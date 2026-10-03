@@ -1,0 +1,15 @@
+---
+description: Keep agent work to the files and schema the task actually needs.
+alwaysApply: true
+---
+
+# Scope
+
+- Read only the files this task needs. Do not scan the whole repository, old transcripts, or pages you are not changing.
+- When the task names a file or page, start there. Open another file only to check a type, import, or query you are about to change.
+- Read the database schema, generated types, or Supabase queries when the task links or writes data. Skip that read for copy, layout, and styling changes.
+- Do not change the schema, migrations, RLS, or color values in `src/app/globals.css` unless the task asks for that.
+- Do not read or commit `.env.local` or any secret.
+- Do not open a browser or sign in to test unless the task asks you to.
+- Do not add a page, module, or dependency for a change that fits the files already open.
+- Leave unrelated dirty files alone.
