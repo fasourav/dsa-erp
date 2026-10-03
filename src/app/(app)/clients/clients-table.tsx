@@ -10,11 +10,11 @@ import {
   Columns3,
   MoreHorizontal,
   Pencil,
-  Plus,
   Trash2,
 } from "lucide-react"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
+import { AddClientDialog } from "@/app/(app)/clients/add-client-dialog"
 import { deleteClient } from "@/app/(app)/clients/actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -184,10 +184,7 @@ export function ClientsTable({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button type="button">
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add New Client
-          </Button>
+          <AddClientDialog />
         </div>
       </div>
 
