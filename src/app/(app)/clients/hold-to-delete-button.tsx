@@ -68,57 +68,45 @@ export function HoldToDeleteButton({
   const secondsLeft = Math.ceil(((1 - progress) * HOLD_DURATION_MS) / 1000)
 
   return (
-    <div className="flex flex-col gap-2 sm:items-end">
-      <Button
-        type="button"
-        variant="destructive"
-        disabled={pending}
-        aria-describedby="hold-to-delete-status"
-        className="relative touch-none overflow-hidden select-none"
-        onPointerDown={(event) => {
-          if (event.button !== 0) {
-            return
-          }
-          event.currentTarget.setPointerCapture(event.pointerId)
+    <Button
+      type="button"
+      variant="destructive"
+      disabled={pending}
+      className="relative touch-none overflow-hidden select-none"
+      onPointerDown={(event) => {
+        if (event.button !== 0) {
+          return
+        }
+        event.currentTarget.setPointerCapture(event.pointerId)
+        beginHold()
+      }}
+      onPointerUp={cancelHold}
+      onPointerCancel={cancelHold}
+      onLostPointerCapture={cancelHold}
+      onKeyDown={(event) => {
+        if ((event.key === " " || event.key === "Enter") && !event.repeat) {
+          event.preventDefault()
           beginHold()
-        }}
-        onPointerUp={cancelHold}
-        onPointerCancel={cancelHold}
-        onLostPointerCapture={cancelHold}
-        onKeyDown={(event) => {
-          if ((event.key === " " || event.key === "Enter") && !event.repeat) {
-            event.preventDefault()
-            beginHold()
-          }
-        }}
-        onKeyUp={(event) => {
-          if (event.key === " " || event.key === "Enter") {
-            event.preventDefault()
-            cancelHold()
-          }
-        }}
-        onBlur={cancelHold}
-        onClick={(event) => event.preventDefault()}
-        onContextMenu={(event) => event.preventDefault()}
-      >
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 origin-left bg-destructive/30"
-          style={{ transform: `scaleX(${fill})` }}
-        />
-        <span className="relative">{pending ? "Deleting…" : "Delete"}</span>
-      </Button>
-      <p
-        id="hold-to-delete-status"
-        aria-live="polite"
-        className="text-sm text-muted-foreground"
-      >
-        {pending
-          ? "Deleting client…"
-          : holding
-            ? `Keep holding… ${secondsLeft}s`
-            : "Hold for 4 seconds to delete."}
-      </p>
-    </div>
+        }
+      }}
+      onKeyUp={(event) => {
+        if (event.key === " " || event.key === "Enter") {
+          event.preventDefault()
+          cancelHold()
+        }
+      }}
+      onBlur={cancelHold}
+      onClick={(event) => event.preventDefault()}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 origin-left bg-destructive/30"
+        style={{ transform: `scaleX(${fill})` }}
+      />
+      <span className="relative tabular-nums" aria-live="polite">
+        {pending ? "Deleting…" : holding ? `Delete (${secondsLeft}s)` : "Delete"}
+      </span>
+    </Button>
   )
 }

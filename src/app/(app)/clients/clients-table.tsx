@@ -406,8 +406,7 @@ export function ClientsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete client</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure want to delete this Client? if yes then hold the
-              press and hold the delete button.
+              Are you sure to delete this item? If yes, Press and Hold
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -415,7 +414,7 @@ export function ClientsTable({
               {deleteError}
             </p>
           ) : null}
-          <AlertDialogFooter className="sm:items-start">
+          <AlertDialogFooter>
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
