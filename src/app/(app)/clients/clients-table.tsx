@@ -10,12 +10,15 @@ import {
   Columns3,
   MoreHorizontal,
   Pencil,
+  Plus,
   Trash2,
 } from "lucide-react"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
-import { AddClientDialog } from "@/app/(app)/clients/add-client-dialog"
 import { deleteClient } from "@/app/(app)/clients/actions"
+import { ClientContactDialog } from "@/app/(app)/clients/client-contact-dialog"
+import { ClientFormDialog } from "@/app/(app)/clients/client-form-dialog"
+import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,7 +31,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -89,6 +91,14 @@ export function ClientsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formClient, setFormClient] = useState<ClientSummary | null>(null)
+  const [formSession, setFormSession] = useState(0)
+  const [contactOpen, setContactOpen] = useState(false)
+  const [contactClient, setContactClient] = useState<ClientSummary | null>(
+    null,
+  )
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<ClientSummary | null>(
     null,
   )
@@ -120,9 +130,21 @@ export function ClientsTable({
     setPage(1)
   }
 
+  function openForm(client: ClientSummary | null) {
+    setFormClient(client)
+    setFormSession((current) => current + 1)
+    setFormOpen(true)
+  }
+
+  function openContact(client: ClientSummary) {
+    setContactClient(client)
+    setContactOpen(true)
+  }
+
   function askDelete(client: ClientSummary) {
     setDeleteError(null)
     setPendingDelete(client)
+    setDeleteOpen(true)
   }
 
   function confirmDelete() {
@@ -139,7 +161,7 @@ export function ClientsTable({
           return
         }
 
-        setPendingDelete(null)
+        setDeleteOpen(false)
         setDeleteError(null)
       } catch {
         setDeleteError("Could not delete this client.")
@@ -184,7 +206,10 @@ export function ClientsTable({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <AddClientDialog />
+          <Button type="button" onClick={() => openForm(null)}>
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add New Client
+          </Button>
         </div>
       </div>
 
@@ -268,11 +293,19 @@ export function ClientsTable({
                       key={column.id}
                       className={cn(column.align === "right" && "text-right")}
                     >
-                      <CellValue client={client} columnId={column.id} />
+                      <CellValue
+                        client={client}
+                        columnId={column.id}
+                        onOpenContact={openContact}
+                      />
                     </TableCell>
                   ))}
                   <TableCell className="sticky right-0 z-10 w-16 border-l border-border bg-card group-hover:bg-muted">
-                    <RowActions client={client} onDelete={askDelete} />
+                    <RowActions
+                      client={client}
+                      onEdit={openForm}
+                      onDelete={askDelete}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -345,24 +378,35 @@ export function ClientsTable({
         </div>
       </div>
 
+      <ClientFormDialog
+        key={formSession}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        client={formClient}
+      />
+
+      <ClientContactDialog
+        client={contactClient}
+        open={contactOpen}
+        onOpenChange={setContactOpen}
+      />
+
       <AlertDialog
-        open={pendingDelete !== null}
+        open={deleteOpen}
         onOpenChange={(open) => {
           if (open || deleting) {
             return
           }
 
-          setPendingDelete(null)
+          setDeleteOpen(false)
           setDeleteError(null)
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete client?</AlertDialogTitle>
+            <AlertDialogTitle>Delete client</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingDelete?.displayName
-                ? `${pendingDelete.displayName} will be removed. This cannot be undone.`
-                : "This client will be removed. This cannot be undone."}
+              Are you sure to delete this item? If yes, Press and Hold
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -374,14 +418,11 @@ export function ClientsTable({
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
-              type="button"
-              variant="destructive"
-              disabled={deleting}
-              onClick={confirmDelete}
-            >
-              {deleting ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
+            <HoldToDeleteButton
+              key={pendingDelete?.id}
+              pending={deleting}
+              onConfirm={confirmDelete}
+            />
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -392,21 +433,27 @@ export function ClientsTable({
 function CellValue({
   client,
   columnId,
+  onOpenContact,
 }: {
   client: ClientSummary
   columnId: ColumnId
+  onOpenContact: (client: ClientSummary) => void
 }) {
   switch (columnId) {
     case "displayName":
       return (
-        <span
+        <Button
+          type="button"
+          variant="link"
           className={cn(
-            "font-medium",
+            "-ml-2.5 font-medium text-foreground",
             !client.displayName && "text-muted-foreground",
           )}
+          aria-label={`Open contact card for ${client.displayName || "client"}`}
+          onClick={() => onOpenContact(client)}
         >
           {client.displayName || "—"}
-        </span>
+        </Button>
       )
     case "kind":
       if (!client.kind) {
@@ -434,9 +481,11 @@ function CellValue({
 
 function RowActions({
   client,
+  onEdit,
   onDelete,
 }: {
   client: ClientSummary
+  onEdit: (client: ClientSummary) => void
   onDelete: (client: ClientSummary) => void
 }) {
   const label = client.displayName || "client"
@@ -456,7 +505,7 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit(client)}>
           <Pencil aria-hidden="true" />
           Edit
         </DropdownMenuItem>

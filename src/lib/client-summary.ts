@@ -14,6 +14,11 @@ export type ClientSummary = {
   totalProjectValue: number
   totalPaid: number
   totalPending: number
+  personName: string | null
+  companyName: string | null
+  email: string | null
+  phone: string | null
+  notes: string | null
 }
 
 export type ColumnId =
