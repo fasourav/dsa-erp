@@ -432,7 +432,6 @@ export type Database = {
       }
       clients: {
         Row: {
-          client_code: string
           company_name: string | null
           created_at: string
           email: string | null
@@ -444,7 +443,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          client_code: string
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -456,7 +454,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          client_code?: string
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -1363,7 +1360,6 @@ export type Database = {
         Row: {
           ar_code: string | null
           billed_amount: number | null
-          client_code: string | null
           client_id: string | null
           client_name: string | null
           created_at: string | null
@@ -1406,7 +1402,6 @@ export type Database = {
           aging_bucket: string | null
           ar_code: string | null
           billed_amount: number | null
-          client_code: string | null
           client_id: string | null
           client_name: string | null
           created_at: string | null
@@ -1631,7 +1626,6 @@ export type Database = {
       }
       client_summaries: {
         Row: {
-          client_code: string | null
           client_id: string | null
           completed_projects: number | null
           display_name: string | null
@@ -1924,7 +1918,6 @@ export type Database = {
       project_backlogs: {
         Row: {
           backlog_amount: number | null
-          client_code: string | null
           client_name: string | null
           project_code: string | null
           project_id: string | null
