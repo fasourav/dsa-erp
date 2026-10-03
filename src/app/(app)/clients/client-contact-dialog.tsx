@@ -3,11 +3,13 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import type { ClientSummary } from "@/lib/client-summary"
+import { cn } from "@/lib/utils"
+
+const NOT_AVAILABLE = "Not Available!"
 
 export function ClientContactDialog({
   client,
@@ -24,25 +26,31 @@ export function ClientContactDialog({
       : ""
 
   const fields = [
-    { label: "Client Name", value: client?.displayName ?? "" },
-    { label: "Contact Name", value: contactName },
-    { label: "Email", value: client?.email?.trim() ?? "" },
-    { label: "Notes", value: client?.notes?.trim() ?? "" },
+    { label: "Contact Name", value: contactName, fallback: "" },
+    { label: "Email", value: client?.email?.trim() ?? "", fallback: NOT_AVAILABLE },
+    { label: "Number", value: client?.phone?.trim() ?? "", fallback: NOT_AVAILABLE },
+    { label: "Notes", value: client?.notes?.trim() ?? "", fallback: NOT_AVAILABLE },
   ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Contact card</DialogTitle>
-          <DialogDescription>Contact details for this client.</DialogDescription>
+          <DialogTitle className="break-words">
+            {client?.displayName ?? ""}
+          </DialogTitle>
         </DialogHeader>
         <dl className="flex flex-col gap-4">
           {fields.map((field) => (
             <div key={field.label} className="flex flex-col gap-1">
               <dt className="text-sm text-muted-foreground">{field.label}</dt>
-              <dd className="min-h-5 text-sm font-medium break-words whitespace-pre-wrap">
-                {field.value}
+              <dd
+                className={cn(
+                  "min-h-5 text-sm font-medium break-words whitespace-pre-wrap",
+                  !field.value && "text-muted-foreground"
+                )}
+              >
+                {field.value || field.fallback}
               </dd>
             </div>
           ))}
