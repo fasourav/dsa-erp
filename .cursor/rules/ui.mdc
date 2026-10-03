@@ -1,0 +1,54 @@
+---
+description: Creating and customizing UI under src (Next.js, Tailwind, shadcn/ui).
+globs: src/**/*.tsx,src/**/*.css
+alwaysApply: true
+---
+
+# UI
+
+These rules apply to UI in `src/**/*.tsx` and `src/**/*.css`.
+
+## Layout
+
+- Every layout is responsive. Write it mobile-first with Tailwind utilities.
+- Unprefixed classes are the phone layout. `sm:`, `md:`, and `lg:` only add behavior for larger screens.
+- Do not design a desktop layout and then hide or undo it with `max-sm:`, `max-md:`, `max-lg:`, or other max-width breakpoint variants.
+- `max-w-*` for content width is fine (pages already use `max-w-3xl` inside the shell). That is not a breakpoint.
+- Match the shell’s larger-screen step: `AppShell` and `AppSidebar` switch at `md:`.
+
+## App shell
+
+- Authenticated pages live in `src/app/(app)/` and render inside `AppShell` (`src/components/app-shell.tsx` + `src/components/app-sidebar.tsx`). Put only page content in that `main`.
+- Do not add a second sidebar, header, tab bar, or layout.
+- A new destination is a new entry in the existing sidebar `navItems`, using a `lucide-react` icon.
+- Signed-out UI stays on the existing `/login` route. Do not invent another signed-out chrome.
+
+## Components
+
+- Use a component already in `src/components` or `src/components/ui` before creating one.
+- Primitives already in `src/components/ui`: `Button`, `Input`, `Label`, `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter`.
+- This app uses shadcn/ui (`components.json`, style `base-nova`, icons `lucide`, CSS variables, aliases `@/components/ui` and `@/lib/utils`).
+- Prefer an official shadcn component or block. If it is missing, add it with the project CLI so `components.json` places it in `src/components/ui`: `npx shadcn add <component-or-block>`.
+- Do not hand-write a lookalike button, input, dialog, select, table, or other primitive.
+
+## Color
+
+- Do not hardcode colors. No hex, `rgb`/`rgba`, `hsl`/`hsla`, `oklch`/`oklab`, palette utilities (`bg-teal-500`, `text-zinc-900`, `border-gray-200`), or arbitrary colors (`bg-[#0d9488]`, `text-[oklch(...)]`).
+- Color comes only from the semantic tokens in `src/app/globals.css`, via utilities such as `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-primary-foreground`, `bg-secondary`, `text-secondary-foreground`, `bg-muted`, `bg-accent`, `text-accent-foreground`, `bg-destructive`, `text-destructive`, `bg-card`, `text-card-foreground`, `bg-popover`, `text-popover-foreground`, `border-input`, `ring-ring`.
+- Sidebar UI uses the sidebar tokens: `bg-sidebar`, `text-sidebar-foreground`, `border-sidebar-border`, `bg-sidebar-accent`, `text-sidebar-accent-foreground`, `bg-sidebar-primary`, `text-sidebar-primary-foreground`, `ring-sidebar-ring`.
+- Charts use `chart-1` through `chart-5` only.
+- Opacity on a semantic token is allowed (`bg-primary/80`, `text-muted-foreground`). A raw color with opacity is not.
+- Do not add `dark:` color overrides. Light and dark values already live on the tokens under `:root` and `.dark`.
+- Do not add or change color values in `src/app/globals.css` for a screen. That file is the only place color values exist.
+
+## Interaction, type, and spacing
+
+- Merge classes with `cn` from `@/lib/utils` (`src/lib/utils.ts` re-exports the `cn` package). Do not concatenate class strings by hand. Leave shadcn files that import `cn` from `"cn"` as the CLI wrote them.
+- Keep controls on the shadcn primitives (`Button`, `Input`, and the rest). Choose `variant` and `size`. Do not restyle them with raw colors.
+- Do not remove focus rings. Do not add `outline-none`, `focus:outline-none`, or `ring-0` / `focus-visible:ring-0` on a control.
+- Icons come from `lucide-react`. Size them with Tailwind (`size-4`). Color them with `currentColor` and `text-*` semantic tokens. Do not set a hex `color` or `stroke`.
+- Forms are one column on small screens (`flex flex-col` with a scale gap). Add a second column only with `sm:` or `md:`.
+- Touch targets stay at least the default primitive size. Use `Button` `default`, `lg`, `icon`, or `icon-lg`. Do not use `xs`, `sm`, `icon-xs`, or `icon-sm`, and do not lower height, padding, or font size below the default.
+- Wide data stays usable on a phone: horizontal scroll inside a bounded `min-w-0` container (`overflow-x-auto`), or a stacked card layout at the base breakpoint with the table only from `md:` up. Do not assume a desktop viewport.
+- Spacing and type use the Tailwind scale (`gap-4`, `px-4`, `text-sm`, `text-2xl`). Radius uses the theme tokens (`rounded-sm` through `rounded-4xl` from `--radius`).
+- Arbitrary values such as `w-[437px]` are a last resort, and never for color.
