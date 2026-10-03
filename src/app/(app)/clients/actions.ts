@@ -17,7 +17,7 @@ export type DeleteClientResult = {
   error: string | null
 }
 
-export type AddClientInput = {
+export type ClientFormInput = {
   kind: ClientKind
   name: string
   email: string
@@ -25,20 +25,38 @@ export type AddClientInput = {
   notes: string
 }
 
-export type AddClientFieldErrors = {
+export type ClientFormFieldErrors = {
   name?: string
   email?: string
   phone?: string
 }
 
-export type AddClientResult = {
+export type ClientFormResult = {
   error: string | null
-  fieldErrors?: AddClientFieldErrors
+  fieldErrors?: ClientFormFieldErrors
 }
 
 export async function addClient(
-  input: AddClientInput,
-): Promise<AddClientResult> {
+  input: ClientFormInput,
+): Promise<ClientFormResult> {
+  return saveClient(null, input)
+}
+
+export async function updateClient(
+  id: string,
+  input: ClientFormInput,
+): Promise<ClientFormResult> {
+  if (!clientIdPattern.test(id)) {
+    return { error: "That client could not be found." }
+  }
+
+  return saveClient(id, input)
+}
+
+async function saveClient(
+  id: string | null,
+  input: ClientFormInput,
+): Promise<ClientFormResult> {
   const { kind } = input
 
   if (kind !== "person" && kind !== "company") {
@@ -86,11 +104,17 @@ export async function addClient(
   }
 
   if (email) {
-    const { data: emailMatches, error: emailLookupError } = await supabase
+    let emailQuery = supabase
       .from("clients")
       .select("id")
       .ilike("email", escapeLikePattern(email))
       .limit(1)
+
+    if (id) {
+      emailQuery = emailQuery.neq("id", id)
+    }
+
+    const { data: emailMatches, error: emailLookupError } = await emailQuery
 
     if (emailLookupError) {
       return { error: "Could not save this client." }
@@ -104,17 +128,21 @@ export async function addClient(
     }
   }
 
-  const { error: insertError } = await supabase.from("clients").insert({
+  const values = {
     kind,
     person_name: kind === "person" ? name : null,
     company_name: kind === "company" ? name : null,
     email: email || null,
     phone: phone || null,
     notes: notes || null,
-  })
+  }
 
-  if (insertError) {
-    if (insertError.code === "23505") {
+  const { data, error } = id
+    ? await supabase.from("clients").update(values).eq("id", id).select("id")
+    : await supabase.from("clients").insert(values).select("id")
+
+  if (error) {
+    if (error.code === "23505") {
       return {
         error: null,
         fieldErrors: {
@@ -124,6 +152,10 @@ export async function addClient(
     }
 
     return { error: "Could not save this client." }
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "That client could not be found." }
   }
 
   revalidatePath("/clients")

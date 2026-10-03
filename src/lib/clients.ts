@@ -13,23 +13,32 @@ export async function getClientSummaries(): Promise<{
 
   try {
     // Total projects counts every status. The view only splits ongoing and completed.
-    const [summariesResult, projectCounts] = await Promise.all([
+    const [summariesResult, detailsResult, projectCounts] = await Promise.all([
       supabase
         .from("client_summaries")
         .select(
           "client_id, display_name, kind, ongoing_projects, completed_projects, total_project_value, total_paid, total_pending",
         ),
+      supabase
+        .from("clients")
+        .select("id, person_name, company_name, email, phone, notes"),
       countProjectsByClient(supabase),
     ])
 
-    if (summariesResult.error) {
+    if (summariesResult.error || detailsResult.error) {
       return { clients: [], error: "Could not load clients." }
     }
+
+    const details = new Map(
+      (detailsResult.data ?? []).map((row) => [row.id, row]),
+    )
 
     const clients = (summariesResult.data ?? []).flatMap((row) => {
       if (!row.client_id) {
         return []
       }
+
+      const detail = details.get(row.client_id)
 
       return [
         {
@@ -42,6 +51,11 @@ export async function getClientSummaries(): Promise<{
           totalProjectValue: toNumber(row.total_project_value),
           totalPaid: toNumber(row.total_paid),
           totalPending: toNumber(row.total_pending),
+          personName: detail?.person_name ?? null,
+          companyName: detail?.company_name ?? null,
+          email: detail?.email ?? null,
+          phone: detail?.phone ?? null,
+          notes: detail?.notes ?? null,
         } satisfies ClientSummary,
       ]
     })

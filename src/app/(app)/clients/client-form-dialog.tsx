@@ -1,9 +1,12 @@
 "use client"
 
-import { Plus } from "lucide-react"
 import { useEffect, useState, useTransition } from "react"
 
-import { addClient, type AddClientFieldErrors } from "@/app/(app)/clients/actions"
+import {
+  addClient,
+  updateClient,
+  type ClientFormFieldErrors,
+} from "@/app/(app)/clients/actions"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -14,12 +17,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import type { ClientKind } from "@/lib/client-summary"
+import type { ClientKind, ClientSummary } from "@/lib/client-summary"
 import {
   escapeLikePattern,
   hasMinDigits,
@@ -42,15 +44,23 @@ type KeyedCheck = {
 
 const noCheck: KeyedCheck = { key: "", message: null }
 
-export function AddClientDialog() {
+export function ClientFormDialog({
+  open,
+  onOpenChange,
+  client,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  client: ClientSummary | null
+}) {
+  const clientId = client?.id ?? null
   const [supabase] = useState(() => createClient())
-  const [open, setOpen] = useState(false)
-  const [kind, setKind] = useState<ClientKind | null>(null)
-  const [name, setName] = useState("")
-  const [company, setCompany] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [notes, setNotes] = useState("")
+  const [kind, setKind] = useState<ClientKind | null>(client?.kind ?? null)
+  const [name, setName] = useState(client?.personName ?? "")
+  const [company, setCompany] = useState(client?.companyName ?? "")
+  const [email, setEmail] = useState(client?.email ?? "")
+  const [phone, setPhone] = useState(client?.phone ?? "")
+  const [notes, setNotes] = useState(client?.notes ?? "")
 
   const [attempted, setAttempted] = useState(false)
   const [nameCheck, setNameCheck] = useState<KeyedCheck>(noCheck)
@@ -63,14 +73,16 @@ export function AddClientDialog() {
   const trimmedEmail = email.trim()
   const trimmedPhone = phone.trim()
 
-  const nameKey = kind && trimmedActiveName
-    ? `${kind}|${trimmedActiveName.toLowerCase()}|${normalizePhoneDigits(trimmedPhone)}`
-    : ""
+  const nameKey =
+    kind && trimmedActiveName
+      ? `${kind}|${trimmedActiveName.toLowerCase()}|${normalizePhoneDigits(trimmedPhone)}`
+      : ""
   const emailFormatError =
     trimmedEmail && !isValidEmail(trimmedEmail)
       ? "Enter a valid email address."
       : null
-  const emailKey = trimmedEmail && !emailFormatError ? trimmedEmail.toLowerCase() : ""
+  const emailKey =
+    trimmedEmail && !emailFormatError ? trimmedEmail.toLowerCase() : ""
   const phoneDigitError =
     trimmedPhone && !hasMinDigits(trimmedPhone, 11)
       ? "Enter a phone number with at least 11 digits."
@@ -84,25 +96,32 @@ export function AddClientDialog() {
         ? "Enter the company name."
         : "Enter the client's name."
       : null
-  const nameDuplicateError = nameKey && nameCheck.key === nameKey ? nameCheck.message : null
+  const nameDuplicateError =
+    nameKey && nameCheck.key === nameKey ? nameCheck.message : null
   const nameError = nameRequiredError ?? nameDuplicateError
   const emailDuplicateError =
     emailKey && emailCheck.key === emailKey ? emailCheck.message : null
   const emailError = emailFormatError ?? emailDuplicateError
 
   useEffect(() => {
-    if (!open || !nameKey) {
+    if (!open || !nameKey || !kind) {
       return
     }
 
     const timer = setTimeout(async () => {
       try {
         const column = kind === "company" ? "company_name" : "person_name"
-        const { data, error } = await supabase
+        let query = supabase
           .from("clients")
-          .select("person_name, company_name, phone")
-          .eq("kind", kind as ClientKind)
+          .select("phone")
+          .eq("kind", kind)
           .ilike(column, escapeLikePattern(trimmedActiveName))
+
+        if (clientId) {
+          query = query.neq("id", clientId)
+        }
+
+        const { data, error } = await query
 
         if (error) {
           return
@@ -130,8 +149,7 @@ export function AddClientDialog() {
     }, DUPLICATE_CHECK_DELAY_MS)
 
     return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- kind and trimmedActiveName are encoded in nameKey
-  }, [open, nameKey, trimmedPhone, supabase])
+  }, [open, nameKey, kind, trimmedActiveName, trimmedPhone, clientId, supabase])
 
   useEffect(() => {
     if (!open || !emailKey) {
@@ -140,11 +158,17 @@ export function AddClientDialog() {
 
     const timer = setTimeout(async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("clients")
           .select("id")
           .ilike("email", escapeLikePattern(emailKey))
           .limit(1)
+
+        if (clientId) {
+          query = query.neq("id", clientId)
+        }
+
+        const { data, error } = await query
 
         if (error) {
           return
@@ -160,30 +184,14 @@ export function AddClientDialog() {
     }, DUPLICATE_CHECK_DELAY_MS)
 
     return () => clearTimeout(timer)
-  }, [open, emailKey, supabase])
-
-  function resetForm() {
-    setKind(null)
-    setName("")
-    setCompany("")
-    setEmail("")
-    setPhone("")
-    setNotes("")
-    setAttempted(false)
-    setNameCheck(noCheck)
-    setEmailCheck(noCheck)
-    setFormError(null)
-  }
+  }, [open, emailKey, clientId, supabase])
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
       return
     }
 
-    setOpen(nextOpen)
-    if (!nextOpen) {
-      resetForm()
-    }
+    onOpenChange(nextOpen)
   }
 
   function selectKind(next: ClientKind, checked: boolean) {
@@ -204,15 +212,19 @@ export function AddClientDialog() {
       return
     }
 
+    const input = {
+      kind,
+      name: trimmedActiveName,
+      email: trimmedEmail,
+      phone: trimmedPhone,
+      notes: notes.trim(),
+    }
+
     startSubmit(async () => {
       try {
-        const result = await addClient({
-          kind,
-          name: trimmedActiveName,
-          email: trimmedEmail,
-          phone: trimmedPhone,
-          notes: notes.trim(),
-        })
+        const result = clientId
+          ? await updateClient(clientId, input)
+          : await addClient(input)
 
         if (result.fieldErrors) {
           applyFieldErrors(result.fieldErrors)
@@ -224,14 +236,14 @@ export function AddClientDialog() {
           return
         }
 
-        handleOpenChange(false)
+        onOpenChange(false)
       } catch {
         setFormError("Could not save this client.")
       }
     })
   }
 
-  function applyFieldErrors(fieldErrors: AddClientFieldErrors) {
+  function applyFieldErrors(fieldErrors: ClientFormFieldErrors) {
     if (fieldErrors.name && nameKey) {
       setNameCheck({ key: nameKey, message: fieldErrors.name })
     }
@@ -245,13 +257,9 @@ export function AddClientDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button type="button" />}>
-        <Plus aria-hidden="true" data-icon="inline-start" />
-        Add New Client
-      </DialogTrigger>
       <DialogContent className="sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
-          <DialogTitle>Add new client</DialogTitle>
+          <DialogTitle>{clientId ? "Edit client" : "Add new client"}</DialogTitle>
           <DialogDescription>
             Individual and Company clients are stored with different name
             fields.
@@ -392,12 +400,14 @@ export function AddClientDialog() {
 
         <DialogFooter>
           <DialogClose
-            render={<Button type="button" variant="outline" disabled={pending} />}
+            render={
+              <Button type="button" variant="outline" disabled={pending} />
+            }
           >
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : "Save client"}
+            {pending ? "Saving…" : clientId ? "Save changes" : "Save client"}
           </Button>
         </DialogFooter>
       </DialogContent>
