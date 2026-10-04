@@ -1,6 +1,7 @@
 import { toNumber } from "@/lib/format"
 import {
   clientDisplayName,
+  type CatalogOption,
   type ClientOption,
   type ProjectRow,
 } from "@/lib/project-summary"
@@ -13,12 +14,15 @@ const MAX_PAGES = 100
 export async function getProjects(): Promise<{
   projects: ProjectRow[]
   clients: ClientOption[]
+  projectTypes: CatalogOption[]
+  projectPhases: CatalogOption[]
   error: string | null
 }> {
   const supabase = await createClient()
 
   try {
-    const [projectRows, financialRows, clientRows] = await Promise.all([
+    const [projectRows, financialRows, clientRows, typeRows, phaseRows] =
+      await Promise.all([
       fetchPages((from, to) =>
         supabase
           .from("projects")
@@ -41,6 +45,22 @@ export async function getProjects(): Promise<{
         supabase
           .from("clients")
           .select("id, person_name, company_name")
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      fetchPages((from, to) =>
+        supabase
+          .from("project_types")
+          .select("id, name, sort_order")
+          .order("sort_order", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      fetchPages((from, to) =>
+        supabase
+          .from("project_phases")
+          .select("id, name, sort_order")
+          .order("sort_order", { ascending: true })
           .order("id", { ascending: true })
           .range(from, to),
       ),
@@ -92,10 +112,41 @@ export async function getProjects(): Promise<{
         return a.id.localeCompare(b.id)
       })
 
-    return { projects, clients, error: null }
+    return {
+      projects,
+      clients,
+      projectTypes: catalogOptions(typeRows),
+      projectPhases: catalogOptions(phaseRows),
+      error: null,
+    }
   } catch {
-    return { projects: [], clients: [], error: "Could not load projects." }
+    return {
+      projects: [],
+      clients: [],
+      projectTypes: [],
+      projectPhases: [],
+      error: "Could not load projects.",
+    }
   }
+}
+
+function catalogOptions(
+  rows: readonly { id: string; name: string }[],
+): CatalogOption[] {
+  const seen = new Set<string>()
+  const options: CatalogOption[] = []
+
+  for (const row of rows) {
+    const name = row.name.trim()
+    if (!name || seen.has(name)) {
+      continue
+    }
+
+    seen.add(name)
+    options.push({ id: row.id, name })
+  }
+
+  return options
 }
 
 async function fetchPages<T>(

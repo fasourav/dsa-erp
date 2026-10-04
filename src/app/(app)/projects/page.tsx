@@ -4,9 +4,16 @@ import { getProjects } from "@/lib/projects"
 export const metadata = { title: "Projects" }
 
 export default async function ProjectsPage() {
-  const { projects, clients, error } = await getProjects()
+  const { projects, clients, projectTypes, projectPhases, error } =
+    await getProjects()
 
   return (
-    <ProjectsTable projects={projects} clients={clients} error={error} />
+    <ProjectsTable
+      projects={projects}
+      clients={clients}
+      projectTypes={projectTypes}
+      projectPhases={projectPhases}
+      error={error}
+    />
   )
 }

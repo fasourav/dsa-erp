@@ -66,6 +66,7 @@ import {
   paginationItems,
   projectRangeLabel,
   sortProjects,
+  type CatalogOption,
   type ClientOption,
   type ColumnId,
   type ProjectRow,
@@ -76,10 +77,14 @@ import { cn } from "@/lib/utils"
 export function ProjectsTable({
   projects,
   clients,
+  projectTypes,
+  projectPhases,
   error,
 }: {
   projects: ProjectRow[]
   clients: ClientOption[]
+  projectTypes: CatalogOption[]
+  projectPhases: CatalogOption[]
   error: string | null
 }) {
   const visibility = useSyncExternalStore(
@@ -375,6 +380,8 @@ export function ProjectsTable({
         onOpenChange={setFormOpen}
         project={formProject}
         clients={clients}
+        projectTypes={projectTypes}
+        projectPhases={projectPhases}
       />
 
       <AlertDialog

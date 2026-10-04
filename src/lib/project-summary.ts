@@ -4,36 +4,10 @@ export const COLUMN_STORAGE_KEY = "dsa-erp.projects.columns"
 
 export type ProjectStatus = "active" | "completed"
 
-export const projectTypeOptions = [
-  "Site/Floor Planning",
-  "Residential Interior",
-  "Corporate Interior",
-  "Residential Exterior",
-  "Corporate Exterior",
-  "Residential Apartment",
-  "Single Storied Residence",
-  "Duplex Residence",
-  "Triplex Residence",
-  "Landscape",
-  "Corporate Furniture Supply",
-  "Residential Furniture Supply",
-  "Fire Protection System",
-  "HVAC System",
-  "3D Visualization",
-  "Graphic Design & Print",
-  "Renovation",
-  "Construction",
-] as const
-
-export const projectPhaseOptions = [
-  "Bidding",
-  "Review",
-  "Concept Design",
-  "Schematic Design",
-  "Construction",
-  "Audit",
-  "Handover",
-] as const
+export type CatalogOption = {
+  id: string
+  name: string
+}
 
 export type ProjectRow = {
   id: string

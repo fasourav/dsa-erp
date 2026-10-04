@@ -5,9 +5,7 @@ import { revalidatePath } from "next/cache"
 import type { ProjectStatus } from "@/lib/project-summary"
 import {
   isIsoDate,
-  isProjectPhase,
   isProjectStatus,
-  isProjectType,
   parseProjectValue,
 } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -89,16 +87,8 @@ async function saveProject(
     fieldErrors.startedOn = "Enter a start date."
   }
 
-  if (projectType && !isProjectType(projectType)) {
-    fieldErrors.projectType = "Choose a project type."
-  }
-
   if (!isProjectStatus(input.status)) {
     fieldErrors.status = "Choose a project status."
-  }
-
-  if (phase && !isProjectPhase(phase)) {
-    fieldErrors.phase = "Choose a project phase."
   }
 
   if (totalValue === null) {
@@ -117,6 +107,43 @@ async function saveProject(
 
   if (authError || !authData.user) {
     return { error: "You must be signed in." }
+  }
+
+  let savedType = ""
+  let savedPhase = ""
+
+  if (id) {
+    const { data: existing, error: existingError } = await supabase
+      .from("projects")
+      .select("project_type, current_phase")
+      .eq("id", id)
+      .limit(1)
+
+    if (existingError) {
+      return { error: "Could not save this project." }
+    }
+
+    if (!existing || existing.length === 0) {
+      return { error: "That project could not be found." }
+    }
+
+    savedType = existing[0].project_type?.trim() ?? ""
+    savedPhase = existing[0].current_phase?.trim() ?? ""
+  }
+
+  const catalogErrors = await catalogFieldErrors(supabase, {
+    projectType,
+    savedType,
+    phase,
+    savedPhase,
+  })
+
+  if (catalogErrors === null) {
+    return { error: "Could not save this project." }
+  }
+
+  if (Object.keys(catalogErrors).length > 0) {
+    return { error: null, fieldErrors: catalogErrors }
   }
 
   const { data: clientMatches, error: clientLookupError } = await supabase
@@ -216,4 +243,57 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
   revalidatePath("/projects")
   revalidatePath("/clients")
   return { error: null }
+}
+
+async function catalogFieldErrors(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  values: {
+    projectType: string
+    savedType: string
+    phase: string
+    savedPhase: string
+  },
+): Promise<ProjectFormFieldErrors | null> {
+  const [typeKnown, phaseKnown] = await Promise.all([
+    values.projectType && values.projectType !== values.savedType
+      ? catalogHasName(supabase, "project_types", values.projectType)
+      : Promise.resolve(true),
+    values.phase && values.phase !== values.savedPhase
+      ? catalogHasName(supabase, "project_phases", values.phase)
+      : Promise.resolve(true),
+  ])
+
+  if (typeKnown === null || phaseKnown === null) {
+    return null
+  }
+
+  const fieldErrors: ProjectFormFieldErrors = {}
+
+  if (!typeKnown) {
+    fieldErrors.projectType = "Choose a project type."
+  }
+
+  if (!phaseKnown) {
+    fieldErrors.phase = "Choose a project phase."
+  }
+
+  return fieldErrors
+}
+
+async function catalogHasName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: "project_types" | "project_phases",
+  name: string,
+): Promise<boolean | null> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("id")
+    .eq("name", name)
+    .limit(1)
+
+  if (error) {
+    return null
+  }
+
+  return (data?.length ?? 0) > 0
 }

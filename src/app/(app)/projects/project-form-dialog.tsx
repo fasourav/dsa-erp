@@ -26,17 +26,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import type { ClientOption, ProjectRow, ProjectStatus } from "@/lib/project-summary"
-import {
-  projectPhaseOptions,
-  projectTypeOptions,
-  statusLabel,
+import type {
+  CatalogOption,
+  ClientOption,
+  ProjectRow,
+  ProjectStatus,
 } from "@/lib/project-summary"
+import { statusLabel } from "@/lib/project-summary"
 import {
   isIsoDate,
-  isProjectPhase,
   isProjectStatus,
-  isProjectType,
   parseProjectValue,
   todayIsoDate,
 } from "@/lib/project-validation"
@@ -46,26 +45,20 @@ const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: "completed", label: statusLabel("completed") },
 ]
 
-const typeItems = projectTypeOptions.map((option) => ({
-  value: option,
-  label: option,
-}))
-
-const phaseItems = projectPhaseOptions.map((option) => ({
-  value: option,
-  label: option,
-}))
-
 export function ProjectFormDialog({
   open,
   onOpenChange,
   project,
   clients,
+  projectTypes,
+  projectPhases,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   project: ProjectRow | null
   clients: ClientOption[]
+  projectTypes: CatalogOption[]
+  projectPhases: CatalogOption[]
 }) {
   const projectId = project?.id ?? null
   const [name, setName] = useState(project?.name ?? "")
@@ -74,15 +67,11 @@ export function ProjectFormDialog({
   const [startedOn, setStartedOn] = useState(
     project?.startedOn || todayIsoDate(),
   )
-  const [projectType, setProjectType] = useState(
-    project && isProjectType(project.projectType) ? project.projectType : "",
-  )
+  const [projectType, setProjectType] = useState(project?.projectType ?? "")
   const [status, setStatus] = useState<ProjectStatus>(
     project?.status ?? "active",
   )
-  const [phase, setPhase] = useState(
-    project && isProjectPhase(project.phase) ? project.phase : "",
-  )
+  const [phase, setPhase] = useState(project?.phase ?? "")
   const [totalValue, setTotalValue] = useState(
     project ? String(project.totalValue) : "0",
   )
@@ -96,6 +85,8 @@ export function ProjectFormDialog({
     value: client.id,
     label: client.displayName || "—",
   }))
+  const typeItems = catalogSelectItems(projectTypes, project?.projectType ?? "")
+  const phaseItems = catalogSelectItems(projectPhases, project?.phase ?? "")
   const nameError = serverErrors.name ?? (attempted && !name.trim()
     ? "Enter the project name."
     : null)
@@ -105,17 +96,9 @@ export function ProjectFormDialog({
   const dateError =
     serverErrors.startedOn ??
     (attempted && !isIsoDate(startedOn) ? "Enter a start date." : null)
-  const typeError =
-    serverErrors.projectType ??
-    (attempted && projectType && !isProjectType(projectType)
-      ? "Choose a project type."
-      : null)
+  const typeError = serverErrors.projectType ?? null
   const statusError = serverErrors.status ?? null
-  const phaseError =
-    serverErrors.phase ??
-    (attempted && phase && !isProjectPhase(phase)
-      ? "Choose a project phase."
-      : null)
+  const phaseError = serverErrors.phase ?? null
   const valueError =
     serverErrors.totalValue ??
     (attempted && parseProjectValue(totalValue) === null
@@ -143,8 +126,6 @@ export function ProjectFormDialog({
       !clientId ||
       !isIsoDate(startedOn) ||
       !isProjectStatus(status) ||
-      (projectType !== "" && !isProjectType(projectType)) ||
-      (phase !== "" && !isProjectPhase(phase)) ||
       parsedValue === null
     ) {
       return
@@ -418,4 +399,19 @@ export function ProjectFormDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function catalogSelectItems(options: readonly CatalogOption[], savedName: string) {
+  const items = options.map((option) => ({
+    id: option.id,
+    value: option.name,
+    label: option.name,
+  }))
+  const saved = savedName.trim()
+
+  if (saved && !items.some((item) => item.value === saved)) {
+    items.push({ id: `saved:${saved}`, value: saved, label: saved })
+  }
+
+  return items
 }
