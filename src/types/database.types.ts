@@ -2148,7 +2148,7 @@ export type Database = {
       lead_status: "open" | "won" | "lost" | "on_hold"
       party_kind: "person" | "company"
       payment_status: "unpaid" | "partial" | "paid" | "void"
-      project_status: "ongoing" | "completed" | "on_hold" | "cancelled"
+      project_status: "active" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2288,7 +2288,7 @@ export const Constants = {
       lead_status: ["open", "won", "lost", "on_hold"],
       party_kind: ["person", "company"],
       payment_status: ["unpaid", "partial", "paid", "void"],
-      project_status: ["ongoing", "completed", "on_hold", "cancelled"],
+      project_status: ["active", "completed"],
     },
   },
 } as const
