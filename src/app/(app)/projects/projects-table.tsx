@@ -5,8 +5,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CircleDot,
   Columns3,
+  LoaderCircle,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -17,6 +17,7 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
 import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -66,6 +67,7 @@ import {
   paginationItems,
   projectRangeLabel,
   sortProjects,
+  statusLabel,
   type CatalogOption,
   type ClientOption,
   type ColumnId,
@@ -228,7 +230,7 @@ export function ProjectsTable({
                         : "none"
                     }
                     className={cn(
-                      "px-3",
+                      "px-3 text-sm",
                       column.align === "right" && "text-right",
                     )}
                   >
@@ -242,6 +244,7 @@ export function ProjectsTable({
                         type="button"
                         variant="ghost"
                         className={cn(
+                          "border-0",
                           column.align === "right" ? "-mr-2.5" : "-ml-2.5",
                         )}
                         aria-label={
@@ -289,14 +292,14 @@ export function ProjectsTable({
                     <TableCell
                       key={column.id}
                       className={cn(
-                        "px-3 py-2.5",
+                        "p-3 text-sm",
                         column.align === "right" && "text-right",
                       )}
                     >
                       <CellValue project={project} columnId={column.id} />
                     </TableCell>
                   ))}
-                  <TableCell className="sticky right-0 z-10 w-16 border-l border-border bg-card px-3 py-2.5 group-hover:bg-muted">
+                  <TableCell className="sticky right-0 z-10 w-16 border-l border-border bg-card p-3 text-sm group-hover:bg-muted">
                     <RowActions
                       project={project}
                       onEdit={openForm}
@@ -470,7 +473,7 @@ function CellValue({
       return <StatusValue status={project.status} />
     case "phase":
       return project.phase ? (
-        <span>{project.phase}</span>
+        <PhaseValue phase={project.phase} />
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -507,21 +510,38 @@ function CellValue({
   }
 }
 
+const pillClassName =
+  "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
+
 function StatusValue({ status }: { status: ProjectRow["status"] }) {
   if (status === "active") {
     return (
-      <span className="inline-flex items-center gap-2">
-        <CircleDot aria-hidden="true" className="size-4 shrink-0 text-primary" />
-        Active
-      </span>
+      <Badge
+        variant="secondary"
+        className={cn(pillClassName, "bg-muted text-muted-foreground")}
+      >
+        <LoaderCircle aria-hidden="true" />
+        {statusLabel(status)}
+      </Badge>
     )
   }
 
   return (
-    <span className="inline-flex items-center gap-2">
-      <Check aria-hidden="true" className="size-4 shrink-0" />
-      Completed
-    </span>
+    <Badge
+      variant="secondary"
+      className={cn(pillClassName, "bg-primary/10 text-primary")}
+    >
+      <Check aria-hidden="true" />
+      {statusLabel(status)}
+    </Badge>
+  )
+}
+
+function PhaseValue({ phase }: { phase: string }) {
+  return (
+    <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
+      {phase}
+    </Badge>
   )
 }
 
