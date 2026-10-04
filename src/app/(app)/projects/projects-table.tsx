@@ -66,7 +66,6 @@ import {
   paginationItems,
   projectRangeLabel,
   sortProjects,
-  statusLabel,
   type ClientOption,
   type ColumnId,
   type ProjectRow,
@@ -223,7 +222,10 @@ export function ProjectsTable({
                           : "descending"
                         : "none"
                     }
-                    className={cn(column.align === "right" && "text-right")}
+                    className={cn(
+                      "px-3",
+                      column.align === "right" && "text-right",
+                    )}
                   >
                     <div
                       className={cn(
@@ -235,7 +237,7 @@ export function ProjectsTable({
                         type="button"
                         variant="ghost"
                         className={cn(
-                          column.align === "right" ? "-mr-2" : "-ml-2",
+                          column.align === "right" ? "-mr-2.5" : "-ml-2.5",
                         )}
                         aria-label={
                           active
@@ -250,7 +252,7 @@ export function ProjectsTable({
                   </TableHead>
                 )
               })}
-              <TableHead className="sticky right-0 z-10 w-16 border-l border-border bg-muted">
+              <TableHead className="sticky right-0 z-10 w-16 border-l border-border bg-muted px-3">
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
@@ -261,7 +263,7 @@ export function ProjectsTable({
                 <TableCell
                   colSpan={columnCount}
                   role="alert"
-                  className="py-8 text-center whitespace-normal text-destructive"
+                  className="px-3 py-8 text-center whitespace-normal text-destructive"
                 >
                   {error}
                 </TableCell>
@@ -270,7 +272,7 @@ export function ProjectsTable({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={columnCount}
-                  className="py-8 text-center whitespace-normal text-muted-foreground"
+                  className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
                 >
                   No projects yet.
                 </TableCell>
@@ -281,12 +283,15 @@ export function ProjectsTable({
                   {visibleColumns.map((column) => (
                     <TableCell
                       key={column.id}
-                      className={cn(column.align === "right" && "text-right")}
+                      className={cn(
+                        "px-3 py-2.5",
+                        column.align === "right" && "text-right",
+                      )}
                     >
                       <CellValue project={project} columnId={column.id} />
                     </TableCell>
                   ))}
-                  <TableCell className="sticky right-0 z-10 w-16 border-l border-border bg-card group-hover:bg-muted">
+                  <TableCell className="sticky right-0 z-10 w-16 border-l border-border bg-card px-3 py-2.5 group-hover:bg-muted">
                     <RowActions
                       project={project}
                       onEdit={openForm}
@@ -496,25 +501,21 @@ function CellValue({
 }
 
 function StatusValue({ status }: { status: ProjectRow["status"] }) {
-  if (status === "ongoing") {
+  if (status === "active") {
     return (
       <span className="inline-flex items-center gap-2">
-        <CircleDot aria-hidden="true" className="size-4 text-primary" />
+        <CircleDot aria-hidden="true" className="size-4 shrink-0 text-primary" />
         Active
       </span>
     )
   }
 
-  if (status === "completed") {
-    return (
-      <span className="inline-flex items-center gap-2">
-        <Check aria-hidden="true" className="size-4" />
-        Completed
-      </span>
-    )
-  }
-
-  return <span>{statusLabel(status)}</span>
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Check aria-hidden="true" className="size-4 shrink-0" />
+      Completed
+    </span>
+  )
 }
 
 function RowActions({

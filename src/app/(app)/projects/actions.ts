@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache"
 import type { ProjectStatus } from "@/lib/project-summary"
 import {
   isIsoDate,
+  isProjectPhase,
   isProjectStatus,
+  isProjectType,
   parseProjectValue,
 } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -29,7 +31,9 @@ export type ProjectFormFieldErrors = {
   name?: string
   clientId?: string
   startedOn?: string
+  projectType?: string
   status?: string
+  phase?: string
   totalValue?: string
 }
 
@@ -85,8 +89,16 @@ async function saveProject(
     fieldErrors.startedOn = "Enter a start date."
   }
 
+  if (projectType && !isProjectType(projectType)) {
+    fieldErrors.projectType = "Choose a project type."
+  }
+
   if (!isProjectStatus(input.status)) {
     fieldErrors.status = "Choose a project status."
+  }
+
+  if (phase && !isProjectPhase(phase)) {
+    fieldErrors.phase = "Choose a project phase."
   }
 
   if (totalValue === null) {

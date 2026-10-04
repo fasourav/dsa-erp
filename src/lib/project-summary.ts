@@ -2,7 +2,38 @@ export const PAGE_SIZE = 10
 
 export const COLUMN_STORAGE_KEY = "dsa-erp.projects.columns"
 
-export type ProjectStatus = "ongoing" | "completed" | "on_hold" | "cancelled"
+export type ProjectStatus = "active" | "completed"
+
+export const projectTypeOptions = [
+  "Site/Floor Planning",
+  "Residential Interior",
+  "Corporate Interior",
+  "Residential Exterior",
+  "Corporate Exterior",
+  "Residential Apartment",
+  "Single Storied Residence",
+  "Duplex Residence",
+  "Triplex Residence",
+  "Landscape",
+  "Corporate Furniture Supply",
+  "Residential Furniture Supply",
+  "Fire Protection System",
+  "HVAC System",
+  "3D Visualization",
+  "Graphic Design & Print",
+  "Renovation",
+  "Construction",
+] as const
+
+export const projectPhaseOptions = [
+  "Bidding",
+  "Review",
+  "Concept Design",
+  "Schematic Design",
+  "Construction",
+  "Audit",
+  "Handover",
+] as const
 
 export type ProjectRow = {
   id: string
@@ -82,14 +113,14 @@ export const dataColumns: readonly DataColumn[] = [
   },
   {
     id: "location",
-    label: "Project Location",
+    label: "Location",
     align: "left",
     locked: false,
     format: "text",
   },
   {
     id: "startedOn",
-    label: "Project Start Date",
+    label: "Date",
     align: "left",
     locked: false,
     format: "date",
@@ -103,7 +134,7 @@ export const dataColumns: readonly DataColumn[] = [
   },
   {
     id: "status",
-    label: "Project Status",
+    label: "Status",
     align: "left",
     locked: true,
     format: "status",
@@ -117,7 +148,7 @@ export const dataColumns: readonly DataColumn[] = [
   },
   {
     id: "totalValue",
-    label: "Project Value",
+    label: "Total Value",
     align: "right",
     locked: false,
     format: "money",
@@ -230,14 +261,10 @@ export function clientDisplayName(
 
 export function statusLabel(status: ProjectStatus): string {
   switch (status) {
-    case "ongoing":
+    case "active":
       return "Active"
     case "completed":
       return "Completed"
-    case "on_hold":
-      return "On hold"
-    case "cancelled":
-      return "Cancelled"
   }
 }
 

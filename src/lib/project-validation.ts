@@ -1,14 +1,21 @@
-import type { ProjectStatus } from "@/lib/project-summary"
+import {
+  projectPhaseOptions,
+  projectTypeOptions,
+  type ProjectStatus,
+} from "@/lib/project-summary"
 
-const statuses: readonly ProjectStatus[] = [
-  "ongoing",
-  "completed",
-  "on_hold",
-  "cancelled",
-]
+const statuses: readonly ProjectStatus[] = ["active", "completed"]
 
 export function isProjectStatus(value: string): value is ProjectStatus {
   return statuses.includes(value as ProjectStatus)
+}
+
+export function isProjectType(value: string): boolean {
+  return (projectTypeOptions as readonly string[]).includes(value)
+}
+
+export function isProjectPhase(value: string): boolean {
+  return (projectPhaseOptions as readonly string[]).includes(value)
 }
 
 export function isIsoDate(value: string): boolean {
