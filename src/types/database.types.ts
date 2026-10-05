@@ -466,18 +466,21 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          sort_order: number
         }
         Insert: {
           created_at?: string
           id?: string
           is_active?: boolean
           name: string
+          sort_order?: number
         }
         Update: {
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -654,6 +657,27 @@ export type Database = {
           },
         ]
       }
+      office_expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       operational_expenses: {
         Row: {
           amount: number
@@ -731,6 +755,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_methods: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       payroll_lines: {
         Row: {
@@ -823,6 +868,27 @@ export type Database = {
           period_year?: number
           run_code?: string
           status?: string
+        }
+        Relationships: []
+      }
+      project_expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -1248,6 +1314,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vendor_work_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       vendors: {
         Row: {
