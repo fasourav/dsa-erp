@@ -260,7 +260,7 @@ export function ProjectsTable({
                   </TableHead>
                 )
               })}
-              <TableHead className="sticky right-0 z-10 w-16 border-l border-border bg-muted px-3">
+              <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3">
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
@@ -299,7 +299,7 @@ export function ProjectsTable({
                       <CellValue project={project} columnId={column.id} />
                     </TableCell>
                   ))}
-                  <TableCell className="sticky right-0 z-10 w-16 border-l border-border bg-card p-3 text-sm group-hover:bg-muted">
+                  <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
                     <RowActions
                       project={project}
                       onEdit={openForm}
@@ -478,36 +478,53 @@ function CellValue({
         <span className="text-muted-foreground">—</span>
       )
     case "totalValue":
-      return (
-        <span className="tabular-nums">{formatMoney(project.totalValue)}</span>
-      )
+      return <MoneyValue value={project.totalValue} />
     case "totalPaid":
       return (
-        <span className="tabular-nums">{formatMoney(project.totalPaid)}</span>
+        <MoneyWithPercent
+          amount={project.totalPaid}
+          part={project.totalPaid}
+          total={project.totalValue}
+        />
       )
     case "totalDue":
-      return (
-        <span className="tabular-nums">{formatMoney(project.totalDue)}</span>
-      )
-    case "totalPercentPaid":
-      return (
-        <span className="tabular-nums">
-          {formatPercent(project.totalPaid, project.totalValue)}
-        </span>
-      )
+      return <MoneyValue value={project.totalDue} />
+    case "expenseTotal":
+      return <MoneyValue value={project.expenseTotal} />
+    case "expenseDue":
+      return <MoneyValue value={project.expenseDue} />
     case "grossProfit":
       return (
-        <span className="tabular-nums">
-          {formatMoney(project.grossProfit)}
-        </span>
-      )
-    case "grossPercentPaid":
-      return (
-        <span className="tabular-nums">
-          {formatPercent(project.grossProfit, project.totalValue)}
-        </span>
+        <MoneyWithPercent
+          amount={project.grossProfit}
+          part={project.grossProfit}
+          total={project.totalValue}
+        />
       )
   }
+}
+
+function MoneyValue({ value }: { value: number }) {
+  return <span className="tabular-nums">{formatMoney(value)}</span>
+}
+
+function MoneyWithPercent({
+  amount,
+  part,
+  total,
+}: {
+  amount: number
+  part: number
+  total: number
+}) {
+  return (
+    <span className="flex flex-col items-end gap-0.5 leading-tight">
+      <span className="tabular-nums">{formatMoney(amount)}</span>
+      <span className="text-muted-foreground tabular-nums">
+        {formatPercent(part, total)}
+      </span>
+    </span>
+  )
 }
 
 const pillClassName =

@@ -22,6 +22,8 @@ export type ProjectRow = {
   totalValue: number
   totalPaid: number
   totalDue: number
+  expenseTotal: number
+  expenseDue: number
   grossProfit: number
   details: string
 }
@@ -42,9 +44,9 @@ export type ColumnId =
   | "totalValue"
   | "totalPaid"
   | "totalDue"
-  | "totalPercentPaid"
+  | "expenseTotal"
+  | "expenseDue"
   | "grossProfit"
-  | "grossPercentPaid"
 
 export type OptionalColumnId = Exclude<
   ColumnId,
@@ -60,7 +62,7 @@ export type SortState = {
   direction: SortDirection
 }
 
-type ColumnFormat = "text" | "date" | "status" | "money" | "percent"
+type ColumnFormat = "text" | "date" | "status" | "money"
 
 export type DataColumn = {
   id: ColumnId
@@ -142,11 +144,18 @@ export const dataColumns: readonly DataColumn[] = [
     format: "money",
   },
   {
-    id: "totalPercentPaid",
-    label: "Total % Paid",
+    id: "expenseTotal",
+    label: "Expense",
     align: "right",
     locked: false,
-    format: "percent",
+    format: "money",
+  },
+  {
+    id: "expenseDue",
+    label: "Expense Due",
+    align: "right",
+    locked: false,
+    format: "money",
   },
   {
     id: "grossProfit",
@@ -154,13 +163,6 @@ export const dataColumns: readonly DataColumn[] = [
     align: "right",
     locked: false,
     format: "money",
-  },
-  {
-    id: "grossPercentPaid",
-    label: "Gross % Paid",
-    align: "right",
-    locked: false,
-    format: "percent",
   },
 ]
 
@@ -171,9 +173,9 @@ const defaultVisibility: ColumnVisibility = {
   totalValue: true,
   totalPaid: true,
   totalDue: true,
-  totalPercentPaid: true,
+  expenseTotal: true,
+  expenseDue: true,
   grossProfit: true,
-  grossPercentPaid: true,
 }
 
 const projectDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -265,27 +267,8 @@ export function formatProjectDate(value: string): string {
 }
 
 export function formatPercent(part: number, total: number): string {
-  if (total === 0) {
-    return "0%"
-  }
-
-  return `${((part / total) * 100).toFixed(1)}%`
-}
-
-export function paidRatio(row: ProjectRow): number {
-  if (row.totalValue === 0) {
-    return 0
-  }
-
-  return row.totalPaid / row.totalValue
-}
-
-export function profitRatio(row: ProjectRow): number {
-  if (row.totalValue === 0) {
-    return 0
-  }
-
-  return row.grossProfit / row.totalValue
+  const ratio = total === 0 ? 0 : (part / total) * 100
+  return `${ratio.toFixed(1)}%`
 }
 
 export function sortProjects(
@@ -337,12 +320,12 @@ function compareProjects(a: ProjectRow, b: ProjectRow, key: ColumnId): number {
       return a.totalPaid - b.totalPaid
     case "totalDue":
       return a.totalDue - b.totalDue
-    case "totalPercentPaid":
-      return paidRatio(a) - paidRatio(b)
+    case "expenseTotal":
+      return a.expenseTotal - b.expenseTotal
+    case "expenseDue":
+      return a.expenseDue - b.expenseDue
     case "grossProfit":
       return a.grossProfit - b.grossProfit
-    case "grossPercentPaid":
-      return profitRatio(a) - profitRatio(b)
   }
 }
 

@@ -36,7 +36,7 @@ export async function getProjects(): Promise<{
         supabase
           .from("project_financials")
           .select(
-            "project_id, total_value, total_paid, total_pending_due, gross_profit",
+            "project_id, total_value, total_paid, total_pending_due, expense_total, expense_due, gross_profit",
           )
           .order("project_id", { ascending: true })
           .range(from, to),
@@ -92,6 +92,8 @@ export async function getProjects(): Promise<{
         totalValue: toNumber(financial?.total_value ?? row.total_value),
         totalPaid: toNumber(financial?.total_paid),
         totalDue: toNumber(financial?.total_pending_due),
+        expenseTotal: toNumber(financial?.expense_total),
+        expenseDue: toNumber(financial?.expense_due),
         grossProfit: toNumber(financial?.gross_profit),
         details: row.details ?? "",
       } satisfies ProjectRow
