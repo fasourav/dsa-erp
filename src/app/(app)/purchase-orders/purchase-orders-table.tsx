@@ -1,24 +1,21 @@
 "use client"
 
 import {
-  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Columns3,
-  LoaderCircle,
   MoreHorizontal,
   Pencil,
   Plus,
-  Receipt,
   Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
-import { deleteProject } from "@/app/(app)/projects/actions"
-import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
+import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
+import { PurchaseOrderFormDialog } from "@/app/(app)/purchase-orders/purchase-order-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -58,37 +55,40 @@ import {
   getColumnSnapshot,
   subscribeColumnVisibility,
   writeColumnVisibility,
-} from "@/lib/project-column-store"
+} from "@/lib/purchase-order-column-store"
+import type { ProjectFilter } from "@/lib/purchase-orders"
 import {
   dataColumns,
-  formatPercent,
-  formatProjectDate,
+  formatPurchaseOrderDate,
   isColumnVisible,
   isOptionalColumn,
-  paginateProjects,
+  paginatePurchaseOrders,
   paginationItems,
-  projectRangeLabel,
-  sortProjects,
-  statusLabel,
-  type CatalogOption,
-  type ClientOption,
+  purchaseOrderRangeLabel,
+  sortPurchaseOrders,
   type ColumnId,
-  type ProjectRow,
+  type ProjectOption,
+  type PurchaseOrderRow,
   type SortState,
-} from "@/lib/project-summary"
+  type VendorOption,
+} from "@/lib/purchase-order-summary"
 import { cn } from "@/lib/utils"
 
-export function ProjectsTable({
+const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
+
+export function PurchaseOrdersTable({
+  orders,
   projects,
-  clients,
-  projectTypes,
-  projectPhases,
+  vendors,
+  workTypes,
+  projectFilter,
   error,
 }: {
-  projects: ProjectRow[]
-  clients: ClientOption[]
-  projectTypes: CatalogOption[]
-  projectPhases: CatalogOption[]
+  orders: PurchaseOrderRow[]
+  projects: ProjectOption[]
+  vendors: VendorOption[]
+  workTypes: string[]
+  projectFilter: ProjectFilter | null
   error: string | null
 }) {
   const visibility = useSyncExternalStore(
@@ -97,15 +97,17 @@ export function ProjectsTable({
     getColumnServerSnapshot,
   )
   const [sort, setSort] = useState<SortState>({
-    key: "name",
-    direction: "asc",
+    key: "issuedOn",
+    direction: "desc",
   })
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
-  const [formProject, setFormProject] = useState<ProjectRow | null>(null)
+  const [formOrder, setFormOrder] = useState<PurchaseOrderRow | null>(null)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [pendingDelete, setPendingDelete] = useState<ProjectRow | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<PurchaseOrderRow | null>(
+    null,
+  )
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
@@ -114,11 +116,11 @@ export function ProjectsTable({
   )
   const columnCount = visibleColumns.length + 1
   const sorted = useMemo(
-    () => sortProjects(projects, sort),
-    [projects, sort],
+    () => sortPurchaseOrders(orders, sort),
+    [orders, sort],
   )
   const pageResult = useMemo(
-    () => paginateProjects(sorted, page),
+    () => paginatePurchaseOrders(sorted, page),
     [sorted, page],
   )
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
@@ -137,15 +139,15 @@ export function ProjectsTable({
     setPage(1)
   }
 
-  function openForm(project: ProjectRow | null) {
-    setFormProject(project)
+  function openForm(order: PurchaseOrderRow | null) {
+    setFormOrder(order)
     setFormSession((current) => current + 1)
     setFormOpen(true)
   }
 
-  function askDelete(project: ProjectRow) {
+  function askDelete(order: PurchaseOrderRow) {
     setDeleteError(null)
-    setPendingDelete(project)
+    setPendingDelete(order)
     setDeleteOpen(true)
   }
 
@@ -157,7 +159,7 @@ export function ProjectsTable({
     const id = pendingDelete.id
     startDelete(async () => {
       try {
-        const result = await deleteProject(id)
+        const result = await deletePurchaseOrder(id)
         if (result.error) {
           setDeleteError(result.error)
           return
@@ -166,7 +168,7 @@ export function ProjectsTable({
         setDeleteOpen(false)
         setDeleteError(null)
       } catch {
-        setDeleteError("Could not delete this project.")
+        setDeleteError("Could not delete this purchase order.")
       }
     })
   }
@@ -174,7 +176,22 @@ export function ProjectsTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Projects</h1>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="text-2xl font-medium tracking-tight">
+            Purchase Orders
+          </h1>
+          {projectFilter ? (
+            <p className="text-sm text-muted-foreground">
+              For {projectFilter.name || "this project"}.{" "}
+              <Link
+                href="/purchase-orders"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Show all
+              </Link>
+            </p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -210,7 +227,7 @@ export function ProjectsTable({
           </DropdownMenu>
           <Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
-            Add New Project
+            Assign Purchase Order
           </Button>
         </div>
       </div>
@@ -284,26 +301,29 @@ export function ProjectsTable({
                   colSpan={columnCount}
                   className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
                 >
-                  No projects yet.
+                  {projectFilter
+                    ? "No purchase orders for this project."
+                    : "No purchase orders yet."}
                 </TableCell>
               </TableRow>
             ) : (
-              pageResult.rows.map((project) => (
-                <TableRow key={project.id} className="group">
+              pageResult.rows.map((order) => (
+                <TableRow key={order.id} className="group">
                   {visibleColumns.map((column) => (
                     <TableCell
                       key={column.id}
                       className={cn(
                         "p-3 text-sm",
                         column.align === "right" && "text-right",
+                        column.id === "vendorName" && "whitespace-normal",
                       )}
                     >
-                      <CellValue project={project} columnId={column.id} />
+                      <CellValue order={order} columnId={column.id} />
                     </TableCell>
                   ))}
                   <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
                     <RowActions
-                      project={project}
+                      order={order}
                       onEdit={openForm}
                       onDelete={askDelete}
                     />
@@ -315,14 +335,14 @@ export function ProjectsTable({
         </Table>
         <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            {projectRangeLabel(
+            {purchaseOrderRangeLabel(
               pageResult.rangeStart,
               pageResult.rangeEnd,
               pageResult.total,
             )}
           </p>
           <Pagination
-            aria-label="Projects pagination"
+            aria-label="Purchase orders pagination"
             className="mx-0 w-auto justify-start sm:justify-end"
           >
             <PaginationContent className="flex-wrap">
@@ -379,14 +399,15 @@ export function ProjectsTable({
         </div>
       </div>
 
-      <ProjectFormDialog
+      <PurchaseOrderFormDialog
         key={formSession}
         open={formOpen}
         onOpenChange={setFormOpen}
-        project={formProject}
-        clients={clients}
-        projectTypes={projectTypes}
-        projectPhases={projectPhases}
+        purchaseOrder={formOrder}
+        projects={projects}
+        vendors={vendors}
+        workTypes={workTypes}
+        defaultProjectId={projectFilter?.id ?? null}
       />
 
       <AlertDialog
@@ -402,7 +423,7 @@ export function ProjectsTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete project</AlertDialogTitle>
+            <AlertDialogTitle>Delete purchase order</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure to delete this item? If yes, Press and Hold
             </AlertDialogDescription>
@@ -429,151 +450,62 @@ export function ProjectsTable({
 }
 
 function CellValue({
-  project,
+  order,
   columnId,
 }: {
-  project: ProjectRow
+  order: PurchaseOrderRow
   columnId: ColumnId
 }) {
   switch (columnId) {
-    case "name":
+    case "issuedOn":
+      return order.issuedOn ? (
+        <span>{formatPurchaseOrderDate(order.issuedOn)}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "projectName":
+      return order.projectName ? (
+        <span className="font-medium">{order.projectName}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "vendorName":
       return (
-        <span
-          className={cn(
-            "font-medium",
-            !project.name && "text-muted-foreground",
-          )}
-        >
-          {project.name || "—"}
-        </span>
-      )
-    case "clientName":
-      return project.clientName ? (
-        <span>{project.clientName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "location":
-      return project.location ? (
-        <span>{project.location}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "startedOn":
-      return project.startedOn ? (
-        <span>{formatProjectDate(project.startedOn)}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "projectType":
-      return project.projectType ? (
-        <span>{project.projectType}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "status":
-      return <StatusValue status={project.status} />
-    case "phase":
-      return project.phase ? (
-        <PhaseValue phase={project.phase} />
-      ) : (
-        <span className="text-muted-foreground">—</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "font-medium",
+              !order.vendorName && "text-muted-foreground",
+            )}
+          >
+            {order.vendorName || "—"}
+          </span>
+          {order.workType ? (
+            <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
+              {order.workType}
+            </Badge>
+          ) : null}
+        </div>
       )
     case "totalValue":
-      return <MoneyValue value={project.totalValue} />
     case "totalPaid":
+    case "totalPending":
       return (
-        <MoneyWithPercent
-          amount={project.totalPaid}
-          part={project.totalPaid}
-          total={project.totalValue}
-        />
-      )
-    case "totalDue":
-      return <MoneyValue value={project.totalDue} />
-    case "expenseTotal":
-      return <MoneyValue value={project.expenseTotal} />
-    case "expenseDue":
-      return <MoneyValue value={project.expenseDue} />
-    case "grossProfit":
-      return (
-        <MoneyWithPercent
-          amount={project.grossProfit}
-          part={project.grossProfit}
-          total={project.totalValue}
-        />
+        <span className="tabular-nums">{formatMoney(order[columnId])}</span>
       )
   }
-}
-
-function MoneyValue({ value }: { value: number }) {
-  return <span className="tabular-nums">{formatMoney(value)}</span>
-}
-
-function MoneyWithPercent({
-  amount,
-  part,
-  total,
-}: {
-  amount: number
-  part: number
-  total: number
-}) {
-  return (
-    <span className="flex flex-col items-end gap-0.5 leading-tight">
-      <span className="tabular-nums">{formatMoney(amount)}</span>
-      <span className="text-muted-foreground tabular-nums">
-        {formatPercent(part, total)}
-      </span>
-    </span>
-  )
-}
-
-const pillClassName =
-  "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
-
-function StatusValue({ status }: { status: ProjectRow["status"] }) {
-  if (status === "active") {
-    return (
-      <Badge
-        variant="secondary"
-        className={cn(pillClassName, "bg-muted text-muted-foreground")}
-      >
-        <LoaderCircle aria-hidden="true" />
-        {statusLabel(status)}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge
-      variant="secondary"
-      className={cn(pillClassName, "bg-primary/10 text-primary")}
-    >
-      <Check aria-hidden="true" />
-      {statusLabel(status)}
-    </Badge>
-  )
-}
-
-function PhaseValue({ phase }: { phase: string }) {
-  return (
-    <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-      {phase}
-    </Badge>
-  )
 }
 
 function RowActions({
-  project,
+  order,
   onEdit,
   onDelete,
 }: {
-  project: ProjectRow
-  onEdit: (project: ProjectRow) => void
-  onDelete: (project: ProjectRow) => void
+  order: PurchaseOrderRow
+  onEdit: (order: PurchaseOrderRow) => void
+  onDelete: (order: PurchaseOrderRow) => void
 }) {
-  const label = project.name || "project"
+  const label = order.vendorName || order.projectName || "purchase order"
 
   return (
     <DropdownMenu>
@@ -589,25 +521,13 @@ function RowActions({
       >
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onClick={() => onEdit(project)}>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={() => onEdit(order)}>
           <Pencil aria-hidden="true" />
           Edit
         </DropdownMenuItem>
-        <DropdownMenuItem
-          nativeButton={false}
-          render={
-            <Link href={`/purchase-orders?project=${project.id}`} />
-          }
-        >
-          <Receipt aria-hidden="true" />
-          Purchase orders
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => onDelete(project)}
-        >
+        <DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>
           <Trash2 aria-hidden="true" />
           Delete
         </DropdownMenuItem>

@@ -96,7 +96,6 @@ export type Database = {
           payment_method: string | null
           project_id: string | null
           source_kind: Database["public"]["Enums"]["bank_source_kind"]
-          transaction_code: string
           transaction_date: string
           vat_tax_payment_id: string | null
           vendor_payment_id: string | null
@@ -113,7 +112,6 @@ export type Database = {
           payment_method?: string | null
           project_id?: string | null
           source_kind: Database["public"]["Enums"]["bank_source_kind"]
-          transaction_code: string
           transaction_date?: string
           vat_tax_payment_id?: string | null
           vendor_payment_id?: string | null
@@ -130,7 +128,6 @@ export type Database = {
           payment_method?: string | null
           project_id?: string | null
           source_kind?: Database["public"]["Enums"]["bank_source_kind"]
-          transaction_code?: string
           transaction_date?: string
           vat_tax_payment_id?: string | null
           vendor_payment_id?: string | null
@@ -275,7 +272,6 @@ export type Database = {
           description: string | null
           due_on: string | null
           id: string
-          invoice_code: string
           issued_on: string
           project_id: string
           status: Database["public"]["Enums"]["payment_status"]
@@ -288,7 +284,6 @@ export type Database = {
           description?: string | null
           due_on?: string | null
           id?: string
-          invoice_code: string
           issued_on?: string
           project_id: string
           status?: Database["public"]["Enums"]["payment_status"]
@@ -301,7 +296,6 @@ export type Database = {
           description?: string | null
           due_on?: string | null
           id?: string
-          invoice_code?: string
           issued_on?: string
           project_id?: string
           status?: Database["public"]["Enums"]["payment_status"]
@@ -684,7 +678,6 @@ export type Database = {
           category: string
           created_at: string
           department_id: string | null
-          expense_code: string
           expense_date: string
           id: string
           notes: string | null
@@ -697,7 +690,6 @@ export type Database = {
           category: string
           created_at?: string
           department_id?: string | null
-          expense_code: string
           expense_date?: string
           id?: string
           notes?: string | null
@@ -710,7 +702,6 @@ export type Database = {
           category?: string
           created_at?: string
           department_id?: string | null
-          expense_code?: string
           expense_date?: string
           id?: string
           notes?: string | null
@@ -846,7 +837,6 @@ export type Database = {
           paid_on: string | null
           period_month: number
           period_year: number
-          run_code: string
           status: string
         }
         Insert: {
@@ -856,7 +846,6 @@ export type Database = {
           paid_on?: string | null
           period_month: number
           period_year: number
-          run_code: string
           status?: string
         }
         Update: {
@@ -866,7 +855,6 @@ export type Database = {
           paid_on?: string | null
           period_month?: number
           period_year?: number
-          run_code?: string
           status?: string
         }
         Relationships: []
@@ -1040,7 +1028,6 @@ export type Database = {
           paid_on: string
           payment_method: string | null
           project_id: string
-          vat_tax_code: string
         }
         Insert: {
           amount: number
@@ -1050,7 +1037,6 @@ export type Database = {
           paid_on?: string
           payment_method?: string | null
           project_id: string
-          vat_tax_code: string
         }
         Update: {
           amount?: number
@@ -1060,7 +1046,6 @@ export type Database = {
           paid_on?: string
           payment_method?: string | null
           project_id?: string
-          vat_tax_code?: string
         }
         Relationships: [
           {
@@ -1093,7 +1078,6 @@ export type Database = {
           description: string | null
           due_on: string | null
           id: string
-          invoice_code: string
           issued_on: string
           purchase_order_id: string
           status: Database["public"]["Enums"]["payment_status"]
@@ -1105,7 +1089,6 @@ export type Database = {
           description?: string | null
           due_on?: string | null
           id?: string
-          invoice_code: string
           issued_on?: string
           purchase_order_id: string
           status?: Database["public"]["Enums"]["payment_status"]
@@ -1117,7 +1100,6 @@ export type Database = {
           description?: string | null
           due_on?: string | null
           id?: string
-          invoice_code?: string
           issued_on?: string
           purchase_order_id?: string
           status?: Database["public"]["Enums"]["payment_status"]
@@ -1225,7 +1207,6 @@ export type Database = {
           id: string
           issued_on: string
           notes: string | null
-          po_code: string
           project_id: string
           total_value: number
           updated_at: string
@@ -1237,7 +1218,6 @@ export type Database = {
           id?: string
           issued_on?: string
           notes?: string | null
-          po_code: string
           project_id: string
           total_value?: number
           updated_at?: string
@@ -1249,7 +1229,6 @@ export type Database = {
           id?: string
           issued_on?: string
           notes?: string | null
-          po_code?: string
           project_id?: string
           total_value?: number
           updated_at?: string
@@ -1379,14 +1358,12 @@ export type Database = {
     Views: {
       accounts_payable: {
         Row: {
-          ap_code: string | null
           created_at: string | null
           current_status: Database["public"]["Enums"]["payment_status"] | null
           due_date: string | null
           id: string | null
           issued_on: string | null
           pending_payable: number | null
-          po_code: string | null
           project_id: string | null
           project_name: string | null
           purchase_order_id: string | null
@@ -1422,7 +1399,6 @@ export type Database = {
       accounts_payable_aging: {
         Row: {
           aging_bucket: string | null
-          ap_code: string | null
           created_at: string | null
           current_status: Database["public"]["Enums"]["payment_status"] | null
           days_past_due: number | null
@@ -1430,7 +1406,6 @@ export type Database = {
           id: string | null
           issued_on: string | null
           pending_payable: number | null
-          po_code: string | null
           project_id: string | null
           project_name: string | null
           purchase_order_id: string | null
@@ -1465,7 +1440,6 @@ export type Database = {
       }
       accounts_receivable: {
         Row: {
-          ar_code: string | null
           billed_amount: number | null
           client_id: string | null
           client_name: string | null
@@ -1506,7 +1480,6 @@ export type Database = {
       accounts_receivable_aging: {
         Row: {
           aging_bucket: string | null
-          ar_code: string | null
           billed_amount: number | null
           client_id: string | null
           client_name: string | null
@@ -1626,7 +1599,6 @@ export type Database = {
           project_id: string | null
           project_name: string | null
           source_kind: Database["public"]["Enums"]["bank_source_kind"] | null
-          transaction_code: string | null
           transaction_date: string | null
           vat_tax_payment_id: string | null
           vendor_payment_id: string | null
@@ -1788,7 +1760,6 @@ export type Database = {
           client_name: string | null
           created_at: string | null
           income_id: string | null
-          invoice_code: string | null
           invoice_id: string | null
           paid_on: string | null
           payment_method: string | null
@@ -1974,7 +1945,6 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string | null
-          expense_code: string | null
           expense_date: string | null
           notes: string | null
           operational_expense_id: string | null
@@ -2025,7 +1995,6 @@ export type Database = {
           expense_id: string | null
           notes: string | null
           payment_method: string | null
-          po_code: string | null
           po_id: string | null
           project_id: string | null
           project_name: string | null
@@ -2110,7 +2079,6 @@ export type Database = {
           payment_method: string | null
           project_id: string | null
           project_name: string | null
-          vat_tax_code: string | null
           vat_tax_id: string | null
           vat_tax_paid: number | null
         }
@@ -2140,7 +2108,6 @@ export type Database = {
       }
       vendor_po_balances: {
         Row: {
-          po_code: string | null
           project_id: string | null
           purchase_order_id: string | null
           total_paid: number | null
