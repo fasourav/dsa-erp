@@ -1,7 +1,10 @@
 "use client"
 
 import {
+  ArrowDownLeft,
+  ArrowUpRight,
   Contact,
+  FileText,
   FolderKanban,
   Landmark,
   LayoutDashboard,
@@ -12,6 +15,7 @@ import {
   Truck,
   UserPlus,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react"
 import Link from "next/link"
@@ -27,7 +31,11 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
   { href: "/leads", label: "Leads", icon: UserPlus },
-  { href: "/finance", label: "Finance", icon: Landmark },
+  { href: "/accounts/receivable", label: "Accounts Receivable", icon: ArrowDownLeft },
+  { href: "/accounts/payable", label: "Accounts Payable", icon: ArrowUpRight },
+  { href: "/accounts/invoices", label: "Client Invoices", icon: FileText },
+  { href: "/accounts/expenses", label: "Operational Expenses", icon: Wallet },
+  { href: "/accounts/bank", label: "Bank", icon: Landmark },
   { href: "/hr", label: "HR", icon: Contact },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
@@ -85,30 +93,39 @@ export function AppSidebar({
           collapsed ? "hidden md:flex" : "flex",
         )}
       >
-        {navItems.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`)
-          const Icon = item.icon
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.label : undefined}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                active &&
-                  "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
-                collapsed && "md:justify-center md:px-2",
-              )}
-            >
-              <Icon aria-hidden="true" className="size-4" />
-              <span className={cn(collapsed && "md:sr-only")}>{item.label}</span>
-            </Link>
-          )
-        })}
+        {navItems.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+        ))}
       </nav>
     </aside>
+  )
+}
+
+function NavLink({
+  item,
+  pathname,
+  collapsed,
+}: {
+  item: { href: string; label: string; icon: LucideIcon }
+  pathname: string
+  collapsed: boolean
+}) {
+  const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+  const Icon = item.icon
+
+  return (
+    <Link
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+        collapsed && "md:justify-center md:px-2",
+      )}
+    >
+      <Icon aria-hidden="true" className="size-4" />
+      <span className={cn(collapsed && "md:sr-only")}>{item.label}</span>
+    </Link>
   )
 }
