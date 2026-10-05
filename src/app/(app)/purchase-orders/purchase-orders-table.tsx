@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns3,
+  FileText,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -521,10 +522,17 @@ function RowActions({
       >
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
+      <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuItem onClick={() => onEdit(order)}>
           <Pencil aria-hidden="true" />
           Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          nativeButton={false}
+          render={<Link href={`/purchase-orders/${order.id}`} />}
+        >
+          <FileText aria-hidden="true" />
+          Invoices
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>

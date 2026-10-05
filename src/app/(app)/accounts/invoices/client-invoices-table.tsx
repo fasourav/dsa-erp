@@ -1,0 +1,287 @@
+"use client"
+
+import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
+import Link from "next/link"
+import { useMemo, useState, useTransition } from "react"
+
+import { deleteClientInvoice } from "@/app/(app)/accounts/invoices/actions"
+import { ClientInvoiceFormDialog } from "@/app/(app)/accounts/invoices/client-invoice-form-dialog"
+import { ClientPaymentsDialog } from "@/app/(app)/accounts/invoices/client-payments-dialog"
+import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { PaymentStatusBadge } from "@/components/payment-status-badge"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { clientInvoiceColumnStore } from "@/lib/client-invoice-column-store"
+import {
+  clientInvoiceColumns,
+  sortClientInvoices,
+  type ClientInvoiceColumnId,
+  type ClientInvoiceRow,
+  type InvoiceProjectOption,
+} from "@/lib/client-invoice-summary"
+import type { InvoiceProjectFilter } from "@/lib/client-invoices"
+import { formatIsoDate, formatMoney } from "@/lib/format"
+import {
+  paginateRows,
+  rangeLabel,
+  toggleSort,
+  type SortState,
+} from "@/lib/list-paging"
+import { useColumnVisibility } from "@/lib/use-column-visibility"
+
+export function ClientInvoicesTable({
+  invoices,
+  projects,
+  paymentMethods,
+  projectFilter,
+  error,
+}: {
+  invoices: ClientInvoiceRow[]
+  projects: InvoiceProjectOption[]
+  paymentMethods: string[]
+  projectFilter: InvoiceProjectFilter | null
+  error: string | null
+}) {
+  const visibility = useColumnVisibility(clientInvoiceColumnStore)
+  const [sort, setSort] = useState<SortState<ClientInvoiceColumnId>>({
+    key: "issuedOn",
+    direction: "desc",
+  })
+  const [page, setPage] = useState(1)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
+  const [formSession, setFormSession] = useState(0)
+  const [paymentsOpen, setPaymentsOpen] = useState(false)
+  const [paymentsInvoiceId, setPaymentsInvoiceId] = useState<string | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<ClientInvoiceRow | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, startDelete] = useTransition()
+
+  const sorted = useMemo(
+    () => sortClientInvoices(invoices, sort),
+    [invoices, sort],
+  )
+  const pageResult = paginateRows(sorted, page)
+  const paymentsInvoice =
+    invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
+
+  function changeVisibility(id: ClientInvoiceColumnId, checked: boolean) {
+    if (id === "issuedOn" || id === "projectName" || id === "clientName") {
+      return
+    }
+
+    clientInvoiceColumnStore.write({ ...visibility, [id]: checked })
+  }
+
+  function openForm(invoice: ClientInvoiceRow | null) {
+    setFormInvoice(invoice)
+    setFormSession((current) => current + 1)
+    setFormOpen(true)
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) {
+      return
+    }
+
+    const id = pendingDelete.id
+    startDelete(async () => {
+      try {
+        const result = await deleteClientInvoice(id)
+        if (result.error) {
+          setDeleteError(result.error)
+          return
+        }
+
+        setDeleteOpen(false)
+        setDeleteError(null)
+      } catch {
+        setDeleteError("Could not delete this invoice.")
+      }
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-1">
+        <h1 className="text-2xl font-medium tracking-tight">Client invoices</h1>
+        {projectFilter ? (
+          <p className="text-sm text-muted-foreground">
+            For {projectFilter.name || "this project"}.{" "}
+            <Link
+              href="/accounts/invoices"
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              Show all
+            </Link>
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Open a project and choose Client invoices to start from that project.
+          </p>
+        )}
+      </div>
+      <DataList
+        columns={clientInvoiceColumns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(invoice) => invoice.id}
+        sort={sort}
+        onSort={(key) => {
+          setSort((current) => toggleSort(current, key))
+          setPage(1)
+        }}
+        visibility={visibility}
+        error={error}
+        emptyMessage={
+          projectFilter
+            ? "No client invoices for this project."
+            : "No client invoices yet."
+        }
+        rangeText={rangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+          "invoice",
+          "invoices",
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Client invoices pagination"
+        toolbar={
+          <>
+            <CustomizeColumns
+              columns={clientInvoiceColumns}
+              visibility={visibility}
+              onVisibilityChange={changeVisibility}
+            />
+            <Button type="button" onClick={() => openForm(null)}>
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Add invoice
+            </Button>
+          </>
+        }
+        renderCell={(invoice, columnId) => (
+          <InvoiceCell invoice={invoice} columnId={columnId} />
+        )}
+        renderActions={(invoice) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Actions for ${invoice.projectName || "client invoice"}`}
+                />
+              }
+            >
+              <MoreHorizontal aria-hidden="true" className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => openForm(invoice)}>
+                <Pencil aria-hidden="true" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setPaymentsInvoiceId(invoice.id)
+                  setPaymentsOpen(true)
+                }}
+              >
+                <Wallet aria-hidden="true" />
+                Payments
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => {
+                  setDeleteError(null)
+                  setPendingDelete(invoice)
+                  setDeleteOpen(true)
+                }}
+              >
+                <Trash2 aria-hidden="true" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      />
+      <ClientInvoiceFormDialog
+        key={formSession}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        invoice={formInvoice}
+        projects={projects}
+        defaultProjectId={projectFilter?.id ?? null}
+      />
+      <ClientPaymentsDialog
+        open={paymentsOpen}
+        onOpenChange={setPaymentsOpen}
+        invoice={paymentsInvoice}
+        paymentMethods={paymentMethods}
+      />
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen || deleting) {
+            return
+          }
+
+          setDeleteOpen(false)
+          setDeleteError(null)
+        }}
+        title="Delete client invoice"
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
+    </div>
+  )
+}
+
+function InvoiceCell({
+  invoice,
+  columnId,
+}: {
+  invoice: ClientInvoiceRow
+  columnId: ClientInvoiceColumnId
+}) {
+  switch (columnId) {
+    case "issuedOn":
+    case "dueOn":
+      return invoice[columnId] ? (
+        <span>{formatIsoDate(invoice[columnId])}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "projectName":
+    case "clientName":
+    case "description":
+      return invoice[columnId] ? (
+        <span className={columnId === "description" ? undefined : "font-medium"}>
+          {invoice[columnId]}
+        </span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "amount":
+    case "paid":
+    case "balance":
+      return (
+        <span className="tabular-nums">{formatMoney(invoice[columnId])}</span>
+      )
+    case "status":
+      return <PaymentStatusBadge status={invoice.status} />
+  }
+}

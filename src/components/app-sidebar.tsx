@@ -1,7 +1,10 @@
 "use client"
 
 import {
+  ArrowDownLeft,
+  ArrowUpRight,
   Contact,
+  FileText,
   FolderKanban,
   Landmark,
   LayoutDashboard,
@@ -12,6 +15,7 @@ import {
   Truck,
   UserPlus,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react"
 import Link from "next/link"
@@ -20,14 +24,24 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-const navItems: { href: string; label: string; icon: LucideIcon }[] = [
+const leadingItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
   { href: "/leads", label: "Leads", icon: UserPlus },
-  { href: "/finance", label: "Finance", icon: Landmark },
+]
+
+const accountItems: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/accounts/receivable", label: "Receivable", icon: ArrowDownLeft },
+  { href: "/accounts/payable", label: "Payable", icon: ArrowUpRight },
+  { href: "/accounts/invoices", label: "Client Invoices", icon: FileText },
+  { href: "/accounts/expenses", label: "Operational Expenses", icon: Wallet },
+  { href: "/accounts/bank", label: "Bank", icon: Landmark },
+]
+
+const trailingItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/hr", label: "HR", icon: Contact },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
@@ -85,30 +99,62 @@ export function AppSidebar({
           collapsed ? "hidden md:flex" : "flex",
         )}
       >
-        {navItems.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`)
-          const Icon = item.icon
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.label : undefined}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                active &&
-                  "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
-                collapsed && "md:justify-center md:px-2",
-              )}
-            >
-              <Icon aria-hidden="true" className="size-4" />
-              <span className={cn(collapsed && "md:sr-only")}>{item.label}</span>
-            </Link>
-          )
-        })}
+        {leadingItems.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+        ))}
+        <p
+          className={cn(
+            "shrink-0 px-3 pt-3 text-sm text-sidebar-foreground/60",
+            collapsed && "md:sr-only",
+          )}
+        >
+          Accounts
+        </p>
+        {accountItems.map((item) => (
+          <NavLink
+            key={item.href}
+            item={item}
+            pathname={pathname}
+            collapsed={collapsed}
+            nested
+          />
+        ))}
+        {trailingItems.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+        ))}
       </nav>
     </aside>
+  )
+}
+
+function NavLink({
+  item,
+  pathname,
+  collapsed,
+  nested = false,
+}: {
+  item: { href: string; label: string; icon: LucideIcon }
+  pathname: string
+  collapsed: boolean
+  nested?: boolean
+}) {
+  const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+  const Icon = item.icon
+
+  return (
+    <Link
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+        collapsed && "md:justify-center md:px-2",
+        nested && !collapsed && "md:ml-3",
+      )}
+    >
+      <Icon aria-hidden="true" className="size-4" />
+      <span className={cn(collapsed && "md:sr-only")}>{item.label}</span>
+    </Link>
   )
 }

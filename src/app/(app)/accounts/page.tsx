@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
-export default function FinancePage() {
+export default function AccountsPage() {
   redirect("/accounts/receivable")
 }

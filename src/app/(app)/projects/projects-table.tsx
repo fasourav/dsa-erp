@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns3,
+  FileText,
   LoaderCircle,
   MoreHorizontal,
   Pencil,
@@ -593,6 +594,13 @@ function RowActions({
         <DropdownMenuItem onClick={() => onEdit(project)}>
           <Pencil aria-hidden="true" />
           Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          nativeButton={false}
+          render={<Link href={`/accounts/invoices?project=${project.id}`} />}
+        >
+          <FileText aria-hidden="true" />
+          Client invoices
         </DropdownMenuItem>
         <DropdownMenuItem
           nativeButton={false}
