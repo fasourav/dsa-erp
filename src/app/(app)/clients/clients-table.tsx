@@ -1,9 +1,6 @@
 "use client"
 
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -251,16 +248,12 @@ export function ClientsTable({
                         onClick={() => toggleSort(column.id)}
                       >
                         {column.label}
-                        <SortIcon
-                          active={active}
-                          direction={sort.direction}
-                        />
                       </Button>
                     </div>
                   </TableHead>
                 )
               })}
-              <TableHead className="sticky right-0 z-10 w-16 border-l border-border bg-muted">
+              <TableHead className="sticky right-0 z-10 w-16 bg-muted">
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
@@ -300,7 +293,7 @@ export function ClientsTable({
                       />
                     </TableCell>
                   ))}
-                  <TableCell className="sticky right-0 z-10 w-16 border-l border-border bg-card group-hover:bg-muted">
+                  <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
                     <RowActions
                       client={client}
                       onEdit={openForm}
@@ -519,27 +512,4 @@ function RowActions({
   )
 }
 
-function SortIcon({
-  active,
-  direction,
-}: {
-  active: boolean
-  direction: SortState["direction"]
-}) {
-  if (!active) {
-    return (
-      <ArrowUpDown
-        aria-hidden="true"
-        className="text-muted-foreground"
-        data-icon="inline-end"
-      />
-    )
-  }
-
-  if (direction === "asc") {
-    return <ArrowUp aria-hidden="true" data-icon="inline-end" />
-  }
-
-  return <ArrowDown aria-hidden="true" data-icon="inline-end" />
-}
 
