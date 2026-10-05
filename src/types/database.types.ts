@@ -1342,36 +1342,36 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
-          kind: Database["public"]["Enums"]["party_kind"]
+          kind: Database["public"]["Enums"]["vendor_kind"]
           notes: string | null
           person_name: string | null
           phone: string | null
           updated_at: string
-          vendor_type: string | null
+          vendor_field: string | null
         }
         Insert: {
           company_name?: string | null
           created_at?: string
           email?: string | null
           id?: string
-          kind: Database["public"]["Enums"]["party_kind"]
+          kind: Database["public"]["Enums"]["vendor_kind"]
           notes?: string | null
           person_name?: string | null
           phone?: string | null
           updated_at?: string
-          vendor_type?: string | null
+          vendor_field?: string | null
         }
         Update: {
           company_name?: string | null
           created_at?: string
           email?: string | null
           id?: string
-          kind?: Database["public"]["Enums"]["party_kind"]
+          kind?: Database["public"]["Enums"]["vendor_kind"]
           notes?: string | null
           person_name?: string | null
           phone?: string | null
           updated_at?: string
-          vendor_type?: string | null
+          vendor_field?: string | null
         }
         Relationships: []
       }
@@ -2210,12 +2210,12 @@ export type Database = {
       vendor_summaries: {
         Row: {
           display_name: string | null
-          kind: Database["public"]["Enums"]["party_kind"] | null
+          kind: Database["public"]["Enums"]["vendor_kind"] | null
           total_due: number | null
           total_paid: number | null
           total_po_value: number | null
+          vendor_field: string | null
           vendor_id: string | null
-          vendor_type: string | null
         }
         Relationships: []
       }
@@ -2236,6 +2236,7 @@ export type Database = {
       party_kind: "person" | "company"
       payment_status: "unpaid" | "partial" | "paid" | "void"
       project_status: "active" | "completed"
+      vendor_kind: "private" | "company"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2376,6 +2377,7 @@ export const Constants = {
       party_kind: ["person", "company"],
       payment_status: ["unpaid", "partial", "paid", "void"],
       project_status: ["active", "completed"],
+      vendor_kind: ["private", "company"],
     },
   },
 } as const
