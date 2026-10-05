@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogFooter,
@@ -168,14 +169,14 @@ export function ProjectFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>
             {projectId ? "Edit project" : "Add New Project"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <DialogBody className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="project-name">Name</Label>
             <Input
@@ -382,7 +383,7 @@ export function ProjectFormDialog({
               {formError}
             </p>
           ) : null}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <DialogClose

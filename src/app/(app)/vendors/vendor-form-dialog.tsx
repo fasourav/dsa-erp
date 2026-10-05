@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/combobox"
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogFooter,
@@ -266,14 +267,14 @@ export function VendorFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>
             {vendorId ? "Edit vendor" : "Add New Vendor"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <DialogBody className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium">Vendor Type</span>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
@@ -411,7 +412,7 @@ export function VendorFormDialog({
               {formError}
             </p>
           ) : null}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <DialogClose

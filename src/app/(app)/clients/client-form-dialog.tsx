@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -257,7 +258,7 @@ export function ClientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>{clientId ? "Edit client" : "Add new client"}</DialogTitle>
           <DialogDescription>
@@ -266,7 +267,7 @@ export function ClientFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <DialogBody className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div className="flex flex-1 flex-col gap-2">
               <Label htmlFor="client-name">Name</Label>
@@ -396,7 +397,7 @@ export function ClientFormDialog({
               {formError}
             </p>
           ) : null}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <DialogClose
