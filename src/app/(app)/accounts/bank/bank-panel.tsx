@@ -1,14 +1,10 @@
 "use client"
 
-import { List, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
-import {
-  deleteBankAccount,
-  deleteBankTransaction,
-} from "@/app/(app)/accounts/bank/actions"
-import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
+import { deleteBankTransaction } from "@/app/(app)/accounts/bank/actions"
 import { BankTransactionFormDialog } from "@/app/(app)/accounts/bank/bank-transaction-form-dialog"
 import { CustomizeColumns, DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
@@ -22,22 +18,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  bankAccountColumns,
-  bankDirectionLabel,
+  bankFlowLabel,
   bankSourceLabel,
   bankTransactionColumns,
-  sortBankAccounts,
   sortBankTransactions,
   type AccountFilter,
-  type BankAccountColumnId,
   type BankAccountRow,
   type BankTransactionColumnId,
   type BankTransactionRow,
 } from "@/lib/bank"
-import {
-  bankAccountColumnStore,
-  bankTransactionColumnStore,
-} from "@/lib/bank-column-store"
+import { bankTransactionColumnStore } from "@/lib/bank-column-store"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
@@ -50,7 +40,6 @@ import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { cn } from "@/lib/utils"
 
 const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
-const accountLocked = new Set<BankAccountColumnId>(["name"])
 const transactionLocked = new Set<BankTransactionColumnId>([
   "transactionDate",
   "accountName",
@@ -71,209 +60,72 @@ export function BankPanel({
   accountFilter: AccountFilter | null
   error: string | null
 }) {
-  const accountVisibility = useColumnVisibility(bankAccountColumnStore)
-  const transactionVisibility = useColumnVisibility(bankTransactionColumnStore)
-  const [accountSort, setAccountSort] = useState<SortState<BankAccountColumnId>>({
-    key: "name",
-    direction: "asc",
+  const visibility = useColumnVisibility(bankTransactionColumnStore)
+  const [sort, setSort] = useState<SortState<BankTransactionColumnId>>({
+    key: "transactionDate",
+    direction: "desc",
   })
-  const [transactionSort, setTransactionSort] = useState<
-    SortState<BankTransactionColumnId>
-  >({ key: "transactionDate", direction: "desc" })
-  const [accountPage, setAccountPage] = useState(1)
-  const [transactionPage, setTransactionPage] = useState(1)
-  const [accountFormOpen, setAccountFormOpen] = useState(false)
-  const [formAccount, setFormAccount] = useState<BankAccountRow | null>(null)
-  const [accountFormSession, setAccountFormSession] = useState(0)
-  const [transactionFormOpen, setTransactionFormOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [formOpen, setFormOpen] = useState(false)
   const [formTransaction, setFormTransaction] = useState<BankTransactionRow | null>(
     null,
   )
-  const [transactionFormSession, setTransactionFormSession] = useState(0)
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
-  const [pendingAccount, setPendingAccount] = useState<BankAccountRow | null>(null)
-  const [accountDeleteError, setAccountDeleteError] = useState<string | null>(null)
-  const [deletingAccount, startDeleteAccount] = useTransition()
-  const [deleteTransactionOpen, setDeleteTransactionOpen] = useState(false)
-  const [pendingTransaction, setPendingTransaction] =
-    useState<BankTransactionRow | null>(null)
-  const [transactionDeleteError, setTransactionDeleteError] = useState<string | null>(
+  const [formSession, setFormSession] = useState(0)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<BankTransactionRow | null>(
     null,
   )
-  const [deletingTransaction, startDeleteTransaction] = useTransition()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, startDelete] = useTransition()
 
-  const sortedAccounts = useMemo(
-    () => sortBankAccounts(accounts, accountSort),
-    [accounts, accountSort],
+  const sorted = useMemo(
+    () => sortBankTransactions(transactions, sort),
+    [transactions, sort],
   )
-  const sortedTransactions = useMemo(
-    () => sortBankTransactions(transactions, transactionSort),
-    [transactions, transactionSort],
-  )
-  const accountPageResult = paginateRows(sortedAccounts, accountPage)
-  const transactionPageResult = paginateRows(sortedTransactions, transactionPage)
-  const accountListError = accounts.length === 0 ? error : null
-  const transactionListError = accounts.length === 0 ? null : error
+  const pageResult = paginateRows(sorted, page)
 
-  function openAccountForm(account: BankAccountRow | null) {
-    setFormAccount(account)
-    setAccountFormSession((current) => current + 1)
-    setAccountFormOpen(true)
+  function changeVisibility(id: BankTransactionColumnId, checked: boolean) {
+    if (transactionLocked.has(id)) {
+      return
+    }
+
+    bankTransactionColumnStore.write({ ...visibility, [id]: checked })
   }
 
-  function openTransactionForm(transaction: BankTransactionRow | null) {
+  function openForm(transaction: BankTransactionRow | null) {
     setFormTransaction(transaction)
-    setTransactionFormSession((current) => current + 1)
-    setTransactionFormOpen(true)
+    setFormSession((current) => current + 1)
+    setFormOpen(true)
   }
 
-  function confirmDeleteAccount() {
-    if (!pendingAccount) {
+  function confirmDelete() {
+    if (!pendingDelete) {
       return
     }
 
-    const id = pendingAccount.id
-    startDeleteAccount(async () => {
-      try {
-        const result = await deleteBankAccount(id)
-        if (result.error) {
-          setAccountDeleteError(result.error)
-          return
-        }
-
-        setDeleteAccountOpen(false)
-        setAccountDeleteError(null)
-      } catch {
-        setAccountDeleteError("Could not delete this bank account.")
-      }
-    })
-  }
-
-  function confirmDeleteTransaction() {
-    if (!pendingTransaction) {
-      return
-    }
-
-    const id = pendingTransaction.id
-    startDeleteTransaction(async () => {
+    const id = pendingDelete.id
+    startDelete(async () => {
       try {
         const result = await deleteBankTransaction(id)
         if (result.error) {
-          setTransactionDeleteError(result.error)
+          setDeleteError(result.error)
           return
         }
 
-        setDeleteTransactionOpen(false)
-        setTransactionDeleteError(null)
+        setDeleteOpen(false)
+        setDeleteError(null)
       } catch {
-        setTransactionDeleteError("Could not delete this transaction.")
+        setDeleteError("Could not delete this transaction.")
       }
     })
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4">
       <div className="flex min-w-0 flex-col gap-1">
         <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
-        <p className="text-sm text-muted-foreground">
-          Accounts and the money moving in and out of them.
-        </p>
+        <p className="text-sm text-muted-foreground">Transactions Log</p>
       </div>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-medium tracking-tight">Bank accounts</h2>
-        <DataList
-          columns={bankAccountColumns}
-          rows={accountListError ? [] : accountPageResult.rows}
-          rowKey={(account) => account.id}
-          sort={accountSort}
-          onSort={(key) => {
-            setAccountSort((current) => toggleSort(current, key))
-            setAccountPage(1)
-          }}
-          visibility={accountVisibility}
-          error={accountListError}
-          emptyMessage="No bank accounts yet."
-          rangeText={rangeLabel(
-            accountPageResult.rangeStart,
-            accountPageResult.rangeEnd,
-            accountListError ? 0 : accountPageResult.total,
-            "account",
-            "accounts",
-          )}
-          currentPage={accountPageResult.currentPage}
-          pageCount={accountPageResult.pageCount}
-          onPageChange={setAccountPage}
-          pagingLabel="Bank accounts pagination"
-          toolbar={
-            <>
-              <CustomizeColumns
-                columns={bankAccountColumns}
-                visibility={accountVisibility}
-                onVisibilityChange={(id, checked) => {
-                  if (accountLocked.has(id)) {
-                    return
-                  }
-
-                  bankAccountColumnStore.write({
-                    ...accountVisibility,
-                    [id]: checked,
-                  })
-                }}
-              />
-              <Button type="button" onClick={() => openAccountForm(null)}>
-                <Plus aria-hidden="true" data-icon="inline-start" />
-                Add account
-              </Button>
-            </>
-          }
-          renderCell={(account, columnId) => (
-            <AccountCell account={account} columnId={columnId} />
-          )}
-          renderActions={(account) => (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Actions for ${account.name || "bank account"}`}
-                  />
-                }
-              >
-                <MoreHorizontal aria-hidden="true" className="size-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem
-                  nativeButton={false}
-                  render={<Link href={`/accounts/bank?account=${account.id}`} />}
-                >
-                  <List aria-hidden="true" />
-                  Transactions
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openAccountForm(account)}>
-                  <Pencil aria-hidden="true" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    setAccountDeleteError(null)
-                    setPendingAccount(account)
-                    setDeleteAccountOpen(true)
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        />
-      </section>
-
       <section className="flex flex-col gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="text-lg font-medium tracking-tight">Transactions</h2>
@@ -291,51 +143,42 @@ export function BankPanel({
         </div>
         <DataList
           columns={bankTransactionColumns}
-          rows={transactionListError ? [] : transactionPageResult.rows}
+          rows={error ? [] : pageResult.rows}
           rowKey={(transaction) => transaction.id}
-          sort={transactionSort}
+          sort={sort}
           onSort={(key) => {
-            setTransactionSort((current) => toggleSort(current, key))
-            setTransactionPage(1)
+            setSort((current) => toggleSort(current, key))
+            setPage(1)
           }}
-          visibility={transactionVisibility}
-          error={transactionListError}
+          visibility={visibility}
+          error={error}
           emptyMessage={
             accountFilter
               ? "No transactions for this account."
               : "No bank transactions yet."
           }
           rangeText={rangeLabel(
-            transactionPageResult.rangeStart,
-            transactionPageResult.rangeEnd,
-            transactionListError ? 0 : transactionPageResult.total,
+            pageResult.rangeStart,
+            pageResult.rangeEnd,
+            error ? 0 : pageResult.total,
             "transaction",
             "transactions",
           )}
-          currentPage={transactionPageResult.currentPage}
-          pageCount={transactionPageResult.pageCount}
-          onPageChange={setTransactionPage}
+          currentPage={pageResult.currentPage}
+          pageCount={pageResult.pageCount}
+          onPageChange={setPage}
           pagingLabel="Bank transactions pagination"
           toolbar={
             <>
               <CustomizeColumns
                 columns={bankTransactionColumns}
-                visibility={transactionVisibility}
-                onVisibilityChange={(id, checked) => {
-                  if (transactionLocked.has(id)) {
-                    return
-                  }
-
-                  bankTransactionColumnStore.write({
-                    ...transactionVisibility,
-                    [id]: checked,
-                  })
-                }}
+                visibility={visibility}
+                onVisibilityChange={changeVisibility}
               />
               <Button
                 type="button"
                 disabled={accounts.length === 0}
-                onClick={() => openTransactionForm(null)}
+                onClick={() => openForm(null)}
               >
                 <Plus aria-hidden="true" data-icon="inline-start" />
                 Add transaction
@@ -360,7 +203,7 @@ export function BankPanel({
                 <MoreHorizontal aria-hidden="true" className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem onClick={() => openTransactionForm(transaction)}>
+                <DropdownMenuItem onClick={() => openForm(transaction)}>
                   <Pencil aria-hidden="true" />
                   Edit
                 </DropdownMenuItem>
@@ -368,9 +211,9 @@ export function BankPanel({
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() => {
-                    setTransactionDeleteError(null)
-                    setPendingTransaction(transaction)
-                    setDeleteTransactionOpen(true)
+                    setDeleteError(null)
+                    setPendingDelete(transaction)
+                    setDeleteOpen(true)
                   }}
                 >
                   <Trash2 aria-hidden="true" />
@@ -381,17 +224,10 @@ export function BankPanel({
           )}
         />
       </section>
-
-      <BankAccountFormDialog
-        key={accountFormSession}
-        open={accountFormOpen}
-        onOpenChange={setAccountFormOpen}
-        account={formAccount}
-      />
       <BankTransactionFormDialog
-        key={transactionFormSession}
-        open={transactionFormOpen}
-        onOpenChange={setTransactionFormOpen}
+        key={formSession}
+        open={formOpen}
+        onOpenChange={setFormOpen}
         transaction={formTransaction}
         accounts={accounts}
         projects={projects}
@@ -399,73 +235,23 @@ export function BankPanel({
         defaultAccountId={accountFilter?.id ?? null}
       />
       <DeleteConfirmDialog
-        open={deleteAccountOpen}
+        open={deleteOpen}
         onOpenChange={(nextOpen) => {
-          if (nextOpen || deletingAccount) {
+          if (nextOpen || deleting) {
             return
           }
 
-          setDeleteAccountOpen(false)
-          setAccountDeleteError(null)
-        }}
-        title="Delete bank account"
-        error={accountDeleteError}
-        pending={deletingAccount}
-        confirmKey={pendingAccount?.id}
-        onConfirm={confirmDeleteAccount}
-      />
-      <DeleteConfirmDialog
-        open={deleteTransactionOpen}
-        onOpenChange={(nextOpen) => {
-          if (nextOpen || deletingTransaction) {
-            return
-          }
-
-          setDeleteTransactionOpen(false)
-          setTransactionDeleteError(null)
+          setDeleteOpen(false)
+          setDeleteError(null)
         }}
         title="Delete bank transaction"
-        error={transactionDeleteError}
-        pending={deletingTransaction}
-        confirmKey={pendingTransaction?.id}
-        onConfirm={confirmDeleteTransaction}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
       />
     </div>
   )
-}
-
-function AccountCell({
-  account,
-  columnId,
-}: {
-  account: BankAccountRow
-  columnId: BankAccountColumnId
-}) {
-  switch (columnId) {
-    case "name":
-      return <span className="font-medium">{account.name || "—"}</span>
-    case "bankName":
-    case "currency":
-      return account[columnId] ? (
-        <span>{account[columnId]}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "isActive":
-      return (
-        <Badge
-          variant="secondary"
-          className={cn(
-            pillClassName,
-            account.isActive
-              ? "bg-primary/10 text-primary"
-              : "bg-muted text-muted-foreground",
-          )}
-        >
-          {account.isActive ? "Active" : "Inactive"}
-        </Badge>
-      )
-  }
 }
 
 function TransactionCell({
@@ -483,23 +269,31 @@ function TransactionCell({
         <span className="text-muted-foreground">—</span>
       )
     case "accountName":
-    case "projectName":
-    case "paymentMethod":
-    case "notes":
-      return transaction[columnId] ? (
-        <span className={columnId === "accountName" ? "font-medium" : undefined}>
-          {transaction[columnId]}
-        </span>
+      return transaction.accountName ? (
+        <span className="font-medium">{transaction.accountName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "direction":
-      return <span>{bankDirectionLabel(transaction.direction)}</span>
+      return (
+        <Badge
+          variant="outline"
+          className={cn(
+            pillClassName,
+            transaction.direction === "inflow"
+              ? "border-primary text-primary"
+              : "border-destructive text-destructive",
+          )}
+        >
+          {bankFlowLabel(transaction.direction)}
+        </Badge>
+      )
     case "sourceKind":
       return <span>{bankSourceLabel(transaction.sourceKind)}</span>
     case "amount":
+    case "balance":
       return (
-        <span className="tabular-nums">{formatMoney(transaction.amount)}</span>
+        <span className="tabular-nums">{formatMoney(transaction[columnId])}</span>
       )
   }
 }

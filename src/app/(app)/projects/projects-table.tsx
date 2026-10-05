@@ -600,7 +600,7 @@ function RowActions({
           render={<Link href={`/accounts/invoices?project=${project.id}`} />}
         >
           <FileText aria-hidden="true" />
-          Client invoices
+          Client Invoices
         </DropdownMenuItem>
         <DropdownMenuItem
           nativeButton={false}

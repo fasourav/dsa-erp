@@ -4,7 +4,6 @@ import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 
-import { AgingSummary } from "@/components/aging-summary"
 import { CustomizeColumns, DataList } from "@/components/data-list"
 import { PaymentStatusBadge } from "@/components/payment-status-badge"
 import { Button } from "@/components/ui/button"
@@ -21,8 +20,7 @@ import {
   type ReceivableColumnId,
   type ReceivableRow,
 } from "@/lib/accounts-receivable"
-import type { AgingSummaryRow } from "@/lib/aging"
-import { formatCount, formatIsoDate, formatMoney } from "@/lib/format"
+import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -31,15 +29,13 @@ import {
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 
-const locked = new Set<ReceivableColumnId>(["clientName", "projectName"])
+const locked = new Set<ReceivableColumnId>(["projectName", "clientName"])
 
 export function ReceivableTable({
   rows,
-  aging,
   error,
 }: {
   rows: ReceivableRow[]
-  aging: AgingSummaryRow[]
   error: string | null
 }) {
   const visibility = useColumnVisibility(receivableColumnStore)
@@ -61,16 +57,7 @@ export function ReceivableTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-2xl font-medium tracking-tight">
-          Accounts receivable
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Open invoices clients still owe. Record invoices and payments from
-          Client invoices.
-        </p>
-      </div>
-      <AgingSummary rows={aging} emptyLabel="No aging buckets yet." />
+      <h1 className="text-2xl font-medium tracking-tight">Accounts Receivable</h1>
       <DataList
         columns={receivableColumns}
         rows={error ? [] : pageResult.rows}
@@ -93,7 +80,7 @@ export function ReceivableTable({
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
-        pagingLabel="Accounts receivable pagination"
+        pagingLabel="Accounts Receivable pagination"
         toolbar={
           <CustomizeColumns
             columns={receivableColumns}
@@ -131,7 +118,7 @@ export function ReceivableTable({
                 }
               >
                 <FileText aria-hidden="true" />
-                Client invoices
+                Client Invoices
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -156,24 +143,11 @@ function Cell({
       ) : (
         <span className="text-muted-foreground">—</span>
       )
-    case "issuedOn":
     case "dueDate":
-      return row[columnId] ? (
-        <span>{formatIsoDate(row[columnId])}</span>
+      return row.dueDate ? (
+        <span>{formatIsoDate(row.dueDate)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
-    case "agingBucket":
-      return row.agingBucket ? (
-        <span>{row.agingBucket}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "daysPastDue":
-      return (
-        <span className="tabular-nums">
-          {row.daysPastDue === null ? "—" : formatCount(row.daysPastDue)}
-        </span>
       )
     case "billedAmount":
     case "paid":

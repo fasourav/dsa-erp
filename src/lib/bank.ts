@@ -3,6 +3,7 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import { moneyCents } from "@/lib/payment-status"
 
 export const bankDirections = ["inflow", "outflow"] as const
 export type BankDirection = (typeof bankDirections)[number]
@@ -31,16 +32,20 @@ export function bankDirectionLabel(direction: BankDirection): string {
 export function bankSourceLabel(source: BankSourceKind): string {
   switch (source) {
     case "project_income":
-      return "Project income"
+      return "Project Income"
     case "vendor_expense":
-      return "Vendor expense"
+      return "Vendor Expense"
     case "operational_expense":
-      return "Operational expense"
+      return "Operational Expense"
     case "vat_tax":
-      return "VAT / tax"
+      return "VAT / Tax"
     case "other":
       return "Other"
   }
+}
+
+export function bankFlowLabel(direction: BankDirection): string {
+  return direction === "inflow" ? "Incoming" : "Outgoing"
 }
 
 export type BankAccountRow = {
@@ -63,6 +68,7 @@ export type BankTransactionRow = {
   projectId: string
   projectName: string
   notes: string
+  balance: number
 }
 
 export type AccountFilter = {
@@ -108,11 +114,9 @@ export type BankTransactionColumnId =
   | "transactionDate"
   | "accountName"
   | "direction"
-  | "amount"
   | "sourceKind"
-  | "paymentMethod"
-  | "projectName"
-  | "notes"
+  | "amount"
+  | "balance"
 
 export type BankTransactionOptionalColumnId = Exclude<
   BankTransactionColumnId,
@@ -130,19 +134,15 @@ export const bankTransactionColumns: readonly ListColumn<BankTransactionColumnId
     { id: "accountName", label: "Account", align: "left", locked: true },
     { id: "direction", label: "Direction", align: "left", locked: false },
     { id: "sourceKind", label: "Source", align: "left", locked: false },
-    { id: "paymentMethod", label: "Payment method", align: "left", locked: false },
-    { id: "projectName", label: "Project", align: "left", locked: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
-    { id: "notes", label: "Notes", align: "left", locked: false },
+    { id: "balance", label: "Balance", align: "right", locked: false },
   ]
 
 const transactionVisibility: BankTransactionColumnVisibility = {
   direction: true,
   sourceKind: true,
-  paymentMethod: true,
-  projectName: false,
   amount: true,
-  notes: false,
+  balance: true,
 }
 
 export function defaultBankTransactionColumns(): BankTransactionColumnVisibility {
@@ -153,7 +153,7 @@ export function sanitizeBankTransactionColumns(
   value: unknown,
 ): BankTransactionColumnVisibility {
   return sanitizeColumnVisibility(
-    ["direction", "sourceKind", "paymentMethod", "projectName", "amount", "notes"],
+    ["direction", "sourceKind", "amount", "balance"],
     defaultBankTransactionColumns(),
     value,
   )
@@ -213,11 +213,50 @@ function compareTransactions(
     case "accountName":
     case "direction":
     case "sourceKind":
-    case "paymentMethod":
-    case "projectName":
-    case "notes":
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
     case "amount":
-      return left.amount - right.amount
+    case "balance":
+      return left[key] - right[key]
   }
+}
+
+export function withRunningBalances(
+  rows: readonly Omit<BankTransactionRow, "balance">[],
+): BankTransactionRow[] {
+  const groups = new Map<string, Omit<BankTransactionRow, "balance">[]>()
+
+  for (const row of rows) {
+    const key = row.bankAccountId || row.id
+    const group = groups.get(key) ?? []
+    group.push(row)
+    groups.set(key, group)
+  }
+
+  const balanceById = new Map<string, number>()
+
+  for (const group of groups.values()) {
+    const ordered = [...group].sort((left, right) => {
+      const byDate = left.transactionDate.localeCompare(right.transactionDate)
+      if (byDate !== 0) {
+        return byDate
+      }
+
+      return left.id.localeCompare(right.id)
+    })
+
+    let cents = 0
+    for (const row of ordered) {
+      const signed =
+        row.direction === "inflow"
+          ? moneyCents(row.amount)
+          : -moneyCents(row.amount)
+      cents += signed
+      balanceById.set(row.id, cents / 100)
+    }
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    balance: balanceById.get(row.id) ?? 0,
+  }))
 }

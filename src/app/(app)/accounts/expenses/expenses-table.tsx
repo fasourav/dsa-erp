@@ -107,14 +107,9 @@ export function ExpensesTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-2xl font-medium tracking-tight">
-          Operational expenses
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Office spending, with an optional project or department.
-        </p>
-      </div>
+      <h1 className="text-2xl font-medium tracking-tight">
+        Operational Expenses
+      </h1>
       <DataList
         columns={expenseColumns}
         rows={error ? [] : pageResult.rows}
@@ -137,7 +132,7 @@ export function ExpensesTable({
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
-        pagingLabel="Operational expenses pagination"
+        pagingLabel="Operational Expenses pagination"
         toolbar={
           <>
             <CustomizeColumns
@@ -238,11 +233,8 @@ function Cell({
     case "amount":
       return <span className="tabular-nums">{formatMoney(expense.amount)}</span>
     case "paymentMethod":
-    case "projectName":
-    case "departmentName":
-    case "notes":
-      return expense[columnId] ? (
-        <span>{expense[columnId]}</span>
+      return expense.paymentMethod ? (
+        <span>{expense.paymentMethod}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

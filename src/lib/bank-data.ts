@@ -1,6 +1,7 @@
 import {
   isBankDirection,
   isBankSourceKind,
+  withRunningBalances,
   type AccountFilter,
   type BankAccountRow,
   type BankTransactionRow,
@@ -90,7 +91,7 @@ export async function getBankPage(accountId: string | null): Promise<{
       )
     const projectsById = new Map(projects.map((project) => [project.id, project.name]))
 
-    const transactions = transactionRows.flatMap((row) => {
+    const transactions = withRunningBalances(transactionRows.flatMap((row) => {
       if (!isBankDirection(row.direction) || !isBankSourceKind(row.source_kind)) {
         return []
       }
@@ -112,9 +113,9 @@ export async function getBankPage(accountId: string | null): Promise<{
           projectId: row.project_id ?? "",
           projectName: row.project_id ? projectsById.get(row.project_id) ?? "" : "",
           notes: row.notes ?? "",
-        } satisfies BankTransactionRow,
+        },
       ]
-    })
+    }))
 
     const requestedId = accountId && isUuid(accountId) ? accountId : null
     if (accountId && !requestedId) {

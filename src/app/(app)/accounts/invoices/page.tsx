@@ -1,7 +1,7 @@
 import { ClientInvoicesTable } from "@/app/(app)/accounts/invoices/client-invoices-table"
 import { getClientInvoices } from "@/lib/client-invoices"
 
-export const metadata = { title: "Client invoices" }
+export const metadata = { title: "Client Invoices" }
 
 export default async function ClientInvoicesPage({
   searchParams,

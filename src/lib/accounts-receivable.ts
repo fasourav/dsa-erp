@@ -10,31 +10,25 @@ export type ReceivableRow = {
   clientName: string
   projectId: string
   projectName: string
-  issuedOn: string
   dueDate: string
   billedAmount: number
   paid: number
   due: number
   status: PaymentStatus | null
-  agingBucket: string
-  daysPastDue: number | null
 }
 
 export type ReceivableColumnId =
-  | "clientName"
   | "projectName"
-  | "issuedOn"
-  | "dueDate"
+  | "clientName"
   | "billedAmount"
   | "paid"
   | "due"
+  | "dueDate"
   | "status"
-  | "agingBucket"
-  | "daysPastDue"
 
 export type ReceivableOptionalColumnId = Exclude<
   ReceivableColumnId,
-  "clientName" | "projectName"
+  "projectName" | "clientName"
 >
 
 export type ReceivableColumnVisibility = Record<
@@ -43,26 +37,20 @@ export type ReceivableColumnVisibility = Record<
 >
 
 export const receivableColumns: readonly ListColumn<ReceivableColumnId>[] = [
-  { id: "clientName", label: "Client", align: "left", locked: true },
   { id: "projectName", label: "Project", align: "left", locked: true },
-  { id: "issuedOn", label: "Issued", align: "left", locked: false },
-  { id: "dueDate", label: "Due", align: "left", locked: false },
-  { id: "agingBucket", label: "Aging", align: "left", locked: false },
-  { id: "daysPastDue", label: "Days past due", align: "right", locked: false },
-  { id: "billedAmount", label: "Billed", align: "right", locked: false },
-  { id: "paid", label: "Paid", align: "right", locked: false },
-  { id: "due", label: "Due amount", align: "right", locked: false },
+  { id: "clientName", label: "Client", align: "left", locked: true },
+  { id: "billedAmount", label: "Billed Amount", align: "right", locked: false },
+  { id: "paid", label: "Total Paid", align: "right", locked: false },
+  { id: "due", label: "Pending Due", align: "right", locked: false },
+  { id: "dueDate", label: "Due Date", align: "left", locked: false },
   { id: "status", label: "Status", align: "left", locked: false },
 ]
 
 const defaultVisibility: ReceivableColumnVisibility = {
-  issuedOn: true,
-  dueDate: true,
-  agingBucket: true,
-  daysPastDue: true,
   billedAmount: true,
   paid: true,
   due: true,
+  dueDate: true,
   status: true,
 }
 
@@ -74,16 +62,7 @@ export function sanitizeReceivableColumns(
   value: unknown,
 ): ReceivableColumnVisibility {
   return sanitizeColumnVisibility(
-    [
-      "issuedOn",
-      "dueDate",
-      "agingBucket",
-      "daysPastDue",
-      "billedAmount",
-      "paid",
-      "due",
-      "status",
-    ],
+    ["billedAmount", "paid", "due", "dueDate", "status"],
     defaultReceivableColumns(),
     value,
   )
@@ -113,14 +92,10 @@ function compareRows(
   switch (key) {
     case "clientName":
     case "projectName":
-    case "issuedOn":
     case "dueDate":
-    case "agingBucket":
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
     case "status":
       return (left.status ?? "").localeCompare(right.status ?? "")
-    case "daysPastDue":
-      return (left.daysPastDue ?? -1) - (right.daysPastDue ?? -1)
     case "billedAmount":
     case "paid":
     case "due":

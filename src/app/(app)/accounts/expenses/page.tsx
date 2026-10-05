@@ -1,7 +1,7 @@
 import { ExpensesTable } from "@/app/(app)/accounts/expenses/expenses-table"
 import { getOperationalExpenses } from "@/lib/operational-expenses-data"
 
-export const metadata = { title: "Operational expenses" }
+export const metadata = { title: "Operational Expenses" }
 
 export default async function OperationalExpensesPage() {
   const page = await getOperationalExpenses()

@@ -112,7 +112,7 @@ export function ClientInvoicesTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-2xl font-medium tracking-tight">Client invoices</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Client Invoices</h1>
         {projectFilter ? (
           <p className="text-sm text-muted-foreground">
             For {projectFilter.name || "this project"}.{" "}
@@ -123,11 +123,7 @@ export function ClientInvoicesTable({
               Show all
             </Link>
           </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Open a project and choose Client invoices to start from that project.
-          </p>
-        )}
+        ) : null}
       </div>
       <DataList
         columns={clientInvoiceColumns}

@@ -27,9 +27,6 @@ export type ExpenseColumnId =
   | "category"
   | "amount"
   | "paymentMethod"
-  | "projectName"
-  | "departmentName"
-  | "notes"
 
 export type ExpenseOptionalColumnId = Exclude<
   ExpenseColumnId,
@@ -42,18 +39,12 @@ export const expenseColumns: readonly ListColumn<ExpenseColumnId>[] = [
   { id: "expenseDate", label: "Date", align: "left", locked: true },
   { id: "category", label: "Category", align: "left", locked: true },
   { id: "amount", label: "Amount", align: "right", locked: false },
-  { id: "paymentMethod", label: "Payment method", align: "left", locked: false },
-  { id: "projectName", label: "Project", align: "left", locked: false },
-  { id: "departmentName", label: "Department", align: "left", locked: false },
-  { id: "notes", label: "Notes", align: "left", locked: false },
+  { id: "paymentMethod", label: "Payment Method", align: "left", locked: false },
 ]
 
 const defaultVisibility: ExpenseColumnVisibility = {
   amount: true,
   paymentMethod: true,
-  projectName: true,
-  departmentName: true,
-  notes: false,
 }
 
 export function defaultExpenseColumns(): ExpenseColumnVisibility {
@@ -62,7 +53,7 @@ export function defaultExpenseColumns(): ExpenseColumnVisibility {
 
 export function sanitizeExpenseColumns(value: unknown): ExpenseColumnVisibility {
   return sanitizeColumnVisibility(
-    ["amount", "paymentMethod", "projectName", "departmentName", "notes"],
+    ["amount", "paymentMethod"],
     defaultExpenseColumns(),
     value,
   )
@@ -93,9 +84,6 @@ function compareRows(
     case "expenseDate":
     case "category":
     case "paymentMethod":
-    case "projectName":
-    case "departmentName":
-    case "notes":
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
     case "amount":
       return left.amount - right.amount

@@ -1,4 +1,3 @@
-import { sortAgingSummaries, type AgingSummaryRow } from "@/lib/aging"
 import type { ReceivableRow } from "@/lib/accounts-receivable"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
@@ -8,32 +7,22 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function getAccountsReceivable(): Promise<{
   rows: ReceivableRow[]
-  aging: AgingSummaryRow[]
   error: string | null
 }> {
   const supabase = await createClient()
 
   try {
-    const [invoiceRows, summaryResult] = await Promise.all([
-      fetchAllPages(
-        (from, to) =>
-          supabase
-            .from("accounts_receivable_aging")
-            .select(
-              "id, client_name, project_id, project_name, issued_on, due_date, billed_amount, paid, due, current_status, aging_bucket, days_past_due",
-            )
-            .order("id", { ascending: true })
-            .range(from, to),
-        "Accounts receivable list is larger than expected.",
-      ),
-      supabase
-        .from("ar_aging_summary")
-        .select("aging_bucket, amount_due, invoice_count"),
-    ])
-
-    if (summaryResult.error) {
-      return { rows: [], aging: [], error: "Could not load accounts receivable." }
-    }
+    const invoiceRows = await fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("accounts_receivable")
+          .select(
+            "id, client_name, project_id, project_name, due_date, billed_amount, paid, due, current_status",
+          )
+          .order("id", { ascending: true })
+          .range(from, to),
+      "Accounts receivable list is larger than expected.",
+    )
 
     const rows = invoiceRows.flatMap((row) => {
       if (!row.id) {
@@ -46,7 +35,6 @@ export async function getAccountsReceivable(): Promise<{
           clientName: row.client_name?.trim() ?? "",
           projectId: row.project_id ?? "",
           projectName: row.project_name?.trim() ?? "",
-          issuedOn: row.issued_on ? dateInputValue(row.issued_on) : "",
           dueDate: row.due_date ? dateInputValue(row.due_date) : "",
           billedAmount: toNumber(row.billed_amount),
           paid: toNumber(row.paid),
@@ -55,34 +43,12 @@ export async function getAccountsReceivable(): Promise<{
             row.current_status && isPaymentStatus(row.current_status)
               ? row.current_status
               : null,
-          agingBucket: row.aging_bucket?.trim() ?? "",
-          daysPastDue:
-            row.days_past_due === null || row.days_past_due === undefined
-              ? null
-              : toNumber(row.days_past_due),
         } satisfies ReceivableRow,
       ]
     })
 
-    const aging = sortAgingSummaries(
-      (summaryResult.data ?? []).flatMap((row) => {
-        const bucket = row.aging_bucket?.trim() ?? ""
-        if (!bucket) {
-          return []
-        }
-
-        return [
-          {
-            bucket,
-            amount: toNumber(row.amount_due),
-            count: toNumber(row.invoice_count),
-          },
-        ]
-      }),
-    )
-
-    return { rows, aging, error: null }
+    return { rows, error: null }
   } catch {
-    return { rows: [], aging: [], error: "Could not load accounts receivable." }
+    return { rows: [], error: "Could not load accounts receivable." }
   }
 }
