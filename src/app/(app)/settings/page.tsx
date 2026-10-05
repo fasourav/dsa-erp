@@ -1,7 +1,10 @@
-import { ModuleStub } from "@/components/module-stub"
+import { getLookupCatalogs } from "@/app/(app)/settings/queries"
+import { SettingsPanel } from "@/app/(app)/settings/settings-panel"
 
 export const metadata = { title: "Settings" }
 
-export default function SettingsPage() {
-  return <ModuleStub title="Settings" />
+export default async function SettingsPage() {
+  const { catalogs, error } = await getLookupCatalogs()
+
+  return <SettingsPanel catalogs={catalogs} error={error} />
 }
