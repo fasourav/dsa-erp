@@ -1,0 +1,17 @@
+---
+description: Hard constraint for add and edit dialogs. Keep the viewport-capped form shell, internal scroll, and background scroll lock.
+globs: src/**/*dialog*.tsx,src/components/ui/dialog.tsx
+alwaysApply: true
+---
+
+# Form dialogs
+
+This is a hard constraint for every add or edit dialog. Do not relax it for one screen, a short form, or a mobile-only tweak.
+
+- Use `Dialog`, `DialogContent`, `DialogHeader`, `DialogBody`, and `DialogFooter` from `src/components/ui/dialog.tsx`. Do not build a second modal.
+- `DialogContent` stays viewport-capped. Pass `overflow-hidden` so the card cannot grow past the visual viewport (`h-dvh` / visual-viewport height, `max-h-full`). Width stays `w-full` with a larger-screen cap such as `sm:max-w-lg`.
+- Fields live in `DialogBody` (`min-h-0`, `overflow-y-auto`, `overscroll-contain`). That body is the only scroller.
+- `DialogHeader` (title) and `DialogFooter` (actions) stay `shrink-0`. They remain visible while the fields scroll. Do not put the title or actions inside the scrolling body.
+- Keep `lockDialogScroll` in `dialog.tsx`. Opening a dialog pins `main` and the window. Focusing a field, or the on-screen keyboard resizing the visual viewport, must not jump the list behind the dialog.
+- Do not remove the visual-viewport sizing, the focus reveal inside `DialogBody`, or the scroll pin to "simplify" the dialog.
+- Do not change theme colors in `src/app/globals.css` to fix dialog layout.

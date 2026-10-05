@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVendor } from "@/app/(app)/vendors/actions"
@@ -142,10 +143,19 @@ export function VendorsTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Vendors</h1>
-        <Button type="button" onClick={() => openForm(null)}>
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Add New Vendor
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/purchase-orders" />}
+          >
+            Purchase Orders
+          </Button>
+          <Button type="button" onClick={() => openForm(null)}>
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add New Vendor
+          </Button>
+        </div>
       </div>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
