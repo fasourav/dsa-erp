@@ -8,8 +8,13 @@ import {
   isValidEmail,
   normalizePhoneDigits,
 } from "@/lib/client-validation"
+import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { createClient } from "@/lib/supabase/server"
-import { isVendorKind, type VendorKind } from "@/lib/vendor-summary"
+import {
+  isVendorKind,
+  mergeCategorySuggestions,
+  type VendorKind,
+} from "@/lib/vendor-summary"
 
 const vendorIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -40,6 +45,41 @@ export type VendorFormFieldErrors = {
 export type VendorFormResult = {
   error: string | null
   fieldErrors?: VendorFormFieldErrors
+}
+
+export type VendorCategoryOptionsResult = {
+  categories: string[] | null
+}
+
+export async function loadVendorCategoryOptions(): Promise<VendorCategoryOptionsResult> {
+  const supabase = await createClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !authData.user) {
+    return { categories: null }
+  }
+
+  const [categoriesResult, fieldsResult] = await Promise.all([
+    supabase
+      .from("vendor_work_categories")
+      .select("name, sort_order")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase.from("vendors").select("vendor_field"),
+  ])
+
+  if (categoriesResult.error) {
+    return { categories: null }
+  }
+
+  return {
+    categories: mergeCategorySuggestions(
+      (categoriesResult.data ?? []).map((row) => row.name),
+      fieldsResult.error
+        ? []
+        : (fieldsResult.data ?? []).map((row) => row.vendor_field),
+    ),
+  }
 }
 
 export async function addVendor(
@@ -126,6 +166,14 @@ async function saveVendor(
     }
   }
 
+  if (vendorField) {
+    const categorySaved = await ensureVendorWorkCategory(supabase, vendorField)
+
+    if (!categorySaved) {
+      return { error: "Could not save this vendor." }
+    }
+  }
+
   const values = {
     kind,
     person_name: kind === "private" ? name : null,
@@ -155,8 +203,59 @@ async function saveVendor(
     return { error: "That vendor could not be found." }
   }
 
-  revalidatePath("/vendors")
+  revalidateVendorSurfaces()
   return { error: null }
+}
+
+async function ensureVendorWorkCategory(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  name: string,
+): Promise<boolean> {
+  const trimmed = name.trim()
+
+  if (!trimmed) {
+    return true
+  }
+
+  const { data, error } = await supabase
+    .from("vendor_work_categories")
+    .select("name, sort_order")
+
+  if (error || !data) {
+    return false
+  }
+
+  const key = trimmed.toLowerCase()
+  const exists = data.some((row) => row.name.trim().toLowerCase() === key)
+
+  if (exists) {
+    return true
+  }
+
+  const { error: insertError } = await supabase
+    .from("vendor_work_categories")
+    .insert({
+      name: trimmed,
+      sort_order: nextSortOrder(
+        data.map((row) => ({ sortOrder: row.sort_order })),
+      ),
+    })
+
+  if (!insertError) {
+    return true
+  }
+
+  return isUniqueViolation(insertError)
+}
+
+function revalidateVendorSurfaces() {
+  revalidatePath("/vendors")
+  revalidatePath("/settings")
+  revalidatePath("/purchase-orders")
+}
+
+function isUniqueViolation(error: { code?: string; message?: string }) {
+  return error.code === "23505" || /duplicate key/i.test(error.message ?? "")
 }
 
 async function findNamePhoneDuplicate(

@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react"
 
 import {
   addVendor,
+  loadVendorCategoryOptions,
   updateVendor,
   type VendorFormFieldErrors,
 } from "@/app/(app)/vendors/actions"
@@ -66,6 +67,9 @@ export function VendorFormDialog({
   const [personName, setPersonName] = useState(vendor?.personName ?? "")
   const [companyName, setCompanyName] = useState(vendor?.companyName ?? "")
   const [category, setCategory] = useState(vendor?.vendorField ?? "")
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(() => [
+    ...categories,
+  ])
   const [email, setEmail] = useState(vendor?.email ?? "")
   const [phone, setPhone] = useState(vendor?.phone ?? "")
   const [notes, setNotes] = useState(vendor?.notes ?? "")
@@ -110,6 +114,32 @@ export function VendorFormDialog({
   const nameError = nameRequiredError ?? nameDuplicateError
   const emailError = emailFormatError ?? serverEmailError
   const phoneError = phoneDigitError ?? serverPhoneError
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    let cancelled = false
+
+    async function loadCategories() {
+      try {
+        const result = await loadVendorCategoryOptions()
+
+        if (!cancelled && result.categories !== null) {
+          setCategoryOptions(result.categories)
+        }
+      } catch {
+        // Keep the list from the page if this refresh fails.
+      }
+    }
+
+    void loadCategories()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open || !nameKey || !kind) {
@@ -330,7 +360,7 @@ export function VendorFormDialog({
             <Label htmlFor="vendor-category">Vendor Category</Label>
             <Combobox
               autoComplete="off"
-              items={categories}
+              items={categoryOptions}
               inputValue={category}
               onInputValueChange={handleCategoryInput}
               onValueChange={(value) => {

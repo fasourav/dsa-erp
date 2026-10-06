@@ -84,7 +84,7 @@ export async function deleteCatalogItem(
     return { error: "That item could not be found." }
   }
 
-  revalidateCatalogs()
+  revalidateCatalogs(catalog)
   return { error: null }
 }
 
@@ -156,7 +156,7 @@ async function saveCatalogItem(
     return { error: "That item could not be found." }
   }
 
-  revalidateCatalogs()
+  revalidateCatalogs(input.catalog)
   return { error: null }
 }
 
@@ -190,9 +190,14 @@ async function isSignedIn(supabase: Awaited<ReturnType<typeof createClient>>) {
   return !error && Boolean(data.user)
 }
 
-function revalidateCatalogs() {
+function revalidateCatalogs(catalog: CatalogKey) {
   revalidatePath("/settings")
   revalidatePath("/projects")
+
+  if (catalog === "vendor_work_categories") {
+    revalidatePath("/vendors")
+    revalidatePath("/purchase-orders")
+  }
 }
 
 function isUniqueViolation(error: { code?: string; message?: string }) {
