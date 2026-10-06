@@ -13,6 +13,8 @@ export type ClientPaymentRow = {
   reference: string
   notes: string
   remarks: string
+  bankAccountId: string
+  bankAccountName: string
 }
 
 export type ClientInvoiceRow = {

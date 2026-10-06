@@ -17,6 +17,7 @@ export default async function PurchaseOrderInvoicesPage({
       invoices={page.invoices}
       paymentMethods={page.paymentMethods}
       expenseCategories={page.expenseCategories}
+      bankAccounts={page.bankAccounts}
       error={page.error}
     />
   )

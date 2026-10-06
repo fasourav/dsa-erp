@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { BankAccountChoice } from "@/lib/bank-account"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
@@ -39,12 +40,16 @@ export function ExpensesTable({
   categories,
   departments,
   vendors,
+  paymentMethods,
+  bankAccounts,
   error,
 }: {
   expenses: OperationalExpenseRow[]
   categories: string[]
   departments: NamedOption[]
   vendors: NamedOption[]
+  paymentMethods: string[]
+  bankAccounts: BankAccountChoice[]
   error: string | null
 }) {
   const visibility = useColumnVisibility(expenseColumnStore)
@@ -190,6 +195,8 @@ export function ExpensesTable({
         categories={categories}
         departments={departments}
         vendors={vendors}
+        paymentMethods={paymentMethods}
+        bankAccounts={bankAccounts}
       />
       <DeleteConfirmDialog
         open={deleteOpen}

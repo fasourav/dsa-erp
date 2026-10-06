@@ -26,6 +26,7 @@ import {
   type ClientInvoiceRow,
   type InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
+import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
@@ -47,12 +48,14 @@ export function ClientInvoicesTable({
   invoices,
   projects,
   paymentMethods,
+  bankAccounts,
   projectFilter,
   error,
 }: {
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
   paymentMethods: string[]
+  bankAccounts: BankAccountChoice[]
   projectFilter: InvoiceProjectFilter | null
   error: string | null
 }) {
@@ -225,6 +228,7 @@ export function ClientInvoicesTable({
         onOpenChange={setFormOpen}
         invoice={formInvoice}
         projects={projects}
+        bankAccounts={bankAccounts}
         defaultProjectId={projectFilter?.id ?? null}
       />
       <ClientPaymentsDialog
@@ -232,6 +236,7 @@ export function ClientInvoicesTable({
         onOpenChange={setPaymentsOpen}
         invoice={paymentsInvoice}
         paymentMethods={paymentMethods}
+        bankAccounts={bankAccounts}
       />
       <DeleteConfirmDialog
         open={deleteOpen}

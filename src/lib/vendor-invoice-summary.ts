@@ -13,6 +13,8 @@ export type VendorPaymentRow = {
   reference: string
   notes: string
   expenseCategory: string
+  bankAccountId: string
+  bankAccountName: string
 }
 
 export type VendorInvoiceRow = {

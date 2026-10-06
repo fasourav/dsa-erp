@@ -20,6 +20,7 @@ export type OperationalExpenseRow = {
   vendorId: string
   vendorName: string
   notes: string
+  bankAccountId: string
 }
 
 export type ExpenseColumnId =

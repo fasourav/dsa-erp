@@ -1,3 +1,5 @@
+import { listBankAccounts } from "@/lib/bank-accounts"
+import type { BankAccountChoice } from "@/lib/bank-account"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
@@ -24,6 +26,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
   paymentMethods: string[]
+  bankAccounts: BankAccountChoice[]
   projectFilter: InvoiceProjectFilter | null
   error: string | null
 }> {
@@ -31,6 +34,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
     invoices: [] as ClientInvoiceRow[],
     projects: [] as InvoiceProjectOption[],
     paymentMethods: [] as string[],
+    bankAccounts: [] as BankAccountChoice[],
     projectFilter: null,
     error: "Could not load client invoices.",
   }
@@ -38,7 +42,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
   const supabase = await createClient()
 
   try {
-    const [projectRows, clientRows, invoiceRows, paymentRows, methodRows] =
+    const [projectRows, clientRows, invoiceRows, paymentRows, methodRows, bankAccounts] =
       await Promise.all([
         fetchAllPages(
           (from, to) =>
@@ -74,7 +78,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
             supabase
               .from("client_payments")
               .select(
-                "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks",
+                "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks, bank_account_id",
               )
               .order("id", { ascending: true })
               .range(from, to),
@@ -90,6 +94,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
               .range(from, to),
           "Payment method list is larger than expected.",
         ),
+        listBankAccounts(),
       ])
 
     const clientsById = new Map(
@@ -110,6 +115,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
       )
 
     const projectsById = new Map(projects.map((project) => [project.id, project]))
+    const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
     const paymentsByInvoice = new Map<string, ClientPaymentRow[]>()
 
     for (const row of paymentRows) {
@@ -121,6 +127,8 @@ export async function getClientInvoices(projectId: string | null): Promise<{
         reference: row.reference?.trim() ?? "",
         notes: row.notes ?? "",
         remarks: row.remarks ?? "",
+        bankAccountId: row.bank_account_id,
+        bankAccountName: accountsById.get(row.bank_account_id) ?? "",
       }
       const current = paymentsByInvoice.get(row.client_invoice_id) ?? []
       current.push(payment)
@@ -166,6 +174,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
         invoices: [],
         projects,
         paymentMethods: methodRows.map((row) => row.name),
+        bankAccounts,
         projectFilter: null,
         error: "That project could not be found.",
       }
@@ -180,6 +189,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
         invoices: [],
         projects,
         paymentMethods: methodRows.map((row) => row.name),
+        bankAccounts,
         projectFilter: null,
         error: "That project could not be found.",
       }
@@ -198,6 +208,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
           invoice.payments.map((payment) => payment.method),
         ),
       ),
+      bankAccounts,
       projectFilter: matchedProject
         ? { id: matchedProject.id, name: matchedProject.name }
         : null,

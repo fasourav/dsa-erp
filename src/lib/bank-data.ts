@@ -49,7 +49,7 @@ export async function getBankPage(accountId: string | null): Promise<{
             supabase
               .from("bank_transactions")
               .select(
-                "id, bank_account_id, transaction_date, direction, amount, source_kind, payment_method, project_id, notes",
+                "id, bank_account_id, transaction_date, direction, amount, source_kind, payment_method, project_id, notes, income_id, vendor_payment_id, operational_expense_id, vat_tax_payment_id",
               )
               .order("id", { ascending: true })
               .range(from, to),
@@ -113,6 +113,12 @@ export async function getBankPage(accountId: string | null): Promise<{
           projectId: row.project_id ?? "",
           projectName: row.project_id ? projectsById.get(row.project_id) ?? "" : "",
           notes: row.notes ?? "",
+          linked: Boolean(
+            row.income_id ||
+              row.vendor_payment_id ||
+              row.operational_expense_id ||
+              row.vat_tax_payment_id,
+          ),
         },
       ]
     }))

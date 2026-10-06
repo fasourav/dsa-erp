@@ -69,6 +69,7 @@ export type BankTransactionRow = {
   projectName: string
   notes: string
   balance: number
+  linked: boolean
 }
 
 export type AccountFilter = {

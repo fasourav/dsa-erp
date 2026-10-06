@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { BankAccountChoice } from "@/lib/bank-account"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
@@ -40,12 +41,14 @@ export function VendorInvoicesPanel({
   invoices,
   paymentMethods,
   expenseCategories,
+  bankAccounts,
   error,
 }: {
   purchaseOrder: PurchaseOrderDetail | null
   invoices: VendorInvoiceRow[]
   paymentMethods: string[]
   expenseCategories: string[]
+  bankAccounts: BankAccountChoice[]
   error: string | null
 }) {
   const visibility = useColumnVisibility(vendorInvoiceColumnStore)
@@ -247,6 +250,7 @@ export function VendorInvoicesPanel({
         invoice={paymentsInvoice}
         paymentMethods={paymentMethods}
         expenseCategories={expenseCategories}
+        bankAccounts={bankAccounts}
       />
 
       <DeleteConfirmDialog

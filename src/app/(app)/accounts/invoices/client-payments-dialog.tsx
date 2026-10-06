@@ -9,6 +9,7 @@ import {
   updateClientPayment,
   type ClientPaymentFieldErrors,
 } from "@/app/(app)/accounts/invoices/actions"
+import { BankAccountField } from "@/components/bank-account-field"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  defaultBankAccountId,
+  type BankAccountChoice,
+} from "@/lib/bank-account"
 import type {
   ClientInvoiceRow,
   ClientPaymentRow,
@@ -37,11 +42,13 @@ export function ClientPaymentsDialog({
   onOpenChange,
   invoice,
   paymentMethods,
+  bankAccounts,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   invoice: ClientInvoiceRow | null
   paymentMethods: readonly string[]
+  bankAccounts: readonly BankAccountChoice[]
 }) {
   const [payment, setPayment] = useState<ClientPaymentRow | null>(null)
   const [editing, setEditing] = useState(false)
@@ -113,6 +120,7 @@ export function ClientPaymentsDialog({
               invoice={invoice}
               payment={payment}
               paymentMethods={paymentMethods}
+              bankAccounts={bankAccounts}
               onCancel={() => setEditing(false)}
               onSaved={() => setEditing(false)}
             />
@@ -144,6 +152,7 @@ export function ClientPaymentsDialog({
                       <p className="text-sm text-muted-foreground">
                         {row.paidOn ? formatIsoDate(row.paidOn) : "—"}
                         {row.method ? ` · ${row.method}` : ""}
+                        {row.bankAccountName ? ` · ${row.bankAccountName}` : ""}
                         {row.reference ? ` · ${row.reference}` : ""}
                       </p>
                       {row.notes ? (
@@ -215,12 +224,14 @@ function PaymentForm({
   invoice,
   payment,
   paymentMethods,
+  bankAccounts,
   onCancel,
   onSaved,
 }: {
   invoice: ClientInvoiceRow
   payment: ClientPaymentRow | null
   paymentMethods: readonly string[]
+  bankAccounts: readonly BankAccountChoice[]
   onCancel: () => void
   onSaved: () => void
 }) {
@@ -230,6 +241,11 @@ function PaymentForm({
   const [reference, setReference] = useState(payment?.reference ?? "")
   const [notes, setNotes] = useState(payment?.notes ?? "")
   const [remarks, setRemarks] = useState(payment?.remarks ?? "")
+  const [bankAccountId, setBankAccountId] = useState(
+    defaultBankAccountId(bankAccounts, payment?.bankAccountId ?? ""),
+  )
+  const [accountName, setAccountName] = useState("Operating account")
+  const [bankName, setBankName] = useState("")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ClientPaymentFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -246,6 +262,8 @@ function PaymentForm({
         ? "Enter a payment greater than 0."
         : "Enter a payment amount."
       : null)
+  const accountError = serverErrors.bankAccountId ?? null
+  const hasAccounts = bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
 
   function handleSubmit() {
     setAttempted(true)
@@ -256,6 +274,16 @@ function PaymentForm({
       return
     }
 
+    if (hasAccounts && !bankAccountId) {
+      setServerErrors({ bankAccountId: "Choose a bank account." })
+      return
+    }
+
+    if (!hasAccounts && !accountName.trim()) {
+      setServerErrors({ bankAccountId: "Enter an account name." })
+      return
+    }
+
     const input = {
       paidOn,
       amount: amount.trim(),
@@ -263,6 +291,9 @@ function PaymentForm({
       reference: reference.trim(),
       notes: notes.trim(),
       remarks: remarks.trim(),
+      bankAccountId,
+      newAccountName: hasAccounts ? "" : accountName.trim(),
+      newBankName: hasAccounts ? "" : bankName.trim(),
     }
 
     startSubmit(async () => {
@@ -325,6 +356,18 @@ function PaymentForm({
             ) : null}
           </div>
         </div>
+        <BankAccountField
+          idPrefix="client-payment"
+          accounts={bankAccounts}
+          accountId={bankAccountId}
+          onAccountIdChange={setBankAccountId}
+          accountName={accountName}
+          onAccountNameChange={setAccountName}
+          bankName={bankName}
+          onBankNameChange={setBankName}
+          disabled={pending}
+          error={accountError}
+        />
         <div className="flex flex-col gap-2">
           <Label htmlFor="client-payment-method">Payment method</Label>
           <NameCombobox

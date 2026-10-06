@@ -1,3 +1,5 @@
+import type { BankAccountChoice } from "@/lib/bank-account"
+import { listBankAccounts } from "@/lib/bank-accounts"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
@@ -20,6 +22,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
   invoices: VendorInvoiceRow[]
   paymentMethods: string[]
   expenseCategories: string[]
+  bankAccounts: BankAccountChoice[]
   error: string | null
 }> {
   const empty = {
@@ -27,6 +30,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
     invoices: [] as VendorInvoiceRow[],
     paymentMethods: [] as string[],
     expenseCategories: [] as string[],
+    bankAccounts: [] as BankAccountChoice[],
     error: "Could not load vendor invoices.",
   }
 
@@ -54,7 +58,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
       return { ...empty, error: "That purchase order could not be found." }
     }
 
-    const [projectRows, vendorRows, balanceRows, invoiceRows, methodRows, categoryRows] =
+    const [projectRows, vendorRows, balanceRows, invoiceRows, methodRows, categoryRows, bankAccounts] =
       await Promise.all([
         supabase.from("projects").select("id, name").eq("id", order.project_id).limit(1),
         supabase
@@ -99,6 +103,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
               .range(from, to),
           "Expense category list is larger than expected.",
         ),
+        listBankAccounts(),
       ])
 
     if (projectRows.error || vendorRows.error || balanceRows.error) {
@@ -114,7 +119,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
               supabase
                 .from("vendor_payments")
                 .select(
-                  "id, vendor_invoice_id, paid_on, amount, method, reference, notes, expense_category",
+                  "id, vendor_invoice_id, paid_on, amount, method, reference, notes, expense_category, bank_account_id",
                 )
                 .in("vendor_invoice_id", invoiceIds)
                 .order("id", { ascending: true })
@@ -122,6 +127,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
             "Vendor payment list is larger than expected.",
           )
 
+    const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
     const paymentsByInvoice = new Map<string, VendorPaymentRow[]>()
     for (const row of paymentRows) {
       const payment: VendorPaymentRow = {
@@ -132,6 +138,8 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
         reference: row.reference?.trim() ?? "",
         notes: row.notes ?? "",
         expenseCategory: row.expense_category?.trim() ?? "",
+        bankAccountId: row.bank_account_id,
+        bankAccountName: accountsById.get(row.bank_account_id) ?? "",
       }
       const current = paymentsByInvoice.get(row.vendor_invoice_id) ?? []
       current.push(payment)
@@ -192,6 +200,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
           invoice.payments.map((payment) => payment.expenseCategory),
         ),
       ),
+      bankAccounts,
       error: null,
     }
   } catch {

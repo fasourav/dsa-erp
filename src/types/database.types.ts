@@ -143,28 +143,28 @@ export type Database = {
           {
             foreignKeyName: "bank_transactions_income_id_fkey"
             columns: ["income_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "client_payments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bank_transactions_income_id_fkey"
             columns: ["income_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "income"
             referencedColumns: ["income_id"]
           },
           {
             foreignKeyName: "bank_transactions_operational_expense_id_fkey"
             columns: ["operational_expense_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "operational_expense_details"
             referencedColumns: ["operational_expense_id"]
           },
           {
             foreignKeyName: "bank_transactions_operational_expense_id_fkey"
             columns: ["operational_expense_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "operational_expenses"
             referencedColumns: ["id"]
           },
@@ -192,28 +192,28 @@ export type Database = {
           {
             foreignKeyName: "bank_transactions_vat_tax_payment_id_fkey"
             columns: ["vat_tax_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "vat_tax_by_project"
             referencedColumns: ["vat_tax_id"]
           },
           {
             foreignKeyName: "bank_transactions_vat_tax_payment_id_fkey"
             columns: ["vat_tax_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "vat_tax_payments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bank_transactions_vendor_payment_id_fkey"
             columns: ["vendor_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "project_expenses"
             referencedColumns: ["expense_id"]
           },
           {
             foreignKeyName: "bank_transactions_vendor_payment_id_fkey"
             columns: ["vendor_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "vendor_payments"
             referencedColumns: ["id"]
           },
@@ -356,6 +356,7 @@ export type Database = {
       client_payments: {
         Row: {
           amount: number
+          bank_account_id: string
           client_invoice_id: string
           created_at: string
           id: string
@@ -367,6 +368,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_account_id: string
           client_invoice_id: string
           created_at?: string
           id?: string
@@ -378,6 +380,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_id?: string
           client_invoice_id?: string
           created_at?: string
           id?: string
@@ -388,6 +391,13 @@ export type Database = {
           remarks?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "client_payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "client_payments_client_invoice_id_fkey"
             columns: ["client_invoice_id"]
@@ -675,6 +685,7 @@ export type Database = {
       operational_expenses: {
         Row: {
           amount: number
+          bank_account_id: string
           category: string
           created_at: string
           department_id: string | null
@@ -688,6 +699,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_account_id: string
           category: string
           created_at?: string
           department_id?: string | null
@@ -701,6 +713,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_id?: string
           category?: string
           created_at?: string
           department_id?: string | null
@@ -713,6 +726,13 @@ export type Database = {
           vendor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "operational_expenses_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "operational_expenses_department_id_fkey"
             columns: ["department_id"]
@@ -1060,6 +1080,7 @@ export type Database = {
       vat_tax_payments: {
         Row: {
           amount: number
+          bank_account_id: string
           created_at: string
           id: string
           notes: string | null
@@ -1069,6 +1090,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_account_id: string
           created_at?: string
           id?: string
           notes?: string | null
@@ -1078,6 +1100,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_id?: string
           created_at?: string
           id?: string
           notes?: string | null
@@ -1086,6 +1109,13 @@ export type Database = {
           project_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vat_tax_payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vat_tax_payments_project_id_fkey"
             columns: ["project_id"]
@@ -1149,7 +1179,21 @@ export type Database = {
             columns: ["purchase_order_id"]
             isOneToOne: false
             referencedRelation: "accounts_payable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_payable"
             referencedColumns: ["purchase_order_id"]
+          },
+          {
+            foreignKeyName: "vendor_invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_payable_aging"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "vendor_invoices_purchase_order_id_fkey"
@@ -1184,6 +1228,7 @@ export type Database = {
       vendor_payments: {
         Row: {
           amount: number
+          bank_account_id: string
           created_at: string
           expense_category: string | null
           id: string
@@ -1195,6 +1240,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_account_id: string
           created_at?: string
           expense_category?: string | null
           id?: string
@@ -1206,6 +1252,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_id?: string
           created_at?: string
           expense_category?: string | null
           id?: string
@@ -1217,17 +1264,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "vendor_payments_vendor_invoice_id_fkey"
-            columns: ["vendor_invoice_id"]
+            foreignKeyName: "vendor_payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
             isOneToOne: false
-            referencedRelation: "accounts_payable"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vendor_payments_vendor_invoice_id_fkey"
-            columns: ["vendor_invoice_id"]
-            isOneToOne: false
-            referencedRelation: "accounts_payable_aging"
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -1407,6 +1447,7 @@ export type Database = {
           purchase_order_id: string | null
           total_paid: number | null
           total_payable: number | null
+          vendor_field: string | null
           vendor_id: string | null
           vendor_name: string | null
         }
@@ -1645,28 +1686,28 @@ export type Database = {
           {
             foreignKeyName: "bank_transactions_income_id_fkey"
             columns: ["income_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "client_payments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bank_transactions_income_id_fkey"
             columns: ["income_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "income"
             referencedColumns: ["income_id"]
           },
           {
             foreignKeyName: "bank_transactions_operational_expense_id_fkey"
             columns: ["operational_expense_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "operational_expense_details"
             referencedColumns: ["operational_expense_id"]
           },
           {
             foreignKeyName: "bank_transactions_operational_expense_id_fkey"
             columns: ["operational_expense_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "operational_expenses"
             referencedColumns: ["id"]
           },
@@ -1694,28 +1735,28 @@ export type Database = {
           {
             foreignKeyName: "bank_transactions_vat_tax_payment_id_fkey"
             columns: ["vat_tax_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "vat_tax_by_project"
             referencedColumns: ["vat_tax_id"]
           },
           {
             foreignKeyName: "bank_transactions_vat_tax_payment_id_fkey"
             columns: ["vat_tax_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "vat_tax_payments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bank_transactions_vendor_payment_id_fkey"
             columns: ["vendor_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "project_expenses"
             referencedColumns: ["expense_id"]
           },
           {
             foreignKeyName: "bank_transactions_vendor_payment_id_fkey"
             columns: ["vendor_payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "vendor_payments"
             referencedColumns: ["id"]
           },
@@ -2226,7 +2267,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      resolve_bank_account_id: { Args: { preferred: string }; Returns: string }
     }
     Enums: {
       bank_flow_direction: "inflow" | "outflow"
