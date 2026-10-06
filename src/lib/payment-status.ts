@@ -1,8 +1,18 @@
 import { parseProjectValue } from "@/lib/project-validation"
+import { Constants } from "@/types/database.types"
 
-export const paymentStatuses = ["unpaid", "partial", "paid", "void"] as const
+export const paymentStatuses = Constants.public.Enums.payment_status
 
 export type PaymentStatus = (typeof paymentStatuses)[number]
+
+export const clientInvoiceStatuses = [
+  "paid",
+  "unpaid",
+] as const satisfies readonly PaymentStatus[]
+
+export type ClientInvoiceStatus = (typeof clientInvoiceStatuses)[number]
+
+export const defaultClientInvoiceStatus: ClientInvoiceStatus = "unpaid"
 
 export function isPaymentStatus(value: string): value is PaymentStatus {
   return paymentStatuses.includes(value as PaymentStatus)
@@ -19,6 +29,36 @@ export function paymentStatusLabel(status: PaymentStatus): string {
     case "void":
       return "Void"
   }
+}
+
+export function isClientInvoiceStatus(
+  value: string,
+): value is ClientInvoiceStatus {
+  return clientInvoiceStatuses.some((status) => status === value)
+}
+
+export function isClientInvoicePaid(status: ClientInvoiceStatus): boolean {
+  return status === "paid"
+}
+
+export function clientInvoiceStatusLabel(status: ClientInvoiceStatus): string {
+  switch (status) {
+    case "paid":
+      return "Paid"
+    case "unpaid":
+      return "Unpaid"
+  }
+}
+
+export function clientInvoiceStatusFromPayments(
+  amount: number,
+  paid: number,
+): ClientInvoiceStatus {
+  if (moneyCents(amount) > 0 && moneyCents(paid) >= moneyCents(amount)) {
+    return "paid"
+  }
+
+  return defaultClientInvoiceStatus
 }
 
 export function moneyCents(value: number): number {

@@ -3,7 +3,7 @@ import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { dateInputValue } from "@/lib/project-validation"
 import {
-  isPaymentStatus,
+  isClientInvoiceStatus,
   moneyCents,
   sumAmounts,
 } from "@/lib/payment-status"
@@ -128,7 +128,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
     }
 
     const invoices = invoiceRows.flatMap((row) => {
-      if (!isPaymentStatus(row.status)) {
+      if (!isClientInvoiceStatus(row.status)) {
         return []
       }
 

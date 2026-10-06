@@ -684,6 +684,7 @@ export type Database = {
           payment_method: string | null
           project_id: string | null
           updated_at: string
+          vendor_id: string | null
         }
         Insert: {
           amount: number
@@ -696,6 +697,7 @@ export type Database = {
           payment_method?: string | null
           project_id?: string | null
           updated_at?: string
+          vendor_id?: string | null
         }
         Update: {
           amount?: number
@@ -708,6 +710,7 @@ export type Database = {
           payment_method?: string | null
           project_id?: string | null
           updated_at?: string
+          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -743,6 +746,41 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_payable"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_payable_aging"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "project_expenses"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_summaries"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]

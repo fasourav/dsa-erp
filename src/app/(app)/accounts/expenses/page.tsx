@@ -10,9 +10,8 @@ export default async function OperationalExpensesPage() {
     <ExpensesTable
       expenses={page.expenses}
       categories={page.categories}
-      paymentMethods={page.paymentMethods}
-      projects={page.projects}
       departments={page.departments}
+      vendors={page.vendors}
       error={page.error}
     />
   )

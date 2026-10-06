@@ -26,16 +26,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import type {
   ClientInvoiceRow,
   InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
 import {
-  isPaymentStatus,
-  paymentStatusLabel,
-  paymentStatuses,
-  statusMatchesPayments,
+  clientInvoiceStatusLabel,
+  clientInvoiceStatuses,
+  defaultClientInvoiceStatus,
+  isClientInvoiceStatus,
 } from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue, todayIsoDate } from "@/lib/project-validation"
 
@@ -53,54 +52,44 @@ export function ClientInvoiceFormDialog({
   defaultProjectId: string | null
 }) {
   const invoiceId = invoice?.id ?? null
+  const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn || todayIsoDate())
   const [projectId, setProjectId] = useState(
     invoice?.projectId ?? defaultProjectId ?? "",
   )
-  const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn || todayIsoDate())
-  const [dueOn, setDueOn] = useState(invoice?.dueOn ?? "")
   const [amount, setAmount] = useState(invoice ? String(invoice.amount) : "")
-  const [status, setStatus] = useState(invoice?.status ?? "unpaid")
-  const [description, setDescription] = useState(invoice?.description ?? "")
+  const [status, setStatus] = useState(
+    invoice?.status ?? defaultClientInvoiceStatus,
+  )
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ClientInvoiceFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
 
-  const project = projects.find((item) => item.id === projectId) ?? null
   const parsedAmount = parseProjectValue(amount)
-  const paid = invoice?.paid ?? 0
   const projectItems = projects.map((item) => ({
     value: item.id,
     label: item.name || "—",
   }))
-  const statusItems = paymentStatuses.map((value) => ({
+  const statusItems = clientInvoiceStatuses.map((value) => ({
     value,
-    label: paymentStatusLabel(value),
+    label: clientInvoiceStatusLabel(value),
   }))
+  const issuedError =
+    serverErrors.issuedOn ??
+    (attempted && !isIsoDate(issuedOn) ? "Enter an issue date." : null)
   const projectError =
     serverErrors.projectId ??
     (attempted && !projectId ? "Choose a project." : null)
-  const issuedError =
-    serverErrors.issuedOn ??
-    (attempted && !isIsoDate(issuedOn) ? "Enter an issued date." : null)
-  const dueError =
-    serverErrors.dueOn ??
-    (attempted && dueOn.trim() && !isIsoDate(dueOn) ? "Enter a due date." : null)
   const amountError =
     serverErrors.amount ??
-    (attempted && parsedAmount === null
+    (attempted && (parsedAmount === null || parsedAmount <= 0)
       ? amount.trim()
-        ? "Enter an amount of 0 or more."
+        ? "Enter an amount greater than 0."
         : "Enter an amount."
       : null)
   const statusError =
     serverErrors.status ??
-    (attempted &&
-    (!isPaymentStatus(status) ||
-      (parsedAmount !== null &&
-        !statusMatchesPayments(status, parsedAmount, paid)))
-      ? "Status does not match recorded payments. Choose Void to set the invoice aside."
-      : null)
+    (attempted && !isClientInvoiceStatus(status) ? "Choose a status." : null)
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
@@ -116,12 +105,11 @@ export function ClientInvoiceFormDialog({
     setFormError(null)
 
     if (
-      !projectId ||
       !isIsoDate(issuedOn) ||
-      (dueOn.trim() && !isIsoDate(dueOn)) ||
+      !projectId ||
       parsedAmount === null ||
-      !isPaymentStatus(status) ||
-      !statusMatchesPayments(status, parsedAmount, paid)
+      parsedAmount <= 0 ||
+      !isClientInvoiceStatus(status)
     ) {
       return
     }
@@ -129,10 +117,8 @@ export function ClientInvoiceFormDialog({
     const input = {
       projectId,
       issuedOn,
-      dueOn: dueOn.trim(),
       amount: amount.trim(),
       status,
-      description: description.trim(),
     }
 
     startSubmit(async () => {
@@ -166,10 +152,26 @@ export function ClientInvoiceFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {invoiceId ? "Edit client invoice" : "Add client invoice"}
+            {invoiceId ? "Edit Client Invoice" : "Add Client Invoice"}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="client-invoice-issued">Issue Date</Label>
+            <Input
+              id="client-invoice-issued"
+              type="date"
+              value={issuedOn}
+              disabled={pending}
+              aria-invalid={Boolean(issuedError)}
+              onChange={(event) => setIssuedOn(event.target.value)}
+            />
+            {issuedError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {issuedError}
+              </p>
+            ) : null}
+          </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="client-invoice-project">Project</Label>
             <Select
@@ -183,7 +185,7 @@ export function ClientInvoiceFormDialog({
                 className="w-full"
                 aria-invalid={Boolean(projectError)}
               >
-                <SelectValue placeholder="Select a project" />
+                <SelectValue placeholder="Select A Project" />
               </SelectTrigger>
               <SelectContent align="start">
                 {projectItems.map((item) => (
@@ -198,43 +200,6 @@ export function ClientInvoiceFormDialog({
                 {projectError}
               </p>
             ) : null}
-            <p className="text-sm text-muted-foreground">
-              Client: {project?.clientName || "—"}
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="client-invoice-issued">Issued</Label>
-              <Input
-                id="client-invoice-issued"
-                type="date"
-                value={issuedOn}
-                disabled={pending}
-                aria-invalid={Boolean(issuedError)}
-                onChange={(event) => setIssuedOn(event.target.value)}
-              />
-              {issuedError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {issuedError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="client-invoice-due">Due</Label>
-              <Input
-                id="client-invoice-due"
-                type="date"
-                value={dueOn}
-                disabled={pending}
-                aria-invalid={Boolean(dueError)}
-                onChange={(event) => setDueOn(event.target.value)}
-              />
-              {dueError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dueError}
-                </p>
-              ) : null}
-            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
@@ -260,7 +225,7 @@ export function ClientInvoiceFormDialog({
                 value={status}
                 disabled={pending}
                 onValueChange={(value) => {
-                  if (value && isPaymentStatus(value)) {
+                  if (value && isClientInvoiceStatus(value)) {
                     setStatus(value)
                   }
                 }}
@@ -270,7 +235,7 @@ export function ClientInvoiceFormDialog({
                   className="w-full"
                   aria-invalid={Boolean(statusError)}
                 >
-                  <SelectValue placeholder="Select a status" />
+                  <SelectValue placeholder="Select A Status" />
                 </SelectTrigger>
                 <SelectContent align="start">
                   {statusItems.map((item) => (
@@ -287,15 +252,6 @@ export function ClientInvoiceFormDialog({
               ) : null}
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-invoice-description">Description</Label>
-            <Textarea
-              id="client-invoice-description"
-              value={description}
-              disabled={pending}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </div>
           {formError ? (
             <p role="alert" className="text-sm text-destructive">
               {formError}
@@ -311,7 +267,7 @@ export function ClientInvoiceFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : invoiceId ? "Save changes" : "Save invoice"}
+            {pending ? "Saving…" : invoiceId ? "Save Changes" : "Save Invoice"}
           </Button>
         </DialogFooter>
       </DialogContent>

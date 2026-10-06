@@ -9,7 +9,7 @@ import { ClientInvoiceFormDialog } from "@/app/(app)/accounts/invoices/client-in
 import { ClientPaymentsDialog } from "@/app/(app)/accounts/invoices/client-payments-dialog"
 import { CustomizeColumns, DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
-import { PaymentStatusBadge } from "@/components/payment-status-badge"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -29,12 +29,19 @@ import {
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
+  clientInvoiceStatusLabel,
+  isClientInvoicePaid,
+} from "@/lib/payment-status"
+import { cn } from "@/lib/utils"
+import {
   paginateRows,
   rangeLabel,
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+
+const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function ClientInvoicesTable({
   invoices,
@@ -120,7 +127,7 @@ export function ClientInvoicesTable({
               href="/accounts/invoices"
               className="font-medium text-foreground underline underline-offset-4"
             >
-              Show all
+              Show All
             </Link>
           </p>
         ) : null}
@@ -151,7 +158,7 @@ export function ClientInvoicesTable({
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
-        pagingLabel="Client invoices pagination"
+        pagingLabel="Client Invoices pagination"
         toolbar={
           <>
             <CustomizeColumns
@@ -161,7 +168,7 @@ export function ClientInvoicesTable({
             />
             <Button type="button" onClick={() => openForm(null)}>
               <Plus aria-hidden="true" data-icon="inline-start" />
-              Add invoice
+              Add Invoice
             </Button>
           </>
         }
@@ -236,7 +243,7 @@ export function ClientInvoicesTable({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-        title="Delete client invoice"
+        title="Delete Client Invoice"
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}
@@ -255,29 +262,51 @@ function InvoiceCell({
 }) {
   switch (columnId) {
     case "issuedOn":
-    case "dueOn":
-      return invoice[columnId] ? (
-        <span>{formatIsoDate(invoice[columnId])}</span>
+      return invoice.issuedOn ? (
+        <span>{formatIsoDate(invoice.issuedOn)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "projectName":
+      return invoice.projectName ? (
+        <span className="font-medium">{invoice.projectName}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
     case "clientName":
-    case "description":
-      return invoice[columnId] ? (
-        <span className={columnId === "description" ? undefined : "font-medium"}>
-          {invoice[columnId]}
-        </span>
+      return invoice.clientName ? (
+        <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
+          {invoice.clientName}
+        </Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "amount":
+      return <span className="tabular-nums">{formatMoney(invoice.amount)}</span>
     case "paid":
-    case "balance":
-      return (
-        <span className="tabular-nums">{formatMoney(invoice[columnId])}</span>
+      return isClientInvoicePaid(invoice.status) ? (
+        <span className="tabular-nums">{formatMoney(invoice.paid)}</span>
+      ) : (
+        <Badge variant="pending" className={pillClassName}>
+          Pending
+        </Badge>
       )
     case "status":
-      return <PaymentStatusBadge status={invoice.status} />
+      return isClientInvoicePaid(invoice.status) ? (
+        <Badge variant="success" className={pillClassName}>
+          <span
+            aria-hidden="true"
+            className="size-2 rounded-full bg-primary-foreground"
+          />
+          {clientInvoiceStatusLabel(invoice.status)}
+        </Badge>
+      ) : (
+        <Badge
+          variant="destructive"
+          className={cn(pillClassName, "border-dotted border-destructive")}
+        >
+          {clientInvoiceStatusLabel(invoice.status)}
+        </Badge>
+      )
   }
 }
