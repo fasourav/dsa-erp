@@ -81,6 +81,10 @@ export function LeadFormDialog({
     attempted && !kind ? "Choose Person or Company." : fieldErrors.kind
 
   const ptItems = projectTypes.map((t) => ({ value: t.name, label: t.name }))
+  const savedType = lead?.projectType.trim() ?? ""
+  if (savedType && !ptItems.some((item) => item.value === savedType)) {
+    ptItems.push({ value: savedType, label: savedType })
+  }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) return
