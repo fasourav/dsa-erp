@@ -257,13 +257,13 @@ export function ExpenseFormDialog({
             ) : null}
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="expense-method">Payment method</Label>
+            <Label htmlFor="expense-method">Payment Method</Label>
             <NameCombobox
               id="expense-method"
               value={paymentMethod}
               names={paymentMethods}
               disabled={pending}
-              placeholder="Search payment methods"
+              placeholder="Search Payment Methods"
               onValueChange={setPaymentMethod}
             />
           </div>

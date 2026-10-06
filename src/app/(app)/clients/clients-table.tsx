@@ -275,7 +275,7 @@ export function ClientsTable({
                   colSpan={columnCount}
                   className="py-8 text-center whitespace-normal text-muted-foreground"
                 >
-                  No clients yet.
+                  No Clients Yet.
                 </TableCell>
               </TableRow>
             ) : (
@@ -397,7 +397,7 @@ export function ClientsTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete client</AlertDialogTitle>
+            <AlertDialogTitle>Delete Client</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure to delete this item? If yes, Press and Hold
             </AlertDialogDescription>

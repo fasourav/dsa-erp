@@ -68,6 +68,12 @@ export function isCatalogKey(value: string): value is CatalogKey {
   return catalogKeySet.has(value)
 }
 
+export function catalogSingularTitle(singular: string) {
+  return singular.replace(/(^|\s)([a-z])/g, (_match, space: string, letter: string) => {
+    return `${space}${letter.toUpperCase()}`
+  })
+}
+
 export function catalogByKey(key: CatalogKey): CatalogDefinition {
   const definition = catalogDefinitions.find((catalog) => catalog.key === key)
 

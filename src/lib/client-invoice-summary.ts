@@ -60,7 +60,7 @@ export type ClientInvoiceColumnVisibility = Record<
 
 export const clientInvoiceColumns: readonly ListColumn<ClientInvoiceColumnId>[] =
   [
-    { id: "issuedOn", label: "Date", align: "left", locked: true },
+    { id: "issuedOn", label: "Issue Date", align: "left", locked: true },
     { id: "projectName", label: "Project", align: "left", locked: true },
     { id: "clientName", label: "Client", align: "left", locked: true },
     { id: "amount", label: "Amount", align: "right", locked: false },

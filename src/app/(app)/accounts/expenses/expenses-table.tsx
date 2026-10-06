@@ -124,7 +124,7 @@ export function ExpensesTable({
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No operational expenses yet."
+        emptyMessage="No Operational Expenses Yet."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

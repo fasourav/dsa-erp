@@ -72,7 +72,7 @@ export function PayableTable({
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No payables yet."
+        emptyMessage="No Payables Yet."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

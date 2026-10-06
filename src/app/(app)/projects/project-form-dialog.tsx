@@ -172,7 +172,7 @@ export function ProjectFormDialog({
       <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>
-            {projectId ? "Edit project" : "Add New Project"}
+            {projectId ? "Edit Project" : "Add New Project"}
           </DialogTitle>
         </DialogHeader>
 
@@ -206,7 +206,7 @@ export function ProjectFormDialog({
                 className="w-full"
                 aria-invalid={Boolean(clientError)}
               >
-                <SelectValue placeholder="Select a client" />
+                <SelectValue placeholder="Select A Client" />
               </SelectTrigger>
               <SelectContent align="start">
                 {clientItems.map((client) => (
@@ -234,7 +234,7 @@ export function ProjectFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="project-started-on">Start date</Label>
+              <Label htmlFor="project-started-on">Start Date</Label>
               <Input
                 id="project-started-on"
                 type="date"
@@ -252,7 +252,7 @@ export function ProjectFormDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="project-type">Type</Label>
+            <Label htmlFor="project-type">Project Type</Label>
             <Select
               items={typeItems}
               value={projectType || null}
@@ -264,7 +264,7 @@ export function ProjectFormDialog({
                 className="w-full"
                 aria-invalid={Boolean(typeError)}
               >
-                <SelectValue placeholder="Select a type" />
+                <SelectValue placeholder="Select A Type" />
               </SelectTrigger>
               <SelectContent align="start">
                 {typeItems.map((option) => (
@@ -316,7 +316,7 @@ export function ProjectFormDialog({
               ) : null}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="project-phase">Phase</Label>
+              <Label htmlFor="project-phase">Project Phase</Label>
               <Select
                 items={phaseItems}
                 value={phase || null}
@@ -328,7 +328,7 @@ export function ProjectFormDialog({
                   className="w-full"
                   aria-invalid={Boolean(phaseError)}
                 >
-                  <SelectValue placeholder="Select a phase" />
+                  <SelectValue placeholder="Select A Phase" />
                 </SelectTrigger>
                 <SelectContent align="start">
                   {phaseItems.map((option) => (
@@ -348,7 +348,7 @@ export function ProjectFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="project-value">Project value</Label>
+              <Label htmlFor="project-value">Project Value</Label>
               <Input
                 id="project-value"
                 type="number"
@@ -394,7 +394,7 @@ export function ProjectFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : projectId ? "Save changes" : "Save project"}
+            {pending ? "Saving…" : projectId ? "Save Changes" : "Save Project"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -60,7 +60,10 @@ export function BankTransactionFormDialog({
 }) {
   const transactionId = transaction?.id ?? null
   const [bankAccountId, setBankAccountId] = useState(
-    transaction?.bankAccountId || defaultAccountId || "",
+    transaction?.bankAccountId ||
+      defaultAccountId ||
+      accounts.find((account) => account.isActive)?.id ||
+      "",
   )
   const [transactionDate, setTransactionDate] = useState(
     transaction?.transactionDate || todayIsoDate(),
@@ -76,10 +79,12 @@ export function BankTransactionFormDialog({
   const [pending, startSubmit] = useTransition()
 
   const parsedAmount = parsePositiveAmount(amount)
-  const accountItems = accounts.map((account) => ({
-    value: account.id,
-    label: account.name || "—",
-  }))
+  const accountItems = accounts
+    .filter((account) => account.isActive || account.id === bankAccountId)
+    .map((account) => ({
+      value: account.id,
+      label: account.name || "—",
+    }))
   const directionItems = bankDirections.map((value) => ({
     value,
     label: bankDirectionLabel(value),
@@ -169,12 +174,12 @@ export function BankTransactionFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {transactionId ? "Edit bank transaction" : "Add bank transaction"}
+            {transactionId ? "Edit Bank Transaction" : "Add Bank Transaction"}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-tx-account">Bank account</Label>
+            <Label htmlFor="bank-tx-account">Bank Account</Label>
             <Select
               items={accountItems}
               value={bankAccountId || null}
@@ -186,7 +191,7 @@ export function BankTransactionFormDialog({
                 className="w-full"
                 aria-invalid={Boolean(accountError)}
               >
-                <SelectValue placeholder="Select an account" />
+                <SelectValue placeholder="Select An Account" />
               </SelectTrigger>
               <SelectContent align="start">
                 {accountItems.map((item) => (
@@ -270,13 +275,13 @@ export function BankTransactionFormDialog({
             ) : null}
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-tx-method">Payment method</Label>
+            <Label htmlFor="bank-tx-method">Payment Method</Label>
             <NameCombobox
               id="bank-tx-method"
               value={paymentMethod}
               names={paymentMethods}
               disabled={pending}
-              placeholder="Search payment methods"
+              placeholder="Search Payment Methods"
               onValueChange={setPaymentMethod}
             />
           </div>
@@ -334,8 +339,8 @@ export function BankTransactionFormDialog({
             {pending
               ? "Saving…"
               : transactionId
-                ? "Save changes"
-                : "Save transaction"}
+                ? "Save Changes"
+                : "Save Transaction"}
           </Button>
         </DialogFooter>
       </DialogContent>

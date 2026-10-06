@@ -143,6 +143,149 @@ export async function updateVendorPayment(
   return saveVendorPayment(id, null, input)
 }
 
+export type RecordVendorPaymentInput = {
+  paidOn: string
+  amount: string
+  method: string
+  notes: string
+  bankAccountId: string
+  newAccountName: string
+  newBankName: string
+  separateInvoice: boolean
+  invoiceIssuedOn: string
+  invoiceDueOn: string
+  invoiceAmount: string
+}
+
+export type RecordVendorPaymentFieldErrors = VendorPaymentFieldErrors & {
+  invoiceIssuedOn?: string
+  invoiceDueOn?: string
+  invoiceAmount?: string
+}
+
+export type RecordVendorPaymentResult = {
+  error: string | null
+  fieldErrors?: RecordVendorPaymentFieldErrors
+}
+
+export async function recordPurchaseOrderPayment(
+  purchaseOrderId: string,
+  input: RecordVendorPaymentInput,
+): Promise<RecordVendorPaymentResult> {
+  if (!isUuid(purchaseOrderId)) {
+    return { error: "That purchase order could not be found." }
+  }
+
+  const paidOn = input.paidOn.trim()
+  const amount = parsePositiveAmount(input.amount)
+  const fieldErrors: RecordVendorPaymentFieldErrors = {}
+
+  if (!isIsoDate(paidOn)) {
+    fieldErrors.paidOn = "Enter a payment date."
+  }
+
+  if (amount === null) {
+    fieldErrors.amount = input.amount.trim()
+      ? "Enter a payment greater than 0."
+      : "Enter a payment amount."
+  }
+
+  let invoiceAmount: number | null = null
+  if (input.separateInvoice) {
+    const issuedOn = input.invoiceIssuedOn.trim()
+    const dueOn = input.invoiceDueOn.trim()
+    invoiceAmount = parseProjectValue(input.invoiceAmount)
+
+    if (!isIsoDate(issuedOn)) {
+      fieldErrors.invoiceIssuedOn = "Enter an issue date."
+    }
+
+    if (dueOn && !isIsoDate(dueOn)) {
+      fieldErrors.invoiceDueOn = "Enter a due date."
+    }
+
+    if (invoiceAmount === null) {
+      fieldErrors.invoiceAmount = input.invoiceAmount.trim()
+        ? "Enter an amount of 0 or more."
+        : "Enter an invoice amount."
+    } else if (
+      amount !== null &&
+      moneyCents(invoiceAmount) < moneyCents(amount)
+    ) {
+      fieldErrors.invoiceAmount = "Invoice amount must cover this payment."
+    }
+  }
+
+  if (Object.keys(fieldErrors).length > 0 || amount === null) {
+    return { error: null, fieldErrors }
+  }
+
+  const auth = await authorizedClient()
+  if (auth.error || !auth.supabase) {
+    return { error: auth.error }
+  }
+
+  const supabase = auth.supabase
+  const order = await supabase
+    .from("vendor_purchase_orders")
+    .select("id, total_value")
+    .eq("id", purchaseOrderId)
+    .limit(1)
+
+  if (order.error) {
+    return { error: "Could not save this payment." }
+  }
+
+  const purchaseOrder = order.data?.[0]
+  if (!purchaseOrder) {
+    return { error: "That purchase order could not be found." }
+  }
+
+  const paymentInput: VendorPaymentInput = {
+    paidOn,
+    amount: input.amount,
+    method: input.method,
+    reference: "",
+    notes: input.notes,
+    expenseCategory: "",
+    bankAccountId: input.bankAccountId,
+    newAccountName: input.newAccountName,
+    newBankName: input.newBankName,
+  }
+
+  if (input.separateInvoice && invoiceAmount !== null) {
+    return payAgainstNewInvoice(supabase, purchaseOrderId, {
+      issuedOn: input.invoiceIssuedOn.trim(),
+      dueOn: input.invoiceDueOn.trim(),
+      amount: invoiceAmount,
+      payment: paymentInput,
+    })
+  }
+
+  const target = await findOrPlanVendorInvoice(
+    supabase,
+    purchaseOrderId,
+    Number(purchaseOrder.total_value),
+    amount,
+  )
+  if (target.error) {
+    return { error: target.error }
+  }
+  if (target.fieldErrors) {
+    return { error: null, fieldErrors: target.fieldErrors }
+  }
+  if (target.invoiceId) {
+    return saveVendorPayment(null, target.invoiceId, paymentInput)
+  }
+
+  return payAgainstNewInvoice(supabase, purchaseOrderId, {
+    issuedOn: paidOn,
+    dueOn: "",
+    amount: target.createAmount ?? amount,
+    payment: paymentInput,
+  })
+}
+
 export async function deleteVendorPayment(id: string): Promise<DeleteResult> {
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
@@ -478,6 +621,117 @@ async function saveVendorPayment(
 
   revalidateVendorMoney(invoiceRow.purchase_order_id)
   return { error: null }
+}
+
+async function findOrPlanVendorInvoice(
+  supabase: SupabaseClient,
+  purchaseOrderId: string,
+  totalValue: number,
+  amount: number,
+): Promise<{
+  invoiceId?: string
+  createAmount?: number
+  error?: string
+  fieldErrors?: RecordVendorPaymentFieldErrors
+}> {
+  const invoices = await supabase
+    .from("vendor_invoices")
+    .select("id, amount, status, issued_on")
+    .eq("purchase_order_id", purchaseOrderId)
+    .order("issued_on", { ascending: true })
+    .order("id", { ascending: true })
+
+  if (invoices.error || !invoices.data) {
+    return { error: "Could not save this payment." }
+  }
+
+  const invoiceIds = invoices.data.map((row) => row.id)
+  const payments =
+    invoiceIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("vendor_payments")
+          .select("vendor_invoice_id, amount")
+          .in("vendor_invoice_id", invoiceIds)
+
+  if (payments.error || !payments.data) {
+    return { error: "Could not save this payment." }
+  }
+
+  const paidByInvoice = new Map<string, number>()
+  for (const row of payments.data) {
+    const current = paidByInvoice.get(row.vendor_invoice_id) ?? 0
+    paidByInvoice.set(
+      row.vendor_invoice_id,
+      sumAmounts([current, Number(row.amount)]),
+    )
+  }
+
+  const amountCents = moneyCents(amount)
+  for (const invoice of invoices.data) {
+    if (invoice.status === "void") {
+      continue
+    }
+
+    const paid = paidByInvoice.get(invoice.id) ?? 0
+    const balanceCents = moneyCents(Number(invoice.amount)) - moneyCents(paid)
+    if (balanceCents >= amountCents) {
+      return { invoiceId: invoice.id }
+    }
+  }
+
+  const totalPaid = sumAmounts(payments.data.map((row) => Number(row.amount)))
+  const pendingCents = Math.max(0, moneyCents(totalValue) - moneyCents(totalPaid))
+  if (amountCents > pendingCents) {
+    return {
+      fieldErrors: { amount: "Payment is more than the amount still due." },
+    }
+  }
+
+  return { createAmount: amount }
+}
+
+async function payAgainstNewInvoice(
+  supabase: SupabaseClient,
+  purchaseOrderId: string,
+  input: {
+    issuedOn: string
+    dueOn: string
+    amount: number
+    payment: VendorPaymentInput
+  },
+): Promise<RecordVendorPaymentResult> {
+  const created = await supabase
+    .from("vendor_invoices")
+    .insert({
+      purchase_order_id: purchaseOrderId,
+      issued_on: input.issuedOn,
+      due_on: input.dueOn || null,
+      amount: input.amount,
+      status: "unpaid",
+      description: null,
+    })
+    .select("id")
+
+  if (created.error || !created.data?.[0]) {
+    return { error: "Could not save this payment." }
+  }
+
+  const invoiceId = created.data[0].id
+  const result = await saveVendorPayment(null, invoiceId, input.payment)
+  if (result.error || result.fieldErrors) {
+    const existing = await supabase
+      .from("vendor_payments")
+      .select("id")
+      .eq("vendor_invoice_id", invoiceId)
+      .limit(1)
+
+    if (!existing.error && (!existing.data || existing.data.length === 0)) {
+      await supabase.from("vendor_invoices").delete().eq("id", invoiceId)
+    }
+  }
+
+  return result
 }
 
 async function syncVendorInvoiceStatus(

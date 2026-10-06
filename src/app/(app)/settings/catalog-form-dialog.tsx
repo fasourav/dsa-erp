@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -21,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  catalogSingularTitle,
   nextSortOrder,
   parseSortOrder,
   type CatalogItem,
@@ -109,26 +111,22 @@ export function CatalogFormDialog({
     })
   }
 
-  const title = item ? `Edit ${catalog.singular}` : `Add ${catalog.singular}`
+  const itemTitle = catalogSingularTitle(catalog.singular)
+  const title = item ? `Edit ${itemTitle}` : `Add ${itemTitle}`
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-lg"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Names in {catalog.label} must be unique.
           </DialogDescription>
         </DialogHeader>
-
-        <form
-          id="catalog-item-form"
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault()
-            handleSubmit()
-          }}
-        >
+        <DialogBody className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="catalog-name">Name</Label>
             <Input
@@ -150,7 +148,7 @@ export function CatalogFormDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="catalog-sort-order">Sort order</Label>
+            <Label htmlFor="catalog-sort-order">Sort Order</Label>
             <Input
               id="catalog-sort-order"
               inputMode="numeric"
@@ -185,8 +183,7 @@ export function CatalogFormDialog({
               {formError}
             </p>
           ) : null}
-        </form>
-
+        </DialogBody>
         <DialogFooter>
           <DialogClose
             render={
@@ -195,8 +192,8 @@ export function CatalogFormDialog({
           >
             Cancel
           </DialogClose>
-          <Button type="submit" form="catalog-item-form" disabled={pending}>
-            {pending ? "Saving…" : item ? "Save changes" : "Save"}
+          <Button type="button" disabled={pending} onClick={handleSubmit}>
+            {pending ? "Saving…" : item ? "Save Changes" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

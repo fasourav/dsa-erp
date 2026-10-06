@@ -149,13 +149,13 @@ export function VendorInvoiceFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {invoiceId ? "Edit vendor invoice" : "Add vendor invoice"}
+            {invoiceId ? "Edit Vendor Invoice" : "Add Vendor Invoice"}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-issued">Issued</Label>
+              <Label htmlFor="vendor-invoice-issued">Issue Date</Label>
               <Input
                 id="vendor-invoice-issued"
                 type="date"
@@ -171,7 +171,7 @@ export function VendorInvoiceFormDialog({
               ) : null}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-due">Due</Label>
+              <Label htmlFor="vendor-invoice-due">Due Date</Label>
               <Input
                 id="vendor-invoice-due"
                 type="date"
@@ -189,7 +189,7 @@ export function VendorInvoiceFormDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-amount">Amount</Label>
+              <Label htmlFor="vendor-invoice-amount">Invoice Amount</Label>
               <Input
                 id="vendor-invoice-amount"
                 inputMode="decimal"
@@ -221,7 +221,7 @@ export function VendorInvoiceFormDialog({
                   className="w-full"
                   aria-invalid={Boolean(statusError)}
                 >
-                  <SelectValue placeholder="Select a status" />
+                  <SelectValue placeholder="Select A Status" />
                 </SelectTrigger>
                 <SelectContent align="start">
                   {statusItems.map((item) => (
@@ -262,7 +262,7 @@ export function VendorInvoiceFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : invoiceId ? "Save changes" : "Save invoice"}
+            {pending ? "Saving…" : invoiceId ? "Save Changes" : "Save Invoice"}
           </Button>
         </DialogFooter>
       </DialogContent>

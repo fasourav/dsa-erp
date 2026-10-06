@@ -27,20 +27,26 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { BankAccountRow } from "@/lib/bank"
+import { parseSortOrder } from "@/lib/lookup-catalogs"
 
 export function BankAccountFormDialog({
   open,
   onOpenChange,
   account,
+  suggestedSortOrder,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   account: BankAccountRow | null
+  suggestedSortOrder: number
 }) {
   const accountId = account?.id ?? null
   const [name, setName] = useState(account?.name ?? "")
   const [bankName, setBankName] = useState(account?.bankName ?? "")
   const [currency, setCurrency] = useState(account?.currency || "BDT")
+  const [sortOrder, setSortOrder] = useState(
+    String(account?.sortOrder ?? suggestedSortOrder),
+  )
   const [isActive, setIsActive] = useState(account ? account.isActive : true)
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<BankAccountFieldErrors>({})
@@ -52,6 +58,11 @@ export function BankAccountFormDialog({
   const currencyError =
     serverErrors.currency ??
     (attempted && !currency.trim() ? "Enter a currency." : null)
+  const sortOrderError =
+    serverErrors.sortOrder ??
+    (attempted && parseSortOrder(sortOrder) === null
+      ? "Enter a whole number."
+      : null)
   const statusItems = [
     { value: "active", label: "Active" },
     { value: "inactive", label: "Inactive" },
@@ -70,7 +81,8 @@ export function BankAccountFormDialog({
     setServerErrors({})
     setFormError(null)
 
-    if (!name.trim() || !currency.trim()) {
+    const parsedSortOrder = parseSortOrder(sortOrder)
+    if (!name.trim() || !currency.trim() || parsedSortOrder === null) {
       return
     }
 
@@ -79,6 +91,7 @@ export function BankAccountFormDialog({
       bankName: bankName.trim(),
       currency: currency.trim(),
       isActive,
+      sortOrder: parsedSortOrder,
     }
 
     startSubmit(async () => {
@@ -112,12 +125,12 @@ export function BankAccountFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {accountId ? "Edit bank account" : "Add bank account"}
+            {accountId ? "Edit Bank Account" : "Add Bank Account"}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-account-name">Account name</Label>
+            <Label htmlFor="bank-account-name">Account Name</Label>
             <Input
               id="bank-account-name"
               value={name}
@@ -158,6 +171,22 @@ export function BankAccountFormDialog({
             </div>
           </div>
           <div className="flex flex-col gap-2">
+            <Label htmlFor="bank-account-sort-order">Sort Order</Label>
+            <Input
+              id="bank-account-sort-order"
+              inputMode="numeric"
+              value={sortOrder}
+              disabled={pending}
+              aria-invalid={Boolean(sortOrderError)}
+              onChange={(event) => setSortOrder(event.target.value)}
+            />
+            {sortOrderError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {sortOrderError}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2">
             <Label htmlFor="bank-account-status">Status</Label>
             <Select
               items={statusItems}
@@ -192,7 +221,7 @@ export function BankAccountFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : accountId ? "Save changes" : "Save account"}
+            {pending ? "Saving…" : accountId ? "Save Changes" : "Save Account"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -69,7 +69,7 @@ export function ReceivableTable({
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No receivable invoices yet."
+        emptyMessage="No Receivable Invoices Yet."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVendorInvoice } from "@/app/(app)/purchase-orders/[id]/actions"
+import { RecordVendorPaymentDialog } from "@/app/(app)/purchase-orders/[id]/record-vendor-payment-dialog"
 import { VendorInvoiceFormDialog } from "@/app/(app)/purchase-orders/[id]/vendor-invoice-form-dialog"
 import { VendorPaymentsDialog } from "@/app/(app)/purchase-orders/[id]/vendor-payments-dialog"
 import { CustomizeColumns, DataList } from "@/components/data-list"
@@ -60,6 +61,8 @@ export function VendorInvoicesPanel({
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<VendorInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)
+  const [recordOpen, setRecordOpen] = useState(false)
+  const [recordSession, setRecordSession] = useState(0)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
   const [paymentsInvoiceId, setPaymentsInvoiceId] = useState<string | null>(
     null,
@@ -111,7 +114,7 @@ export function VendorInvoicesPanel({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-medium tracking-tight">Vendor invoices</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Vendor Invoices</h1>
           {purchaseOrder ? (
             <>
               <p className="text-sm text-muted-foreground">
@@ -123,7 +126,7 @@ export function VendorInvoicesPanel({
                   : "—"}
               </p>
               <p className="text-sm text-muted-foreground">
-                Purchase order value {formatMoney(purchaseOrder.totalValue)} ·
+                Purchase Order Value {formatMoney(purchaseOrder.totalValue)} ·
                 Paid {formatMoney(purchaseOrder.totalPaid)} · Pending{" "}
                 {formatMoney(purchaseOrder.totalPending)}
               </p>
@@ -134,7 +137,7 @@ export function VendorInvoicesPanel({
               href="/purchase-orders"
               className="font-medium text-foreground underline underline-offset-4"
             >
-              All purchase orders
+              All Purchase Orders
             </Link>
           </p>
         </div>
@@ -151,7 +154,7 @@ export function VendorInvoicesPanel({
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No vendor invoices for this purchase order."
+        emptyMessage="No Vendor Invoices For This Purchase Order."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
@@ -179,10 +182,22 @@ export function VendorInvoicesPanel({
             <Button
               type="button"
               disabled={!purchaseOrder}
+              onClick={() => {
+                setRecordSession((current) => current + 1)
+                setRecordOpen(true)
+              }}
+            >
+              <Wallet aria-hidden="true" data-icon="inline-start" />
+              Record Payment
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!purchaseOrder}
               onClick={() => openForm(null)}
             >
               <Plus aria-hidden="true" data-icon="inline-start" />
-              Add invoice
+              Add Vendor Invoice
             </Button>
           </>
         }
@@ -235,13 +250,23 @@ export function VendorInvoicesPanel({
       />
 
       {purchaseOrder ? (
-        <VendorInvoiceFormDialog
-          key={formSession}
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          purchaseOrderId={purchaseOrder.id}
-          invoice={formInvoice}
-        />
+        <>
+          <VendorInvoiceFormDialog
+            key={formSession}
+            open={formOpen}
+            onOpenChange={setFormOpen}
+            purchaseOrderId={purchaseOrder.id}
+            invoice={formInvoice}
+          />
+          <RecordVendorPaymentDialog
+            key={recordSession}
+            open={recordOpen}
+            onOpenChange={setRecordOpen}
+            purchaseOrder={purchaseOrder}
+            paymentMethods={paymentMethods}
+            bankAccounts={bankAccounts}
+          />
+        </>
       ) : null}
 
       <VendorPaymentsDialog
@@ -263,7 +288,7 @@ export function VendorInvoicesPanel({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-        title="Delete vendor invoice"
+        title="Delete Vendor Invoice"
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { isBankDirection } from "@/lib/bank"
 import { isUuid } from "@/lib/ids"
+import { isSortOrder } from "@/lib/lookup-catalogs"
 import { isIsoDate } from "@/lib/project-validation"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { createClient } from "@/lib/supabase/server"
@@ -13,11 +14,13 @@ export type BankAccountInput = {
   bankName: string
   currency: string
   isActive: boolean
+  sortOrder: number
 }
 
 export type BankAccountFieldErrors = {
   name?: string
   currency?: string
+  sortOrder?: string
 }
 
 export type BankAccountResult = {
@@ -71,6 +74,42 @@ export async function updateBankAccount(
   return saveBankAccount(id, input)
 }
 
+export async function setBankAccountActive(
+  id: string,
+  isActive: boolean,
+): Promise<BankAccountResult> {
+  if (!isUuid(id)) {
+    return { error: "That bank account could not be found." }
+  }
+
+  if (typeof isActive !== "boolean") {
+    return { error: "Could not update this bank account." }
+  }
+
+  const supabase = await createClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user) {
+    return { error: "You must be signed in." }
+  }
+
+  const { data, error } = await supabase
+    .from("bank_accounts")
+    .update({ is_active: isActive })
+    .eq("id", id)
+    .select("id")
+
+  if (error) {
+    return { error: "Could not update this bank account." }
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "That bank account could not be found." }
+  }
+
+  revalidateBankAccounts()
+  return { error: null }
+}
+
 export async function deleteBankAccount(id: string): Promise<DeleteResult> {
   if (!isUuid(id)) {
     return { error: "That bank account could not be found." }
@@ -102,7 +141,7 @@ export async function deleteBankAccount(id: string): Promise<DeleteResult> {
     return { error: "That bank account could not be found." }
   }
 
-  revalidatePath("/accounts/bank")
+  revalidateBankAccounts()
   return { error: null }
 }
 
@@ -195,6 +234,10 @@ async function saveBankAccount(
     fieldErrors.currency = "Enter a currency."
   }
 
+  if (!isSortOrder(input.sortOrder)) {
+    fieldErrors.sortOrder = "Enter a whole number."
+  }
+
   if (Object.keys(fieldErrors).length > 0) {
     return { error: null, fieldErrors }
   }
@@ -210,6 +253,7 @@ async function saveBankAccount(
     bank_name: bankName || null,
     currency,
     is_active: input.isActive,
+    sort_order: input.sortOrder,
   }
 
   const { data, error } = id
@@ -224,8 +268,19 @@ async function saveBankAccount(
     return { error: "That bank account could not be found." }
   }
 
-  revalidatePath("/accounts/bank")
+  revalidateBankAccounts()
   return { error: null }
+}
+
+function revalidateBankAccounts() {
+  revalidatePath("/settings")
+  revalidatePath("/accounts/bank")
+  revalidatePath("/accounts/invoices")
+  revalidatePath("/accounts/expenses")
+  revalidatePath("/accounts/payable")
+  revalidatePath("/accounts/receivable")
+  revalidatePath("/purchase-orders")
+  revalidatePath("/purchase-orders/[id]", "page")
 }
 
 async function saveBankTransaction(

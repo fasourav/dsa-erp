@@ -105,9 +105,9 @@ export function VendorPaymentsDialog({
 
   const title = editing
     ? payment
-      ? "Edit vendor payment"
-      : "Record vendor payment"
-    : "Vendor payments"
+      ? "Edit Vendor Payment"
+      : "Record Payment"
+    : "Vendor Payments"
 
   return (
     <>
@@ -139,7 +139,7 @@ export function VendorPaymentsDialog({
                 ) : null}
                 {invoice && invoice.payments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No payments recorded yet.
+                    No Payments Recorded Yet.
                   </p>
                 ) : null}
                 {invoice?.payments.map((row) => (
@@ -197,7 +197,7 @@ export function VendorPaymentsDialog({
                   onClick={() => openForm(null)}
                 >
                   <Plus aria-hidden="true" data-icon="inline-start" />
-                  Record payment
+                  Record Payment
                 </Button>
               </DialogFooter>
             </>
@@ -214,7 +214,7 @@ export function VendorPaymentsDialog({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-        title="Delete vendor payment"
+        title="Delete Vendor Payment"
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}
@@ -333,7 +333,7 @@ function PaymentForm({
       <DialogBody className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="vendor-payment-date">Paid on</Label>
+            <Label htmlFor="vendor-payment-date">Payment Date</Label>
             <Input
               id="vendor-payment-date"
               type="date"
@@ -378,24 +378,24 @@ function PaymentForm({
           error={accountError}
         />
         <div className="flex flex-col gap-2">
-          <Label htmlFor="vendor-payment-method">Payment method</Label>
+          <Label htmlFor="vendor-payment-method">Payment Method</Label>
           <NameCombobox
             id="vendor-payment-method"
             value={method}
             names={paymentMethods}
             disabled={pending}
-            placeholder="Search payment methods"
+            placeholder="Search Payment Methods"
             onValueChange={setMethod}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="vendor-payment-category">Expense category</Label>
+          <Label htmlFor="vendor-payment-category">Expense Category</Label>
           <NameCombobox
             id="vendor-payment-category"
             value={expenseCategory}
             names={expenseCategories}
             disabled={pending}
-            placeholder="Search expense categories"
+            placeholder="Search Expense Categories"
             onValueChange={setExpenseCategory}
           />
         </div>
@@ -433,7 +433,7 @@ function PaymentForm({
           Cancel
         </Button>
         <Button type="button" disabled={pending} onClick={handleSubmit}>
-          {pending ? "Saving…" : payment ? "Save changes" : "Save payment"}
+          {pending ? "Saving…" : payment ? "Save Changes" : "Save Payment"}
         </Button>
       </DialogFooter>
     </>

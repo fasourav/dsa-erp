@@ -64,8 +64,8 @@ export type VendorInvoiceColumnVisibility = Record<
 
 export const vendorInvoiceColumns: readonly ListColumn<VendorInvoiceColumnId>[] =
   [
-    { id: "issuedOn", label: "Issued", align: "left", locked: true },
-    { id: "dueOn", label: "Due", align: "left", locked: false },
+    { id: "issuedOn", label: "Issue Date", align: "left", locked: true },
+    { id: "dueOn", label: "Due Date", align: "left", locked: false },
     { id: "description", label: "Description", align: "left", locked: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
     { id: "paid", label: "Paid", align: "right", locked: false },
