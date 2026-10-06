@@ -136,7 +136,7 @@ export function BankPanel({
                 href="/accounts/bank"
                 className="font-medium text-foreground underline underline-offset-4"
               >
-                Show all
+                Show All
               </Link>
             </p>
           ) : null}
@@ -154,8 +154,8 @@ export function BankPanel({
           error={error}
           emptyMessage={
             accountFilter
-              ? "No transactions for this account."
-              : "No bank transactions yet."
+              ? "No Transactions For This Account."
+              : "No Bank Transactions Yet."
           }
           rangeText={rangeLabel(
             pageResult.rangeStart,
@@ -181,7 +181,7 @@ export function BankPanel({
                 onClick={() => openForm(null)}
               >
                 <Plus aria-hidden="true" data-icon="inline-start" />
-                Add transaction
+                Add Transaction
               </Button>
             </>
           }
@@ -205,7 +205,7 @@ export function BankPanel({
               <DropdownMenuContent align="end" className="w-56">
                 {transaction.linked ? (
                   <DropdownMenuItem disabled>
-                    From a payment or expense
+                    From A Payment Or Expense
                   </DropdownMenuItem>
                 ) : (
                   <>
@@ -252,7 +252,7 @@ export function BankPanel({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-        title="Delete bank transaction"
+        title="Delete Bank Transaction"
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

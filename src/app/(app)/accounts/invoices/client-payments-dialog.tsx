@@ -109,9 +109,9 @@ export function ClientPaymentsDialog({
             <DialogTitle>
               {editing
                 ? payment
-                  ? "Edit client payment"
-                  : "Record client payment"
-                : "Client payments"}
+                  ? "Edit Client Payment"
+                  : "Record Payment"
+                : "Client Payments"}
             </DialogTitle>
           </DialogHeader>
           {editing && invoice ? (
@@ -137,7 +137,7 @@ export function ClientPaymentsDialog({
                 ) : null}
                 {invoice && invoice.payments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No payments recorded yet.
+                    No Payments Recorded Yet.
                   </p>
                 ) : null}
                 {invoice?.payments.map((row) => (
@@ -210,7 +210,7 @@ export function ClientPaymentsDialog({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-        title="Delete client payment"
+        title="Delete Client Payment"
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}
@@ -324,7 +324,7 @@ function PaymentForm({
       <DialogBody className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="client-payment-date">Paid on</Label>
+            <Label htmlFor="client-payment-date">Payment Date</Label>
             <Input
               id="client-payment-date"
               type="date"
@@ -369,13 +369,13 @@ function PaymentForm({
           error={accountError}
         />
         <div className="flex flex-col gap-2">
-          <Label htmlFor="client-payment-method">Payment method</Label>
+          <Label htmlFor="client-payment-method">Payment Method</Label>
           <NameCombobox
             id="client-payment-method"
             value={method}
             names={paymentMethods}
             disabled={pending}
-            placeholder="Search payment methods"
+            placeholder="Search Payment Methods"
             onValueChange={setMethod}
           />
         </div>
@@ -417,7 +417,7 @@ function PaymentForm({
           Cancel
         </Button>
         <Button type="button" disabled={pending} onClick={handleSubmit}>
-          {pending ? "Saving…" : payment ? "Save changes" : "Save payment"}
+          {pending ? "Saving…" : payment ? "Save Changes" : "Save Payment"}
         </Button>
       </DialogFooter>
     </>

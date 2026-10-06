@@ -285,7 +285,7 @@ export function ProjectsTable({
                   colSpan={columnCount}
                   className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
                 >
-                  No projects yet.
+                  No Projects Yet.
                 </TableCell>
               </TableRow>
             ) : (
@@ -403,7 +403,7 @@ export function ProjectsTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete project</AlertDialogTitle>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure to delete this item? If yes, Press and Hold
             </AlertDialogDescription>

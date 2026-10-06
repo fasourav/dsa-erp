@@ -54,6 +54,7 @@ export type BankAccountRow = {
   bankName: string
   currency: string
   isActive: boolean
+  sortOrder: number
 }
 
 export type BankTransactionRow = {

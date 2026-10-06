@@ -300,7 +300,7 @@ export function VendorFormDialog({
       <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>
-            {vendorId ? "Edit vendor" : "Add New Vendor"}
+            {vendorId ? "Edit Vendor" : "Add New Vendor"}
           </DialogTitle>
         </DialogHeader>
 
@@ -453,7 +453,7 @@ export function VendorFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : vendorId ? "Save changes" : "Save vendor"}
+            {pending ? "Saving…" : vendorId ? "Save Changes" : "Save Vendor"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -223,7 +223,7 @@ export function VendorsTable({
                   colSpan={columnCount}
                   className="py-8 text-center whitespace-normal text-muted-foreground"
                 >
-                  No vendors yet.
+                  No Vendors Yet.
                 </TableCell>
               </TableRow>
             ) : (
@@ -341,7 +341,7 @@ export function VendorsTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete vendor</AlertDialogTitle>
+            <AlertDialogTitle>Delete Vendor</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure to delete this item? If yes, Press and Hold
             </AlertDialogDescription>

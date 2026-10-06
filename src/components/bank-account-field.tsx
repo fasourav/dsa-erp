@@ -42,7 +42,7 @@ export function BankAccountField({
     return (
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${idPrefix}-account-name`}>Bank account</Label>
+          <Label htmlFor={`${idPrefix}-account-name`}>Bank Account</Label>
           <Input
             id={`${idPrefix}-account-name`}
             value={accountName}
@@ -51,7 +51,7 @@ export function BankAccountField({
             onChange={(event) => onAccountNameChange(event.target.value)}
           />
           <p className="text-sm text-muted-foreground">
-            No accounts yet. Saving adds this one.
+            No Accounts Yet. Saving Adds This One.
           </p>
           {error ? (
             <p role="alert" className="text-sm text-destructive">
@@ -79,7 +79,7 @@ export function BankAccountField({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={`${idPrefix}-account`}>Bank account</Label>
+      <Label htmlFor={`${idPrefix}-account`}>Bank Account</Label>
       <Select
         items={items}
         value={accountId || null}
@@ -91,7 +91,7 @@ export function BankAccountField({
           className="w-full"
           aria-invalid={Boolean(error)}
         >
-          <SelectValue placeholder="Select an account" />
+          <SelectValue placeholder="Select An Account" />
         </SelectTrigger>
         <SelectContent align="start">
           {items.map((item) => (

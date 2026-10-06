@@ -39,7 +39,9 @@ export async function getBankPage(accountId: string | null): Promise<{
           (from, to) =>
             supabase
               .from("bank_accounts")
-              .select("id, name, bank_name, currency, is_active")
+              .select("id, name, bank_name, currency, is_active, sort_order")
+              .order("sort_order", { ascending: true })
+              .order("created_at", { ascending: true })
               .order("id", { ascending: true })
               .range(from, to),
           "Bank account list is larger than expected.",
@@ -82,6 +84,7 @@ export async function getBankPage(accountId: string | null): Promise<{
       bankName: row.bank_name?.trim() ?? "",
       currency: row.currency?.trim() ?? "",
       isActive: row.is_active,
+      sortOrder: row.sort_order,
     }))
     const accountsById = new Map(accounts.map((account) => [account.id, account]))
     const projects = projectRows

@@ -179,7 +179,7 @@ export function PurchaseOrderFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {purchaseOrderId ? "Edit purchase order" : "Assign Purchase Order"}
+            {purchaseOrderId ? "Edit Purchase Order" : "Assign Purchase Order"}
           </DialogTitle>
         </DialogHeader>
 
@@ -197,7 +197,7 @@ export function PurchaseOrderFormDialog({
                 className="w-full"
                 aria-invalid={Boolean(projectError)}
               >
-                <SelectValue placeholder="Select a project" />
+                <SelectValue placeholder="Select A Project" />
               </SelectTrigger>
               <SelectContent align="start">
                 {projectItems.map((project) => (
@@ -227,7 +227,7 @@ export function PurchaseOrderFormDialog({
                 className="w-full"
                 aria-invalid={Boolean(vendorError)}
               >
-                <SelectValue placeholder="Select a vendor" />
+                <SelectValue placeholder="Select A Vendor" />
               </SelectTrigger>
               <SelectContent align="start">
                 {vendorItems.map((vendor) => (
@@ -338,8 +338,8 @@ export function PurchaseOrderFormDialog({
             {pending
               ? "Saving…"
               : purchaseOrderId
-                ? "Save changes"
-                : "Save purchase order"}
+                ? "Save Changes"
+                : "Save Purchase Order"}
           </Button>
         </DialogFooter>
       </DialogContent>

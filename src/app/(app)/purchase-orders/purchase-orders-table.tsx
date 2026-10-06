@@ -303,8 +303,8 @@ export function PurchaseOrdersTable({
                   className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
                 >
                   {projectFilter
-                    ? "No purchase orders for this project."
-                    : "No purchase orders yet."}
+                    ? "No Purchase Orders For This Project."
+                    : "No Purchase Orders Yet."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -424,7 +424,7 @@ export function PurchaseOrdersTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete purchase order</AlertDialogTitle>
+            <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure to delete this item? If yes, Press and Hold
             </AlertDialogDescription>
@@ -522,7 +522,7 @@ function RowActions({
       >
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onClick={() => onEdit(order)}>
           <Pencil aria-hidden="true" />
           Edit
@@ -532,7 +532,7 @@ function RowActions({
           render={<Link href={`/purchase-orders/${order.id}`} />}
         >
           <FileText aria-hidden="true" />
-          Invoices
+          Vendor Invoices
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>

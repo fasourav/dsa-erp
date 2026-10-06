@@ -148,8 +148,8 @@ export function ClientInvoicesTable({
         error={error}
         emptyMessage={
           projectFilter
-            ? "No client invoices for this project."
-            : "No client invoices yet."
+            ? "No Client Invoices For This Project."
+            : "No Client Invoices Yet."
         }
         rangeText={rangeLabel(
           pageResult.rangeStart,
@@ -171,7 +171,7 @@ export function ClientInvoicesTable({
             />
             <Button type="button" onClick={() => openForm(null)}>
               <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Invoice
+              Add Client Invoice
             </Button>
           </>
         }

@@ -3,6 +3,8 @@
 import { Plus } from "lucide-react"
 import { useState, useTransition } from "react"
 
+import { setBankAccountActive } from "@/app/(app)/accounts/bank/actions"
+import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
 import { CatalogFormDialog } from "@/app/(app)/settings/catalog-form-dialog"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
@@ -24,13 +26,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import type { CatalogItem, CatalogList } from "@/lib/lookup-catalogs"
+import type { BankAccountRow } from "@/lib/bank"
+import {
+  catalogSingularTitle,
+  nextSortOrder,
+  type CatalogItem,
+  type CatalogList,
+} from "@/lib/lookup-catalogs"
 
 export function SettingsPanel({
   catalogs,
+  bankAccounts,
   error,
 }: {
   catalogs: CatalogList[]
+  bankAccounts: BankAccountRow[]
   error: string | null
 }) {
   const [formOpen, setFormOpen] = useState(false)
@@ -46,6 +56,14 @@ export function SettingsPanel({
   } | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
+  const [bankFormOpen, setBankFormOpen] = useState(false)
+  const [bankFormAccount, setBankFormAccount] = useState<BankAccountRow | null>(
+    null,
+  )
+  const [bankFormSession, setBankFormSession] = useState(0)
+  const [bankError, setBankError] = useState<string | null>(null)
+  const [bankPendingId, setBankPendingId] = useState<string | null>(null)
+  const [updatingBank, startBankUpdate] = useTransition()
 
   function openCreate(catalog: CatalogList) {
     setFormCatalog(catalog)
@@ -65,6 +83,30 @@ export function SettingsPanel({
     setPendingDelete({ catalog, item })
     setDeleteError(null)
     setDeleteOpen(true)
+  }
+
+  function openBankForm(account: BankAccountRow | null) {
+    setBankFormAccount(account)
+    setBankFormSession((session) => session + 1)
+    setBankFormOpen(true)
+  }
+
+  function toggleBankAccount(account: BankAccountRow) {
+    setBankError(null)
+    setBankPendingId(account.id)
+    startBankUpdate(async () => {
+      try {
+        const result = await setBankAccountActive(account.id, !account.isActive)
+        if (result.error) {
+          setBankError(result.error)
+          return
+        }
+      } catch {
+        setBankError("Could not update this bank account.")
+      } finally {
+        setBankPendingId(null)
+      }
+    })
   }
 
   function confirmDelete() {
@@ -97,7 +139,7 @@ export function SettingsPanel({
         <h1 className="text-2xl font-medium tracking-tight">Settings</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Manage lookup lists for departments, projects, expenses, payments,
-          and vendors.
+          vendors, and bank accounts.
         </p>
       </div>
 
@@ -113,8 +155,8 @@ export function SettingsPanel({
             <CardHeader>
               <CardTitle>{catalog.label}</CardTitle>
               <CardDescription>
-                {itemCountLabel(catalog.items.length)}. Ordered by sort order,
-                then name.
+                {itemCountLabel(catalog.items.length)}. Ordered By Sort Order,
+                Then Name.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
@@ -124,11 +166,11 @@ export function SettingsPanel({
                 onClick={() => openCreate(catalog)}
               >
                 <Plus aria-hidden="true" data-icon="inline-start" />
-                Add {catalog.singular}
+                Add {catalogSingularTitle(catalog.singular)}
               </Button>
 
               {catalog.items.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No items yet.</p>
+                <p className="text-sm text-muted-foreground">No Items Yet.</p>
               ) : (
                 <ul className="flex flex-col divide-y divide-border">
                   {catalog.items.map((item) => (
@@ -144,7 +186,7 @@ export function SettingsPanel({
                           ) : null}
                         </div>
                         <p className="text-sm text-muted-foreground tabular-nums">
-                          Sort order {item.sortOrder}
+                          Sort Order {item.sortOrder}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -170,7 +212,90 @@ export function SettingsPanel({
             </CardContent>
           </Card>
         ))}
+        <Card>
+          <CardHeader>
+            <CardTitle>Bank Accounts</CardTitle>
+            <CardDescription>
+              {itemCountLabel(bankAccounts.length)}. Ordered By Sort Order, Then
+              Name.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Button
+              type="button"
+              className="h-auto min-h-8 w-full whitespace-normal sm:w-fit"
+              onClick={() => openBankForm(null)}
+            >
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Add Bank Account
+            </Button>
+            {bankError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {bankError}
+              </p>
+            ) : null}
+            {bankAccounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No Bank Accounts Yet.</p>
+            ) : (
+              <ul className="flex flex-col divide-y divide-border">
+                {bankAccounts.map((account) => (
+                  <li
+                    key={account.id}
+                    className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium break-words">{account.name}</p>
+                        {account.isActive ? null : (
+                          <Badge variant="outline">Inactive</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {[account.bankName, account.currency]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      <p className="text-sm text-muted-foreground tabular-nums">
+                        Sort Order {account.sortOrder}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={updatingBank}
+                        onClick={() => openBankForm(account)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={updatingBank}
+                        onClick={() => toggleBankAccount(account)}
+                      >
+                        {bankPendingId === account.id && updatingBank
+                          ? "Saving…"
+                          : account.isActive
+                            ? "Deactivate"
+                            : "Activate"}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <BankAccountFormDialog
+        key={bankFormSession}
+        open={bankFormOpen}
+        onOpenChange={setBankFormOpen}
+        account={bankFormAccount}
+        suggestedSortOrder={nextSortOrder(bankAccounts)}
+      />
 
       <CatalogFormDialog
         key={formSession}
@@ -222,7 +347,7 @@ export function SettingsPanel({
 }
 
 function itemCountLabel(count: number) {
-  return count === 1 ? "1 item" : `${count} items`
+  return count === 1 ? "1 Item" : `${count} Items`
 }
 
 function emptyCatalog(): CatalogList {

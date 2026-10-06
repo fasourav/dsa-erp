@@ -260,7 +260,7 @@ export function ClientFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
-          <DialogTitle>{clientId ? "Edit client" : "Add new client"}</DialogTitle>
+          <DialogTitle>{clientId ? "Edit Client" : "Add New Client"}</DialogTitle>
           <DialogDescription>
             Individual and Company clients are stored with different name
             fields.
@@ -408,7 +408,7 @@ export function ClientFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : clientId ? "Save changes" : "Save client"}
+            {pending ? "Saving…" : clientId ? "Save Changes" : "Save Client"}
           </Button>
         </DialogFooter>
       </DialogContent>
