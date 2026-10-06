@@ -7,7 +7,6 @@ import {
   updateOperationalExpense,
   type ExpenseFieldErrors,
 } from "@/app/(app)/accounts/expenses/actions"
-import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -41,27 +40,24 @@ export function ExpenseFormDialog({
   onOpenChange,
   expense,
   categories,
-  paymentMethods,
-  projects,
   departments,
+  vendors,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   expense: OperationalExpenseRow | null
   categories: readonly string[]
-  paymentMethods: readonly string[]
-  projects: readonly NamedOption[]
   departments: readonly NamedOption[]
+  vendors: readonly NamedOption[]
 }) {
   const expenseId = expense?.id ?? null
   const [expenseDate, setExpenseDate] = useState(
     expense?.expenseDate || todayIsoDate(),
   )
-  const [category, setCategory] = useState(expense?.category ?? "")
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "")
-  const [paymentMethod, setPaymentMethod] = useState(expense?.paymentMethod ?? "")
-  const [projectId, setProjectId] = useState(expense?.projectId ?? "")
+  const [category, setCategory] = useState(expense?.category ?? "")
   const [departmentId, setDepartmentId] = useState(expense?.departmentId ?? "")
+  const [vendorId, setVendorId] = useState(expense?.vendorId ?? "")
   const [notes, setNotes] = useState(expense?.notes ?? "")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ExpenseFieldErrors>({})
@@ -72,28 +68,29 @@ export function ExpenseFormDialog({
   const dateError =
     serverErrors.expenseDate ??
     (attempted && !isIsoDate(expenseDate) ? "Enter a date." : null)
-  const categoryError =
-    serverErrors.category ??
-    (attempted && !category.trim() ? "Enter a category." : null)
   const amountError =
     serverErrors.amount ??
-    (attempted && parsedAmount === null
+    (attempted && (parsedAmount === null || parsedAmount <= 0)
       ? amount.trim()
-        ? "Enter an amount of 0 or more."
+        ? "Enter an amount greater than 0."
         : "Enter an amount."
       : null)
-  const projectItems = [
-    { value: noneValue, label: "None" },
-    ...projects.map((project) => ({
-      value: project.id,
-      label: project.name || "—",
-    })),
-  ]
+  const categoryError =
+    serverErrors.category ??
+    (attempted && !categories.includes(category) ? "Choose a category." : null)
+  const categoryItems = categories.map((name) => ({ value: name, label: name }))
   const departmentItems = [
     { value: noneValue, label: "None" },
     ...departments.map((department) => ({
       value: department.id,
       label: department.name || "—",
+    })),
+  ]
+  const vendorItems = [
+    { value: noneValue, label: "None" },
+    ...vendors.map((vendor) => ({
+      value: vendor.id,
+      label: vendor.name || "—",
     })),
   ]
 
@@ -110,17 +107,21 @@ export function ExpenseFormDialog({
     setServerErrors({})
     setFormError(null)
 
-    if (!isIsoDate(expenseDate) || !category.trim() || parsedAmount === null) {
+    if (
+      !isIsoDate(expenseDate) ||
+      parsedAmount === null ||
+      parsedAmount <= 0 ||
+      !categories.includes(category)
+    ) {
       return
     }
 
     const input = {
       expenseDate,
-      category: category.trim(),
       amount: amount.trim(),
-      paymentMethod: paymentMethod.trim(),
-      projectId,
+      category,
       departmentId,
+      vendorId,
       notes: notes.trim(),
     }
 
@@ -155,7 +156,7 @@ export function ExpenseFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {expenseId ? "Edit operational expense" : "Add operational expense"}
+            {expenseId ? "Edit Operational Expense" : "Add Operational Expense"}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
@@ -195,60 +196,34 @@ export function ExpenseFormDialog({
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="expense-category">Category</Label>
-            <NameCombobox
-              id="expense-category"
-              value={category}
-              names={categories}
+            <Select
+              items={categoryItems}
+              value={category || null}
               disabled={pending}
-              invalid={Boolean(categoryError)}
-              placeholder="Search office expense categories"
-              onValueChange={setCategory}
-            />
+              onValueChange={(value) => setCategory(value ?? "")}
+            >
+              <SelectTrigger
+                id="expense-category"
+                className="w-full"
+                aria-invalid={Boolean(categoryError)}
+              >
+                <SelectValue placeholder="Select A Category" />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {categoryItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {categoryError ? (
               <p role="alert" className="text-sm text-destructive">
                 {categoryError}
               </p>
             ) : null}
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="expense-method">Payment method</Label>
-            <NameCombobox
-              id="expense-method"
-              value={paymentMethod}
-              names={paymentMethods}
-              disabled={pending}
-              placeholder="Search payment methods"
-              onValueChange={setPaymentMethod}
-            />
-          </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-project">Project</Label>
-              <Select
-                items={projectItems}
-                value={projectId || noneValue}
-                disabled={pending}
-                onValueChange={(value) =>
-                  setProjectId(!value || value === noneValue ? "" : value)
-                }
-              >
-                <SelectTrigger id="expense-project" className="w-full">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {projectItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {serverErrors.projectId ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {serverErrors.projectId}
-                </p>
-              ) : null}
-            </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-department">Department</Label>
               <Select
@@ -260,7 +235,7 @@ export function ExpenseFormDialog({
                 }
               >
                 <SelectTrigger id="expense-department" className="w-full">
-                  <SelectValue placeholder="None" />
+                  <SelectValue placeholder="Select A Department" />
                 </SelectTrigger>
                 <SelectContent align="start">
                   {departmentItems.map((item) => (
@@ -276,6 +251,33 @@ export function ExpenseFormDialog({
                 </p>
               ) : null}
             </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="expense-vendor">Vendor</Label>
+              <Select
+                items={vendorItems}
+                value={vendorId || noneValue}
+                disabled={pending}
+                onValueChange={(value) =>
+                  setVendorId(!value || value === noneValue ? "" : value)
+                }
+              >
+                <SelectTrigger id="expense-vendor" className="w-full">
+                  <SelectValue placeholder="Select A Vendor" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {vendorItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {serverErrors.vendorId ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {serverErrors.vendorId}
+                </p>
+              ) : null}
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="expense-notes">Notes</Label>
@@ -283,6 +285,7 @@ export function ExpenseFormDialog({
               id="expense-notes"
               value={notes}
               disabled={pending}
+              placeholder="Add Notes"
               onChange={(event) => setNotes(event.target.value)}
             />
           </div>
@@ -301,7 +304,7 @@ export function ExpenseFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : expenseId ? "Save changes" : "Save expense"}
+            {pending ? "Saving…" : expenseId ? "Save Changes" : "Save Expense"}
           </Button>
         </DialogFooter>
       </DialogContent>

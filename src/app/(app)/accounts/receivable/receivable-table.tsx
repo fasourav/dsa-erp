@@ -81,6 +81,7 @@ export function ReceivableTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Accounts Receivable pagination"
+        columnLayout="even"
         toolbar={
           <CustomizeColumns
             columns={receivableColumns}

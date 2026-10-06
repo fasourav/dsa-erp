@@ -1,4 +1,4 @@
-import type { PaymentStatus } from "@/lib/payment-status"
+import type { ClientInvoiceStatus } from "@/lib/payment-status"
 import {
   sanitizeColumnVisibility,
   type ListColumn,
@@ -24,7 +24,7 @@ export type ClientInvoiceRow = {
   issuedOn: string
   dueOn: string
   amount: number
-  status: PaymentStatus
+  status: ClientInvoiceStatus
   description: string
   paid: number
   balance: number
@@ -42,12 +42,9 @@ export type ClientInvoiceColumnId =
   | "issuedOn"
   | "projectName"
   | "clientName"
-  | "dueOn"
   | "amount"
   | "paid"
-  | "balance"
   | "status"
-  | "description"
 
 export type ClientInvoiceOptionalColumnId = Exclude<
   ClientInvoiceColumnId,
@@ -61,23 +58,17 @@ export type ClientInvoiceColumnVisibility = Record<
 
 export const clientInvoiceColumns: readonly ListColumn<ClientInvoiceColumnId>[] =
   [
-    { id: "issuedOn", label: "Issued", align: "left", locked: true },
+    { id: "issuedOn", label: "Date", align: "left", locked: true },
     { id: "projectName", label: "Project", align: "left", locked: true },
     { id: "clientName", label: "Client", align: "left", locked: true },
-    { id: "dueOn", label: "Due", align: "left", locked: false },
-    { id: "description", label: "Description", align: "left", locked: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
     { id: "paid", label: "Paid", align: "right", locked: false },
-    { id: "balance", label: "Balance", align: "right", locked: false },
     { id: "status", label: "Status", align: "left", locked: false },
   ]
 
 const defaultVisibility: ClientInvoiceColumnVisibility = {
-  dueOn: true,
-  description: false,
   amount: true,
   paid: true,
-  balance: true,
   status: true,
 }
 
@@ -89,7 +80,7 @@ export function sanitizeClientInvoiceColumns(
   value: unknown,
 ): ClientInvoiceColumnVisibility {
   return sanitizeColumnVisibility(
-    ["dueOn", "description", "amount", "paid", "balance", "status"],
+    ["amount", "paid", "status"],
     defaultClientInvoiceColumns(),
     value,
   )
@@ -123,15 +114,12 @@ function compareInvoices(
 ): number {
   switch (key) {
     case "issuedOn":
-    case "dueOn":
     case "projectName":
     case "clientName":
-    case "description":
     case "status":
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
     case "amount":
     case "paid":
-    case "balance":
       return left[key] - right[key]
   }
 }

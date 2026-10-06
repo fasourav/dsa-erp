@@ -10,9 +10,8 @@ export type ExpenseInput = {
   expenseDate: string
   category: string
   amount: string
-  paymentMethod: string
-  projectId: string
   departmentId: string
+  vendorId: string
   notes: string
 }
 
@@ -20,8 +19,8 @@ export type ExpenseFieldErrors = {
   expenseDate?: string
   category?: string
   amount?: string
-  projectId?: string
   departmentId?: string
+  vendorId?: string
 }
 
 export type ExpenseResult = {
@@ -92,9 +91,8 @@ async function saveExpense(
 ): Promise<ExpenseResult> {
   const expenseDate = input.expenseDate.trim()
   const category = input.category.trim()
-  const paymentMethod = input.paymentMethod.trim()
-  const projectId = input.projectId.trim()
   const departmentId = input.departmentId.trim()
+  const vendorId = input.vendorId.trim()
   const notes = input.notes.trim()
   const amount = parseProjectValue(input.amount)
   const fieldErrors: ExpenseFieldErrors = {}
@@ -104,24 +102,24 @@ async function saveExpense(
   }
 
   if (!category) {
-    fieldErrors.category = "Enter a category."
+    fieldErrors.category = "Choose a category."
   }
 
-  if (amount === null) {
+  if (amount === null || amount <= 0) {
     fieldErrors.amount = input.amount.trim()
-      ? "Enter an amount of 0 or more."
+      ? "Enter an amount greater than 0."
       : "Enter an amount."
-  }
-
-  if (projectId && !isUuid(projectId)) {
-    fieldErrors.projectId = "Choose a project."
   }
 
   if (departmentId && !isUuid(departmentId)) {
     fieldErrors.departmentId = "Choose a department."
   }
 
-  if (Object.keys(fieldErrors).length > 0 || amount === null) {
+  if (vendorId && !isUuid(vendorId)) {
+    fieldErrors.vendorId = "Choose a vendor."
+  }
+
+  if (Object.keys(fieldErrors).length > 0 || amount === null || amount <= 0) {
     return { error: null, fieldErrors }
   }
 
@@ -131,18 +129,16 @@ async function saveExpense(
     return { error: "You must be signed in." }
   }
 
-  if (projectId) {
-    const project = await supabase
-      .from("projects")
-      .select("id")
-      .eq("id", projectId)
-      .limit(1)
-    if (project.error) {
-      return { error: "Could not save this expense." }
-    }
-    if (!project.data || project.data.length === 0) {
-      return { error: null, fieldErrors: { projectId: "Choose a project." } }
-    }
+  const categoryMatch = await supabase
+    .from("office_expense_categories")
+    .select("id")
+    .eq("name", category)
+    .limit(1)
+  if (categoryMatch.error) {
+    return { error: "Could not save this expense." }
+  }
+  if (!categoryMatch.data || categoryMatch.data.length === 0) {
+    return { error: null, fieldErrors: { category: "Choose a category." } }
   }
 
   if (departmentId) {
@@ -150,6 +146,7 @@ async function saveExpense(
       .from("departments")
       .select("id")
       .eq("id", departmentId)
+      .eq("is_active", true)
       .limit(1)
     if (department.error) {
       return { error: "Could not save this expense." }
@@ -162,13 +159,26 @@ async function saveExpense(
     }
   }
 
+  if (vendorId) {
+    const vendor = await supabase
+      .from("vendors")
+      .select("id")
+      .eq("id", vendorId)
+      .limit(1)
+    if (vendor.error) {
+      return { error: "Could not save this expense." }
+    }
+    if (!vendor.data || vendor.data.length === 0) {
+      return { error: null, fieldErrors: { vendorId: "Choose a vendor." } }
+    }
+  }
+
   const values = {
     expense_date: expenseDate,
     category,
     amount,
-    payment_method: paymentMethod || null,
-    project_id: projectId || null,
     department_id: departmentId || null,
+    vendor_id: vendorId || null,
     notes: notes || null,
   }
 
@@ -182,13 +192,13 @@ async function saveExpense(
 
   if (error) {
     if (error.code === "23503") {
-      return { error: "Choose a valid project or department." }
+      return { error: "Choose a valid department or vendor." }
     }
 
     if (error.code === "23514") {
       return {
         error: null,
-        fieldErrors: { amount: "Enter an amount of 0 or more." },
+        fieldErrors: { amount: "Enter an amount greater than 0." },
       }
     }
 

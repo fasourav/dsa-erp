@@ -180,11 +180,11 @@ export function ClientPaymentsDialog({
                 </DialogClose>
                 <Button
                   type="button"
-                  disabled={!invoice || invoice.status === "void"}
+                  disabled={!invoice}
                   onClick={() => openForm(null)}
                 >
                   <Plus aria-hidden="true" data-icon="inline-start" />
-                  Record payment
+                  Record Payment
                 </Button>
               </DialogFooter>
             </>

@@ -84,6 +84,7 @@ export function PayableTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Accounts Payable pagination"
+        columnLayout="even"
         toolbar={
           <CustomizeColumns
             columns={payableColumns}

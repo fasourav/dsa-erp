@@ -54,6 +54,7 @@ export function DataList<T, Id extends string>({
   renderCell,
   renderActions,
   toolbar,
+  columnLayout = "auto",
 }: {
   columns: readonly ListColumn<Id>[]
   rows: readonly T[]
@@ -71,7 +72,9 @@ export function DataList<T, Id extends string>({
   renderCell: (row: T, columnId: Id) => ReactNode
   renderActions: (row: T) => ReactNode
   toolbar?: ReactNode
+  columnLayout?: "auto" | "even"
 }) {
+  const even = columnLayout === "even"
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
   )
@@ -84,7 +87,19 @@ export function DataList<T, Id extends string>({
         <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
       ) : null}
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
+        <Table
+          className={cn(
+            even ? "min-w-max md:min-w-full md:table-fixed" : "min-w-max",
+          )}
+        >
+          {even ? (
+            <colgroup>
+              {visibleColumns.map((column) => (
+                <col key={column.id} />
+              ))}
+              <col className="w-16" />
+            </colgroup>
+          ) : null}
           <TableHeader>
             <TableRow className="bg-muted hover:bg-muted">
               {visibleColumns.map((column) => {
@@ -101,12 +116,13 @@ export function DataList<T, Id extends string>({
                     }
                     className={cn(
                       "px-3 text-sm",
+                      even && "whitespace-normal",
                       column.align === "right" && "text-right",
                     )}
                   >
                     <div
                       className={cn(
-                        "flex",
+                        "flex min-w-0",
                         column.align === "right" && "justify-end",
                       )}
                     >
@@ -115,7 +131,8 @@ export function DataList<T, Id extends string>({
                         variant="ghost"
                         className={cn(
                           "border-0",
-                          column.align === "right" ? "-mr-2.5" : "-ml-2.5",
+                          column.align === "right" ? "-mr-2.5 text-right" : "-ml-2.5 text-left",
+                          even && "h-auto min-h-8 max-w-full min-w-0 shrink whitespace-normal",
                         )}
                         aria-label={
                           active
@@ -163,7 +180,8 @@ export function DataList<T, Id extends string>({
                       key={column.id}
                       className={cn(
                         "p-3 text-sm whitespace-normal",
-                        column.align === "right" && "text-right",
+                        column.align === "right" && "text-right tabular-nums",
+                        even && column.align === "right" && "whitespace-nowrap",
                       )}
                     >
                       {renderCell(row, column.id)}

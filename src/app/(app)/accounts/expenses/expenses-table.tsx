@@ -37,16 +37,14 @@ const locked = new Set<ExpenseColumnId>(["expenseDate", "category"])
 export function ExpensesTable({
   expenses,
   categories,
-  paymentMethods,
-  projects,
   departments,
+  vendors,
   error,
 }: {
   expenses: OperationalExpenseRow[]
   categories: string[]
-  paymentMethods: string[]
-  projects: NamedOption[]
   departments: NamedOption[]
+  vendors: NamedOption[]
   error: string | null
 }) {
   const visibility = useColumnVisibility(expenseColumnStore)
@@ -142,7 +140,7 @@ export function ExpensesTable({
             />
             <Button type="button" onClick={() => openForm(null)}>
               <Plus aria-hidden="true" data-icon="inline-start" />
-              Add expense
+              Add Expense
             </Button>
           </>
         }
@@ -190,9 +188,8 @@ export function ExpensesTable({
         onOpenChange={setFormOpen}
         expense={formExpense}
         categories={categories}
-        paymentMethods={paymentMethods}
-        projects={projects}
         departments={departments}
+        vendors={vendors}
       />
       <DeleteConfirmDialog
         open={deleteOpen}
@@ -204,13 +201,27 @@ export function ExpensesTable({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-        title="Delete operational expense"
+        title="Delete Operational Expense"
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}
         onConfirm={confirmDelete}
       />
     </div>
+  )
+}
+
+function ArrowTag({ children }: { children: string }) {
+  return (
+    <span
+      className="inline-flex h-7 items-center bg-secondary px-5 text-sm font-medium whitespace-nowrap text-secondary-foreground"
+      style={{
+        clipPath:
+          "polygon(0.65rem 0, calc(100% - 0.65rem) 0, 100% 50%, calc(100% - 0.65rem) 100%, 0.65rem 100%, 0 50%)",
+      }}
+    >
+      {children}
+    </span>
   )
 }
 
@@ -229,7 +240,15 @@ function Cell({
         <span className="text-muted-foreground">—</span>
       )
     case "category":
-      return <span className="font-medium">{expense.category || "—"}</span>
+      return (
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="font-medium">{expense.category || "—"}</span>
+          {expense.departmentName ? (
+            <ArrowTag>{expense.departmentName}</ArrowTag>
+          ) : null}
+          {expense.vendorName ? <ArrowTag>{expense.vendorName}</ArrowTag> : null}
+        </span>
+      )
     case "amount":
       return <span className="tabular-nums">{formatMoney(expense.amount)}</span>
     case "paymentMethod":
