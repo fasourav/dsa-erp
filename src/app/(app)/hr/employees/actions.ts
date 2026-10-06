@@ -129,8 +129,19 @@ async function saveEmployee(
     return { error: "You must be signed in." }
   }
 
+  let departmentName: string | null = null
+  if (departmentId) {
+    const { data: deptData } = await supabase
+      .from("departments")
+      .select("name")
+      .eq("id", departmentId)
+      .limit(1)
+    departmentName = deptData?.[0]?.name ?? null
+  }
+
   const values = {
     full_name: fullName,
+    department: departmentName,
     department_id: departmentId || null,
     designation: designation || null,
     joining_date: joiningDate,

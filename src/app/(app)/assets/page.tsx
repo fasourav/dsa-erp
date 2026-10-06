@@ -4,7 +4,7 @@ import { getAssets } from "@/lib/assets"
 export const metadata = { title: "Assets" }
 
 export default async function AssetsPage() {
-  const { assets, error } = await getAssets()
+  const { assets, categories, error } = await getAssets()
 
-  return <AssetsTable assets={assets} error={error} />
+  return <AssetsTable assets={assets} categories={categories} error={error} />
 }

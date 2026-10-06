@@ -219,8 +219,6 @@ async function savePayrollLine(
   const { data: auth, error: authErr } = await supabase.auth.getUser()
   if (authErr || !auth.user) return { error: "You must be signed in." }
 
-  const netSalary = (basicSalary ?? 0) + allowance + bonus - deductions
-
   const values = {
     payroll_run_id: runId,
     employee_id: employeeId,
@@ -228,7 +226,6 @@ async function savePayrollLine(
     allowance,
     bonus,
     deductions,
-    net_salary: netSalary,
     notes: notes || null,
   }
 
