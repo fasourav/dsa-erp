@@ -7,6 +7,8 @@ import {
   updateOperationalExpense,
   type ExpenseFieldErrors,
 } from "@/app/(app)/accounts/expenses/actions"
+import { BankAccountField } from "@/components/bank-account-field"
+import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -27,6 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  defaultBankAccountId,
+  type BankAccountChoice,
+} from "@/lib/bank-account"
 import type {
   NamedOption,
   OperationalExpenseRow,
@@ -42,6 +48,8 @@ export function ExpenseFormDialog({
   categories,
   departments,
   vendors,
+  paymentMethods,
+  bankAccounts,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -49,6 +57,8 @@ export function ExpenseFormDialog({
   categories: readonly string[]
   departments: readonly NamedOption[]
   vendors: readonly NamedOption[]
+  paymentMethods: readonly string[]
+  bankAccounts: readonly BankAccountChoice[]
 }) {
   const expenseId = expense?.id ?? null
   const [expenseDate, setExpenseDate] = useState(
@@ -59,6 +69,12 @@ export function ExpenseFormDialog({
   const [departmentId, setDepartmentId] = useState(expense?.departmentId ?? "")
   const [vendorId, setVendorId] = useState(expense?.vendorId ?? "")
   const [notes, setNotes] = useState(expense?.notes ?? "")
+  const [paymentMethod, setPaymentMethod] = useState(expense?.paymentMethod ?? "")
+  const [bankAccountId, setBankAccountId] = useState(
+    defaultBankAccountId(bankAccounts, expense?.bankAccountId ?? ""),
+  )
+  const [accountName, setAccountName] = useState("Operating account")
+  const [bankName, setBankName] = useState("")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ExpenseFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -75,6 +91,9 @@ export function ExpenseFormDialog({
         ? "Enter an amount greater than 0."
         : "Enter an amount."
       : null)
+  const accountError = serverErrors.bankAccountId ?? null
+  const hasAccounts =
+    bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
   const categoryError =
     serverErrors.category ??
     (attempted && !categories.includes(category) ? "Choose a category." : null)
@@ -116,13 +135,27 @@ export function ExpenseFormDialog({
       return
     }
 
+    if (hasAccounts && !bankAccountId) {
+      setServerErrors({ bankAccountId: "Choose a bank account." })
+      return
+    }
+
+    if (!hasAccounts && !accountName.trim()) {
+      setServerErrors({ bankAccountId: "Enter an account name." })
+      return
+    }
+
     const input = {
       expenseDate,
       amount: amount.trim(),
       category,
+      paymentMethod: paymentMethod.trim(),
       departmentId,
       vendorId,
       notes: notes.trim(),
+      bankAccountId,
+      newAccountName: hasAccounts ? "" : accountName.trim(),
+      newBankName: hasAccounts ? "" : bankName.trim(),
     }
 
     startSubmit(async () => {
@@ -223,6 +256,29 @@ export function ExpenseFormDialog({
               </p>
             ) : null}
           </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="expense-method">Payment method</Label>
+            <NameCombobox
+              id="expense-method"
+              value={paymentMethod}
+              names={paymentMethods}
+              disabled={pending}
+              placeholder="Search payment methods"
+              onValueChange={setPaymentMethod}
+            />
+          </div>
+          <BankAccountField
+            idPrefix="expense"
+            accounts={bankAccounts}
+            accountId={bankAccountId}
+            onAccountIdChange={setBankAccountId}
+            accountName={accountName}
+            onAccountNameChange={setAccountName}
+            bankName={bankName}
+            onBankNameChange={setBankName}
+            disabled={pending}
+            error={accountError}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-department">Department</Label>

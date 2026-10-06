@@ -31,10 +31,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   bankDirectionLabel,
   bankDirections,
-  bankSourceKinds,
-  bankSourceLabel,
   isBankDirection,
-  isBankSourceKind,
   type BankAccountRow,
   type BankTransactionRow,
 } from "@/lib/bank"
@@ -70,7 +67,6 @@ export function BankTransactionFormDialog({
   )
   const [direction, setDirection] = useState(transaction?.direction ?? "outflow")
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : "")
-  const [sourceKind, setSourceKind] = useState(transaction?.sourceKind ?? "other")
   const [paymentMethod, setPaymentMethod] = useState(transaction?.paymentMethod ?? "")
   const [projectId, setProjectId] = useState(transaction?.projectId ?? "")
   const [notes, setNotes] = useState(transaction?.notes ?? "")
@@ -87,10 +83,6 @@ export function BankTransactionFormDialog({
   const directionItems = bankDirections.map((value) => ({
     value,
     label: bankDirectionLabel(value),
-  }))
-  const sourceItems = bankSourceKinds.map((value) => ({
-    value,
-    label: bankSourceLabel(value),
   }))
   const projectItems = [
     { value: noneValue, label: "None" },
@@ -130,7 +122,6 @@ export function BankTransactionFormDialog({
       !bankAccountId ||
       !isIsoDate(transactionDate) ||
       !isBankDirection(direction) ||
-      !isBankSourceKind(sourceKind) ||
       parsedAmount === null
     ) {
       return
@@ -141,7 +132,7 @@ export function BankTransactionFormDialog({
       transactionDate,
       direction,
       amount: amount.trim(),
-      sourceKind,
+      sourceKind: "other",
       paymentMethod: paymentMethod.trim(),
       projectId,
       notes: notes.trim(),
@@ -245,55 +236,38 @@ export function BankTransactionFormDialog({
               ) : null}
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bank-tx-direction">Direction</Label>
-              <Select
-                items={directionItems}
-                value={direction}
-                disabled={pending}
-                onValueChange={(value) => {
-                  if (value && isBankDirection(value)) {
-                    setDirection(value)
-                  }
-                }}
-              >
-                <SelectTrigger id="bank-tx-direction" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {directionItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bank-tx-source">Source</Label>
-              <Select
-                items={sourceItems}
-                value={sourceKind}
-                disabled={pending}
-                onValueChange={(value) => {
-                  if (value && isBankSourceKind(value)) {
-                    setSourceKind(value)
-                  }
-                }}
-              >
-                <SelectTrigger id="bank-tx-source" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {sourceItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="bank-tx-direction">Direction</Label>
+            <Select
+              items={directionItems}
+              value={direction}
+              disabled={pending}
+              onValueChange={(value) => {
+                if (value && isBankDirection(value)) {
+                  setDirection(value)
+                }
+              }}
+            >
+              <SelectTrigger id="bank-tx-direction" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {directionItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Client payments, vendor payments, and operational expenses are
+              recorded on those pages and show up here.
+            </p>
+            {serverErrors.sourceKind ? (
+              <p role="alert" className="text-sm text-destructive">
+                {serverErrors.sourceKind}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="bank-tx-method">Payment method</Label>

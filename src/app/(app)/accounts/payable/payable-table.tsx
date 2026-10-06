@@ -72,13 +72,13 @@ export function PayableTable({
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No payable invoices yet."
+        emptyMessage="No payables yet."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
-          "invoice",
-          "invoices",
+          "payable",
+          "payables",
         )}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}

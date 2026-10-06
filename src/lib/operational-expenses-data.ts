@@ -1,3 +1,5 @@
+import type { BankAccountChoice } from "@/lib/bank-account"
+import { listBankAccounts } from "@/lib/bank-accounts"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import type {
@@ -6,6 +8,7 @@ import type {
 } from "@/lib/operational-expenses"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 
 type Embedded<T> = T | T[] | null
 
@@ -14,6 +17,8 @@ export async function getOperationalExpenses(): Promise<{
   categories: string[]
   departments: NamedOption[]
   vendors: NamedOption[]
+  paymentMethods: string[]
+  bankAccounts: BankAccountChoice[]
   error: string | null
 }> {
   const empty = {
@@ -21,19 +26,21 @@ export async function getOperationalExpenses(): Promise<{
     categories: [] as string[],
     departments: [] as NamedOption[],
     vendors: [] as NamedOption[],
+    paymentMethods: [] as string[],
+    bankAccounts: [] as BankAccountChoice[],
     error: "Could not load operational expenses.",
   }
   const supabase = await createClient()
 
   try {
-    const [expenseRows, categoryRows, departmentRows, vendorRows] =
+    const [expenseRows, categoryRows, departmentRows, vendorRows, methodRows, bankAccounts] =
       await Promise.all([
         fetchAllPages(
           (from, to) =>
             supabase
               .from("operational_expenses")
               .select(
-                "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, departments(name), vendors(person_name, company_name)",
+                "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, departments(name), vendors(person_name, company_name)",
               )
               .order("id", { ascending: true })
               .range(from, to),
@@ -69,6 +76,17 @@ export async function getOperationalExpenses(): Promise<{
               .range(from, to),
           "Vendor list is larger than expected.",
         ),
+        fetchAllPages(
+          (from, to) =>
+            supabase
+              .from("payment_methods")
+              .select("name, sort_order")
+              .order("sort_order", { ascending: true })
+              .order("name", { ascending: true })
+              .range(from, to),
+          "Payment method list is larger than expected.",
+        ),
+        listBankAccounts(),
       ])
 
     const categories = uniqueNames(categoryRows.map((row) => row.name))
@@ -102,6 +120,7 @@ export async function getOperationalExpenses(): Promise<{
           ? partyName(vendor.person_name, vendor.company_name)
           : "",
         notes: row.notes ?? "",
+        bankAccountId: row.bank_account_id,
       }
     })
 
@@ -110,6 +129,11 @@ export async function getOperationalExpenses(): Promise<{
       categories,
       departments,
       vendors,
+      paymentMethods: mergeCategorySuggestions(
+        methodRows.map((row) => row.name),
+        expenses.map((expense) => expense.paymentMethod),
+      ),
+      bankAccounts,
       error: null,
     }
   } catch {

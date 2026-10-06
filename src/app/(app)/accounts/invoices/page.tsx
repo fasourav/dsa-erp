@@ -20,6 +20,7 @@ export default async function ClientInvoicesPage({
       invoices={page.invoices}
       projects={page.projects}
       paymentMethods={page.paymentMethods}
+      bankAccounts={page.bankAccounts}
       projectFilter={page.projectFilter}
       error={page.error}
     />

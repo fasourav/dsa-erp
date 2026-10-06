@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import {
   clientInvoiceStatusFromPayments,
   isClientInvoicePaid,
@@ -20,15 +21,21 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 export type ClientInvoiceInput = {
   projectId: string
   issuedOn: string
+  dueOn: string
   amount: string
   status: string
+  bankAccountId: string
+  newAccountName: string
+  newBankName: string
 }
 
 export type ClientInvoiceFieldErrors = {
   projectId?: string
   issuedOn?: string
+  dueOn?: string
   amount?: string
   status?: string
+  bankAccountId?: string
 }
 
 export type ClientInvoiceResult = {
@@ -43,11 +50,15 @@ export type ClientPaymentInput = {
   reference: string
   notes: string
   remarks: string
+  bankAccountId: string
+  newAccountName: string
+  newBankName: string
 }
 
 export type ClientPaymentFieldErrors = {
   paidOn?: string
   amount?: string
+  bankAccountId?: string
 }
 
 export type ClientPaymentResult = {
@@ -174,6 +185,7 @@ async function saveClientInvoice(
 ): Promise<ClientInvoiceResult> {
   const projectId = input.projectId.trim()
   const issuedOn = input.issuedOn.trim()
+  const dueOn = input.dueOn.trim()
   const amount = parseProjectValue(input.amount)
   const status = input.status.trim()
   const fieldErrors: ClientInvoiceFieldErrors = {}
@@ -184,6 +196,10 @@ async function saveClientInvoice(
 
   if (!isIsoDate(issuedOn)) {
     fieldErrors.issuedOn = "Enter an issue date."
+  }
+
+  if (dueOn && !isIsoDate(dueOn)) {
+    fieldErrors.dueOn = "Enter a due date."
   }
 
   if (amount === null || amount <= 0) {
@@ -230,6 +246,7 @@ async function saveClientInvoice(
     project_id: string
     client_id: string
     issued_on: string
+    due_on: string | null
     amount: number
     status: ClientInvoiceStatus
   } | null = null
@@ -237,7 +254,7 @@ async function saveClientInvoice(
   if (id) {
     const existing = await supabase
       .from("client_invoices")
-      .select("id, project_id, client_id, issued_on, amount, status")
+      .select("id, project_id, client_id, issued_on, due_on, amount, status")
       .eq("id", id)
       .limit(1)
 
@@ -254,6 +271,7 @@ async function saveClientInvoice(
       project_id: existingRow.project_id,
       client_id: existingRow.client_id,
       issued_on: existingRow.issued_on,
+      due_on: existingRow.due_on,
       amount: existingRow.amount,
       status: existingRow.status,
     }
@@ -262,6 +280,24 @@ async function saveClientInvoice(
   const paid = id ? await paidForInvoice(supabase, id, null) : 0
   if (paid === null) {
     return { error: "Could not save this invoice." }
+  }
+
+  const remainingCents = moneyCents(amount) - moneyCents(paid)
+  let paymentBankAccountId: string | null = null
+  if (isClientInvoicePaid(status) && remainingCents > 0) {
+    const bank = await resolveBankAccountId(
+      supabase,
+      input.bankAccountId,
+      input.newAccountName,
+      input.newBankName,
+    )
+    if (bank.fieldError) {
+      return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
+    }
+    if (bank.error || !bank.id) {
+      return { error: bank.error ?? "Could not save this invoice." }
+    }
+    paymentBankAccountId = bank.id
   }
 
   if (moneyCents(amount) < moneyCents(paid)) {
@@ -286,6 +322,7 @@ async function saveClientInvoice(
     project_id: projectRow.id,
     client_id: projectRow.client_id,
     issued_on: issuedOn,
+    due_on: dueOn || null,
     amount,
     status,
   }
@@ -318,14 +355,14 @@ async function saveClientInvoice(
   }
 
   if (isClientInvoicePaid(status)) {
-    const remainingCents = moneyCents(amount) - moneyCents(paid)
-    if (remainingCents > 0) {
+    if (remainingCents > 0 && paymentBankAccountId) {
       const payment = await supabase
         .from("client_payments")
         .insert({
           client_invoice_id: savedId,
           paid_on: issuedOn,
           amount: remainingCents / 100,
+          bank_account_id: paymentBankAccountId,
         })
         .select("id")
 
@@ -337,6 +374,7 @@ async function saveClientInvoice(
               project_id: previous.project_id,
               client_id: previous.client_id,
               issued_on: previous.issued_on,
+              due_on: previous.due_on,
               amount: previous.amount,
               status: previous.status,
             })
@@ -439,6 +477,19 @@ async function saveClientPayment(
     }
   }
 
+  const bank = await resolveBankAccountId(
+    supabase,
+    input.bankAccountId,
+    input.newAccountName,
+    input.newBankName,
+  )
+  if (bank.fieldError) {
+    return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
+  }
+  if (bank.error || !bank.id) {
+    return { error: bank.error ?? "Could not save this payment." }
+  }
+
   const values = {
     client_invoice_id: invoiceId,
     paid_on: paidOn,
@@ -447,6 +498,7 @@ async function saveClientPayment(
     reference: reference || null,
     notes: notes || null,
     remarks: remarks || null,
+    bank_account_id: bank.id,
   }
 
   const { data, error } = id
@@ -559,6 +611,7 @@ async function authorizedClient(): Promise<{
 function revalidateClientMoney() {
   revalidatePath("/accounts/invoices")
   revalidatePath("/accounts/receivable")
+  revalidatePath("/accounts/bank")
   revalidatePath("/projects")
   revalidatePath("/clients")
 }

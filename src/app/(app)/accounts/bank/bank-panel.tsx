@@ -202,23 +202,31 @@ export function BankPanel({
               >
                 <MoreHorizontal aria-hidden="true" className="size-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem onClick={() => openForm(transaction)}>
-                  <Pencil aria-hidden="true" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    setDeleteError(null)
-                    setPendingDelete(transaction)
-                    setDeleteOpen(true)
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                  Delete
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-56">
+                {transaction.linked ? (
+                  <DropdownMenuItem disabled>
+                    From a payment or expense
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => openForm(transaction)}>
+                      <Pencil aria-hidden="true" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => {
+                        setDeleteError(null)
+                        setPendingDelete(transaction)
+                        setDeleteOpen(true)
+                      }}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

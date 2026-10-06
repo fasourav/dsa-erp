@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
@@ -10,9 +11,13 @@ export type ExpenseInput = {
   expenseDate: string
   category: string
   amount: string
+  paymentMethod: string
   departmentId: string
   vendorId: string
   notes: string
+  bankAccountId: string
+  newAccountName: string
+  newBankName: string
 }
 
 export type ExpenseFieldErrors = {
@@ -21,6 +26,7 @@ export type ExpenseFieldErrors = {
   amount?: string
   departmentId?: string
   vendorId?: string
+  bankAccountId?: string
 }
 
 export type ExpenseResult = {
@@ -94,6 +100,7 @@ async function saveExpense(
   const departmentId = input.departmentId.trim()
   const vendorId = input.vendorId.trim()
   const notes = input.notes.trim()
+  const paymentMethod = input.paymentMethod.trim()
   const amount = parseProjectValue(input.amount)
   const fieldErrors: ExpenseFieldErrors = {}
 
@@ -173,13 +180,28 @@ async function saveExpense(
     }
   }
 
+  const bank = await resolveBankAccountId(
+    supabase,
+    input.bankAccountId,
+    input.newAccountName,
+    input.newBankName,
+  )
+  if (bank.fieldError) {
+    return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
+  }
+  if (bank.error || !bank.id) {
+    return { error: bank.error ?? "Could not save this expense." }
+  }
+
   const values = {
     expense_date: expenseDate,
     category,
     amount,
+    payment_method: paymentMethod || null,
     department_id: departmentId || null,
     vendor_id: vendorId || null,
     notes: notes || null,
+    bank_account_id: bank.id,
   }
 
   const { data, error } = id
@@ -210,5 +232,6 @@ async function saveExpense(
   }
 
   revalidatePath("/accounts/expenses")
+  revalidatePath("/accounts/bank")
   return { error: null }
 }

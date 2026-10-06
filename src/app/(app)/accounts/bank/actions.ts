@@ -2,10 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import {
-  isBankDirection,
-  isBankSourceKind,
-} from "@/lib/bank"
+import { isBankDirection } from "@/lib/bank"
 import { isUuid } from "@/lib/ids"
 import { isIsoDate } from "@/lib/project-validation"
 import { parsePositiveAmount } from "@/lib/payment-status"
@@ -137,6 +134,32 @@ export async function deleteBankTransaction(id: string): Promise<DeleteResult> {
     return { error: "You must be signed in." }
   }
 
+  const existing = await supabase
+    .from("bank_transactions")
+    .select("id, income_id, vendor_payment_id, operational_expense_id, vat_tax_payment_id")
+    .eq("id", id)
+    .limit(1)
+
+  if (existing.error) {
+    return { error: "Could not delete this transaction." }
+  }
+
+  const row = existing.data?.[0]
+  if (!row) {
+    return { error: "That transaction could not be found." }
+  }
+
+  if (
+    row.income_id ||
+    row.vendor_payment_id ||
+    row.operational_expense_id ||
+    row.vat_tax_payment_id
+  ) {
+    return {
+      error: "This transaction comes from a payment or expense. Change it there.",
+    }
+  }
+
   const { data, error } = await supabase
     .from("bank_transactions")
     .delete()
@@ -231,8 +254,9 @@ async function saveBankTransaction(
     fieldErrors.direction = "Choose a direction."
   }
 
-  if (!isBankSourceKind(sourceKind)) {
-    fieldErrors.sourceKind = "Choose a source."
+  if (sourceKind !== "other") {
+    fieldErrors.sourceKind =
+      "Record client payments, vendor payments, and expenses on those pages."
   }
 
   if (amount === null) {
@@ -249,7 +273,7 @@ async function saveBankTransaction(
     Object.keys(fieldErrors).length > 0 ||
     amount === null ||
     !isBankDirection(direction) ||
-    !isBankSourceKind(sourceKind)
+    sourceKind !== "other"
   ) {
     return { error: null, fieldErrors }
   }
@@ -277,6 +301,34 @@ async function saveBankTransaction(
     }
   }
 
+  if (id) {
+    const existing = await supabase
+      .from("bank_transactions")
+      .select("income_id, vendor_payment_id, operational_expense_id, vat_tax_payment_id")
+      .eq("id", id)
+      .limit(1)
+
+    if (existing.error) {
+      return { error: "Could not save this transaction." }
+    }
+
+    const row = existing.data?.[0]
+    if (!row) {
+      return { error: "That transaction could not be found." }
+    }
+
+    if (
+      row.income_id ||
+      row.vendor_payment_id ||
+      row.operational_expense_id ||
+      row.vat_tax_payment_id
+    ) {
+      return {
+        error: "This transaction comes from a payment or expense. Change it there.",
+      }
+    }
+  }
+
   if (projectId) {
     const project = await supabase
       .from("projects")
@@ -293,7 +345,7 @@ async function saveBankTransaction(
     transaction_date: transactionDate,
     direction,
     amount,
-    source_kind: sourceKind,
+    source_kind: "other" as const,
     payment_method: paymentMethod || null,
     project_id: projectId || null,
     notes: notes || null,

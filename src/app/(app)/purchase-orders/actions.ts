@@ -213,6 +213,7 @@ export async function deletePurchaseOrder(
 
 function revalidatePurchaseOrders() {
   revalidatePath("/purchase-orders")
+  revalidatePath("/accounts/payable")
   revalidatePath("/vendors")
   revalidatePath("/projects")
 }

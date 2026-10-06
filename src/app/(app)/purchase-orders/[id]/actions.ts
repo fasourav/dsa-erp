@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import {
   derivePaymentStatus,
   isPaymentStatus,
@@ -44,11 +45,15 @@ export type VendorPaymentInput = {
   reference: string
   notes: string
   expenseCategory: string
+  bankAccountId: string
+  newAccountName: string
+  newBankName: string
 }
 
 export type VendorPaymentFieldErrors = {
   paidOn?: string
   amount?: string
+  bankAccountId?: string
 }
 
 export type VendorPaymentResult = {
@@ -416,6 +421,19 @@ async function saveVendorPayment(
     }
   }
 
+  const bank = await resolveBankAccountId(
+    supabase,
+    input.bankAccountId,
+    input.newAccountName,
+    input.newBankName,
+  )
+  if (bank.fieldError) {
+    return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
+  }
+  if (bank.error || !bank.id) {
+    return { error: bank.error ?? "Could not save this payment." }
+  }
+
   const values = {
     vendor_invoice_id: invoiceId,
     paid_on: paidOn,
@@ -424,6 +442,7 @@ async function saveVendorPayment(
     reference: reference || null,
     notes: notes || null,
     expense_category: expenseCategory || null,
+    bank_account_id: bank.id,
   }
 
   const { data, error } = id
@@ -542,6 +561,7 @@ function revalidateVendorMoney(purchaseOrderId: string | null) {
     revalidatePath(`/purchase-orders/${purchaseOrderId}`)
   }
   revalidatePath("/accounts/payable")
+  revalidatePath("/accounts/bank")
   revalidatePath("/vendors")
   revalidatePath("/projects")
 }

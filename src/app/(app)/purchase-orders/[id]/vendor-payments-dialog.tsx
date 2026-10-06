@@ -9,6 +9,7 @@ import {
   updateVendorPayment,
   type VendorPaymentFieldErrors,
 } from "@/app/(app)/purchase-orders/[id]/actions"
+import { BankAccountField } from "@/components/bank-account-field"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  defaultBankAccountId,
+  type BankAccountChoice,
+} from "@/lib/bank-account"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
@@ -38,12 +43,14 @@ export function VendorPaymentsDialog({
   invoice,
   paymentMethods,
   expenseCategories,
+  bankAccounts,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   invoice: VendorInvoiceRow | null
   paymentMethods: readonly string[]
   expenseCategories: readonly string[]
+  bankAccounts: readonly BankAccountChoice[]
 }) {
   const [payment, setPayment] = useState<VendorPaymentRow | null>(null)
   const [editing, setEditing] = useState(false)
@@ -116,6 +123,7 @@ export function VendorPaymentsDialog({
               payment={payment}
               paymentMethods={paymentMethods}
               expenseCategories={expenseCategories}
+              bankAccounts={bankAccounts}
               onCancel={() => setEditing(false)}
               onSaved={() => setEditing(false)}
             />
@@ -146,6 +154,7 @@ export function VendorPaymentsDialog({
                       <p className="text-sm text-muted-foreground">
                         {row.paidOn ? formatIsoDate(row.paidOn) : "—"}
                         {row.method ? ` · ${row.method}` : ""}
+                        {row.bankAccountName ? ` · ${row.bankAccountName}` : ""}
                         {row.expenseCategory ? ` · ${row.expenseCategory}` : ""}
                         {row.reference ? ` · ${row.reference}` : ""}
                       </p>
@@ -220,6 +229,7 @@ function PaymentForm({
   payment,
   paymentMethods,
   expenseCategories,
+  bankAccounts,
   onCancel,
   onSaved,
 }: {
@@ -227,6 +237,7 @@ function PaymentForm({
   payment: VendorPaymentRow | null
   paymentMethods: readonly string[]
   expenseCategories: readonly string[]
+  bankAccounts: readonly BankAccountChoice[]
   onCancel: () => void
   onSaved: () => void
 }) {
@@ -238,6 +249,11 @@ function PaymentForm({
     payment?.expenseCategory ?? "",
   )
   const [notes, setNotes] = useState(payment?.notes ?? "")
+  const [bankAccountId, setBankAccountId] = useState(
+    defaultBankAccountId(bankAccounts, payment?.bankAccountId ?? ""),
+  )
+  const [accountName, setAccountName] = useState("Operating account")
+  const [bankName, setBankName] = useState("")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<VendorPaymentFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -254,6 +270,9 @@ function PaymentForm({
         ? "Enter a payment greater than 0."
         : "Enter a payment amount."
       : null)
+  const accountError = serverErrors.bankAccountId ?? null
+  const hasAccounts =
+    bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
 
   function handleSubmit() {
     setAttempted(true)
@@ -264,6 +283,16 @@ function PaymentForm({
       return
     }
 
+    if (hasAccounts && !bankAccountId) {
+      setServerErrors({ bankAccountId: "Choose a bank account." })
+      return
+    }
+
+    if (!hasAccounts && !accountName.trim()) {
+      setServerErrors({ bankAccountId: "Enter an account name." })
+      return
+    }
+
     const input = {
       paidOn,
       amount: amount.trim(),
@@ -271,6 +300,9 @@ function PaymentForm({
       reference: reference.trim(),
       notes: notes.trim(),
       expenseCategory: expenseCategory.trim(),
+      bankAccountId,
+      newAccountName: hasAccounts ? "" : accountName.trim(),
+      newBankName: hasAccounts ? "" : bankName.trim(),
     }
 
     startSubmit(async () => {
@@ -333,6 +365,18 @@ function PaymentForm({
             ) : null}
           </div>
         </div>
+        <BankAccountField
+          idPrefix="vendor-payment"
+          accounts={bankAccounts}
+          accountId={bankAccountId}
+          onAccountIdChange={setBankAccountId}
+          accountName={accountName}
+          onAccountNameChange={setAccountName}
+          bankName={bankName}
+          onBankNameChange={setBankName}
+          disabled={pending}
+          error={accountError}
+        />
         <div className="flex flex-col gap-2">
           <Label htmlFor="vendor-payment-method">Payment method</Label>
           <NameCombobox

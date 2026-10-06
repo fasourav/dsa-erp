@@ -7,6 +7,7 @@ import {
   updateClientInvoice,
   type ClientInvoiceFieldErrors,
 } from "@/app/(app)/accounts/invoices/actions"
+import { BankAccountField } from "@/components/bank-account-field"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,6 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  defaultBankAccountId,
+  type BankAccountChoice,
+} from "@/lib/bank-account"
 import type {
   ClientInvoiceRow,
   InvoiceProjectOption,
@@ -43,16 +48,19 @@ export function ClientInvoiceFormDialog({
   onOpenChange,
   invoice,
   projects,
+  bankAccounts,
   defaultProjectId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   invoice: ClientInvoiceRow | null
   projects: InvoiceProjectOption[]
+  bankAccounts: readonly BankAccountChoice[]
   defaultProjectId: string | null
 }) {
   const invoiceId = invoice?.id ?? null
   const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn || todayIsoDate())
+  const [dueOn, setDueOn] = useState(invoice?.dueOn ?? "")
   const [projectId, setProjectId] = useState(
     invoice?.projectId ?? defaultProjectId ?? "",
   )
@@ -60,6 +68,11 @@ export function ClientInvoiceFormDialog({
   const [status, setStatus] = useState(
     invoice?.status ?? defaultClientInvoiceStatus,
   )
+  const [bankAccountId, setBankAccountId] = useState(
+    defaultBankAccountId(bankAccounts, ""),
+  )
+  const [accountName, setAccountName] = useState("Operating account")
+  const [bankName, setBankName] = useState("")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ClientInvoiceFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -74,6 +87,16 @@ export function ClientInvoiceFormDialog({
     value,
     label: clientInvoiceStatusLabel(value),
   }))
+  const needsBankAccount =
+    status === "paid" && (invoice ? invoice.balance > 0 : true)
+  const hasAccounts =
+    bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
+  const dueError =
+    serverErrors.dueOn ??
+    (attempted && dueOn.trim() !== "" && !isIsoDate(dueOn)
+      ? "Enter a due date."
+      : null)
+  const accountError = serverErrors.bankAccountId ?? null
   const issuedError =
     serverErrors.issuedOn ??
     (attempted && !isIsoDate(issuedOn) ? "Enter an issue date." : null)
@@ -106,6 +129,7 @@ export function ClientInvoiceFormDialog({
 
     if (
       !isIsoDate(issuedOn) ||
+      (dueOn.trim() !== "" && !isIsoDate(dueOn)) ||
       !projectId ||
       parsedAmount === null ||
       parsedAmount <= 0 ||
@@ -114,11 +138,25 @@ export function ClientInvoiceFormDialog({
       return
     }
 
+    if (needsBankAccount && hasAccounts && !bankAccountId) {
+      setServerErrors({ bankAccountId: "Choose a bank account." })
+      return
+    }
+
+    if (needsBankAccount && !hasAccounts && !accountName.trim()) {
+      setServerErrors({ bankAccountId: "Enter an account name." })
+      return
+    }
+
     const input = {
       projectId,
       issuedOn,
+      dueOn: dueOn.trim(),
       amount: amount.trim(),
       status,
+      bankAccountId: needsBankAccount ? bankAccountId : "",
+      newAccountName: needsBankAccount && !hasAccounts ? accountName.trim() : "",
+      newBankName: needsBankAccount && !hasAccounts ? bankName.trim() : "",
     }
 
     startSubmit(async () => {
@@ -169,6 +207,22 @@ export function ClientInvoiceFormDialog({
             {issuedError ? (
               <p role="alert" className="text-sm text-destructive">
                 {issuedError}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="client-invoice-due">Due Date</Label>
+            <Input
+              id="client-invoice-due"
+              type="date"
+              value={dueOn}
+              disabled={pending}
+              aria-invalid={Boolean(dueError)}
+              onChange={(event) => setDueOn(event.target.value)}
+            />
+            {dueError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {dueError}
               </p>
             ) : null}
           </div>
@@ -252,6 +306,20 @@ export function ClientInvoiceFormDialog({
               ) : null}
             </div>
           </div>
+          {needsBankAccount ? (
+            <BankAccountField
+              idPrefix="client-invoice"
+              accounts={bankAccounts}
+              accountId={bankAccountId}
+              onAccountIdChange={setBankAccountId}
+              accountName={accountName}
+              onAccountNameChange={setAccountName}
+              bankName={bankName}
+              onBankNameChange={setBankName}
+              disabled={pending}
+              error={accountError}
+            />
+          ) : null}
           {formError ? (
             <p role="alert" className="text-sm text-destructive">
               {formError}
