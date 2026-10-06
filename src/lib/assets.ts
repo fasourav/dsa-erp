@@ -17,20 +17,32 @@ export type AssetRow = {
 
 export async function getAssets(): Promise<{
   assets: AssetRow[]
+  categories: string[]
   error: string | null
 }> {
   const supabase = await createClient()
 
   try {
-    const rows = await fetchAllPages(
-      (from, to) =>
-        supabase
-          .from("asset_register")
-          .select("*")
-          .order("purchase_date", { ascending: false })
-          .range(from, to),
-      "Asset list is larger than expected.",
-    )
+    const [rows, catRows] = await Promise.all([
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("asset_register")
+            .select("*")
+            .order("purchase_date", { ascending: false })
+            .range(from, to),
+        "Asset list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("assets")
+            .select("category")
+            .order("category", { ascending: true })
+            .range(from, to),
+        "Asset category list is larger than expected.",
+      ),
+    ])
 
     const assets: AssetRow[] = rows.map((r) => ({
       id: r.asset_id ?? "",
@@ -46,8 +58,18 @@ export async function getAssets(): Promise<{
       monthlyDepreciation: r.monthly_depreciation ?? 0,
     }))
 
-    return { assets, error: null }
+    const seen = new Set<string>()
+    const categories: string[] = []
+    for (const row of catRows) {
+      const name = (row.category ?? "").trim()
+      if (name && !seen.has(name)) {
+        seen.add(name)
+        categories.push(name)
+      }
+    }
+
+    return { assets, categories, error: null }
   } catch {
-    return { assets: [], error: "Could not load assets." }
+    return { assets: [], categories: [], error: "Could not load assets." }
   }
 }

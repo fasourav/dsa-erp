@@ -97,15 +97,12 @@ async function saveAsset(
   const { data: auth, error: authErr } = await supabase.auth.getUser()
   if (authErr || !auth.user) return { error: "You must be signed in." }
 
-  const totalCost = (unitCost ?? 0) * quantity
-
   const values = {
     name,
     category: category || null,
     purchase_date: purchaseDate,
     quantity,
     unit_cost: unitCost ?? 0,
-    total_cost: totalCost,
     lifespan_years: lifespanYears,
     notes: notes || null,
   }

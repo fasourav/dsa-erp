@@ -7,6 +7,7 @@ import {
   updateAsset,
   type AssetFieldErrors,
 } from "@/app/(app)/assets/actions"
+import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,10 +27,12 @@ export function AssetFormDialog({
   open,
   onOpenChange,
   asset,
+  categories,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   asset: AssetRow | null
+  categories: readonly string[]
 }) {
   const assetId = asset?.id ?? null
   const [name, setName] = useState(asset?.name ?? "")
@@ -129,11 +132,13 @@ export function AssetFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="asset-category">Category</Label>
-              <Input
+              <NameCombobox
                 id="asset-category"
                 value={category}
+                names={categories}
                 disabled={pending}
-                onChange={(e) => setCategory(e.target.value)}
+                placeholder="Search Categories"
+                onValueChange={setCategory}
               />
             </div>
             <div className="flex flex-col gap-2">

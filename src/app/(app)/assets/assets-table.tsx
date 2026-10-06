@@ -97,9 +97,11 @@ function sortAssets(rows: AssetRow[], sort: SortState<ColId>): AssetRow[] {
 
 export function AssetsTable({
   assets,
+  categories,
   error,
 }: {
   assets: AssetRow[]
+  categories: string[]
   error: string | null
 }) {
   const [sort, setSort] = useState<SortState<ColId>>({
@@ -304,7 +306,7 @@ export function AssetsTable({
         </div>
       </div>
 
-      <AssetFormDialog key={formSession} open={formOpen} onOpenChange={setFormOpen} asset={formAsset} />
+      <AssetFormDialog key={formSession} open={formOpen} onOpenChange={setFormOpen} asset={formAsset} categories={categories} />
 
       <AlertDialog open={deleteOpen} onOpenChange={(open) => { if (open || deleting) return; setDeleteOpen(false); setDeleteError(null) }}>
         <AlertDialogContent>
