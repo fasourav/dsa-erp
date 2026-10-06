@@ -114,6 +114,15 @@ export function EmployeeFormDialog({
   }
 
   const deptItems = departments.map((d) => ({ value: d.id, label: d.name }))
+  if (
+    employee?.departmentId &&
+    !deptItems.some((item) => item.value === employee.departmentId)
+  ) {
+    deptItems.push({
+      value: employee.departmentId,
+      label: employee.department.trim() || "Department",
+    })
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

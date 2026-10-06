@@ -64,6 +64,15 @@ export function BudgetFormDialog({
   const [pending, startSubmit] = useTransition()
 
   const deptItems = departments.map((d) => ({ value: d.id, label: d.name }))
+  if (
+    budget?.departmentId &&
+    !deptItems.some((item) => item.value === budget.departmentId)
+  ) {
+    deptItems.push({
+      value: budget.departmentId,
+      label: budget.department.trim() || "Department",
+    })
+  }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) return
