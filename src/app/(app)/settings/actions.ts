@@ -138,17 +138,8 @@ async function saveCatalogItem(
       code = slugifyCatalogCode(name)
     }
     if (!code || !/^[a-z][a-z0-9_]*$/.test(code)) {
-      fieldErrors.code =
-        "Enter a code using letters, numbers, and underscores."
+      fieldErrors.name = "Enter a name that can be saved as a status."
     }
-  }
-
-  if (
-    definition.hasIsOpen &&
-    typeof input.isOpen !== "boolean" &&
-    input.isOpen !== undefined
-  ) {
-    fieldErrors.isOpen = "Choose whether this status is open."
   }
 
   if (
@@ -169,6 +160,11 @@ async function saveCatalogItem(
   }
 
   const sortOrder = input.sortOrder
+
+  if (input.catalog === "lead_statuses" && !id) {
+    code = await uniqueLeadStatusCode(supabase, code)
+  }
+
   const { data, error } =
     input.catalog === "departments"
       ? await writeDepartment(supabase, id, {
@@ -181,7 +177,6 @@ async function saveCatalogItem(
             name,
             sort_order: sortOrder,
             code,
-            is_open: input.isOpen ?? true,
           })
         : await writeShared(supabase, input.catalog, id, {
             name,
@@ -190,14 +185,12 @@ async function saveCatalogItem(
 
   if (error) {
     if (isUniqueViolation(error)) {
-      const message = /code/i.test(error.message ?? "")
-        ? "A lead status with this code already exists."
-        : duplicateNameMessage(definition.singular)
+      // Code is auto-generated; surface collisions as a name problem for users.
       return {
         error: null,
-        fieldErrors: definition.hasCode && /code/i.test(error.message ?? "")
-          ? { code: message }
-          : { name: message },
+        fieldErrors: {
+          name: duplicateNameMessage(definition.singular),
+        },
       }
     }
 
@@ -244,22 +237,58 @@ async function writeLeadStatus(
     name: string
     sort_order: number
     code: string
-    is_open: boolean
   },
 ) {
   if (id) {
+    // Preserve code and is_open; Settings only edits name + sort order.
     return supabase
       .from("lead_statuses")
       .update({
         name: row.name,
         sort_order: row.sort_order,
-        is_open: row.is_open,
       })
       .eq("id", id)
       .select("id")
   }
 
-  return supabase.from("lead_statuses").insert(row).select("id")
+  // New custom statuses default to open in the DB without exposing that in UI.
+  return supabase
+    .from("lead_statuses")
+    .insert({
+      name: row.name,
+      sort_order: row.sort_order,
+      code: row.code,
+      is_open: true,
+    })
+    .select("id")
+}
+
+async function uniqueLeadStatusCode(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  baseCode: string,
+) {
+  const { data, error } = await supabase.from("lead_statuses").select("code")
+
+  if (error || !data) {
+    return baseCode
+  }
+
+  const existing = new Set(
+    data.map((row) => String(row.code ?? "").toLowerCase()),
+  )
+
+  if (!existing.has(baseCode)) {
+    return baseCode
+  }
+
+  for (let index = 2; index < 1000; index += 1) {
+    const candidate = `${baseCode}_${index}`
+    if (!existing.has(candidate)) {
+      return candidate
+    }
+  }
+
+  return `${baseCode}_${Date.now()}`
 }
 
 async function leadStatusInUse(
