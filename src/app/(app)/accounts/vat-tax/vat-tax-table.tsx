@@ -1,43 +1,29 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { VatTaxFormDialog } from "@/app/(app)/accounts/vat-tax/vat-tax-form-dialog"
+import { DataList } from "@/components/data-list"
 import { Button } from "@/components/ui/button"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import type { BankAccountChoice } from "@/lib/bank-account"
+import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
-  paginationItems,
   rangeLabel,
   toggleSort,
+  type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import { formatIsoDate, formatMoney } from "@/lib/format"
-import type { BankAccountChoice } from "@/lib/bank-account"
 import type { ProjectOption, VatTaxRow } from "@/lib/vat-tax"
-import { cn } from "@/lib/utils"
 
 type ColId = "projectName" | "paidOn" | "amount" | "paymentMethod"
 
-const columns: { id: ColId; label: string; align: "left" | "right" }[] = [
-  { id: "projectName", label: "Project", align: "left" },
-  { id: "paidOn", label: "Paid On", align: "left" },
-  { id: "amount", label: "Amount", align: "right" },
-  { id: "paymentMethod", label: "Payment Method", align: "left" },
+const columns: readonly ListColumn<ColId>[] = [
+  { id: "projectName", label: "Project", align: "left", locked: true },
+  { id: "paidOn", label: "Paid On", align: "left", locked: true },
+  { id: "amount", label: "Amount", align: "right", locked: true },
+  { id: "paymentMethod", label: "Payment Method", align: "left", locked: true },
 ]
 
 function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
@@ -46,7 +32,9 @@ function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
     let cmp = 0
     switch (sort.key) {
       case "projectName":
-        cmp = a.projectName.localeCompare(b.projectName, "en", { sensitivity: "base" })
+        cmp = a.projectName.localeCompare(b.projectName, "en", {
+          sensitivity: "base",
+        })
         break
       case "paidOn":
         cmp = a.paidOn.localeCompare(b.paidOn)
@@ -86,7 +74,6 @@ export function VatTaxTable({
 
   const sorted = useMemo(() => sortVat(payments, sort), [payments, sort])
   const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function openForm() {
     setFormSession((s) => s + 1)
@@ -112,154 +99,33 @@ export function VatTaxTable({
         </Button>
       </div>
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {columns.map((col) => {
-                const active = sort.key === col.id
-                return (
-                  <TableHead
-                    key={col.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(col.align === "right" && "text-right")}
-                  >
-                    <div
-                      className={cn(
-                        "flex",
-                        col.align === "right" && "justify-end",
-                      )}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                          col.align === "right" ? "-mr-2" : "-ml-2",
-                        )}
-                        onClick={() => {
-                          setSort(toggleSort(sort, col.id))
-                          setPage(1)
-                        }}
-                      >
-                        {col.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columns.length}
-                  role="alert"
-                  className="py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columns.length}
-                  className="py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  No VAT / Tax Payments Yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">
-                    {p.projectName || "—"}
-                  </TableCell>
-                  <TableCell>
-                    {p.paidOn ? formatIsoDate(p.paidOn) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(p.amount)}
-                  </TableCell>
-                  <TableCell>{p.paymentMethod || "—"}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {rangeLabel(
-              pageResult.rangeStart,
-              pageResult.rangeEnd,
-              pageResult.total,
-              "payment",
-              "payments",
-            )}
-          </p>
-          <Pagination
-            aria-label="VAT tax pagination"
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => setPage(pageResult.currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant={
-                        item === pageResult.currentPage ? "outline" : "ghost"
-                      }
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={
-                        item === pageResult.currentPage ? "page" : undefined
-                      }
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage >= pageResult.pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => setPage(pageResult.currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+      <DataList
+        columns={columns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(payment) => payment.id}
+        sort={sort}
+        onSort={(key) => {
+          setSort(toggleSort(sort, key))
+          setPage(1)
+        }}
+        visibility={{}}
+        error={error}
+        emptyMessage="No VAT / Tax Payments Yet."
+        rangeText={rangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+          "payment",
+          "payments",
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="VAT tax pagination"
+        renderCell={(payment, columnId) => (
+          <Cell payment={payment} columnId={columnId} />
+        )}
+      />
 
       <VatTaxFormDialog
         key={formSession}
@@ -271,4 +137,33 @@ export function VatTaxTable({
       />
     </div>
   )
+}
+
+function Cell({
+  payment,
+  columnId,
+}: {
+  payment: VatTaxRow
+  columnId: ColId
+}) {
+  switch (columnId) {
+    case "projectName":
+      return (
+        <span className="font-medium">{payment.projectName || "—"}</span>
+      )
+    case "paidOn":
+      return payment.paidOn ? (
+        <span>{formatIsoDate(payment.paidOn)}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "amount":
+      return <span className="tabular-nums">{formatMoney(payment.amount)}</span>
+    case "paymentMethod":
+      return payment.paymentMethod ? (
+        <span>{payment.paymentMethod}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+  }
 }

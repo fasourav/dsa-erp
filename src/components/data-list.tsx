@@ -37,6 +37,48 @@ import {
 } from "@/lib/list-paging"
 import { cn } from "@/lib/utils"
 
+type ColumnAlign = ListColumn<string>["align"]
+
+function alignClass(align: ColumnAlign) {
+  if (align === "right") {
+    return "text-right"
+  }
+
+  if (align === "center") {
+    return "text-center"
+  }
+
+  return "text-left"
+}
+
+function insetClass(
+  align: ColumnAlign,
+  previous: ColumnAlign | null,
+  next: ColumnAlign | null,
+) {
+  return cn(
+    "px-4",
+    align === "right" && next && next !== "right" && "pr-8",
+    previous === "right" && align !== "right" && "pl-8",
+  )
+}
+
+function staysOnOneLine(column: {
+  id: string
+  label: string
+  align: ColumnAlign
+}) {
+  if (column.align !== "left") {
+    return true
+  }
+
+  return (
+    /date/i.test(column.id) ||
+    /date/i.test(column.label) ||
+    /On$/.test(column.id)
+  )
+}
+
 export function DataList<T, Id extends string>({
   columns,
   rows,
@@ -54,7 +96,6 @@ export function DataList<T, Id extends string>({
   renderCell,
   renderActions,
   toolbar,
-  columnLayout = "auto",
 }: {
   columns: readonly ListColumn<Id>[]
   rows: readonly T[]
@@ -72,9 +113,7 @@ export function DataList<T, Id extends string>({
   renderCell: (row: T, columnId: Id) => ReactNode
   renderActions?: (row: T) => ReactNode
   toolbar?: ReactNode
-  columnLayout?: "auto" | "even"
 }) {
-  const even = columnLayout === "even"
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
   )
@@ -88,23 +127,13 @@ export function DataList<T, Id extends string>({
         <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
       ) : null}
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table
-          className={cn(
-            even ? "min-w-max md:min-w-full md:table-fixed" : "min-w-max",
-          )}
-        >
-          {even ? (
-            <colgroup>
-              {visibleColumns.map((column) => (
-                <col key={column.id} />
-              ))}
-              {hasActions ? <col className="w-16" /> : null}
-            </colgroup>
-          ) : null}
+        <Table>
           <TableHeader>
             <TableRow className="bg-muted hover:bg-muted">
-              {visibleColumns.map((column) => {
+              {visibleColumns.map((column, index) => {
                 const active = sort.key === column.id
+                const previous = visibleColumns[index - 1]?.align ?? null
+                const next = visibleColumns[index + 1]?.align ?? null
                 return (
                   <TableHead
                     key={column.id}
@@ -116,40 +145,29 @@ export function DataList<T, Id extends string>({
                         : "none"
                     }
                     className={cn(
-                      "px-3 text-sm",
-                      even && "whitespace-normal",
-                      column.align === "right" && "text-right",
+                      "h-auto py-2 align-middle text-sm font-medium whitespace-nowrap",
+                      alignClass(column.align),
+                      insetClass(column.align, previous, next),
                     )}
                   >
-                    <div
-                      className={cn(
-                        "flex min-w-0",
-                        column.align === "right" && "justify-end",
-                      )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto min-h-8 px-0 font-medium"
+                      aria-label={
+                        active
+                          ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
+                          : `Sort by ${column.label}`
+                      }
+                      onClick={() => onSort(column.id)}
                     >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                          "border-0",
-                          column.align === "right" ? "-mr-2.5 text-right" : "-ml-2.5 text-left",
-                          even && "h-auto min-h-8 max-w-full min-w-0 shrink whitespace-normal",
-                        )}
-                        aria-label={
-                          active
-                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                            : `Sort by ${column.label}`
-                        }
-                        onClick={() => onSort(column.id)}
-                      >
-                        {column.label}
-                      </Button>
-                    </div>
+                      {column.label}
+                    </Button>
                   </TableHead>
                 )
               })}
               {hasActions ? (
-                <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3">
+                <TableHead className="sticky right-0 z-10 w-px bg-muted px-3 align-middle whitespace-nowrap">
                   <span className="sr-only">Actions</span>
                 </TableHead>
               ) : null}
@@ -178,21 +196,37 @@ export function DataList<T, Id extends string>({
             ) : (
               rows.map((row) => (
                 <TableRow key={rowKey(row)} className="group">
-                  {visibleColumns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className={cn(
-                        "p-3 text-sm whitespace-normal",
-                        column.align === "right" && "text-right tabular-nums",
-                        even && column.align === "right" && "whitespace-nowrap",
-                      )}
-                    >
-                      {renderCell(row, column.id)}
-                    </TableCell>
-                  ))}
+                  {visibleColumns.map((column, index) => {
+                    const previous = visibleColumns[index - 1]?.align ?? null
+                    const next = visibleColumns[index + 1]?.align ?? null
+                    const oneLine = staysOnOneLine(column)
+                    return (
+                      <TableCell
+                        key={column.id}
+                        className={cn(
+                          "py-3 align-middle text-sm",
+                          oneLine ? "whitespace-nowrap" : "whitespace-normal",
+                          alignClass(column.align),
+                          insetClass(column.align, previous, next),
+                          column.align !== "left" && "tabular-nums",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "max-w-full items-center",
+                            oneLine ? "inline-flex" : "flex w-full min-w-0",
+                          )}
+                        >
+                          {renderCell(row, column.id)}
+                        </span>
+                      </TableCell>
+                    )
+                  })}
                   {hasActions ? (
-                    <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
-                      {renderActions(row)}
+                    <TableCell className="sticky right-0 z-10 w-px bg-card p-3 align-middle text-sm whitespace-nowrap group-hover:bg-muted">
+                      <span className="inline-flex items-center">
+                        {renderActions(row)}
+                      </span>
                     </TableCell>
                   ) : null}
                 </TableRow>

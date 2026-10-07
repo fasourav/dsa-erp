@@ -3,8 +3,6 @@
 import {
   Check,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Columns3,
   FileText,
   MoreHorizontal,
@@ -19,6 +17,7 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
 import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
+import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,20 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { formatMoney } from "@/lib/format"
 import {
   getColumnServerSnapshot,
@@ -63,10 +48,8 @@ import {
   dataColumns,
   formatPercent,
   formatProjectDate,
-  isColumnVisible,
   isOptionalColumn,
   paginateProjects,
-  paginationItems,
   projectRangeLabel,
   sortProjects,
   statusLabel,
@@ -109,10 +92,6 @@ export function ProjectsTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const visibleColumns = dataColumns.filter((column) =>
-    isColumnVisible(column.id, visibility),
-  )
-  const columnCount = visibleColumns.length + 1
   const sorted = useMemo(
     () => sortProjects(projects, sort),
     [projects, sort],
@@ -121,7 +100,6 @@ export function ProjectsTable({
     () => paginateProjects(sorted, page),
     [sorted, page],
   )
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function toggleSort(key: ColumnId) {
     setSort((current) => {
@@ -215,170 +193,35 @@ export function ProjectsTable({
         </div>
       </div>
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {visibleColumns.map((column) => {
-                const active = sort.key === column.id
-                return (
-                  <TableHead
-                    key={column.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(
-                      "px-3 text-sm",
-                      column.align === "right" && "text-right",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex",
-                        column.align === "right" && "justify-end",
-                      )}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                          "border-0",
-                          column.align === "right" ? "-mr-2.5" : "-ml-2.5",
-                        )}
-                        aria-label={
-                          active
-                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                            : `Sort by ${column.label}`
-                        }
-                        onClick={() => toggleSort(column.id)}
-                      >
-                        {column.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  role="alert"
-                  className="px-3 py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  No Projects Yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((project) => (
-                <TableRow key={project.id} className="group">
-                  {visibleColumns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className={cn(
-                        "p-3 text-sm",
-                        column.align === "right" && "text-right",
-                      )}
-                    >
-                      <CellValue project={project} columnId={column.id} />
-                    </TableCell>
-                  ))}
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
-                    <RowActions
-                      project={project}
-                      onEdit={openForm}
-                      onDelete={askDelete}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {projectRangeLabel(
-              pageResult.rangeStart,
-              pageResult.rangeEnd,
-              pageResult.total,
-            )}
-          </p>
-          <Pagination
-            aria-label="Projects pagination"
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => setPage(pageResult.currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant={
-                        item === pageResult.currentPage ? "outline" : "ghost"
-                      }
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={
-                        item === pageResult.currentPage ? "page" : undefined
-                      }
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage >= pageResult.pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => setPage(pageResult.currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
-
+      <DataList
+        columns={dataColumns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(project) => project.id}
+        sort={sort}
+        onSort={toggleSort}
+        visibility={visibility}
+        error={error}
+        emptyMessage="No Projects Yet."
+        rangeText={projectRangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Projects pagination"
+        renderCell={(project, columnId) => (
+          <CellValue project={project} columnId={columnId} />
+        )}
+        renderActions={(project) => (
+          <RowActions
+            project={project}
+            onEdit={openForm}
+            onDelete={askDelete}
+          />
+        )}
+      />
       <ProjectFormDialog
         key={formSession}
         open={formOpen}
@@ -438,7 +281,7 @@ function CellValue({
   switch (columnId) {
     case "name":
       return (
-        <div className="flex min-w-[12rem] flex-col gap-1">
+        <div className="flex w-full min-w-0 flex-col gap-1">
           <span
             className={cn(
               "font-medium",

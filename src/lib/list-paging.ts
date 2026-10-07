@@ -10,7 +10,7 @@ export type SortState<Id extends string> = {
 export type ListColumn<Id extends string> = {
   id: Id
   label: string
-  align: "left" | "right"
+  align: "left" | "right" | "center"
   locked: boolean
 }
 

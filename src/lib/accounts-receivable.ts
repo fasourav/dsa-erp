@@ -10,7 +10,6 @@ export type ReceivableRow = {
   clientName: string
   projectId: string
   projectName: string
-  dueDate: string
   billedAmount: number
   paid: number
   due: number
@@ -23,7 +22,6 @@ export type ReceivableColumnId =
   | "billedAmount"
   | "paid"
   | "due"
-  | "dueDate"
   | "status"
 
 export type ReceivableOptionalColumnId = Exclude<
@@ -42,7 +40,6 @@ export const receivableColumns: readonly ListColumn<ReceivableColumnId>[] = [
   { id: "billedAmount", label: "Billed Amount", align: "right", locked: false },
   { id: "paid", label: "Total Paid", align: "right", locked: false },
   { id: "due", label: "Pending Due", align: "right", locked: false },
-  { id: "dueDate", label: "Due Date", align: "left", locked: false },
   { id: "status", label: "Status", align: "left", locked: false },
 ]
 
@@ -50,7 +47,6 @@ const defaultVisibility: ReceivableColumnVisibility = {
   billedAmount: true,
   paid: true,
   due: true,
-  dueDate: true,
   status: true,
 }
 
@@ -62,7 +58,7 @@ export function sanitizeReceivableColumns(
   value: unknown,
 ): ReceivableColumnVisibility {
   return sanitizeColumnVisibility(
-    ["billedAmount", "paid", "due", "dueDate", "status"],
+    ["billedAmount", "paid", "due", "status"],
     defaultReceivableColumns(),
     value,
   )
@@ -92,7 +88,6 @@ function compareRows(
   switch (key) {
     case "clientName":
     case "projectName":
-    case "dueDate":
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
     case "status":
       return (left.status ?? "").localeCompare(right.status ?? "")

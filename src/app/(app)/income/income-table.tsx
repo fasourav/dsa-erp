@@ -65,7 +65,6 @@ export function IncomeTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Income pagination"
-        columnLayout="even"
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
       />
     </div>

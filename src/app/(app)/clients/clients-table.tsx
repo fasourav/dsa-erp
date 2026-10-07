@@ -2,8 +2,6 @@
 
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Columns3,
   MoreHorizontal,
   Pencil,
@@ -16,6 +14,7 @@ import { deleteClient } from "@/app/(app)/clients/actions"
 import { ClientContactDialog } from "@/app/(app)/clients/client-contact-dialog"
 import { ClientFormDialog } from "@/app/(app)/clients/client-form-dialog"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,20 +35,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   getColumnServerSnapshot,
   getColumnSnapshot,
   subscribeColumnVisibility,
@@ -58,11 +43,9 @@ import {
 import {
   clientRangeLabel,
   dataColumns,
-  isColumnVisible,
   isOptionalColumn,
   kindLabel,
   paginateClients,
-  paginationItems,
   sortClients,
   type ClientSummary,
   type ColumnId,
@@ -102,16 +85,11 @@ export function ClientsTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const visibleColumns = dataColumns.filter((column) =>
-    isColumnVisible(column.id, visibility),
-  )
-  const columnCount = visibleColumns.length + 1
   const sorted = useMemo(() => sortClients(clients, sort), [clients, sort])
   const pageResult = useMemo(
     () => paginateClients(sorted, page),
     [sorted, page],
   )
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function toggleSort(key: ColumnId) {
     setSort((current) => {
@@ -210,166 +188,39 @@ export function ClientsTable({
         </div>
       </div>
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {visibleColumns.map((column) => {
-                const active = sort.key === column.id
-                return (
-                  <TableHead
-                    key={column.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(column.align === "right" && "text-right")}
-                  >
-                    <div
-                      className={cn(
-                        "flex",
-                        column.align === "right" && "justify-end",
-                      )}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                          column.align === "right" ? "-mr-2" : "-ml-2",
-                        )}
-                        aria-label={
-                          active
-                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                            : `Sort by ${column.label}`
-                        }
-                        onClick={() => toggleSort(column.id)}
-                      >
-                        {column.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  role="alert"
-                  className="py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  className="py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  No Clients Yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((client) => (
-                <TableRow key={client.id} className="group">
-                  {visibleColumns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className={cn(column.align === "right" && "text-right")}
-                    >
-                      <CellValue
-                        client={client}
-                        columnId={column.id}
-                        onOpenContact={openContact}
-                      />
-                    </TableCell>
-                  ))}
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
-                    <RowActions
-                      client={client}
-                      onEdit={openForm}
-                      onDelete={askDelete}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {clientRangeLabel(
-              pageResult.rangeStart,
-              pageResult.rangeEnd,
-              pageResult.total,
-            )}
-          </p>
-          <Pagination
-            aria-label="Clients pagination"
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => setPage(pageResult.currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant={
-                        item === pageResult.currentPage ? "outline" : "ghost"
-                      }
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={
-                        item === pageResult.currentPage ? "page" : undefined
-                      }
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage >= pageResult.pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => setPage(pageResult.currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+      <DataList
+        columns={dataColumns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(client) => client.id}
+        sort={sort}
+        onSort={toggleSort}
+        visibility={visibility}
+        error={error}
+        emptyMessage="No Clients Yet."
+        rangeText={clientRangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Clients pagination"
+        renderCell={(client, columnId) => (
+          <CellValue
+            client={client}
+            columnId={columnId}
+            onOpenContact={openContact}
+          />
+        )}
+        renderActions={(client) => (
+          <RowActions
+            client={client}
+            onEdit={openForm}
+            onDelete={askDelete}
+          />
+        )}
+      />
 
       <ClientFormDialog
         key={formSession}
@@ -439,7 +290,7 @@ function CellValue({
           type="button"
           variant="link"
           className={cn(
-            "-ml-2.5 font-medium text-foreground",
+            "h-auto min-h-8 px-0 font-medium text-foreground",
             !client.displayName && "text-muted-foreground",
           )}
           aria-label={`Open contact card for ${client.displayName || "client"}`}
