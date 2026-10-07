@@ -17,11 +17,11 @@ export async function getClientSummaries(): Promise<{
       supabase
         .from("client_summaries")
         .select(
-          "client_id, display_name, kind, ongoing_projects, completed_projects, total_project_value, total_paid, total_pending",
+          "client_id, display_name, kind, ongoing_projects, completed_projects, total_project_value, total_paid, total_pending, gross_profit, gross_profit_pct",
         ),
       supabase
         .from("clients")
-        .select("id, person_name, company_name, email, phone, notes"),
+        .select("id, person_name, company_name, email, phone, notes, address"),
       countProjectsByClient(supabase),
     ])
 
@@ -51,11 +51,15 @@ export async function getClientSummaries(): Promise<{
           totalProjectValue: toNumber(row.total_project_value),
           totalPaid: toNumber(row.total_paid),
           totalPending: toNumber(row.total_pending),
+          grossProfit: toNumber(row.gross_profit),
+          grossProfitPct:
+            row.gross_profit_pct == null ? null : toNumber(row.gross_profit_pct),
           personName: detail?.person_name ?? null,
           companyName: detail?.company_name ?? null,
           email: detail?.email ?? null,
           phone: detail?.phone ?? null,
           notes: detail?.notes ?? null,
+          address: detail?.address ?? null,
         } satisfies ClientSummary,
       ]
     })

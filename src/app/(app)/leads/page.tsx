@@ -4,9 +4,7 @@ import { getLeads } from "@/lib/leads"
 export const metadata = { title: "Leads" }
 
 export default async function LeadsPage() {
-  const { leads, projectTypes, error } = await getLeads()
+  const { leads, lookups, error } = await getLeads()
 
-  return (
-    <LeadsTable leads={leads} projectTypes={projectTypes} error={error} />
-  )
+  return <LeadsTable leads={leads} lookups={lookups} error={error} />
 }

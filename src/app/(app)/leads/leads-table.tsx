@@ -2,14 +2,16 @@
 
 import {
   ArrowRightLeft,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Columns3,
   MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react"
-import { useMemo, useState, useTransition } from "react"
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import {
   convertLead,
@@ -21,6 +23,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -50,28 +53,29 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  getColumnServerSnapshot,
+  getColumnSnapshot,
+  subscribeColumnVisibility,
+  writeColumnVisibility,
+} from "@/lib/lead-column-store"
+import {
+  dataColumns,
+  isColumnVisible,
+  isOptionalColumn,
+  type ColumnId,
+} from "@/lib/lead-summary"
+import {
   paginateRows,
   paginationItems,
   rangeLabel,
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { formatMoney } from "@/lib/format"
-import type { LeadRow, ProjectTypeOption } from "@/lib/leads"
+import { formatIsoDate, formatMoney } from "@/lib/format"
+import type { LeadLookups, LeadRow } from "@/lib/leads"
 import { cn } from "@/lib/utils"
 
-type ColId = "leadName" | "kind" | "status" | "projectType" | "estimatedValue" | "probability"
-
-const columns: { id: ColId; label: string; align: "left" | "right" }[] = [
-  { id: "leadName", label: "Lead Name", align: "left" },
-  { id: "kind", label: "Type", align: "left" },
-  { id: "status", label: "Status", align: "left" },
-  { id: "projectType", label: "Project Type", align: "left" },
-  { id: "estimatedValue", label: "Est. Value", align: "right" },
-  { id: "probability", label: "Prob. %", align: "right" },
-]
-
-function sortLeads(rows: LeadRow[], sort: SortState<ColId>): LeadRow[] {
+function sortLeads(rows: LeadRow[], sort: SortState<ColumnId>): LeadRow[] {
   const sorted = [...rows]
   sorted.sort((a, b) => {
     let cmp = 0
@@ -79,14 +83,21 @@ function sortLeads(rows: LeadRow[], sort: SortState<ColId>): LeadRow[] {
       case "leadName":
         cmp = a.leadName.localeCompare(b.leadName, "en", { sensitivity: "base" })
         break
-      case "kind":
-        cmp = a.kind.localeCompare(b.kind)
+      case "createdOn":
+        cmp = a.createdOn.localeCompare(b.createdOn)
         break
-      case "status":
-        cmp = a.status.localeCompare(b.status)
+      case "projectName":
+        cmp = a.projectName.localeCompare(b.projectName, "en", {
+          sensitivity: "base",
+        })
         break
-      case "projectType":
-        cmp = a.projectType.localeCompare(b.projectType, "en", { sensitivity: "base" })
+      case "currentStage":
+        cmp = a.currentStage.localeCompare(b.currentStage, "en", {
+          sensitivity: "base",
+        })
+        break
+      case "source":
+        cmp = a.source.localeCompare(b.source, "en", { sensitivity: "base" })
         break
       case "estimatedValue":
         cmp = a.estimatedValue - b.estimatedValue
@@ -94,35 +105,34 @@ function sortLeads(rows: LeadRow[], sort: SortState<ColId>): LeadRow[] {
       case "probability":
         cmp = a.probability - b.probability
         break
+      case "status":
+        cmp = a.statusLabel.localeCompare(b.statusLabel, "en", {
+          sensitivity: "base",
+        })
+        break
     }
     return sort.direction === "asc" ? cmp : -cmp
   })
   return sorted
 }
 
-function statusBadge(status: string) {
-  switch (status) {
-    case "won":
-      return "secondary"
-    case "lost":
-      return "destructive"
-    default:
-      return "outline"
-  }
-}
-
 export function LeadsTable({
   leads,
-  projectTypes,
+  lookups,
   error,
 }: {
   leads: LeadRow[]
-  projectTypes: ProjectTypeOption[]
+  lookups: LeadLookups
   error: string | null
 }) {
-  const [sort, setSort] = useState<SortState<ColId>>({
-    key: "leadName",
-    direction: "asc",
+  const visibility = useSyncExternalStore(
+    subscribeColumnVisibility,
+    getColumnSnapshot,
+    getColumnServerSnapshot,
+  )
+  const [sort, setSort] = useState<SortState<ColumnId>>({
+    key: "createdOn",
+    direction: "desc",
   })
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
@@ -135,6 +145,10 @@ export function LeadsTable({
   const [converting, startConvert] = useTransition()
   const [convertError, setConvertError] = useState<string | null>(null)
 
+  const visibleColumns = dataColumns.filter((column) =>
+    isColumnVisible(column.id, visibility),
+  )
+  const columnCount = visibleColumns.length + 1
   const sorted = useMemo(() => sortLeads(leads, sort), [leads, sort])
   const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
@@ -187,10 +201,41 @@ export function LeadsTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Leads</h1>
-        <Button type="button" onClick={() => openForm(null)}>
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Add New Lead
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button type="button" variant="outline" />}
+            >
+              <Columns3 aria-hidden="true" data-icon="inline-start" />
+              Customize Columns
+              <ChevronDown aria-hidden="true" data-icon="inline-end" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              {dataColumns.map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  checked={
+                    isOptionalColumn(column.id) ? visibility[column.id] : true
+                  }
+                  disabled={column.locked}
+                  onCheckedChange={(checked) => {
+                    if (!isOptionalColumn(column.id)) return
+                    writeColumnVisibility({
+                      ...visibility,
+                      [column.id]: checked,
+                    })
+                  }}
+                >
+                  {column.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button type="button" onClick={() => openForm(null)}>
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add New Lead
+          </Button>
+        </div>
       </div>
 
       {convertError ? (
@@ -203,7 +248,7 @@ export function LeadsTable({
         <Table className="min-w-max">
           <TableHeader>
             <TableRow className="bg-muted hover:bg-muted">
-              {columns.map((col) => {
+              {visibleColumns.map((col) => {
                 const active = sort.key === col.id
                 return (
                   <TableHead
@@ -247,7 +292,7 @@ export function LeadsTable({
             {error ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={columns.length + 1}
+                  colSpan={columnCount}
                   role="alert"
                   className="py-8 text-center whitespace-normal text-destructive"
                 >
@@ -257,7 +302,7 @@ export function LeadsTable({
             ) : pageResult.rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={columns.length + 1}
+                  colSpan={columnCount}
                   className="py-8 text-center whitespace-normal text-muted-foreground"
                 >
                   No Leads Yet.
@@ -266,72 +311,27 @@ export function LeadsTable({
             ) : (
               pageResult.rows.map((lead) => (
                 <TableRow key={lead.id} className="group">
-                  <TableCell className="font-medium">
-                    {lead.leadName || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={lead.kind === "company" ? "secondary" : "outline"}
-                      className="rounded-full capitalize"
+                  {visibleColumns.map((column) => (
+                    <TableCell
+                      key={column.id}
+                      className={cn(
+                        column.align === "right" && "text-right",
+                        (column.id === "leadName" ||
+                          column.id === "projectName") &&
+                          "whitespace-normal",
+                      )}
                     >
-                      {lead.kind}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={statusBadge(lead.status) as "secondary" | "destructive" | "outline"}
-                      className="rounded-full capitalize"
-                    >
-                      {lead.status.replace("_", " ")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{lead.projectType || "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(lead.estimatedValue)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {lead.probability}%
-                  </TableCell>
+                      <CellValue lead={lead} columnId={column.id} />
+                    </TableCell>
+                  ))}
                   <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Actions for ${lead.leadName}`}
-                          />
-                        }
-                      >
-                        <MoreHorizontal aria-hidden="true" className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => openForm(lead)}>
-                          <Pencil aria-hidden="true" />
-                          Edit
-                        </DropdownMenuItem>
-                        {lead.status === "open" &&
-                          !lead.convertedClientId &&
-                          !lead.convertedProjectId ? (
-                          <DropdownMenuItem
-                            disabled={converting}
-                            onClick={() => handleConvert(lead)}
-                          >
-                            <ArrowRightLeft aria-hidden="true" />
-                            Convert To Client
-                          </DropdownMenuItem>
-                        ) : null}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => askDelete(lead)}
-                        >
-                          <Trash2 aria-hidden="true" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <RowActions
+                      lead={lead}
+                      converting={converting}
+                      onEdit={openForm}
+                      onConvert={handleConvert}
+                      onDelete={askDelete}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -374,10 +374,14 @@ export function LeadsTable({
                   <PaginationItem key={item}>
                     <Button
                       type="button"
-                      variant={item === pageResult.currentPage ? "outline" : "ghost"}
+                      variant={
+                        item === pageResult.currentPage ? "outline" : "ghost"
+                      }
                       size="icon"
                       aria-label={`Page ${item}`}
-                      aria-current={item === pageResult.currentPage ? "page" : undefined}
+                      aria-current={
+                        item === pageResult.currentPage ? "page" : undefined
+                      }
                       onClick={() => setPage(item)}
                     >
                       {item}
@@ -407,22 +411,19 @@ export function LeadsTable({
         open={formOpen}
         onOpenChange={setFormOpen}
         lead={formLead}
-        projectTypes={projectTypes}
+        lookups={lookups}
       />
 
-      <AlertDialog
-        open={deleteOpen}
-        onOpenChange={(open) => {
-          if (open || deleting) return
-          setDeleteOpen(false)
-          setDeleteError(null)
-        }}
-      >
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+            <AlertDialogTitle>Delete Lead?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              This permanently deletes{" "}
+              <span className="font-medium text-foreground">
+                {pendingDelete?.leadName || "this lead"}
+              </span>
+              . Hold Delete to confirm.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -434,14 +435,156 @@ export function LeadsTable({
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
-            <HoldToDeleteButton
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-            />
+            <HoldToDeleteButton pending={deleting} onConfirm={confirmDelete} />
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+function CellValue({
+  lead,
+  columnId,
+}: {
+  lead: LeadRow
+  columnId: ColumnId
+}) {
+  switch (columnId) {
+    case "leadName":
+      return (
+        <div className="flex flex-col gap-1">
+          <span className={cn("font-medium", !lead.leadName && "text-muted-foreground")}>
+            {lead.leadName || "—"}
+          </span>
+          {lead.kindLabel ? (
+            <Badge variant="outline" className="w-fit rounded-full">
+              {lead.kindLabel}
+            </Badge>
+          ) : null}
+        </div>
+      )
+    case "createdOn":
+      return lead.createdOn ? (
+        <span>{formatIsoDate(lead.createdOn)}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "projectName":
+      return (
+        <div className="flex flex-col gap-1">
+          <span className={cn(!lead.projectName && "text-muted-foreground")}>
+            {lead.projectName || "—"}
+          </span>
+          {lead.projectType ? (
+            <Badge variant="secondary" className="w-fit rounded-full">
+              {lead.projectType}
+            </Badge>
+          ) : null}
+        </div>
+      )
+    case "currentStage":
+      return lead.currentStage ? (
+        <span>{lead.currentStage}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "source":
+      return lead.source ? (
+        <span>{lead.source}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "estimatedValue":
+      return (
+        <span className="tabular-nums">{formatMoney(lead.estimatedValue)}</span>
+      )
+    case "probability":
+      return (
+        <span className="tabular-nums">
+          {Number.isFinite(lead.probability) ? `${lead.probability}%` : "—"}
+        </span>
+      )
+    case "status":
+      return (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge
+            variant={
+              lead.status === "won"
+                ? "secondary"
+                : lead.status === "lost" || lead.status === "cancelled"
+                  ? "destructive"
+                  : "outline"
+            }
+            className="rounded-full"
+          >
+            {lead.statusLabel}
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "rounded-full",
+              lead.statusIsOpen
+                ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+                : "text-muted-foreground",
+            )}
+          >
+            {lead.statusIsOpen ? "Open" : "Closed"}
+          </Badge>
+        </div>
+      )
+  }
+}
+
+function RowActions({
+  lead,
+  converting,
+  onEdit,
+  onConvert,
+  onDelete,
+}: {
+  lead: LeadRow
+  converting: boolean
+  onEdit: (lead: LeadRow) => void
+  onConvert: (lead: LeadRow) => void
+  onDelete: (lead: LeadRow) => void
+}) {
+  const alreadyConverted = Boolean(
+    lead.convertedClientId || lead.convertedProjectId,
+  )
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Actions for ${lead.leadName || "lead"}`}
+          />
+        }
+      >
+        <MoreHorizontal aria-hidden="true" className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuItem onClick={() => onEdit(lead)}>
+          <Pencil aria-hidden="true" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={alreadyConverted || converting}
+          onClick={() => onConvert(lead)}
+        >
+          <ArrowRightLeft aria-hidden="true" />
+          Convert To Client
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={() => onDelete(lead)}>
+          <Trash2 aria-hidden="true" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

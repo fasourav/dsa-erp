@@ -8,7 +8,6 @@ import {
   type LeadFieldErrors,
 } from "@/app/(app)/leads/actions"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogBody,
@@ -28,41 +27,33 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import type { LeadRow, ProjectTypeOption } from "@/lib/leads"
-
-const statusItems = [
-  { value: "open", label: "Open" },
-  { value: "won", label: "Won" },
-  { value: "lost", label: "Lost" },
-  { value: "on_hold", label: "On Hold" },
-]
+import type { LeadLookups, LeadRow } from "@/lib/leads"
 
 export function LeadFormDialog({
   open,
   onOpenChange,
   lead,
-  projectTypes,
+  lookups,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   lead: LeadRow | null
-  projectTypes: readonly ProjectTypeOption[]
+  lookups: LeadLookups
 }) {
   const leadId = lead?.id ?? null
+  const defaultStatus = lookups.statuses[0]?.code ?? "open"
   const [leadName, setLeadName] = useState(lead?.leadName ?? "")
   const [kind, setKind] = useState<string>(lead?.kind ?? "")
   const [phone, setPhone] = useState(lead?.phone ?? "")
   const [email, setEmail] = useState(lead?.email ?? "")
-  const [projectDetails, setProjectDetails] = useState(
-    lead?.projectDetails ?? "",
-  )
+  const [projectName, setProjectName] = useState(lead?.projectName ?? "")
   const [projectType, setProjectType] = useState(lead?.projectType ?? "")
   const [source, setSource] = useState(lead?.source ?? "")
   const [estimatedValue, setEstimatedValue] = useState(
     lead ? String(lead.estimatedValue || "") : "",
   )
   const [currentStage, setCurrentStage] = useState(lead?.currentStage ?? "")
-  const [status, setStatus] = useState(lead?.status ?? "open")
+  const [status, setStatus] = useState(lead?.status ?? defaultStatus)
   const [probability, setProbability] = useState(
     lead ? String(lead.probability || "") : "",
   )
@@ -78,13 +69,33 @@ export function LeadFormDialog({
       ? "Enter the lead name."
       : fieldErrors.leadName
   const kindError =
-    attempted && !kind ? "Choose Person or Company." : fieldErrors.kind
+    attempted && !kind ? "Choose a lead type." : fieldErrors.kind
 
-  const ptItems = projectTypes.map((t) => ({ value: t.name, label: t.name }))
+  const typeItems = lookups.leadTypes.map((item) => ({
+    value: item.code,
+    label: item.name,
+  }))
+  const ptItems = lookups.projectTypes.map((t) => ({
+    value: t.name,
+    label: t.name,
+  }))
   const savedType = lead?.projectType.trim() ?? ""
   if (savedType && !ptItems.some((item) => item.value === savedType)) {
     ptItems.push({ value: savedType, label: savedType })
   }
+
+  const sourceItems = withSavedOption(
+    lookups.sources.map((item) => ({ value: item.name, label: item.name })),
+    lead?.source,
+  )
+  const stageItems = withSavedOption(
+    lookups.stages.map((item) => ({ value: item.name, label: item.name })),
+    lead?.currentStage,
+  )
+  const statusItems = lookups.statuses.map((item) => ({
+    value: item.code,
+    label: item.name,
+  }))
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) return
@@ -103,7 +114,7 @@ export function LeadFormDialog({
       kind,
       phone: phone.trim(),
       email: email.trim(),
-      projectDetails: projectDetails.trim(),
+      projectName: projectName.trim(),
       projectType,
       source: source.trim(),
       estimatedValue: estimatedValue.trim(),
@@ -144,8 +155,8 @@ export function LeadFormDialog({
           <DialogTitle>{leadId ? "Edit Lead" : "Add New Lead"}</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-            <div className="flex flex-1 flex-col gap-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="lead-name">Lead Name</Label>
               <Input
                 id="lead-name"
@@ -161,29 +172,24 @@ export function LeadFormDialog({
               ) : null}
             </div>
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Type</span>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={kind === "person"}
-                    disabled={pending}
-                    onCheckedChange={(checked) =>
-                      setKind(checked ? "person" : "")
-                    }
-                  />
-                  Person
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={kind === "company"}
-                    disabled={pending}
-                    onCheckedChange={(checked) =>
-                      setKind(checked ? "company" : "")
-                    }
-                  />
-                  Company
-                </label>
-              </div>
+              <Label htmlFor="lead-type">Lead Type</Label>
+              <Select
+                items={typeItems}
+                value={kind || null}
+                disabled={pending}
+                onValueChange={(v) => setKind(v ?? "")}
+              >
+                <SelectTrigger id="lead-type" className="w-full">
+                  <SelectValue placeholder="Select Type" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {typeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {kindError ? (
                 <p role="alert" className="text-sm text-destructive">
                   {kindError}
@@ -194,7 +200,7 @@ export function LeadFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-phone">Phone</Label>
+              <Label htmlFor="lead-phone">Contact Number</Label>
               <Input
                 id="lead-phone"
                 type="tel"
@@ -213,6 +219,16 @@ export function LeadFormDialog({
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="lead-project-name">Project Name</Label>
+            <Input
+              id="lead-project-name"
+              value={projectName}
+              disabled={pending}
+              onChange={(e) => setProjectName(e.target.value)}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -238,12 +254,23 @@ export function LeadFormDialog({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="lead-source">Source</Label>
-              <Input
-                id="lead-source"
-                value={source}
+              <Select
+                items={sourceItems}
+                value={source || null}
                 disabled={pending}
-                onChange={(e) => setSource(e.target.value)}
-              />
+                onValueChange={(v) => setSource(v ?? "")}
+              >
+                <SelectTrigger id="lead-source" className="w-full">
+                  <SelectValue placeholder="Select Source" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {sourceItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -275,13 +302,24 @@ export function LeadFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-stage">Current Stage</Label>
-              <Input
-                id="lead-stage"
-                value={currentStage}
+              <Label htmlFor="lead-stage">Stage</Label>
+              <Select
+                items={stageItems}
+                value={currentStage || null}
                 disabled={pending}
-                onChange={(e) => setCurrentStage(e.target.value)}
-              />
+                onValueChange={(v) => setCurrentStage(v ?? "")}
+              >
+                <SelectTrigger id="lead-stage" className="w-full">
+                  <SelectValue placeholder="Select Stage" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {stageItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="lead-status">Status</Label>
@@ -289,7 +327,7 @@ export function LeadFormDialog({
                 items={statusItems}
                 value={status}
                 disabled={pending}
-                onValueChange={(v) => setStatus(v ?? "open")}
+                onValueChange={(v) => setStatus((v as typeof status) ?? defaultStatus)}
               >
                 <SelectTrigger id="lead-status" className="w-full">
                   <SelectValue placeholder="Select Status" />
@@ -302,17 +340,12 @@ export function LeadFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {fieldErrors.status ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {fieldErrors.status}
+                </p>
+              ) : null}
             </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="lead-details">Project Details</Label>
-            <Textarea
-              id="lead-details"
-              value={projectDetails}
-              disabled={pending}
-              onChange={(e) => setProjectDetails(e.target.value)}
-            />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -346,4 +379,15 @@ export function LeadFormDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function withSavedOption(
+  items: { value: string; label: string }[],
+  saved: string | undefined,
+) {
+  const value = saved?.trim() ?? ""
+  if (value && !items.some((item) => item.value === value)) {
+    items.push({ value, label: value })
+  }
+  return items
 }

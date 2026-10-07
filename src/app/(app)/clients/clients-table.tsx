@@ -468,7 +468,27 @@ function CellValue({
     case "totalProjectValue":
     case "totalPaid":
     case "totalPending":
+    case "grossProfit":
       return <span className="tabular-nums">{formatMoney(client[columnId])}</span>
+    case "grossProfitPct": {
+      const pct = client.grossProfitPct
+      if (pct == null) {
+        return <span className="text-muted-foreground">—</span>
+      }
+      const positive = pct >= 0
+      return (
+        <Badge
+          variant="outline"
+          className={
+            positive
+              ? "rounded-full border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+              : "rounded-full border-destructive/40 text-destructive"
+          }
+        >
+          {`${pct.toFixed(1)}%`}
+        </Badge>
+      )
+    }
   }
 }
 

@@ -61,6 +61,7 @@ export function ClientFormDialog({
   const [company, setCompany] = useState(client?.companyName ?? "")
   const [email, setEmail] = useState(client?.email ?? "")
   const [phone, setPhone] = useState(client?.phone ?? "")
+  const [address, setAddress] = useState(client?.address ?? "")
   const [notes, setNotes] = useState(client?.notes ?? "")
 
   const [attempted, setAttempted] = useState(false)
@@ -218,6 +219,7 @@ export function ClientFormDialog({
       name: trimmedActiveName,
       email: trimmedEmail,
       phone: trimmedPhone,
+      address: address.trim(),
       notes: notes.trim(),
     }
 
@@ -380,6 +382,16 @@ export function ClientFormDialog({
                 </p>
               ) : null}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="client-address">Address</Label>
+            <Textarea
+              id="client-address"
+              value={address}
+              disabled={pending}
+              onChange={(event) => setAddress(event.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-2">

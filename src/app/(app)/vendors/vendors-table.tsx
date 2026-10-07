@@ -13,7 +13,9 @@ import { useMemo, useState, useTransition } from "react"
 
 import { deleteVendor } from "@/app/(app)/vendors/actions"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { VendorContactDialog } from "@/app/(app)/vendors/vendor-contact-dialog"
 import { VendorFormDialog } from "@/app/(app)/vendors/vendor-form-dialog"
+import { MailtoLink, TelLink } from "@/components/contact-links"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -78,6 +80,8 @@ export function VendorsTable({
   const [formOpen, setFormOpen] = useState(false)
   const [formVendor, setFormVendor] = useState<VendorSummary | null>(null)
   const [formSession, setFormSession] = useState(0)
+  const [contactOpen, setContactOpen] = useState(false)
+  const [contactVendor, setContactVendor] = useState<VendorSummary | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<VendorSummary | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -109,6 +113,11 @@ export function VendorsTable({
     setFormVendor(vendor)
     setFormSession((current) => current + 1)
     setFormOpen(true)
+  }
+
+  function openContact(vendor: VendorSummary) {
+    setContactVendor(vendor)
+    setContactOpen(true)
   }
 
   function askDelete(vendor: VendorSummary) {
@@ -239,7 +248,7 @@ export function VendorsTable({
                           "whitespace-normal",
                       )}
                     >
-                      <CellValue vendor={vendor} columnId={column.id} />
+                      <CellValue vendor={vendor} columnId={column.id} onOpenContact={openContact} />
                     </TableCell>
                   ))}
                   <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
@@ -328,6 +337,12 @@ export function VendorsTable({
         categories={categories}
       />
 
+      <VendorContactDialog
+        vendor={contactVendor}
+        open={contactOpen}
+        onOpenChange={setContactOpen}
+      />
+
       <AlertDialog
         open={deleteOpen}
         onOpenChange={(open) => {
@@ -370,22 +385,28 @@ export function VendorsTable({
 function CellValue({
   vendor,
   columnId,
+  onOpenContact,
 }: {
   vendor: VendorSummary
   columnId: ColumnId
+  onOpenContact: (vendor: VendorSummary) => void
 }) {
   switch (columnId) {
     case "displayName":
       return (
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span
+          <Button
+            type="button"
+            variant="link"
             className={cn(
-              "font-medium",
+              "-ml-2.5 font-medium text-foreground",
               !vendor.displayName && "text-muted-foreground",
             )}
+            aria-label={`Open contact card for ${vendor.displayName || "vendor"}`}
+            onClick={() => onOpenContact(vendor)}
           >
             {vendor.displayName || "—"}
-          </span>
+          </Button>
           {vendor.vendorField ? (
             <Badge
               variant="outline"
@@ -417,11 +438,12 @@ function ContactValue({ vendor }: { vendor: VendorSummary }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      {phone ? <span className="tabular-nums">{phone}</span> : null}
+      {phone ? <TelLink phone={phone} /> : null}
       {email ? (
-        <span className={cn("break-all", phone && "text-muted-foreground")}>
-          {email}
-        </span>
+        <MailtoLink
+          email={email}
+          className={cn(phone && "text-muted-foreground")}
+        />
       ) : null}
     </div>
   )

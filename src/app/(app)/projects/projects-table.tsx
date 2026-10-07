@@ -439,14 +439,25 @@ function CellValue({
   switch (columnId) {
     case "name":
       return (
-        <span
-          className={cn(
-            "font-medium",
-            !project.name && "text-muted-foreground",
-          )}
-        >
-          {project.name || "—"}
-        </span>
+        <div className="flex min-w-[12rem] flex-col gap-1">
+          <span
+            className={cn(
+              "font-medium",
+              !project.name && "text-muted-foreground",
+            )}
+          >
+            {project.name || "—"}
+          </span>
+          {(project.clientName || project.projectType) ? (
+            <span className="inline-flex w-fit max-w-full items-center rounded-md border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground opacity-70">
+              <span className="truncate">
+                {[project.clientName, project.projectType]
+                  .filter(Boolean)
+                  .join(" / ")}
+              </span>
+            </span>
+          ) : null}
+        </div>
       )
     case "clientName":
       return project.clientName ? (

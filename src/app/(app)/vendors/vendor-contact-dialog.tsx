@@ -9,31 +9,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { ClientSummary } from "@/lib/client-summary"
+import type { VendorSummary } from "@/lib/vendor-summary"
 import { cn } from "@/lib/utils"
 
 const NOT_AVAILABLE = "Not Available!"
 
-export function ClientContactDialog({
-  client,
+export function VendorContactDialog({
+  vendor,
   open,
   onOpenChange,
 }: {
-  client: ClientSummary | null
+  vendor: VendorSummary | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const address = client?.address?.trim() ?? ""
-  const phone = client?.phone?.trim() ?? ""
-  const email = client?.email?.trim() ?? ""
-  const notes = client?.notes?.trim() ?? ""
+  const address = vendor?.address?.trim() ?? ""
+  const phone = vendor?.phone?.trim() ?? ""
+  const email = vendor?.email?.trim() ?? ""
+  const notes = vendor?.notes?.trim() ?? ""
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="break-words">
-            {client?.displayName ?? ""}
+            {vendor?.displayName ?? ""}
           </DialogTitle>
         </DialogHeader>
         <dl className="flex flex-col gap-4">
