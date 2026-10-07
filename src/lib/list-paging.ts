@@ -7,11 +7,18 @@ export type SortState<Id extends string> = {
   direction: SortDirection
 }
 
+export type ListColumnAlign = "left" | "right"
+
 export type ListColumn<Id extends string> = {
   id: Id
   label: string
-  align: "left" | "right"
+  align: ListColumnAlign
   locked: boolean
+}
+
+/** Shared text-align class for DataList header and body cells. */
+export function listColumnAlignClass(align: ListColumnAlign) {
+  return align === "right" ? "text-right" : "text-left"
 }
 
 export function toggleSort<Id extends string>(

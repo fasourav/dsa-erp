@@ -31,11 +31,15 @@ import {
 } from "@/components/ui/table"
 import {
   columnVisible,
+  listColumnAlignClass,
   paginationItems,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
 import { cn } from "@/lib/utils"
+
+const stickyActionsClassName =
+  "sticky right-0 z-10 w-16 px-3 text-center"
 
 export function DataList<T, Id extends string>({
   columns,
@@ -54,7 +58,7 @@ export function DataList<T, Id extends string>({
   renderCell,
   renderActions,
   toolbar,
-  columnLayout = "auto",
+  columnLayout = "even",
 }: {
   columns: readonly ListColumn<Id>[]
   rows: readonly T[]
@@ -116,40 +120,39 @@ export function DataList<T, Id extends string>({
                         : "none"
                     }
                     className={cn(
-                      "px-3 text-sm",
+                      "text-sm",
+                      listColumnAlignClass(column.align),
                       even && "whitespace-normal",
-                      column.align === "right" && "text-right",
                     )}
                   >
-                    <div
+                    <Button
+                      type="button"
+                      variant="ghost"
                       className={cn(
-                        "flex min-w-0",
-                        column.align === "right" && "justify-end",
+                        "h-8 w-full border-0 px-0 font-medium",
+                        listColumnAlignClass(column.align),
+                        column.align === "right"
+                          ? "justify-end"
+                          : "justify-start",
+                        even &&
+                          "h-auto min-h-8 max-w-full min-w-0 shrink whitespace-normal",
                       )}
+                      aria-label={
+                        active
+                          ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
+                          : `Sort by ${column.label}`
+                      }
+                      onClick={() => onSort(column.id)}
                     >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                          "border-0",
-                          column.align === "right" ? "-mr-2.5 text-right" : "-ml-2.5 text-left",
-                          even && "h-auto min-h-8 max-w-full min-w-0 shrink whitespace-normal",
-                        )}
-                        aria-label={
-                          active
-                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                            : `Sort by ${column.label}`
-                        }
-                        onClick={() => onSort(column.id)}
-                      >
-                        {column.label}
-                      </Button>
-                    </div>
+                      {column.label}
+                    </Button>
                   </TableHead>
                 )
               })}
               {hasActions ? (
-                <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3">
+                <TableHead
+                  className={cn(stickyActionsClassName, "bg-muted")}
+                >
                   <span className="sr-only">Actions</span>
                 </TableHead>
               ) : null}
@@ -161,7 +164,7 @@ export function DataList<T, Id extends string>({
                 <TableCell
                   colSpan={columnCount}
                   role="alert"
-                  className="px-3 py-8 text-center whitespace-normal text-destructive"
+                  className="py-8 text-center whitespace-normal text-destructive"
                 >
                   {error}
                 </TableCell>
@@ -170,7 +173,7 @@ export function DataList<T, Id extends string>({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={columnCount}
-                  className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
+                  className="py-8 text-center whitespace-normal text-muted-foreground"
                 >
                   {emptyMessage}
                 </TableCell>
@@ -182,16 +185,24 @@ export function DataList<T, Id extends string>({
                     <TableCell
                       key={column.id}
                       className={cn(
-                        "p-3 text-sm whitespace-normal",
-                        column.align === "right" && "text-right tabular-nums",
-                        even && column.align === "right" && "whitespace-nowrap",
+                        "text-sm whitespace-normal",
+                        listColumnAlignClass(column.align),
+                        column.align === "right" && "tabular-nums",
+                        even &&
+                          column.align === "right" &&
+                          "whitespace-nowrap",
                       )}
                     >
                       {renderCell(row, column.id)}
                     </TableCell>
                   ))}
                   {hasActions ? (
-                    <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
+                    <TableCell
+                      className={cn(
+                        stickyActionsClassName,
+                        "bg-card text-sm group-hover:bg-muted",
+                      )}
+                    >
                       {renderActions(row)}
                     </TableCell>
                   ) : null}
