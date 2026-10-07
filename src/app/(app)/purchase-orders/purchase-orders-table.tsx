@@ -532,7 +532,7 @@ function RowActions({
           render={<Link href={`/purchase-orders/${order.id}`} />}
         >
           <FileText aria-hidden="true" />
-          Vendor Invoices
+          Vendor Payments
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>

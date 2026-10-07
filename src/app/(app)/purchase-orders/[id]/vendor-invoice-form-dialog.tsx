@@ -79,7 +79,7 @@ export function VendorInvoiceFormDialog({
     (!isPaymentStatus(status) ||
       (parsedAmount !== null &&
         !statusMatchesPayments(status, parsedAmount, paid)))
-      ? "Status does not match recorded payments. Choose Void to set the invoice aside."
+      ? "Status does not match recorded payments. Choose Void to set this payment aside."
       : null)
 
   const statusItems = paymentStatuses.map((value) => ({
@@ -136,7 +136,7 @@ export function VendorInvoiceFormDialog({
 
         onOpenChange(false)
       } catch {
-        setFormError("Could not save this invoice.")
+        setFormError("Could not save this payment.")
       }
     })
   }
@@ -149,7 +149,7 @@ export function VendorInvoiceFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {invoiceId ? "Edit Vendor Invoice" : "Add Vendor Invoice"}
+            {invoiceId ? "Edit Vendor Payment" : "Add Vendor Payment"}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
@@ -189,7 +189,7 @@ export function VendorInvoiceFormDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-amount">Invoice Amount</Label>
+              <Label htmlFor="vendor-invoice-amount">Amount</Label>
               <Input
                 id="vendor-invoice-amount"
                 inputMode="decimal"
@@ -262,7 +262,7 @@ export function VendorInvoiceFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : invoiceId ? "Save Changes" : "Save Invoice"}
+            {pending ? "Saving…" : invoiceId ? "Save Changes" : "Save Payment"}
           </Button>
         </DialogFooter>
       </DialogContent>

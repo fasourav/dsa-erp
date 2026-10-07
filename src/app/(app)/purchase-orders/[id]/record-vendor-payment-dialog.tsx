@@ -9,7 +9,6 @@ import {
 import { BankAccountField } from "@/components/bank-account-field"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogBody,
@@ -28,11 +27,7 @@ import {
 } from "@/lib/bank-account"
 import { formatMoney } from "@/lib/format"
 import { parsePositiveAmount } from "@/lib/payment-status"
-import {
-  isIsoDate,
-  parseProjectValue,
-  todayIsoDate,
-} from "@/lib/project-validation"
+import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 import type { PurchaseOrderDetail } from "@/lib/vendor-invoice-summary"
 
 export function RecordVendorPaymentDialog({
@@ -59,10 +54,6 @@ export function RecordVendorPaymentDialog({
   )
   const [accountName, setAccountName] = useState("Operating account")
   const [bankName, setBankName] = useState("")
-  const [separateInvoice, setSeparateInvoice] = useState(false)
-  const [invoiceIssuedOn, setInvoiceIssuedOn] = useState(todayIsoDate())
-  const [invoiceDueOn, setInvoiceDueOn] = useState("")
-  const [invoiceAmount, setInvoiceAmount] = useState(initialAmount)
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<RecordVendorPaymentFieldErrors>(
     {},
@@ -71,7 +62,6 @@ export function RecordVendorPaymentDialog({
   const [pending, startSubmit] = useTransition()
 
   const parsedAmount = parsePositiveAmount(amount)
-  const parsedInvoiceAmount = parseProjectValue(invoiceAmount)
   const dateError =
     serverErrors.paidOn ??
     (attempted && !isIsoDate(paidOn) ? "Enter a payment date." : null)
@@ -81,30 +71,6 @@ export function RecordVendorPaymentDialog({
       ? amount.trim()
         ? "Enter a payment greater than 0."
         : "Enter a payment amount."
-      : null)
-  const issuedError =
-    serverErrors.invoiceIssuedOn ??
-    (attempted && separateInvoice && !isIsoDate(invoiceIssuedOn)
-      ? "Enter an issue date."
-      : null)
-  const dueError =
-    serverErrors.invoiceDueOn ??
-    (attempted &&
-    separateInvoice &&
-    invoiceDueOn.trim() &&
-    !isIsoDate(invoiceDueOn)
-      ? "Enter a due date."
-      : null)
-  const invoiceAmountError =
-    serverErrors.invoiceAmount ??
-    (attempted && separateInvoice
-      ? parsedInvoiceAmount === null
-        ? invoiceAmount.trim()
-          ? "Enter an amount of 0 or more."
-          : "Enter an invoice amount."
-        : parsedAmount !== null && parsedInvoiceAmount < parsedAmount
-          ? "Invoice amount must cover this payment."
-          : null
       : null)
   const accountError = serverErrors.bankAccountId ?? null
   const hasAccounts =
@@ -118,26 +84,6 @@ export function RecordVendorPaymentDialog({
     onOpenChange(nextOpen)
   }
 
-  function toggleInvoice(checked: boolean) {
-    setSeparateInvoice(checked)
-    if (!checked) {
-      return
-    }
-
-    setInvoiceIssuedOn((current) => current || paidOn || todayIsoDate())
-    setInvoiceAmount((current) => {
-      if (current.trim()) {
-        return current
-      }
-
-      if (purchaseOrder.totalPending > 0) {
-        return String(purchaseOrder.totalPending)
-      }
-
-      return amount
-    })
-  }
-
   function handleSubmit() {
     setAttempted(true)
     setServerErrors({})
@@ -145,17 +91,6 @@ export function RecordVendorPaymentDialog({
 
     if (!isIsoDate(paidOn) || parsedAmount === null) {
       return
-    }
-
-    if (separateInvoice) {
-      if (
-        !isIsoDate(invoiceIssuedOn) ||
-        (invoiceDueOn.trim() && !isIsoDate(invoiceDueOn)) ||
-        parsedInvoiceAmount === null ||
-        parsedInvoiceAmount < parsedAmount
-      ) {
-        return
-      }
     }
 
     if (hasAccounts && !bankAccountId) {
@@ -178,10 +113,10 @@ export function RecordVendorPaymentDialog({
           bankAccountId,
           newAccountName: hasAccounts ? "" : accountName.trim(),
           newBankName: hasAccounts ? "" : bankName.trim(),
-          separateInvoice,
-          invoiceIssuedOn: invoiceIssuedOn.trim(),
-          invoiceDueOn: invoiceDueOn.trim(),
-          invoiceAmount: invoiceAmount.trim(),
+          separateInvoice: false,
+          invoiceIssuedOn: "",
+          invoiceDueOn: "",
+          invoiceAmount: "",
         })
 
         if (result.fieldErrors) {
@@ -215,6 +150,10 @@ export function RecordVendorPaymentDialog({
             Purchase Order Value {formatMoney(purchaseOrder.totalValue)} · Paid{" "}
             {formatMoney(purchaseOrder.totalPaid)} · Pending{" "}
             {formatMoney(purchaseOrder.totalPending)}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Enter what you paid the vendor. It applies to the amount still due
+            on this purchase order.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
@@ -281,77 +220,6 @@ export function RecordVendorPaymentDialog({
               disabled={pending}
               onChange={(event) => setNotes(event.target.value)}
             />
-          </div>
-          <div className="flex flex-col gap-4 rounded-lg border border-border p-3">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <Checkbox
-                checked={separateInvoice}
-                disabled={pending}
-                onCheckedChange={(checked) => toggleInvoice(checked === true)}
-              />
-              Vendor Invoice
-            </label>
-            {separateInvoice ? (
-              <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="record-payment-issued">Issue Date</Label>
-                    <Input
-                      id="record-payment-issued"
-                      type="date"
-                      value={invoiceIssuedOn}
-                      disabled={pending}
-                      aria-invalid={Boolean(issuedError)}
-                      onChange={(event) => setInvoiceIssuedOn(event.target.value)}
-                    />
-                    {issuedError ? (
-                      <p role="alert" className="text-sm text-destructive">
-                        {issuedError}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="record-payment-due">Due Date</Label>
-                    <Input
-                      id="record-payment-due"
-                      type="date"
-                      value={invoiceDueOn}
-                      disabled={pending}
-                      aria-invalid={Boolean(dueError)}
-                      onChange={(event) => setInvoiceDueOn(event.target.value)}
-                    />
-                    {dueError ? (
-                      <p role="alert" className="text-sm text-destructive">
-                        {dueError}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="record-payment-invoice-amount">
-                    Invoice Amount
-                  </Label>
-                  <Input
-                    id="record-payment-invoice-amount"
-                    inputMode="decimal"
-                    value={invoiceAmount}
-                    disabled={pending}
-                    aria-invalid={Boolean(invoiceAmountError)}
-                    onChange={(event) => setInvoiceAmount(event.target.value)}
-                  />
-                  {invoiceAmountError ? (
-                    <p role="alert" className="text-sm text-destructive">
-                      {invoiceAmountError}
-                    </p>
-                  ) : null}
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Applies this payment to an open vendor invoice, or creates one
-                for the unpaid purchase order amount.
-              </p>
-            )}
           </div>
           {formError ? (
             <p role="alert" className="text-sm text-destructive">
