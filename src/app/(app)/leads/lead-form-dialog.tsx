@@ -7,6 +7,7 @@ import {
   updateLead,
   type LeadFieldErrors,
 } from "@/app/(app)/leads/actions"
+import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
 
@@ -55,7 +57,7 @@ export function LeadFormDialog({
   const [currentStage, setCurrentStage] = useState(lead?.currentStage ?? "")
   const [status, setStatus] = useState(lead?.status ?? defaultStatus)
   const [probability, setProbability] = useState(
-    lead ? String(lead.probability || "") : "",
+    lead && Number.isFinite(lead.probability) ? String(lead.probability) : "20",
   )
   const [notes, setNotes] = useState(lead?.notes ?? "")
 
@@ -84,18 +86,22 @@ export function LeadFormDialog({
     ptItems.push({ value: savedType, label: savedType })
   }
 
-  const sourceItems = withSavedOption(
-    lookups.sources.map((item) => ({ value: item.name, label: item.name })),
+  const sourceNames = withSavedName(
+    lookups.sources.map((item) => item.name),
     lead?.source,
   )
-  const stageItems = withSavedOption(
-    lookups.stages.map((item) => ({ value: item.name, label: item.name })),
+  const stageNames = withSavedName(
+    lookups.stages.map((item) => item.name),
     lead?.currentStage,
   )
   const statusItems = lookups.statuses.map((item) => ({
     value: item.code,
     label: item.name,
   }))
+  const probabilityValue = Number(probability)
+  const probabilityNumber = Number.isFinite(probabilityValue)
+    ? Math.min(100, Math.max(0, Math.round(probabilityValue)))
+    : 0
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) return
@@ -120,7 +126,7 @@ export function LeadFormDialog({
       estimatedValue: estimatedValue.trim(),
       currentStage: currentStage.trim(),
       status,
-      probability: probability.trim(),
+      probability: String(probabilityNumber),
       notes: notes.trim(),
     }
 
@@ -254,23 +260,14 @@ export function LeadFormDialog({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="lead-source">Source</Label>
-              <Select
-                items={sourceItems}
-                value={source || null}
+              <NameCombobox
+                id="lead-source"
+                value={source}
+                names={sourceNames}
                 disabled={pending}
-                onValueChange={(v) => setSource(v ?? "")}
-              >
-                <SelectTrigger id="lead-source" className="w-full">
-                  <SelectValue placeholder="Select Source" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {sourceItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Type Or Select Source"
+                onValueChange={setSource}
+              />
             </div>
           </div>
 
@@ -287,15 +284,25 @@ export function LeadFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-prob">Probability (%)</Label>
-              <Input
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="lead-prob">Probability</Label>
+                <span className="text-sm tabular-nums text-muted-foreground">
+                  {probabilityNumber}%
+                </span>
+              </div>
+              <Slider
                 id="lead-prob"
-                type="number"
-                min="0"
-                max="100"
-                value={probability}
+                min={0}
+                max={100}
+                step={1}
+                value={[probabilityNumber]}
                 disabled={pending}
-                onChange={(e) => setProbability(e.target.value)}
+                onValueChange={(values) => {
+                  const next = Array.isArray(values)
+                    ? values[0]
+                    : (values as number)
+                  setProbability(String(next ?? 0))
+                }}
               />
             </div>
           </div>
@@ -303,23 +310,14 @@ export function LeadFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="lead-stage">Stage</Label>
-              <Select
-                items={stageItems}
-                value={currentStage || null}
+              <NameCombobox
+                id="lead-stage"
+                value={currentStage}
+                names={stageNames}
                 disabled={pending}
-                onValueChange={(v) => setCurrentStage(v ?? "")}
-              >
-                <SelectTrigger id="lead-stage" className="w-full">
-                  <SelectValue placeholder="Select Stage" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {stageItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Type Or Select Stage"
+                onValueChange={setCurrentStage}
+              />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="lead-status">Status</Label>
@@ -390,4 +388,12 @@ function withSavedOption(
     items.push({ value, label: value })
   }
   return items
+}
+
+function withSavedName(names: string[], saved: string | undefined) {
+  const value = saved?.trim() ?? ""
+  if (value && !names.some((name) => name === value)) {
+    return [...names, value]
+  }
+  return names
 }
