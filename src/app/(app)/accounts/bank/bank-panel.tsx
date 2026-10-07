@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from "react"
 
 import { deleteBankTransaction } from "@/app/(app)/accounts/bank/actions"
 import { BankTransactionFormDialog } from "@/app/(app)/accounts/bank/bank-transaction-form-dialog"
-import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -40,10 +40,6 @@ import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { cn } from "@/lib/utils"
 
 const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
-const transactionLocked = new Set<BankTransactionColumnId>([
-  "transactionDate",
-  "accountName",
-])
 
 export function BankPanel({
   accounts,
@@ -83,14 +79,6 @@ export function BankPanel({
     [transactions, sort],
   )
   const pageResult = paginateRows(sorted, page)
-
-  function changeVisibility(id: BankTransactionColumnId, checked: boolean) {
-    if (transactionLocked.has(id)) {
-      return
-    }
-
-    bankTransactionColumnStore.write({ ...visibility, [id]: checked })
-  }
 
   function openForm(transaction: BankTransactionRow | null) {
     setFormTransaction(transaction)
@@ -169,21 +157,14 @@ export function BankPanel({
           onPageChange={setPage}
           pagingLabel="Bank transactions pagination"
           toolbar={
-            <>
-              <CustomizeColumns
-                columns={bankTransactionColumns}
-                visibility={visibility}
-                onVisibilityChange={changeVisibility}
-              />
-              <Button
-                type="button"
-                disabled={accounts.length === 0}
-                onClick={() => openForm(null)}
-              >
-                <Plus aria-hidden="true" data-icon="inline-start" />
-                Add Transaction
-              </Button>
-            </>
+            <Button
+              type="button"
+              disabled={accounts.length === 0}
+              onClick={() => openForm(null)}
+            >
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Add Transaction
+            </Button>
           }
           renderCell={(transaction, columnId) => (
             <TransactionCell transaction={transaction} columnId={columnId} />

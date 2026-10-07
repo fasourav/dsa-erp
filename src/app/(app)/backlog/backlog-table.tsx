@@ -4,7 +4,7 @@ import { MoreHorizontal, Pencil } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { RecoveryPlanDialog } from "@/app/(app)/backlog/recovery-plan-dialog"
-import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +32,6 @@ import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { cn } from "@/lib/utils"
 
 const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
-const locked = new Set<BacklogColumnId>(["projectName"])
 
 export function BacklogTable({
   rows,
@@ -52,14 +51,6 @@ export function BacklogTable({
   const [formSession, setFormSession] = useState(0)
   const sorted = useMemo(() => sortBacklog(rows, sort), [rows, sort])
   const pageResult = paginateRows(sorted, page)
-
-  function changeVisibility(id: BacklogColumnId, checked: boolean) {
-    if (locked.has(id)) {
-      return
-    }
-
-    backlogColumnStore.write({ ...visibility, [id]: checked })
-  }
 
   function openPlan(row: BacklogRow) {
     setFormProject(row)
@@ -94,13 +85,6 @@ export function BacklogTable({
         onPageChange={setPage}
         pagingLabel="Backlog pagination"
         columnLayout="even"
-        toolbar={
-          <CustomizeColumns
-            columns={backlogColumns}
-            visibility={visibility}
-            onVisibilityChange={changeVisibility}
-          />
-        }
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
         renderActions={(row) => (
           <DropdownMenu>

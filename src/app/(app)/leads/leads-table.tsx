@@ -2,10 +2,8 @@
 
 import {
   ArrowRightLeft,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Columns3,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -23,7 +21,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -56,12 +53,10 @@ import {
   getColumnServerSnapshot,
   getColumnSnapshot,
   subscribeColumnVisibility,
-  writeColumnVisibility,
 } from "@/lib/lead-column-store"
 import {
   dataColumns,
   isColumnVisible,
-  isOptionalColumn,
   type ColumnId,
 } from "@/lib/lead-summary"
 import {
@@ -202,35 +197,6 @@ export function LeadsTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Leads</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button type="button" variant="outline" />}
-            >
-              <Columns3 aria-hidden="true" data-icon="inline-start" />
-              Customize Columns
-              <ChevronDown aria-hidden="true" data-icon="inline-end" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              {dataColumns.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={
-                    isOptionalColumn(column.id) ? visibility[column.id] : true
-                  }
-                  disabled={column.locked}
-                  onCheckedChange={(checked) => {
-                    if (!isOptionalColumn(column.id)) return
-                    writeColumnVisibility({
-                      ...visibility,
-                      [column.id]: checked,
-                    })
-                  }}
-                >
-                  {column.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
           <Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add New Lead

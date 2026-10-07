@@ -7,7 +7,7 @@ import { useMemo, useState, useTransition } from "react"
 import { deleteClientInvoice } from "@/app/(app)/accounts/invoices/actions"
 import { ClientInvoiceFormDialog } from "@/app/(app)/accounts/invoices/client-invoice-form-dialog"
 import { ClientPaymentsDialog } from "@/app/(app)/accounts/invoices/client-payments-dialog"
-import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -83,14 +83,6 @@ export function ClientInvoicesTable({
   const paymentsInvoice =
     invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
 
-  function changeVisibility(id: ClientInvoiceColumnId, checked: boolean) {
-    if (id === "issuedOn" || id === "projectName" || id === "clientName") {
-      return
-    }
-
-    clientInvoiceColumnStore.write({ ...visibility, [id]: checked })
-  }
-
   function openForm(invoice: ClientInvoiceRow | null) {
     setFormInvoice(invoice)
     setFormSession((current) => current + 1)
@@ -163,17 +155,10 @@ export function ClientInvoicesTable({
         onPageChange={setPage}
         pagingLabel="Client Invoices pagination"
         toolbar={
-          <>
-            <CustomizeColumns
-              columns={clientInvoiceColumns}
-              visibility={visibility}
-              onVisibilityChange={changeVisibility}
-            />
-            <Button type="button" onClick={() => openForm(null)}>
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Client Invoice
-            </Button>
-          </>
+          <Button type="button" onClick={() => openForm(null)}>
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add Client Invoice
+          </Button>
         }
         renderCell={(invoice, columnId) => (
           <InvoiceCell invoice={invoice} columnId={columnId} />

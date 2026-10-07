@@ -3,11 +3,15 @@
 import { ArrowLeft, Landmark, ListTree, Plus } from "lucide-react"
 import { useMemo, useState, useTransition } from "react"
 
-import { setBankAccountActive } from "@/app/(app)/accounts/bank/actions"
+import {
+  deleteBankAccount,
+  setBankAccountActive,
+} from "@/app/(app)/accounts/bank/actions"
 import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
 import { CatalogFormDialog } from "@/app/(app)/settings/catalog-form-dialog"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -70,6 +74,11 @@ export function SettingsPanel({
   const [bankError, setBankError] = useState<string | null>(null)
   const [bankPendingId, setBankPendingId] = useState<string | null>(null)
   const [updatingBank, startBankUpdate] = useTransition()
+  const [bankDeleteOpen, setBankDeleteOpen] = useState(false)
+  const [pendingBankDelete, setPendingBankDelete] =
+    useState<BankAccountRow | null>(null)
+  const [bankDeleteError, setBankDeleteError] = useState<string | null>(null)
+  const [deletingBank, startBankDelete] = useTransition()
 
   const catalogByKey = useMemo(() => {
     return new Map(catalogs.map((catalog) => [catalog.key, catalog]))
@@ -118,6 +127,34 @@ export function SettingsPanel({
         setBankError("Could not update this bank account.")
       } finally {
         setBankPendingId(null)
+      }
+    })
+  }
+
+  function openBankDelete(account: BankAccountRow) {
+    setPendingBankDelete(account)
+    setBankDeleteError(null)
+    setBankDeleteOpen(true)
+  }
+
+  function confirmBankDelete() {
+    if (!pendingBankDelete) {
+      return
+    }
+
+    const id = pendingBankDelete.id
+    startBankDelete(async () => {
+      try {
+        const result = await deleteBankAccount(id)
+        if (result.error) {
+          setBankDeleteError(result.error)
+          return
+        }
+
+        setBankDeleteOpen(false)
+        setBankDeleteError(null)
+      } catch {
+        setBankDeleteError("Could not delete this bank account.")
       }
     })
   }
@@ -208,7 +245,7 @@ export function SettingsPanel({
                 Bank Accounts
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Add, Edit, Or Activate Accounts
+                Add, Edit, Or Remove Accounts
               </p>
             </div>
           </button>
@@ -292,7 +329,7 @@ export function SettingsPanel({
                       <Button
                         type="button"
                         variant="outline"
-                        disabled={updatingBank}
+                        disabled={updatingBank || deletingBank}
                         onClick={() => openBankForm(account)}
                       >
                         Edit
@@ -300,7 +337,7 @@ export function SettingsPanel({
                       <Button
                         type="button"
                         variant="outline"
-                        disabled={updatingBank}
+                        disabled={updatingBank || deletingBank}
                         onClick={() => toggleBankAccount(account)}
                       >
                         {bankPendingId === account.id && updatingBank
@@ -308,6 +345,14 @@ export function SettingsPanel({
                           : account.isActive
                             ? "Deactivate"
                             : "Activate"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={updatingBank || deletingBank}
+                        onClick={() => openBankDelete(account)}
+                      >
+                        Delete
                       </Button>
                     </div>
                   </li>
@@ -324,6 +369,23 @@ export function SettingsPanel({
         onOpenChange={setBankFormOpen}
         account={bankFormAccount}
         suggestedSortOrder={nextSortOrder(bankAccounts)}
+      />
+
+      <DeleteConfirmDialog
+        open={bankDeleteOpen}
+        onOpenChange={(open) => {
+          if (open || deletingBank) {
+            return
+          }
+
+          setBankDeleteOpen(false)
+          setBankDeleteError(null)
+        }}
+        title={`Delete ${pendingBankDelete?.name ?? "Bank Account"}`}
+        error={bankDeleteError}
+        pending={deletingBank}
+        confirmKey={pendingBankDelete?.id}
+        onConfirm={confirmBankDelete}
       />
 
       <CatalogFormDialog
