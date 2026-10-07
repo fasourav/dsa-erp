@@ -52,7 +52,7 @@ type ColumnFormat = "text" | "kind" | "count" | "money" | "percentPill"
 export type DataColumn = {
   id: ColumnId
   label: string
-  align: "left" | "right"
+  align: "left" | "right" | "center"
   locked: boolean
   format: ColumnFormat
 }
@@ -69,21 +69,21 @@ export const dataColumns: readonly DataColumn[] = [
   {
     id: "ongoingProjects",
     label: "Ongoing Projects",
-    align: "right",
+    align: "center",
     locked: false,
     format: "count",
   },
   {
     id: "completedProjects",
     label: "Completed Projects",
-    align: "right",
+    align: "center",
     locked: false,
     format: "count",
   },
   {
     id: "totalProjects",
     label: "Total Projects",
-    align: "right",
+    align: "center",
     locked: false,
     format: "count",
   },

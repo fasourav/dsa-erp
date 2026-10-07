@@ -20,7 +20,7 @@ import {
   type ReceivableColumnId,
   type ReceivableRow,
 } from "@/lib/accounts-receivable"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -40,7 +40,7 @@ export function ReceivableTable({
 }) {
   const visibility = useColumnVisibility(receivableColumnStore)
   const [sort, setSort] = useState<SortState<ReceivableColumnId>>({
-    key: "dueDate",
+    key: "projectName",
     direction: "asc",
   })
   const [page, setPage] = useState(1)
@@ -81,7 +81,6 @@ export function ReceivableTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Accounts Receivable pagination"
-        columnLayout="even"
         toolbar={
           <CustomizeColumns
             columns={receivableColumns}
@@ -141,12 +140,6 @@ function Cell({
     case "projectName":
       return row[columnId] ? (
         <span className="font-medium">{row[columnId]}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "dueDate":
-      return row.dueDate ? (
-        <span>{formatIsoDate(row.dueDate)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

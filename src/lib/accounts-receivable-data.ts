@@ -2,7 +2,6 @@ import type { ReceivableRow } from "@/lib/accounts-receivable"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isPaymentStatus } from "@/lib/payment-status"
-import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
 export async function getAccountsReceivable(): Promise<{
@@ -17,7 +16,7 @@ export async function getAccountsReceivable(): Promise<{
         supabase
           .from("accounts_receivable")
           .select(
-            "id, client_name, project_id, project_name, due_date, billed_amount, paid, due, current_status",
+            "id, client_name, project_id, project_name, billed_amount, paid, due, current_status",
           )
           .order("id", { ascending: true })
           .range(from, to),
@@ -35,7 +34,6 @@ export async function getAccountsReceivable(): Promise<{
           clientName: row.client_name?.trim() ?? "",
           projectId: row.project_id ?? "",
           projectName: row.project_name?.trim() ?? "",
-          dueDate: row.due_date ? dateInputValue(row.due_date) : "",
           billedAmount: toNumber(row.billed_amount),
           paid: toNumber(row.paid),
           due: toNumber(row.due),

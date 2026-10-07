@@ -2,8 +2,6 @@
 
 import {
   ArrowRightLeft,
-  ChevronLeft,
-  ChevronRight,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -17,6 +15,7 @@ import {
 } from "@/app/(app)/leads/actions"
 import { LeadFormDialog } from "@/app/(app)/leads/lead-form-dialog"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,32 +35,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   getColumnServerSnapshot,
   getColumnSnapshot,
   subscribeColumnVisibility,
 } from "@/lib/lead-column-store"
 import {
   dataColumns,
-  isColumnVisible,
   type ColumnId,
 } from "@/lib/lead-summary"
 import {
   paginateRows,
-  paginationItems,
   rangeLabel,
   toggleSort,
   type SortState,
@@ -140,13 +123,8 @@ export function LeadsTable({
   const [converting, startConvert] = useTransition()
   const [convertError, setConvertError] = useState<string | null>(null)
 
-  const visibleColumns = dataColumns.filter((column) =>
-    isColumnVisible(column.id, visibility),
-  )
-  const columnCount = visibleColumns.length + 1
   const sorted = useMemo(() => sortLeads(leads, sort), [leads, sort])
   const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function openForm(lead: LeadRow | null) {
     setFormLead(lead)
@@ -210,167 +188,42 @@ export function LeadsTable({
         </p>
       ) : null}
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {visibleColumns.map((col) => {
-                const active = sort.key === col.id
-                return (
-                  <TableHead
-                    key={col.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(col.align === "right" && "text-right")}
-                  >
-                    <div
-                      className={cn(
-                        "flex",
-                        col.align === "right" && "justify-end",
-                      )}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(col.align === "right" ? "-mr-2" : "-ml-2")}
-                        onClick={() => {
-                          setSort(toggleSort(sort, col.id))
-                          setPage(1)
-                        }}
-                      >
-                        {col.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  role="alert"
-                  className="py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  className="py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  No Leads Yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((lead) => (
-                <TableRow key={lead.id} className="group">
-                  {visibleColumns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className={cn(
-                        column.align === "right" && "text-right",
-                        (column.id === "leadName" ||
-                          column.id === "projectName") &&
-                          "whitespace-normal",
-                      )}
-                    >
-                      <CellValue lead={lead} columnId={column.id} />
-                    </TableCell>
-                  ))}
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
-                    <RowActions
-                      lead={lead}
-                      converting={converting}
-                      onEdit={openForm}
-                      onConvert={handleConvert}
-                      onDelete={askDelete}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {rangeLabel(
-              pageResult.rangeStart,
-              pageResult.rangeEnd,
-              pageResult.total,
-              "lead",
-              "leads",
-            )}
-          </p>
-          <Pagination
-            aria-label="Leads pagination"
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => setPage(pageResult.currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant={
-                        item === pageResult.currentPage ? "outline" : "ghost"
-                      }
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={
-                        item === pageResult.currentPage ? "page" : undefined
-                      }
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage >= pageResult.pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => setPage(pageResult.currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+      <DataList
+        columns={dataColumns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(lead) => lead.id}
+        sort={sort}
+        onSort={(key) => {
+          setSort(toggleSort(sort, key))
+          setPage(1)
+        }}
+        visibility={visibility}
+        error={error}
+        emptyMessage="No Leads Yet."
+        rangeText={rangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+          "lead",
+          "leads",
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Leads pagination"
+        renderCell={(lead, columnId) => (
+          <CellValue lead={lead} columnId={columnId} />
+        )}
+        renderActions={(lead) => (
+          <RowActions
+            lead={lead}
+            converting={converting}
+            onEdit={openForm}
+            onConvert={handleConvert}
+            onDelete={askDelete}
+          />
+        )}
+      />
 
       <LeadFormDialog
         key={formSession}
@@ -419,7 +272,7 @@ function CellValue({
   switch (columnId) {
     case "leadName":
       return (
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-40 flex-col gap-1 whitespace-normal">
           <span className={cn("font-medium", !lead.leadName && "text-muted-foreground")}>
             {lead.leadName || "—"}
           </span>
@@ -438,7 +291,7 @@ function CellValue({
       )
     case "projectName":
       return (
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-40 flex-col gap-1 whitespace-normal">
           <span className={cn(!lead.projectName && "text-muted-foreground")}>
             {lead.projectName || "—"}
           </span>

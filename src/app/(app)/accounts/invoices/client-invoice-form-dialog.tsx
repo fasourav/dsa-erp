@@ -60,7 +60,6 @@ export function ClientInvoiceFormDialog({
 }) {
   const invoiceId = invoice?.id ?? null
   const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn || todayIsoDate())
-  const [dueOn, setDueOn] = useState(invoice?.dueOn ?? "")
   const [projectId, setProjectId] = useState(
     invoice?.projectId ?? defaultProjectId ?? "",
   )
@@ -91,11 +90,6 @@ export function ClientInvoiceFormDialog({
     status === "paid" && (invoice ? invoice.balance > 0 : true)
   const hasAccounts =
     bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
-  const dueError =
-    serverErrors.dueOn ??
-    (attempted && dueOn.trim() !== "" && !isIsoDate(dueOn)
-      ? "Enter a due date."
-      : null)
   const accountError = serverErrors.bankAccountId ?? null
   const issuedError =
     serverErrors.issuedOn ??
@@ -129,7 +123,6 @@ export function ClientInvoiceFormDialog({
 
     if (
       !isIsoDate(issuedOn) ||
-      (dueOn.trim() !== "" && !isIsoDate(dueOn)) ||
       !projectId ||
       parsedAmount === null ||
       parsedAmount <= 0 ||
@@ -151,7 +144,7 @@ export function ClientInvoiceFormDialog({
     const input = {
       projectId,
       issuedOn,
-      dueOn: dueOn.trim(),
+      dueOn: invoice?.dueOn ?? "",
       amount: amount.trim(),
       status,
       bankAccountId: needsBankAccount ? bankAccountId : "",
@@ -207,22 +200,6 @@ export function ClientInvoiceFormDialog({
             {issuedError ? (
               <p role="alert" className="text-sm text-destructive">
                 {issuedError}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-invoice-due">Due Date</Label>
-            <Input
-              id="client-invoice-due"
-              type="date"
-              value={dueOn}
-              disabled={pending}
-              aria-invalid={Boolean(dueError)}
-              onChange={(event) => setDueOn(event.target.value)}
-            />
-            {dueError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {dueError}
               </p>
             ) : null}
           </div>

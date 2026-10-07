@@ -65,7 +65,6 @@ export function ExpenseTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Expense pagination"
-        columnLayout="even"
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
       />
     </div>

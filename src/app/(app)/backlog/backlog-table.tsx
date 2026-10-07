@@ -84,7 +84,6 @@ export function BacklogTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Backlog pagination"
-        columnLayout="even"
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
         renderActions={(row) => (
           <DropdownMenu>
