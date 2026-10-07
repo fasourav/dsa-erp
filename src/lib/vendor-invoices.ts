@@ -31,7 +31,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
     paymentMethods: [] as string[],
     expenseCategories: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
-    error: "Could not load vendor invoices.",
+    error: "Could not load vendor payments.",
   }
 
   if (!isUuid(purchaseOrderId)) {
@@ -81,7 +81,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
               .eq("purchase_order_id", order.id)
               .order("id", { ascending: true })
               .range(from, to),
-          "Vendor invoice list is larger than expected.",
+          "Vendor payment list is larger than expected.",
         ),
         fetchAllPages(
           (from, to) =>

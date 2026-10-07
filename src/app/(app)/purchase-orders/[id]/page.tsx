@@ -1,7 +1,7 @@
 import { VendorInvoicesPanel } from "@/app/(app)/purchase-orders/[id]/vendor-invoices-panel"
 import { getVendorInvoicePage } from "@/lib/vendor-invoices"
 
-export const metadata = { title: "Vendor Invoices" }
+export const metadata = { title: "Vendor Payments" }
 
 export default async function PurchaseOrderInvoicesPage({
   params,

@@ -81,7 +81,7 @@ export async function updateVendorInvoice(
   input: VendorInvoiceInput,
 ): Promise<VendorInvoiceResult> {
   if (!isUuid(id)) {
-    return { error: "That invoice could not be found." }
+    return { error: "That payment could not be found." }
   }
 
   return saveVendorInvoice(id, null, input)
@@ -89,7 +89,7 @@ export async function updateVendorInvoice(
 
 export async function deleteVendorInvoice(id: string): Promise<DeleteResult> {
   if (!isUuid(id)) {
-    return { error: "That invoice could not be found." }
+    return { error: "That payment could not be found." }
   }
 
   const auth = await authorizedClient()
@@ -106,15 +106,15 @@ export async function deleteVendorInvoice(id: string): Promise<DeleteResult> {
   if (error) {
     if (error.code === "23503" || /foreign key/i.test(error.message)) {
       return {
-        error: "This invoice has payments and cannot be deleted.",
+        error: "Remove recorded payments before deleting this.",
       }
     }
 
-    return { error: "Could not delete this invoice." }
+    return { error: "Could not delete this payment." }
   }
 
   if (!data || data.length === 0) {
-    return { error: "That invoice could not be found." }
+    return { error: "That payment could not be found." }
   }
 
   revalidateVendorMoney(data[0]?.purchase_order_id ?? null)
@@ -126,7 +126,7 @@ export async function addVendorPayment(
   input: VendorPaymentInput,
 ): Promise<VendorPaymentResult> {
   if (!isUuid(vendorInvoiceId)) {
-    return { error: "That invoice could not be found." }
+    return { error: "That payment could not be found." }
   }
 
   return saveVendorPayment(null, vendorInvoiceId, input)
@@ -382,11 +382,11 @@ async function saveVendorInvoice(
       .limit(1)
 
     if (existing.error) {
-      return { error: "Could not save this invoice." }
+      return { error: "Could not save this payment." }
     }
 
     if (!existing.data || existing.data.length === 0) {
-      return { error: "That invoice could not be found." }
+      return { error: "That payment could not be found." }
     }
 
     orderId = existing.data[0]?.purchase_order_id ?? null
@@ -403,7 +403,7 @@ async function saveVendorInvoice(
     .limit(1)
 
   if (order.error) {
-    return { error: "Could not save this invoice." }
+    return { error: "Could not save this payment." }
   }
 
   if (!order.data || order.data.length === 0) {
@@ -412,7 +412,7 @@ async function saveVendorInvoice(
 
   const paid = id ? await paidForInvoice(supabase, id, null) : 0
   if (paid === null) {
-    return { error: "Could not save this invoice." }
+    return { error: "Could not save this payment." }
   }
 
   if (moneyCents(amount) < moneyCents(paid)) {
@@ -428,7 +428,7 @@ async function saveVendorInvoice(
     return {
       error: null,
       fieldErrors: {
-        status: "Status does not match recorded payments. Choose Void to set the invoice aside.",
+        status: "Status does not match recorded payments. Choose Void to set this payment aside.",
       },
     }
   }
@@ -462,11 +462,11 @@ async function saveVendorInvoice(
       }
     }
 
-    return { error: "Could not save this invoice." }
+    return { error: "Could not save this payment." }
   }
 
   if (!data || data.length === 0) {
-    return { error: "That invoice could not be found." }
+    return { error: "That payment could not be found." }
   }
 
   revalidateVendorMoney(orderId)
@@ -527,7 +527,7 @@ async function saveVendorPayment(
   }
 
   if (!invoiceId || !isUuid(invoiceId)) {
-    return { error: "That invoice could not be found." }
+    return { error: "That payment could not be found." }
   }
 
   const invoice = await supabase
@@ -542,11 +542,11 @@ async function saveVendorPayment(
 
   const invoiceRow = invoice.data?.[0]
   if (!invoiceRow || !isPaymentStatus(invoiceRow.status)) {
-    return { error: "That invoice could not be found." }
+    return { error: "That payment could not be found." }
   }
 
   if (!id && invoiceRow.status === "void") {
-    return { error: "This invoice is void." }
+    return { error: "This payment is void." }
   }
 
   const alreadyPaid = await paidForInvoice(supabase, invoiceId, id)
@@ -615,7 +615,7 @@ async function saveVendorPayment(
       .eq("id", invoiceId)
 
     if (statusUpdate.error) {
-      return { error: "Could not update the invoice status." }
+      return { error: "Could not update the payment status." }
     }
   }
 
@@ -745,18 +745,18 @@ async function syncVendorInvoiceStatus(
     .limit(1)
 
   if (invoice.error || !invoice.data || invoice.data.length === 0) {
-    return { error: "Could not update the invoice status." }
+    return { error: "Could not update the payment status." }
   }
 
   const invoiceRow = invoice.data[0]
   if (!invoiceRow || !isPaymentStatus(invoiceRow.status)) {
-    return { error: "Could not update the invoice status." }
+    return { error: "Could not update the payment status." }
   }
 
   if (invoiceRow.status !== "void") {
     const paid = await paidForInvoice(supabase, invoiceId, null)
     if (paid === null) {
-      return { error: "Could not update the invoice status." }
+      return { error: "Could not update the payment status." }
     }
 
     const status = derivePaymentStatus(invoiceRow.amount, paid)
@@ -766,7 +766,7 @@ async function syncVendorInvoiceStatus(
       .eq("id", invoiceId)
 
     if (statusUpdate.error) {
-      return { error: "Could not update the invoice status." }
+      return { error: "Could not update the payment status." }
     }
   }
 

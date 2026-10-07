@@ -1,6 +1,6 @@
 "use client"
 
-import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
@@ -105,7 +105,7 @@ export function VendorInvoicesPanel({
         setDeleteOpen(false)
         setDeleteError(null)
       } catch {
-        setDeleteError("Could not delete this invoice.")
+        setDeleteError("Could not delete this payment.")
       }
     })
   }
@@ -114,7 +114,10 @@ export function VendorInvoicesPanel({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-medium tracking-tight">Vendor Invoices</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Vendor Payments</h1>
+          <p className="text-sm text-muted-foreground">
+            Pay the vendor against this purchase order.
+          </p>
           {purchaseOrder ? (
             <>
               <p className="text-sm text-muted-foreground">
@@ -154,18 +157,18 @@ export function VendorInvoicesPanel({
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No Vendor Invoices For This Purchase Order."
+        emptyMessage="No Vendor Payments For This Purchase Order."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
-          "invoice",
-          "invoices",
+          "payment",
+          "payments",
         )}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
-        pagingLabel="Vendor invoices pagination"
+        pagingLabel="Vendor Payments pagination"
         toolbar={
           <>
             <CustomizeColumns
@@ -190,15 +193,6 @@ export function VendorInvoicesPanel({
               <Wallet aria-hidden="true" data-icon="inline-start" />
               Record Payment
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!purchaseOrder}
-              onClick={() => openForm(null)}
-            >
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Vendor Invoice
-            </Button>
           </>
         }
         renderCell={(invoice, columnId) => (
@@ -212,7 +206,7 @@ export function VendorInvoicesPanel({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label={`Actions for invoice issued ${invoice.issuedOn || "on an unknown date"}`}
+                  aria-label={`Actions for payment issued ${invoice.issuedOn || "on an unknown date"}`}
                 />
               }
             >
@@ -288,7 +282,7 @@ export function VendorInvoicesPanel({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-        title="Delete Vendor Invoice"
+        title="Delete Vendor Payment"
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

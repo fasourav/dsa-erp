@@ -122,7 +122,7 @@ export function PayableTable({
                 }
               >
                 <FileText aria-hidden="true" />
-                Vendor Invoices
+                Vendor Payments
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

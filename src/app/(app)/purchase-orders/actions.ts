@@ -196,7 +196,7 @@ export async function deletePurchaseOrder(
     if (error.code === "23503" || /foreign key/i.test(error.message)) {
       return {
         error:
-          "This purchase order has invoices and cannot be deleted.",
+          "This purchase order has vendor payments and cannot be deleted.",
       }
     }
 

@@ -30,19 +30,19 @@ import { cn } from "@/lib/utils"
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/leads", label: "Leads", icon: UserPlus },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
-  { href: "/leads", label: "Leads", icon: UserPlus },
-  { href: "/assets", label: "Assets", icon: Box },
   { href: "/accounts/receivable", label: "Accounts Receivable", icon: ArrowDownLeft },
-  { href: "/accounts/payable", label: "Accounts Payable", icon: ArrowUpRight },
   { href: "/accounts/invoices", label: "Client Invoices", icon: FileText },
+  { href: "/accounts/payable", label: "Accounts Payable", icon: ArrowUpRight },
   { href: "/accounts/expenses", label: "Operational Expenses", icon: Wallet },
   { href: "/accounts/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/accounts/vat-tax", label: "VAT / Tax", icon: Calculator },
   { href: "/accounts/bank", label: "Bank", icon: Landmark },
+  { href: "/assets", label: "Assets", icon: Box },
   { href: "/hr/employees", label: "Employees", icon: Contact },
   { href: "/hr/payroll", label: "Payroll", icon: Banknote },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -127,8 +127,9 @@ function NavLink({
       title={collapsed ? item.label : undefined}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+        "flex shrink-0 items-center gap-2 rounded-lg border-l-4 border-transparent px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        active &&
+          "border-sidebar-primary-foreground bg-sidebar-primary font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
         collapsed && "md:justify-center md:px-2",
       )}
     >
