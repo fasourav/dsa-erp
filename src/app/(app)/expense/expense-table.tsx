@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 
-import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { formatMoney } from "@/lib/format"
 import {
@@ -22,7 +22,6 @@ import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { cn } from "@/lib/utils"
 
 const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
-const locked = new Set<PoExpenseColumnId>(["projectName", "vendorName"])
 
 export function ExpenseTable({
   rows,
@@ -39,14 +38,6 @@ export function ExpenseTable({
   const [page, setPage] = useState(1)
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
   const pageResult = paginateRows(sorted, page)
-
-  function changeVisibility(id: PoExpenseColumnId, checked: boolean) {
-    if (locked.has(id)) {
-      return
-    }
-
-    poExpenseColumnStore.write({ ...visibility, [id]: checked })
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -75,13 +66,6 @@ export function ExpenseTable({
         onPageChange={setPage}
         pagingLabel="Expense pagination"
         columnLayout="even"
-        toolbar={
-          <CustomizeColumns
-            columns={poExpenseColumns}
-            visibility={visibility}
-            onVisibilityChange={changeVisibility}
-          />
-        }
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
       />
     </div>

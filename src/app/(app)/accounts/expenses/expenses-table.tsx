@@ -5,7 +5,7 @@ import { useMemo, useState, useTransition } from "react"
 
 import { deleteOperationalExpense } from "@/app/(app)/accounts/expenses/actions"
 import { ExpenseFormDialog } from "@/app/(app)/accounts/expenses/expense-form-dialog"
-import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,8 +32,6 @@ import {
   type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
-
-const locked = new Set<ExpenseColumnId>(["expenseDate", "category"])
 
 export function ExpensesTable({
   expenses,
@@ -71,14 +69,6 @@ export function ExpensesTable({
   const [deleting, startDelete] = useTransition()
   const sorted = useMemo(() => sortExpenses(expenses, sort), [expenses, sort])
   const pageResult = paginateRows(sorted, page)
-
-  function changeVisibility(id: ExpenseColumnId, checked: boolean) {
-    if (locked.has(id)) {
-      return
-    }
-
-    expenseColumnStore.write({ ...visibility, [id]: checked })
-  }
 
   function openForm(expense: OperationalExpenseRow | null) {
     setFormExpense(expense)
@@ -137,17 +127,10 @@ export function ExpensesTable({
         onPageChange={setPage}
         pagingLabel="Operational Expenses pagination"
         toolbar={
-          <>
-            <CustomizeColumns
-              columns={expenseColumns}
-              visibility={visibility}
-              onVisibilityChange={changeVisibility}
-            />
-            <Button type="button" onClick={() => openForm(null)}>
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Expense
-            </Button>
-          </>
+          <Button type="button" onClick={() => openForm(null)}>
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add Expense
+          </Button>
         }
         renderCell={(expense, columnId) => (
           <Cell expense={expense} columnId={columnId} />

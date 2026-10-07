@@ -4,7 +4,7 @@ import { Check, Circle, FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 
-import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +32,6 @@ import {
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 
 const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
-const locked = new Set<PayableColumnId>(["projectName", "vendorName"])
 
 export function PayableTable({
   rows,
@@ -49,14 +48,6 @@ export function PayableTable({
   const [page, setPage] = useState(1)
   const sorted = useMemo(() => sortPayables(rows, sort), [rows, sort])
   const pageResult = paginateRows(sorted, page)
-
-  function changeVisibility(id: PayableColumnId, checked: boolean) {
-    if (locked.has(id)) {
-      return
-    }
-
-    payableColumnStore.write({ ...visibility, [id]: checked })
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -85,13 +76,6 @@ export function PayableTable({
         onPageChange={setPage}
         pagingLabel="Accounts Payable pagination"
         columnLayout="even"
-        toolbar={
-          <CustomizeColumns
-            columns={payableColumns}
-            visibility={visibility}
-            onVisibilityChange={changeVisibility}
-          />
-        }
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
         renderActions={(row) => (
           <DropdownMenu>

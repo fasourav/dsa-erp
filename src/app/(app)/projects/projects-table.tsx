@@ -448,7 +448,7 @@ function CellValue({
             {project.name || "—"}
           </span>
           {(project.clientName || project.projectType) ? (
-            <span className="inline-flex w-fit max-w-full items-center rounded-md border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground opacity-70">
+            <span className="inline-flex w-fit max-w-full items-center rounded-md border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground opacity-90">
               <span className="truncate">
                 {[project.clientName, project.projectType]
                   .filter(Boolean)

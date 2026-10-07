@@ -130,7 +130,7 @@ export async function deleteBankAccount(id: string): Promise<DeleteResult> {
   if (error) {
     if (error.code === "23503" || /foreign key/i.test(error.message)) {
       return {
-        error: "This account has transactions and cannot be deleted.",
+        error: "This account is in use and cannot be deleted.",
       }
     }
 
