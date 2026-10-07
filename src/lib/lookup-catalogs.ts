@@ -41,6 +41,18 @@ export const catalogDefinitions = [
     singular: "vendor work category",
     hasActive: false,
   },
+  {
+    key: "lead_sources",
+    label: "Lead Sources",
+    singular: "lead source",
+    hasActive: false,
+  },
+  {
+    key: "lead_stages",
+    label: "Lead Stages",
+    singular: "lead stage",
+    hasActive: false,
+  },
 ] as const
 
 export type CatalogDefinition = (typeof catalogDefinitions)[number]

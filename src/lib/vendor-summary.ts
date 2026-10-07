@@ -16,6 +16,7 @@ export type VendorSummary = {
   email: string | null
   phone: string | null
   notes: string | null
+  address: string | null
   totalProjectValue: number
   totalPaid: number
   totalDue: number

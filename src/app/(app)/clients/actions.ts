@@ -22,6 +22,7 @@ export type ClientFormInput = {
   name: string
   email: string
   phone: string
+  address: string
   notes: string
 }
 
@@ -66,6 +67,7 @@ async function saveClient(
   const name = input.name.trim()
   const email = input.email.trim()
   const phone = input.phone.trim()
+  const address = input.address.trim()
   const notes = input.notes.trim()
 
   if (!name) {
@@ -134,6 +136,7 @@ async function saveClient(
     company_name: kind === "company" ? name : null,
     email: email || null,
     phone: phone || null,
+    address: address || null,
     notes: notes || null,
   }
 

@@ -14,11 +14,14 @@ export type ClientSummary = {
   totalProjectValue: number
   totalPaid: number
   totalPending: number
+  grossProfit: number
+  grossProfitPct: number | null
   personName: string | null
   companyName: string | null
   email: string | null
   phone: string | null
   notes: string | null
+  address: string | null
 }
 
 export type ColumnId =
@@ -30,6 +33,8 @@ export type ColumnId =
   | "totalProjectValue"
   | "totalPaid"
   | "totalPending"
+  | "grossProfit"
+  | "grossProfitPct"
 
 export type OptionalColumnId = Exclude<ColumnId, "displayName" | "kind">
 
@@ -42,7 +47,7 @@ export type SortState = {
   direction: SortDirection
 }
 
-type ColumnFormat = "text" | "kind" | "count" | "money"
+type ColumnFormat = "text" | "kind" | "count" | "money" | "percentPill"
 
 export type DataColumn = {
   id: ColumnId
@@ -112,6 +117,8 @@ const defaultVisibility: ColumnVisibility = {
   totalProjectValue: true,
   totalPaid: true,
   totalPending: true,
+  grossProfit: true,
+  grossProfitPct: true,
 }
 
 export function defaultColumnVisibility(): ColumnVisibility {
@@ -211,7 +218,10 @@ function compareClients(
     case "totalProjectValue":
     case "totalPaid":
     case "totalPending":
+    case "grossProfit":
       return a[key] - b[key]
+    case "grossProfitPct":
+      return (a.grossProfitPct ?? Number.NEGATIVE_INFINITY) - (b.grossProfitPct ?? Number.NEGATIVE_INFINITY)
   }
 }
 

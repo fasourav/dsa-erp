@@ -433,6 +433,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          address: string | null
           company_name: string | null
           created_at: string
           email: string | null
@@ -444,6 +445,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -455,6 +457,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -554,6 +557,99 @@ export type Database = {
           },
         ]
       }
+      lead_sources: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      lead_stages: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      lead_statuses: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_open: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      lead_types: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           converted_client_id: string | null
@@ -568,10 +664,10 @@ export type Database = {
           notes: string | null
           phone: string | null
           probability: number | null
-          project_details: string | null
+          project_name: string | null
           project_type: string | null
           source: string | null
-          status: Database["public"]["Enums"]["lead_status"]
+          status: string
           updated_at: string
         }
         Insert: {
@@ -587,10 +683,10 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           probability?: number | null
-          project_details?: string | null
+          project_name?: string | null
           project_type?: string | null
           source?: string | null
-          status?: Database["public"]["Enums"]["lead_status"]
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -606,10 +702,10 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           probability?: number | null
-          project_details?: string | null
+          project_name?: string | null
           project_type?: string | null
           source?: string | null
-          status?: Database["public"]["Enums"]["lead_status"]
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -1419,6 +1515,7 @@ export type Database = {
       }
       vendors: {
         Row: {
+          address: string | null
           company_name: string | null
           created_at: string
           email: string | null
@@ -1431,6 +1528,7 @@ export type Database = {
           vendor_field: string | null
         }
         Insert: {
+          address?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -1443,6 +1541,7 @@ export type Database = {
           vendor_field?: string | null
         }
         Update: {
+          address?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -1804,6 +1903,8 @@ export type Database = {
           client_id: string | null
           completed_projects: number | null
           display_name: string | null
+          gross_profit: number | null
+          gross_profit_pct: number | null
           kind: Database["public"]["Enums"]["party_kind"] | null
           ongoing_projects: number | null
           total_paid: number | null
@@ -1937,10 +2038,10 @@ export type Database = {
           lead_name: string | null
           phone: string | null
           probability: number | null
-          project_details: string | null
+          project_name: string | null
           project_type: string | null
           source: string | null
-          status: Database["public"]["Enums"]["lead_status"] | null
+          status: string | null
           weighted_value: number | null
         }
         Insert: {
@@ -1955,10 +2056,10 @@ export type Database = {
           lead_name?: string | null
           phone?: string | null
           probability?: number | null
-          project_details?: string | null
+          project_name?: string | null
           project_type?: string | null
           source?: string | null
-          status?: Database["public"]["Enums"]["lead_status"] | null
+          status?: string | null
           weighted_value?: never
         }
         Update: {
@@ -1973,10 +2074,10 @@ export type Database = {
           lead_name?: string | null
           phone?: string | null
           probability?: number | null
-          project_details?: string | null
+          project_name?: string | null
           project_type?: string | null
           source?: string | null
-          status?: Database["public"]["Enums"]["lead_status"] | null
+          status?: string | null
           weighted_value?: never
         }
         Relationships: [
@@ -2291,6 +2392,7 @@ export type Database = {
       }
     }
     Functions: {
+      has_erp_role: { Args: { allowed_roles: string[] }; Returns: boolean }
       resolve_bank_account_id: { Args: { preferred: string }; Returns: string }
     }
     Enums: {
@@ -2302,7 +2404,6 @@ export type Database = {
         | "vat_tax"
         | "other"
       invoice_direction: "receivable" | "payable"
-      lead_status: "open" | "won" | "lost" | "on_hold"
       party_kind: "person" | "company"
       payment_status: "unpaid" | "partial" | "paid" | "void"
       project_status: "active" | "completed"
@@ -2443,7 +2544,6 @@ export const Constants = {
         "other",
       ],
       invoice_direction: ["receivable", "payable"],
-      lead_status: ["open", "won", "lost", "on_hold"],
       party_kind: ["person", "company"],
       payment_status: ["unpaid", "partial", "paid", "void"],
       project_status: ["active", "completed"],

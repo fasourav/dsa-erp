@@ -72,6 +72,7 @@ export function VendorFormDialog({
   ])
   const [email, setEmail] = useState(vendor?.email ?? "")
   const [phone, setPhone] = useState(vendor?.phone ?? "")
+  const [address, setAddress] = useState(vendor?.address ?? "")
   const [notes, setNotes] = useState(vendor?.notes ?? "")
 
   const [attempted, setAttempted] = useState(false)
@@ -239,7 +240,8 @@ export function VendorFormDialog({
       vendorField: category.trim(),
       email: trimmedEmail,
       phone: trimmedPhone,
-      notes: notes.trim(),
+      address: address.trim(),
+        notes: notes.trim(),
     }
 
     startSubmit(async () => {
@@ -425,6 +427,16 @@ export function VendorFormDialog({
                 </p>
               ) : null}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="vendor-address">Address</Label>
+            <Textarea
+              id="vendor-address"
+              value={address}
+              disabled={pending}
+              onChange={(event) => setAddress(event.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-2">

@@ -32,6 +32,7 @@ export type VendorFormInput = {
   vendorField: string
   email: string
   phone: string
+  address: string
   notes: string
 }
 
@@ -116,6 +117,7 @@ async function saveVendor(
   const vendorField = input.vendorField.trim()
   const email = input.email.trim()
   const phone = input.phone.trim()
+  const address = input.address.trim()
   const notes = input.notes.trim()
 
   if (!name) {
@@ -181,6 +183,7 @@ async function saveVendor(
     vendor_field: vendorField || null,
     email: email || null,
     phone: phone || null,
+    address: address || null,
     notes: notes || null,
   }
 

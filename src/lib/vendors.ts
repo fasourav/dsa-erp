@@ -21,7 +21,7 @@ export async function getVendors(): Promise<{
         ),
       supabase
         .from("vendors")
-        .select("id, person_name, company_name, email, phone, notes"),
+        .select("id, person_name, company_name, email, phone, notes, address"),
       supabase
         .from("vendor_work_categories")
         .select("name, sort_order")
@@ -56,6 +56,7 @@ export async function getVendors(): Promise<{
           email: detail?.email ?? null,
           phone: detail?.phone ?? null,
           notes: detail?.notes ?? null,
+          address: detail?.address ?? null,
           totalProjectValue: toNumber(row.total_po_value),
           totalPaid: toNumber(row.total_paid),
           totalDue: toNumber(row.total_due),

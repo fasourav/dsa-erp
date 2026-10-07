@@ -11,7 +11,7 @@ export type LeadInput = {
   kind: string
   phone: string
   email: string
-  projectDetails: string
+  projectName: string
   projectType: string
   source: string
   estimatedValue: string
@@ -43,7 +43,6 @@ export type ConvertResult = {
 }
 
 const validKinds = ["person", "company"]
-const validStatuses = ["open", "won", "lost", "on_hold"]
 
 export async function addLead(input: LeadInput): Promise<LeadResult> {
   return saveLead(null, input)
@@ -129,8 +128,12 @@ export async function convertLead(leadId: string): Promise<ConvertResult> {
 
   const clientId = clientData[0].id
 
+  const projectName =
+    (typeof lead.project_name === "string" && lead.project_name.trim()) ||
+    lead.lead_name
+
   const projectValues = {
-    name: lead.project_details || lead.lead_name,
+    name: projectName,
     client_id: clientId,
     project_type: lead.project_type || null,
     total_value: lead.estimated_value ?? 0,
@@ -173,7 +176,7 @@ async function saveLead(
   const kind = input.kind.trim()
   const phone = input.phone.trim()
   const email = input.email.trim()
-  const projectDetails = input.projectDetails.trim()
+  const projectName = input.projectName.trim()
   const projectType = input.projectType.trim()
   const source = input.source.trim()
   const currentStage = input.currentStage.trim()
@@ -185,7 +188,6 @@ async function saveLead(
 
   if (!leadName) fieldErrors.leadName = "Enter the lead name."
   if (!validKinds.includes(kind)) fieldErrors.kind = "Choose Person or Company."
-  if (!validStatuses.includes(status)) fieldErrors.status = "Choose a status."
 
   if (Object.keys(fieldErrors).length > 0) {
     return { error: null, fieldErrors }
@@ -195,17 +197,31 @@ async function saveLead(
   const { data: auth, error: authErr } = await supabase.auth.getUser()
   if (authErr || !auth.user) return { error: "You must be signed in." }
 
+  const { data: statusRows, error: statusErr } = await supabase
+    .from("lead_statuses")
+    .select("code")
+
+  if (statusErr) return { error: "Could not save this lead." }
+
+  const allowedStatuses = new Set(
+    (statusRows ?? []).map((row) => String(row.code)),
+  )
+
+  if (!allowedStatuses.has(status)) {
+    return { error: null, fieldErrors: { status: "Choose a status." } }
+  }
+
   const values = {
     lead_name: leadName,
     kind: kind as "person" | "company",
     phone: phone || null,
     email: email || null,
-    project_details: projectDetails || null,
+    project_name: projectName || null,
     project_type: projectType || null,
     source: source || null,
     estimated_value: estimatedValue,
     current_stage: currentStage || null,
-    status: status as "open" | "won" | "lost" | "on_hold",
+    status,
     probability: probability,
     notes: notes || null,
   }
