@@ -77,7 +77,8 @@ export const catalogDefinitions = [
     singular: "lead status",
     hasActive: false,
     hasCode: true,
-    hasIsOpen: true,
+    // is_open remains in DB with silent defaults; not exposed in Settings UI
+    hasIsOpen: false,
   },
 ] as const
 
@@ -164,9 +165,19 @@ export function nextSortOrder(items: { sortOrder: number }[]) {
 }
 
 export function slugifyCatalogCode(name: string) {
-  return name
+  let slug = name
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
+
+  if (!slug) {
+    return "item"
+  }
+
+  if (!/^[a-z]/.test(slug)) {
+    slug = `s_${slug}`
+  }
+
+  return slug
 }

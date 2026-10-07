@@ -46,11 +46,8 @@ export function CatalogFormDialog({
     String(item?.sortOrder ?? nextSortOrder(catalog.items)),
   )
   const [isActive, setIsActive] = useState(item?.isActive ?? true)
-  const [code, setCode] = useState(item?.code ?? "")
-  const [isOpen, setIsOpen] = useState(item?.isOpen ?? true)
   const [nameError, setNameError] = useState<string | null>(null)
   const [sortOrderError, setSortOrderError] = useState<string | null>(null)
-  const [codeError, setCodeError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
   const isCreate = !item
@@ -64,9 +61,8 @@ export function CatalogFormDialog({
   }
 
   function applyFieldErrors(fieldErrors: CatalogFieldErrors) {
-    setNameError(fieldErrors.name ?? null)
+    setNameError(fieldErrors.name ?? fieldErrors.code ?? null)
     setSortOrderError(fieldErrors.sortOrder ?? null)
-    setCodeError(fieldErrors.code ?? null)
     if (fieldErrors.isActive || fieldErrors.isOpen) {
       setFormError(fieldErrors.isActive ?? fieldErrors.isOpen ?? null)
     }
@@ -79,21 +75,19 @@ export function CatalogFormDialog({
     const nextSortOrderError =
       parsedSortOrder === null ? "Enter a whole number." : null
     const resolvedCode = catalog.hasCode
-      ? (code.trim() || slugifyCatalogCode(trimmedName))
+      ? slugifyCatalogCode(trimmedName)
       : ""
-    const nextCodeError =
-      catalog.hasCode && isCreate
-        ? !resolvedCode || !/^[a-z][a-z0-9_]*$/.test(resolvedCode)
-          ? "Enter a code using letters, numbers, and underscores."
-          : null
-        : null
 
     setNameError(nextNameError)
     setSortOrderError(nextSortOrderError)
-    setCodeError(nextCodeError)
     setFormError(null)
 
-    if (!trimmedName || parsedSortOrder === null || nextCodeError) {
+    if (!trimmedName || parsedSortOrder === null) {
+      return
+    }
+
+    if (catalog.hasCode && isCreate && !/^[a-z][a-z0-9_]*$/.test(resolvedCode)) {
+      setNameError("Enter a name that can be saved as a status.")
       return
     }
 
@@ -102,8 +96,11 @@ export function CatalogFormDialog({
       name: trimmedName,
       sortOrder: parsedSortOrder,
       isActive,
-      code: catalog.hasCode ? (isCreate ? resolvedCode : item?.code ?? resolvedCode) : undefined,
-      isOpen: catalog.hasIsOpen ? isOpen : undefined,
+      code: catalog.hasCode
+        ? isCreate
+          ? resolvedCode
+          : (item?.code ?? resolvedCode)
+        : undefined,
     }
 
     startSubmit(async () => {
@@ -142,7 +139,6 @@ export function CatalogFormDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Names in {catalog.label} must be unique.
-            {catalog.hasCode ? " Codes must also be unique." : null}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
@@ -155,12 +151,8 @@ export function CatalogFormDialog({
               disabled={pending}
               aria-invalid={Boolean(nameError)}
               onChange={(event) => {
-                const nextName = event.target.value
-                setName(nextName)
+                setName(event.target.value)
                 setNameError(null)
-                if (catalog.hasCode && isCreate && !code) {
-                  setCode(slugifyCatalogCode(nextName))
-                }
               }}
             />
             {nameError ? (
@@ -169,31 +161,6 @@ export function CatalogFormDialog({
               </p>
             ) : null}
           </div>
-
-          {catalog.hasCode ? (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="catalog-code">Code</Label>
-              <Input
-                id="catalog-code"
-                value={code}
-                disabled={pending || !isCreate}
-                aria-invalid={Boolean(codeError)}
-                onChange={(event) => {
-                  setCode(event.target.value.toLowerCase())
-                  setCodeError(null)
-                }}
-              />
-              {codeError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {codeError}
-                </p>
-              ) : !isCreate ? (
-                <p className="text-sm text-muted-foreground">
-                  Code cannot be changed after create.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="catalog-sort-order">Sort Order</Label>
@@ -223,17 +190,6 @@ export function CatalogFormDialog({
                 onCheckedChange={(checked) => setIsActive(checked)}
               />
               Active
-            </label>
-          ) : null}
-
-          {catalog.hasIsOpen ? (
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={isOpen}
-                disabled={pending}
-                onCheckedChange={(checked) => setIsOpen(checked)}
-              />
-              Open Pipeline Status
             </label>
           ) : null}
 

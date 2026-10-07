@@ -1,7 +1,7 @@
 "use client"
 
-import { Plus } from "lucide-react"
-import { useState, useTransition } from "react"
+import { ArrowLeft, Landmark, ListTree, Plus } from "lucide-react"
+import { useMemo, useState, useTransition } from "react"
 
 import { setBankAccountActive } from "@/app/(app)/accounts/bank/actions"
 import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
@@ -34,6 +34,11 @@ import {
   type CatalogList,
 } from "@/lib/lookup-catalogs"
 
+type ActiveView =
+  | { kind: "home" }
+  | { kind: "catalog"; key: CatalogList["key"] }
+  | { kind: "bank" }
+
 export function SettingsPanel({
   catalogs,
   bankAccounts,
@@ -43,6 +48,7 @@ export function SettingsPanel({
   bankAccounts: BankAccountRow[]
   error: string | null
 }) {
+  const [view, setView] = useState<ActiveView>({ kind: "home" })
   const [formOpen, setFormOpen] = useState(false)
   const [formCatalog, setFormCatalog] = useState<CatalogList>(
     catalogs[0] ?? emptyCatalog(),
@@ -64,6 +70,13 @@ export function SettingsPanel({
   const [bankError, setBankError] = useState<string | null>(null)
   const [bankPendingId, setBankPendingId] = useState<string | null>(null)
   const [updatingBank, startBankUpdate] = useTransition()
+
+  const catalogByKey = useMemo(() => {
+    return new Map(catalogs.map((catalog) => [catalog.key, catalog]))
+  }, [catalogs])
+
+  const activeCatalog =
+    view.kind === "catalog" ? (catalogByKey.get(view.key) ?? null) : null
 
   function openCreate(catalog: CatalogList) {
     setFormCatalog(catalog)
@@ -134,7 +147,7 @@ export function SettingsPanel({
   }
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
       <div>
         <h1 className="text-2xl font-medium tracking-tight">Settings</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -149,108 +162,109 @@ export function SettingsPanel({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-6">
-        {catalogs.map((catalog) => (
-          <Card key={catalog.key}>
-            <CardHeader>
-              <CardTitle>{catalog.label}</CardTitle>
-              <CardDescription>
-                {itemCountLabel(catalog.items.length)}. Ordered By Sort Order,
-                Then Name.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
+      {view.kind === "home" ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {catalogs.map((catalog) => (
+            <button
+              key={catalog.key}
+              type="button"
+              onClick={() => setView({ kind: "catalog", key: catalog.key })}
+              className="group flex min-h-28 flex-col items-start justify-between rounded-xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-foreground/20 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className="flex w-full items-start justify-between gap-3">
+                <span className="rounded-lg border border-border bg-background p-2 text-muted-foreground transition group-hover:text-foreground">
+                  <ListTree className="size-5" aria-hidden="true" />
+                </span>
+                <Badge variant="outline" className="tabular-nums">
+                  {itemCountLabel(catalog.items.length)}
+                </Badge>
+              </div>
+              <div className="mt-4">
+                <p className="text-base font-medium tracking-tight">
+                  {catalog.label}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Add, Edit, Or Remove Entries
+                </p>
+              </div>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setView({ kind: "bank" })}
+            className="group flex min-h-28 flex-col items-start justify-between rounded-xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-foreground/20 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="flex w-full items-start justify-between gap-3">
+              <span className="rounded-lg border border-border bg-background p-2 text-muted-foreground transition group-hover:text-foreground">
+                <Landmark className="size-5" aria-hidden="true" />
+              </span>
+              <Badge variant="outline" className="tabular-nums">
+                {itemCountLabel(bankAccounts.length)}
+              </Badge>
+            </div>
+            <div className="mt-4">
+              <p className="text-base font-medium tracking-tight">
+                Bank Accounts
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add, Edit, Or Activate Accounts
+              </p>
+            </div>
+          </button>
+        </div>
+      ) : null}
+
+      {view.kind === "catalog" && activeCatalog ? (
+        <CatalogDetail
+          catalog={activeCatalog}
+          onBack={() => setView({ kind: "home" })}
+          onCreate={() => openCreate(activeCatalog)}
+          onEdit={(item) => openEdit(activeCatalog, item)}
+          onDelete={(item) => openDelete(activeCatalog, item)}
+        />
+      ) : null}
+
+      {view.kind === "bank" ? (
+        <Card>
+          <CardHeader className="gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="-ml-2 mb-2 h-auto px-2 py-1"
+                  onClick={() => setView({ kind: "home" })}
+                >
+                  <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+                  All Categories
+                </Button>
+                <CardTitle>Bank Accounts</CardTitle>
+                <CardDescription>
+                  {itemCountLabel(bankAccounts.length)}. Ordered By Sort Order,
+                  Then Name.
+                </CardDescription>
+              </div>
               <Button
                 type="button"
                 className="h-auto min-h-8 w-full whitespace-normal sm:w-fit"
-                onClick={() => openCreate(catalog)}
+                onClick={() => openBankForm(null)}
               >
                 <Plus aria-hidden="true" data-icon="inline-start" />
-                Add {catalogSingularTitle(catalog.singular)}
+                Add Bank Account
               </Button>
-
-              {catalog.items.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No Items Yet.</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {catalog.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium break-words">{item.name}</p>
-                          {catalog.hasActive && item.isActive === false ? (
-                            <Badge variant="outline">Inactive</Badge>
-                          ) : null}
-                          {catalog.hasCode && item.code ? (
-                            <Badge variant="outline">{item.code}</Badge>
-                          ) : null}
-                          {catalog.hasIsOpen ? (
-                            <Badge
-                              variant="outline"
-                              className={
-                                item.isOpen
-                                  ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
-                                  : undefined
-                              }
-                            >
-                              {item.isOpen ? "Open" : "Closed"}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <p className="text-sm text-muted-foreground tabular-nums">
-                          Sort Order {item.sortOrder}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => openEdit(catalog, item)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          onClick={() => openDelete(catalog, item)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-        <Card>
-          <CardHeader>
-            <CardTitle>Bank Accounts</CardTitle>
-            <CardDescription>
-              {itemCountLabel(bankAccounts.length)}. Ordered By Sort Order, Then
-              Name.
-            </CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Button
-              type="button"
-              className="h-auto min-h-8 w-full whitespace-normal sm:w-fit"
-              onClick={() => openBankForm(null)}
-            >
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Bank Account
-            </Button>
             {bankError ? (
               <p role="alert" className="text-sm text-destructive">
                 {bankError}
               </p>
             ) : null}
             {bankAccounts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No Bank Accounts Yet.</p>
+              <p className="text-sm text-muted-foreground">
+                No Bank Accounts Yet.
+              </p>
             ) : (
               <ul className="flex flex-col divide-y divide-border">
                 {bankAccounts.map((account) => (
@@ -302,7 +316,7 @@ export function SettingsPanel({
             )}
           </CardContent>
         </Card>
-      </div>
+      ) : null}
 
       <BankAccountFormDialog
         key={bankFormSession}
@@ -358,6 +372,95 @@ export function SettingsPanel({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+function CatalogDetail({
+  catalog,
+  onBack,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  catalog: CatalogList
+  onBack: () => void
+  onCreate: () => void
+  onEdit: (item: CatalogItem) => void
+  onDelete: (item: CatalogItem) => void
+}) {
+  return (
+    <Card>
+      <CardHeader className="gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <Button
+              type="button"
+              variant="ghost"
+              className="-ml-2 mb-2 h-auto px-2 py-1"
+              onClick={onBack}
+            >
+              <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+              All Categories
+            </Button>
+            <CardTitle>{catalog.label}</CardTitle>
+            <CardDescription>
+              {itemCountLabel(catalog.items.length)}. Ordered By Sort Order,
+              Then Name.
+            </CardDescription>
+          </div>
+          <Button
+            type="button"
+            className="h-auto min-h-8 w-full whitespace-normal sm:w-fit"
+            onClick={onCreate}
+          >
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add {catalogSingularTitle(catalog.singular)}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {catalog.items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No Items Yet.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border">
+            {catalog.items.map((item) => (
+              <li
+                key={item.id}
+                className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium break-words">{item.name}</p>
+                    {catalog.hasActive && item.isActive === false ? (
+                      <Badge variant="outline">Inactive</Badge>
+                    ) : null}
+                  </div>
+                  <p className="text-sm text-muted-foreground tabular-nums">
+                    Sort Order {item.sortOrder}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onEdit(item)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => onDelete(item)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
