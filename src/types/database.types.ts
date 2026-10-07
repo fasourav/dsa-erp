@@ -2410,7 +2410,6 @@ export type Database = {
         | "operational_expense"
         | "vat_tax"
         | "other"
-      invoice_direction: "receivable" | "payable"
       party_kind: "person" | "company"
       payment_status: "unpaid" | "partial" | "paid" | "void"
       project_status: "active" | "completed"
@@ -2550,7 +2549,6 @@ export const Constants = {
         "vat_tax",
         "other",
       ],
-      invoice_direction: ["receivable", "payable"],
       party_kind: ["person", "company"],
       payment_status: ["unpaid", "partial", "paid", "void"],
       project_status: ["active", "completed"],
