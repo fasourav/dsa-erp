@@ -9,8 +9,10 @@ import {
   Contact,
   FileText,
   FolderKanban,
+  HandCoins,
   Landmark,
   LayoutDashboard,
+  ListTodo,
   PanelLeftClose,
   PanelLeftOpen,
   PiggyBank,
@@ -20,6 +22,7 @@ import {
   UserPlus,
   Users,
   Wallet,
+  WalletCards,
   type LucideIcon,
 } from "lucide-react"
 import Link from "next/link"
@@ -33,6 +36,9 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/leads", label: "Leads", icon: UserPlus },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/income", label: "Income", icon: HandCoins },
+  { href: "/expense", label: "Expense", icon: WalletCards },
+  { href: "/backlog", label: "Backlog", icon: ListTodo },
   { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
   { href: "/accounts/receivable", label: "Accounts Receivable", icon: ArrowDownLeft },

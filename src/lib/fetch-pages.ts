@@ -28,3 +28,29 @@ export async function fetchAllPages<T>(
 
   throw new Error(overflowMessage)
 }
+
+const ID_CHUNK = 100
+
+export async function fetchByIds<T>(
+  ids: readonly string[],
+  load: (ids: string[]) => PromiseLike<{
+    data: T[] | null
+    error: { message: string } | null
+  }>,
+): Promise<T[]> {
+  const unique = [...new Set(ids.filter((id) => id.length > 0))]
+  const rows: T[] = []
+
+  for (let index = 0; index < unique.length; index += ID_CHUNK) {
+    const slice = unique.slice(index, index + ID_CHUNK)
+    const { data, error } = await load(slice)
+
+    if (error) {
+      throw error
+    }
+
+    rows.push(...(data ?? []))
+  }
+
+  return rows
+}
