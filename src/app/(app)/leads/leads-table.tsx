@@ -272,7 +272,7 @@ function CellValue({
   switch (columnId) {
     case "leadName":
       return (
-        <div className="flex min-w-40 flex-col gap-1 whitespace-normal">
+        <div className="flex w-full min-w-0 flex-col gap-1">
           <span className={cn("font-medium", !lead.leadName && "text-muted-foreground")}>
             {lead.leadName || "—"}
           </span>
@@ -291,7 +291,7 @@ function CellValue({
       )
     case "projectName":
       return (
-        <div className="flex min-w-40 flex-col gap-1 whitespace-normal">
+        <div className="flex w-full min-w-0 flex-col gap-1">
           <span className={cn(!lead.projectName && "text-muted-foreground")}>
             {lead.projectName || "—"}
           </span>

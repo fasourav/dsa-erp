@@ -281,7 +281,7 @@ function CellValue({
   switch (columnId) {
     case "name":
       return (
-        <div className="flex min-w-48 flex-col gap-1 whitespace-normal">
+        <div className="flex w-full min-w-0 flex-col gap-1">
           <span
             className={cn(
               "font-medium",

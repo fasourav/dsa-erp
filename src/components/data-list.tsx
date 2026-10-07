@@ -63,6 +63,22 @@ function insetClass(
   )
 }
 
+function staysOnOneLine(column: {
+  id: string
+  label: string
+  align: ColumnAlign
+}) {
+  if (column.align !== "left") {
+    return true
+  }
+
+  return (
+    /date/i.test(column.id) ||
+    /date/i.test(column.label) ||
+    /On$/.test(column.id)
+  )
+}
+
 export function DataList<T, Id extends string>({
   columns,
   rows,
@@ -102,7 +118,7 @@ export function DataList<T, Id extends string>({
     columnVisible(column, visibility),
   )
   const hasActions = renderActions !== undefined
-  const columnCount = visibleColumns.length + 1 + (hasActions ? 1 : 0)
+  const columnCount = visibleColumns.length + (hasActions ? 1 : 0)
   const pages = paginationItems(currentPage, pageCount)
 
   return (
@@ -111,14 +127,7 @@ export function DataList<T, Id extends string>({
         <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
       ) : null}
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <colgroup>
-            {visibleColumns.map((column) => (
-              <col key={column.id} className="w-px" />
-            ))}
-            <col className="w-full" />
-            {hasActions ? <col className="w-16" /> : null}
-          </colgroup>
+        <Table>
           <TableHeader>
             <TableRow className="bg-muted hover:bg-muted">
               {visibleColumns.map((column, index) => {
@@ -157,9 +166,8 @@ export function DataList<T, Id extends string>({
                   </TableHead>
                 )
               })}
-              <TableHead aria-hidden="true" className="w-full bg-muted p-0" />
               {hasActions ? (
-                <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3 align-middle">
+                <TableHead className="sticky right-0 z-10 w-px bg-muted px-3 align-middle whitespace-nowrap">
                   <span className="sr-only">Actions</span>
                 </TableHead>
               ) : null}
@@ -191,25 +199,31 @@ export function DataList<T, Id extends string>({
                   {visibleColumns.map((column, index) => {
                     const previous = visibleColumns[index - 1]?.align ?? null
                     const next = visibleColumns[index + 1]?.align ?? null
+                    const oneLine = staysOnOneLine(column)
                     return (
                       <TableCell
                         key={column.id}
                         className={cn(
-                          "py-3 align-middle text-sm whitespace-nowrap",
+                          "py-3 align-middle text-sm",
+                          oneLine ? "whitespace-nowrap" : "whitespace-normal",
                           alignClass(column.align),
                           insetClass(column.align, previous, next),
                           column.align !== "left" && "tabular-nums",
                         )}
                       >
-                        <span className="inline-flex max-w-full items-center">
+                        <span
+                          className={cn(
+                            "max-w-full items-center",
+                            oneLine ? "inline-flex" : "flex w-full min-w-0",
+                          )}
+                        >
                           {renderCell(row, column.id)}
                         </span>
                       </TableCell>
                     )
                   })}
-                  <TableCell aria-hidden="true" className="w-full p-0" />
                   {hasActions ? (
-                    <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 align-middle text-sm group-hover:bg-muted">
+                    <TableCell className="sticky right-0 z-10 w-px bg-card p-3 align-middle text-sm whitespace-nowrap group-hover:bg-muted">
                       <span className="inline-flex items-center">
                         {renderActions(row)}
                       </span>
