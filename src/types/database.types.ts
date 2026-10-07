@@ -1119,6 +1119,7 @@ export type Database = {
           location: string | null
           name: string
           project_type: string | null
+          recovery_plan: string | null
           started_on: string
           status: Database["public"]["Enums"]["project_status"]
           total_value: number
@@ -1136,6 +1137,7 @@ export type Database = {
           location?: string | null
           name: string
           project_type?: string | null
+          recovery_plan?: string | null
           started_on?: string
           status?: Database["public"]["Enums"]["project_status"]
           total_value?: number
@@ -1153,6 +1155,7 @@ export type Database = {
           location?: string | null
           name?: string
           project_type?: string | null
+          recovery_plan?: string | null
           started_on?: string
           status?: Database["public"]["Enums"]["project_status"]
           total_value?: number
@@ -2192,9 +2195,13 @@ export type Database = {
         Row: {
           backlog_amount: number | null
           client_name: string | null
+          expense_total: number | null
           project_id: string | null
           project_name: string | null
+          project_status: Database["public"]["Enums"]["project_status"] | null
           project_value: number | null
+          recovery_plan: string | null
+          total_paid: number | null
         }
         Relationships: []
       }

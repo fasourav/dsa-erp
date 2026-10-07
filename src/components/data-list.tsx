@@ -70,7 +70,7 @@ export function DataList<T, Id extends string>({
   onPageChange: (page: number) => void
   pagingLabel: string
   renderCell: (row: T, columnId: Id) => ReactNode
-  renderActions: (row: T) => ReactNode
+  renderActions?: (row: T) => ReactNode
   toolbar?: ReactNode
   columnLayout?: "auto" | "even"
 }) {
@@ -78,7 +78,8 @@ export function DataList<T, Id extends string>({
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
   )
-  const columnCount = visibleColumns.length + 1
+  const hasActions = renderActions !== undefined
+  const columnCount = visibleColumns.length + (hasActions ? 1 : 0)
   const pages = paginationItems(currentPage, pageCount)
 
   return (
@@ -97,7 +98,7 @@ export function DataList<T, Id extends string>({
               {visibleColumns.map((column) => (
                 <col key={column.id} />
               ))}
-              <col className="w-16" />
+              {hasActions ? <col className="w-16" /> : null}
             </colgroup>
           ) : null}
           <TableHeader>
@@ -147,9 +148,11 @@ export function DataList<T, Id extends string>({
                   </TableHead>
                 )
               })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3">
-                <span className="sr-only">Actions</span>
-              </TableHead>
+              {hasActions ? (
+                <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -187,9 +190,11 @@ export function DataList<T, Id extends string>({
                       {renderCell(row, column.id)}
                     </TableCell>
                   ))}
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
-                    {renderActions(row)}
-                  </TableCell>
+                  {hasActions ? (
+                    <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
+                      {renderActions(row)}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             )}
