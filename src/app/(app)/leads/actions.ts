@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
@@ -211,6 +212,13 @@ async function saveLead(
     return { error: null, fieldErrors: { status: "Choose a status." } }
   }
 
+  if (!(await ensureLeadCatalogName(supabase, "lead_sources", source))) {
+    return { error: "Could not save this lead." }
+  }
+  if (!(await ensureLeadCatalogName(supabase, "lead_stages", currentStage))) {
+    return { error: "Could not save this lead." }
+  }
+
   const values = {
     lead_name: leadName,
     kind: kind as "person" | "company",
@@ -235,5 +243,42 @@ async function saveLead(
     return { error: "That lead could not be found." }
 
   revalidatePath("/leads")
+  if (source || currentStage) {
+    revalidatePath("/settings")
+  }
   return { error: null }
 }
+
+async function ensureLeadCatalogName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: "lead_sources" | "lead_stages",
+  name: string,
+): Promise<boolean> {
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return true
+  }
+
+  const { data, error } = await supabase.from(table).select("name, sort_order")
+  if (error || !data) {
+    return false
+  }
+
+  const key = trimmed.toLowerCase()
+  const exists = data.some((row) => row.name.trim().toLowerCase() === key)
+  if (exists) {
+    return true
+  }
+
+  const { error: insertError } = await supabase.from(table).insert({
+    name: trimmed,
+    sort_order: nextSortOrder(data.map((row) => ({ sortOrder: row.sort_order }))),
+  })
+
+  if (!insertError) {
+    return true
+  }
+
+  return insertError.code === "23505" || /duplicate key/i.test(insertError.message ?? "")
+}
+

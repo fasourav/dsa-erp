@@ -485,7 +485,9 @@ function CellValue({
       )
     case "currentStage":
       return lead.currentStage ? (
-        <span>{lead.currentStage}</span>
+        <Badge variant="outline" className="rounded-full">
+          {lead.currentStage}
+        </Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -507,31 +509,18 @@ function CellValue({
       )
     case "status":
       return (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge
-            variant={
-              lead.status === "won"
-                ? "secondary"
-                : lead.status === "lost" || lead.status === "cancelled"
-                  ? "destructive"
-                  : "outline"
-            }
-            className="rounded-full"
-          >
-            {lead.statusLabel}
-          </Badge>
-          <Badge
-            variant="outline"
-            className={cn(
-              "rounded-full",
-              lead.statusIsOpen
-                ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
-                : "text-muted-foreground",
-            )}
-          >
-            {lead.statusIsOpen ? "Open" : "Closed"}
-          </Badge>
-        </div>
+        <Badge
+          variant={
+            lead.status === "won"
+              ? "secondary"
+              : lead.status === "lost" || lead.status === "cancelled"
+                ? "destructive"
+                : "outline"
+          }
+          className="rounded-full"
+        >
+          {lead.statusLabel}
+        </Badge>
       )
   }
 }

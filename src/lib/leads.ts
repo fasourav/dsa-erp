@@ -2,12 +2,7 @@ import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 
-export type LeadStatusCode =
-  | "open"
-  | "on_hold"
-  | "won"
-  | "lost"
-  | "cancelled"
+export type LeadStatusCode = string
 
 export type LeadRow = {
   id: string
@@ -45,7 +40,7 @@ export type LeadTypeOption = {
 
 export type LeadStatusOption = {
   id: string
-  code: LeadStatusCode
+  code: string
   name: string
   isOpen: boolean
 }
@@ -208,7 +203,7 @@ async function loadLeadLookups(
       stages: uniqueNamed(stages),
       statuses: statuses.map((row) => ({
         id: row.id,
-        code: row.code as LeadStatusCode,
+        code: row.code,
         name: row.name,
         isOpen: Boolean(row.is_open),
       })),

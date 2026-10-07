@@ -4,54 +4,80 @@ export const catalogDefinitions = [
     label: "Departments",
     singular: "department",
     hasActive: true,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "project_types",
     label: "Project Types",
     singular: "project type",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "project_phases",
     label: "Project Phases",
     singular: "project phase",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "office_expense_categories",
     label: "Office Expense Categories",
     singular: "office expense category",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "project_expense_categories",
     label: "Project Expense Categories",
     singular: "project expense category",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "payment_methods",
     label: "Payment Methods",
     singular: "payment method",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "vendor_work_categories",
     label: "Vendor Work Categories",
     singular: "vendor work category",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "lead_sources",
     label: "Lead Sources",
     singular: "lead source",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
   },
   {
     key: "lead_stages",
     label: "Lead Stages",
     singular: "lead stage",
     hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
+  },
+  {
+    key: "lead_statuses",
+    label: "Lead Statuses",
+    singular: "lead status",
+    hasActive: false,
+    hasCode: true,
+    hasIsOpen: true,
   },
 ] as const
 
@@ -63,6 +89,8 @@ export type CatalogItem = {
   name: string
   sortOrder: number
   isActive: boolean | null
+  code: string | null
+  isOpen: boolean | null
 }
 
 export type CatalogList = CatalogDefinition & {
@@ -133,4 +161,12 @@ export function nextSortOrder(items: { sortOrder: number }[]) {
 
   const max = Math.max(...items.map((item) => item.sortOrder))
   return max >= INT4_MAX ? max : max + 1
+}
+
+export function slugifyCatalogCode(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
 }

@@ -35,10 +35,8 @@ export type ClientOption = {
 
 export type ColumnId =
   | "name"
-  | "clientName"
   | "location"
   | "startedOn"
-  | "projectType"
   | "status"
   | "phase"
   | "totalValue"
@@ -48,10 +46,7 @@ export type ColumnId =
   | "expenseDue"
   | "grossProfit"
 
-export type OptionalColumnId = Exclude<
-  ColumnId,
-  "name" | "clientName" | "status" | "phase"
->
+export type OptionalColumnId = Exclude<ColumnId, "name" | "status" | "phase">
 
 export type ColumnVisibility = Record<OptionalColumnId, boolean>
 
@@ -81,13 +76,6 @@ export const dataColumns: readonly DataColumn[] = [
     format: "text",
   },
   {
-    id: "clientName",
-    label: "Client Name",
-    align: "left",
-    locked: true,
-    format: "text",
-  },
-  {
     id: "location",
     label: "Location",
     align: "left",
@@ -100,13 +88,6 @@ export const dataColumns: readonly DataColumn[] = [
     align: "left",
     locked: false,
     format: "date",
-  },
-  {
-    id: "projectType",
-    label: "Project Type",
-    align: "left",
-    locked: false,
-    format: "text",
   },
   {
     id: "status",
@@ -169,7 +150,6 @@ export const dataColumns: readonly DataColumn[] = [
 const defaultVisibility: ColumnVisibility = {
   location: true,
   startedOn: true,
-  projectType: true,
   totalValue: true,
   totalPaid: true,
   totalDue: true,
@@ -212,9 +192,7 @@ export function sanitizeColumnVisibility(value: unknown): ColumnVisibility {
 }
 
 export function isOptionalColumn(id: ColumnId): id is OptionalColumnId {
-  return (
-    id !== "name" && id !== "clientName" && id !== "status" && id !== "phase"
-  )
+  return id !== "name" && id !== "status" && id !== "phase"
 }
 
 export function isColumnVisible(
@@ -296,18 +274,10 @@ function compareProjects(a: ProjectRow, b: ProjectRow, key: ColumnId): number {
   switch (key) {
     case "name":
       return a.name.localeCompare(b.name, "en", { sensitivity: "base" })
-    case "clientName":
-      return a.clientName.localeCompare(b.clientName, "en", {
-        sensitivity: "base",
-      })
     case "location":
       return a.location.localeCompare(b.location, "en", { sensitivity: "base" })
     case "startedOn":
       return a.startedOn.localeCompare(b.startedOn)
-    case "projectType":
-      return a.projectType.localeCompare(b.projectType, "en", {
-        sensitivity: "base",
-      })
     case "status":
       return statusLabel(a.status).localeCompare(statusLabel(b.status), "en", {
         sensitivity: "base",

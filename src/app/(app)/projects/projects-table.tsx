@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Columns3,
   FileText,
-  LoaderCircle,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -459,12 +458,6 @@ function CellValue({
           ) : null}
         </div>
       )
-    case "clientName":
-      return project.clientName ? (
-        <span>{project.clientName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
     case "location":
       return project.location ? (
         <span>{project.location}</span>
@@ -474,12 +467,6 @@ function CellValue({
     case "startedOn":
       return project.startedOn ? (
         <span>{formatProjectDate(project.startedOn)}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
-    case "projectType":
-      return project.projectType ? (
-        <span>{project.projectType}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -548,10 +535,12 @@ function StatusValue({ status }: { status: ProjectRow["status"] }) {
   if (status === "active") {
     return (
       <Badge
-        variant="secondary"
-        className={cn(pillClassName, "bg-muted text-muted-foreground")}
+        variant="outline"
+        className={cn(
+          pillClassName,
+          "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+        )}
       >
-        <LoaderCircle aria-hidden="true" />
         {statusLabel(status)}
       </Badge>
     )

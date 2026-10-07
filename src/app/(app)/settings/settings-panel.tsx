@@ -138,8 +138,8 @@ export function SettingsPanel({
       <div>
         <h1 className="text-2xl font-medium tracking-tight">Settings</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manage lookup lists for departments, projects, expenses, payments,
-          vendors, and bank accounts.
+          Manage Lookup Lists For Departments, Projects, Expenses, Payments,
+          Vendors, Leads, And Bank Accounts.
         </p>
       </div>
 
@@ -183,6 +183,21 @@ export function SettingsPanel({
                           <p className="font-medium break-words">{item.name}</p>
                           {catalog.hasActive && item.isActive === false ? (
                             <Badge variant="outline">Inactive</Badge>
+                          ) : null}
+                          {catalog.hasCode && item.code ? (
+                            <Badge variant="outline">{item.code}</Badge>
+                          ) : null}
+                          {catalog.hasIsOpen ? (
+                            <Badge
+                              variant="outline"
+                              className={
+                                item.isOpen
+                                  ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+                                  : undefined
+                              }
+                            >
+                              {item.isOpen ? "Open" : "Closed"}
+                            </Badge>
                           ) : null}
                         </div>
                         <p className="text-sm text-muted-foreground tabular-nums">
@@ -356,6 +371,8 @@ function emptyCatalog(): CatalogList {
     label: "Departments",
     singular: "department",
     hasActive: true,
+    hasCode: false,
+    hasIsOpen: false,
     items: [],
   }
 }

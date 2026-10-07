@@ -8,18 +8,21 @@ import {
   duplicateNameMessage,
   isCatalogKey,
   isSortOrder,
+  slugifyCatalogCode,
   type CatalogKey,
 } from "@/lib/lookup-catalogs"
 
 const idPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-type SharedCatalog = Exclude<CatalogKey, "departments">
+type SharedCatalog = Exclude<CatalogKey, "departments" | "lead_statuses">
 
 export type CatalogFieldErrors = {
   name?: string
   sortOrder?: string
   isActive?: string
+  code?: string
+  isOpen?: string
 }
 
 export type CatalogActionResult = {
@@ -32,6 +35,8 @@ export type CatalogItemInput = {
   name: string
   sortOrder: number
   isActive: boolean
+  code?: string
+  isOpen?: boolean
 }
 
 export async function addCatalogItem(
@@ -64,6 +69,16 @@ export async function deleteCatalogItem(
 
   if (!signedIn) {
     return { error: "You must be signed in." }
+  }
+
+  if (catalog === "lead_statuses") {
+    const blocked = await leadStatusInUse(supabase, id)
+    if (blocked === "error") {
+      return { error: "Could not delete this item." }
+    }
+    if (blocked === "in_use") {
+      return { error: "This item is still in use and cannot be deleted." }
+    }
   }
 
   const { data, error } = await supabase
@@ -117,7 +132,32 @@ async function saveCatalogItem(
     fieldErrors.isActive = "Choose whether this department is active."
   }
 
-  if (fieldErrors.name || fieldErrors.sortOrder || fieldErrors.isActive) {
+  let code = (input.code ?? "").trim().toLowerCase()
+  if (definition.hasCode) {
+    if (!code) {
+      code = slugifyCatalogCode(name)
+    }
+    if (!code || !/^[a-z][a-z0-9_]*$/.test(code)) {
+      fieldErrors.code =
+        "Enter a code using letters, numbers, and underscores."
+    }
+  }
+
+  if (
+    definition.hasIsOpen &&
+    typeof input.isOpen !== "boolean" &&
+    input.isOpen !== undefined
+  ) {
+    fieldErrors.isOpen = "Choose whether this status is open."
+  }
+
+  if (
+    fieldErrors.name ||
+    fieldErrors.sortOrder ||
+    fieldErrors.isActive ||
+    fieldErrors.code ||
+    fieldErrors.isOpen
+  ) {
     return { error: null, fieldErrors }
   }
 
@@ -136,16 +176,28 @@ async function saveCatalogItem(
           sort_order: sortOrder,
           is_active: input.isActive,
         })
-      : await writeShared(supabase, input.catalog, id, {
-          name,
-          sort_order: sortOrder,
-        })
+      : input.catalog === "lead_statuses"
+        ? await writeLeadStatus(supabase, id, {
+            name,
+            sort_order: sortOrder,
+            code,
+            is_open: input.isOpen ?? true,
+          })
+        : await writeShared(supabase, input.catalog, id, {
+            name,
+            sort_order: sortOrder,
+          })
 
   if (error) {
     if (isUniqueViolation(error)) {
+      const message = /code/i.test(error.message ?? "")
+        ? "A lead status with this code already exists."
+        : duplicateNameMessage(definition.singular)
       return {
         error: null,
-        fieldErrors: { name: duplicateNameMessage(definition.singular) },
+        fieldErrors: definition.hasCode && /code/i.test(error.message ?? "")
+          ? { code: message }
+          : { name: message },
       }
     }
 
@@ -185,6 +237,58 @@ async function writeShared(
   return supabase.from(table).insert(row).select("id")
 }
 
+async function writeLeadStatus(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string | null,
+  row: {
+    name: string
+    sort_order: number
+    code: string
+    is_open: boolean
+  },
+) {
+  if (id) {
+    return supabase
+      .from("lead_statuses")
+      .update({
+        name: row.name,
+        sort_order: row.sort_order,
+        is_open: row.is_open,
+      })
+      .eq("id", id)
+      .select("id")
+  }
+
+  return supabase.from("lead_statuses").insert(row).select("id")
+}
+
+async function leadStatusInUse(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string,
+): Promise<"in_use" | "clear" | "error"> {
+  const { data, error } = await supabase
+    .from("lead_statuses")
+    .select("code")
+    .eq("id", id)
+    .limit(1)
+
+  if (error || !data || data.length === 0) {
+    return "error"
+  }
+
+  const code = data[0].code
+  const { count, error: leadError } = await supabase
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("status", code)
+
+  if (leadError) {
+    return "error"
+  }
+
+  return (count ?? 0) > 0 ? "in_use" : "clear"
+}
+
 async function isSignedIn(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data, error } = await supabase.auth.getUser()
   return !error && Boolean(data.user)
@@ -193,6 +297,14 @@ async function isSignedIn(supabase: Awaited<ReturnType<typeof createClient>>) {
 function revalidateCatalogs(catalog: CatalogKey) {
   revalidatePath("/settings")
   revalidatePath("/projects")
+
+  if (
+    catalog === "lead_sources" ||
+    catalog === "lead_stages" ||
+    catalog === "lead_statuses"
+  ) {
+    revalidatePath("/leads")
+  }
 
   if (catalog === "vendor_work_categories") {
     revalidatePath("/vendors")

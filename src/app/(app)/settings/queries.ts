@@ -18,17 +18,27 @@ const sharedCatalogs = [
   "project_expense_categories",
   "payment_methods",
   "vendor_work_categories",
-] as const satisfies readonly Exclude<CatalogKey, "departments">[]
+  "lead_sources",
+  "lead_stages",
+] as const satisfies readonly Exclude<
+  CatalogKey,
+  "departments" | "lead_statuses"
+>[]
 
 type SharedCatalog = (typeof sharedCatalogs)[number]
 
 export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
   const supabase = await createClient()
 
-  const [departments, ...shared] = await Promise.all([
+  const [departments, statuses, ...shared] = await Promise.all([
     supabase
       .from("departments")
       .select("id, name, sort_order, is_active")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("lead_statuses")
+      .select("id, name, sort_order, code, is_open")
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
     ...sharedCatalogs.map((table) => loadShared(supabase, table)),
@@ -43,7 +53,21 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
   } else {
     rows.set(
       "departments",
-      departments.data.map((row) => toItem(row, row.is_active)),
+      departments.data.map((row) =>
+        toItem(row, row.is_active, null, null),
+      ),
+    )
+  }
+
+  if (statuses.error || !statuses.data) {
+    failed = true
+    rows.set("lead_statuses", [])
+  } else {
+    rows.set(
+      "lead_statuses",
+      statuses.data.map((row) =>
+        toItem(row, null, row.code, Boolean(row.is_open)),
+      ),
     )
   }
 
@@ -58,7 +82,7 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
 
     rows.set(
       key,
-      result.data.map((row) => toItem(row, null)),
+      result.data.map((row) => toItem(row, null, null, null)),
     )
   })
 
@@ -85,11 +109,15 @@ function loadShared(
 function toItem(
   row: { id: string; name: string; sort_order: number },
   isActive: boolean | null,
+  code: string | null,
+  isOpen: boolean | null,
 ): CatalogItem {
   return {
     id: row.id,
     name: row.name,
     sortOrder: row.sort_order,
     isActive,
+    code,
+    isOpen,
   }
 }
