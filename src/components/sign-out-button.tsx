@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 
 export function SignOutButton() {
   return (
-    <form action={signOut}>
+    <form action={signOut} className="shrink-0">
       <Button type="submit" variant="outline">
         Sign out
       </Button>

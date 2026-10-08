@@ -28,6 +28,7 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { BrandLockup, BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -66,22 +67,20 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground md:min-h-0 md:overflow-y-auto md:border-r md:border-b-0",
+        "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground md:min-h-0 md:border-r md:border-b-0",
         collapsed ? "md:w-16" : "md:w-60",
       )}
     >
       <div
         className={cn(
-          "flex items-center gap-2 px-3 py-4",
-          collapsed && "md:flex-col md:px-2",
+          "flex h-16 shrink-0 items-center gap-2 border-b border-border px-3",
+          collapsed && "md:justify-center md:gap-0 md:px-0",
         )}
       >
         <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
-          <p className="text-[0.68rem] font-medium tracking-[0.22em] text-sidebar-foreground/60">
-            DYNAMIC SPACE
-          </p>
-          <p className="mt-1 text-lg font-medium tracking-tight">DSA ERP</p>
+          <BrandLockup layout="bar" />
         </div>
+        <BrandMark className={cn("hidden size-8", collapsed && "md:inline-flex md:size-7")} />
         <Button
           type="button"
           variant="ghost"
@@ -103,7 +102,7 @@ export function AppSidebar({
         id="primary-navigation"
         aria-label="Primary"
         className={cn(
-          "gap-1 overflow-x-auto px-3 pb-3 md:flex-1 md:flex-col md:overflow-visible md:pb-6",
+          "gap-1 overflow-x-auto px-3 py-3 md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:pb-6",
           collapsed ? "hidden md:flex" : "flex",
         )}
       >

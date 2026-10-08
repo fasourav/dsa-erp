@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { LoginForm } from "@/app/login/login-form"
+import { BrandLockup } from "@/components/brand-mark"
 import {
   Card,
   CardContent,
@@ -25,9 +26,7 @@ export default async function LoginPage() {
     <main className="flex min-h-svh items-center justify-center px-4 py-12">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <p className="text-[0.68rem] font-medium tracking-[0.22em] text-muted-foreground">
-            DYNAMIC SPACE ARCHITECTS
-          </p>
+          <BrandLockup layout="stacked" priority className="mb-2" />
           <CardTitle className="text-xl">Sign in to DSA ERP</CardTitle>
           <CardDescription>
             Use the email and password for your invited account.
