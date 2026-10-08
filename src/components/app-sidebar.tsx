@@ -28,6 +28,7 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { BrandLockup, BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -72,16 +73,14 @@ export function AppSidebar({
     >
       <div
         className={cn(
-          "flex items-center gap-2 px-3 py-4",
-          collapsed && "md:flex-col md:px-2",
+          "flex items-center gap-2 px-3 py-4 md:items-start",
+          collapsed && "md:flex-col md:items-center md:px-2",
         )}
       >
         <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
-          <p className="text-[0.68rem] font-medium tracking-[0.22em] text-sidebar-foreground/60">
-            DYNAMIC SPACE
-          </p>
-          <p className="mt-1 text-lg font-medium tracking-tight">DSA ERP</p>
+          <BrandLockup />
         </div>
+        <BrandMark className={cn("hidden size-8", collapsed && "md:inline-flex")} />
         <Button
           type="button"
           variant="ghost"

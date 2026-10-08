@@ -184,6 +184,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             label="Accounts Payables"
             value={model.payables}
             detail={`${formatExactBdt(model.payables)} · Current`}
+            tone={model.payables > 0 ? "warning" : "default"}
             icon={model.payables > 0 ? AlertCircle : undefined}
           />
           <CompactMetric
@@ -378,16 +379,16 @@ function DashboardSections({ model }: { model: DashboardModel }) {
               <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-              <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-chart-2" />
-              <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-destructive" />
+              <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
+              <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
               <Ring
                 label="Gross Profit Margin"
                 value={snapshot.grossMargin}
                 tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
               />
-              <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-4" />
+              <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
               <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
-              <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-5" />
+              <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
             </div>
           </CardContent>
         </Card>
@@ -436,7 +437,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">In Operation</p>
-                <p className="text-base font-semibold text-primary">{model.tenure.inOperation}</p>
+                <p className="text-base font-semibold text-chart-1">{model.tenure.inOperation}</p>
                 <p className="text-xs text-muted-foreground">{model.tenure.daysLabel}</p>
               </div>
             </div>
@@ -452,7 +453,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
                 <p
                   className={cn(
                     "text-sm font-semibold tabular-nums",
-                    model.tenure.netProfitPerDay < 0 ? "text-destructive" : "text-primary",
+                    model.tenure.netProfitPerDay < 0 ? "text-destructive" : "text-chart-1",
                   )}
                 >
                   {formatExactBdt(model.tenure.netProfitPerDay)}
@@ -519,16 +520,23 @@ function CompactMetric({
   label: string
   value: number
   detail: string
-  tone?: "default" | "negative"
+  tone?: "default" | "negative" | "warning"
   icon?: LucideIcon
 }) {
   return (
-    <Card className={tone === "negative" ? "bg-destructive/5" : undefined}>
+    <Card
+      className={cn(
+        tone === "negative" && "bg-destructive/5",
+        tone === "warning" && "bg-warning/10",
+      )}
+    >
       <CardContent className="flex flex-col justify-center gap-1">
         <p
           className={cn(
             "flex items-center gap-1 text-xs font-medium",
-            tone === "negative" ? "text-destructive" : "text-muted-foreground",
+            tone === "negative" && "text-destructive",
+            tone === "warning" && "text-warning",
+            tone === "default" && "text-muted-foreground",
           )}
         >
           {Icon ? <Icon aria-hidden="true" className="size-4" /> : null}
@@ -563,7 +571,7 @@ function MetricTile({
 }) {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-3">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-chart-1/15 text-chart-1">
         <Icon aria-hidden="true" className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
@@ -573,7 +581,7 @@ function MetricTile({
         {bar != null ? (
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-primary"
+              className="h-full rounded-full bg-chart-1"
               style={{ width: `${Math.min(100, Math.max(0, bar))}%` }}
             />
           </div>
@@ -640,7 +648,7 @@ function WeekStat({
       <p
         className={cn(
           "mt-1 flex items-center gap-1 text-sm font-semibold tabular-nums",
-          emphasize && (value < 0 ? "text-destructive" : "text-primary"),
+          emphasize && (value < 0 ? "text-destructive" : "text-success-foreground"),
         )}
       >
         {formatCompactBdt(value)}
@@ -665,7 +673,7 @@ function TrendMark({
   return (
     <Icon
       aria-hidden="true"
-      className={cn("size-4", improved ? "text-primary" : "text-destructive")}
+      className={cn("size-4", improved ? "text-success-foreground" : "text-destructive")}
     />
   )
 }
@@ -677,7 +685,7 @@ function DeltaBadge({ value }: { value: number }) {
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-        rising ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive",
+        rising ? "bg-success/15 text-success-foreground" : "bg-destructive/10 text-destructive",
       )}
     >
       <Icon aria-hidden="true" className="size-4" />

@@ -24,15 +24,15 @@ export const expenseSliceStyle = [
   {
     key: "subcontractor",
     label: "Subcontractor Cost",
-    fill: "var(--chart-1)",
-    swatch: "bg-chart-1",
+    fill: "var(--chart-6)",
+    swatch: "bg-chart-6",
     opacity: 1,
   },
   {
     key: "material",
     label: "Material Cost",
-    fill: "var(--chart-2)",
-    swatch: "bg-chart-2",
+    fill: "var(--chart-7)",
+    swatch: "bg-chart-7",
     opacity: 1,
   },
   {
@@ -45,30 +45,30 @@ export const expenseSliceStyle = [
   {
     key: "admin",
     label: "Admin Expense",
-    fill: "var(--chart-4)",
-    swatch: "bg-chart-4",
-    opacity: 1,
-  },
-  {
-    key: "operational",
-    label: "Operational Expense",
     fill: "var(--chart-5)",
     swatch: "bg-chart-5",
     opacity: 1,
   },
   {
+    key: "operational",
+    label: "Operational Expense",
+    fill: "var(--chart-4)",
+    swatch: "bg-chart-4",
+    opacity: 1,
+  },
+  {
     key: "marketing",
     label: "Marketing",
-    fill: "var(--chart-1)",
-    swatch: "bg-chart-1/60",
-    opacity: 0.6,
+    fill: "var(--chart-8)",
+    swatch: "bg-chart-8",
+    opacity: 1,
   },
   {
     key: "salary",
     label: "Employee Salary",
-    fill: "var(--chart-3)",
-    swatch: "bg-chart-3/50",
-    opacity: 0.5,
+    fill: "var(--chart-9)",
+    swatch: "bg-chart-9",
+    opacity: 1,
   },
 ] as const
 
@@ -393,11 +393,11 @@ export function TrendChart({ data }: { data: { label: string; count: number }[] 
             type="monotone"
             dataKey="count"
             name="Projects"
-            stroke="var(--chart-1)"
-            fill="var(--chart-1)"
+            stroke="var(--chart-6)"
+            fill="var(--chart-6)"
             fillOpacity={0.16}
             strokeWidth={2}
-            dot={{ r: 3, fill: "var(--background)", stroke: "var(--chart-1)", strokeWidth: 2 }}
+            dot={{ r: 3, fill: "var(--card)", stroke: "var(--chart-6)", strokeWidth: 2 }}
             isAnimationActive={!reduced}
             label={{
               position: "top",
