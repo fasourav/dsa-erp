@@ -77,19 +77,20 @@ export function BrandLockup({
   priority = false,
   className,
 }: {
-  layout?: "sidebar" | "stacked"
+  layout?: "sidebar" | "bar" | "stacked"
   priority?: boolean
   className?: string
 }) {
   const stacked = layout === "stacked"
+  const bar = layout === "bar"
 
   return (
     <div
       className={cn(
         "flex min-w-0 gap-2",
-        stacked
-          ? "flex-col items-stretch gap-2"
-          : "items-center md:flex-col md:items-stretch md:gap-1.5",
+        stacked && "flex-col items-stretch gap-2",
+        bar && "items-center",
+        !stacked && !bar && "items-center md:flex-col md:items-stretch md:gap-1.5",
         className,
       )}
     >
@@ -97,13 +98,17 @@ export function BrandLockup({
         priority={priority}
         className={cn(
           "shrink-0",
-          stacked ? "h-16 w-auto self-start" : "h-9 w-auto md:h-12 md:self-start",
+          stacked && "h-16 w-auto self-start",
+          bar && "h-8 w-auto",
+          !stacked && !bar && "h-9 w-auto md:h-12 md:self-start",
         )}
       />
       <span
         className={cn(
           "flex min-w-0 flex-col gap-0.5",
-          stacked ? "w-full" : "flex-1 md:w-full md:flex-none",
+          stacked && "w-full",
+          bar && "flex-1",
+          !stacked && !bar && "flex-1 md:w-full md:flex-none",
         )}
       >
         <Wordmark

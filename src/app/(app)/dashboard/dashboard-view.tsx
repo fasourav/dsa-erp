@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import {
   AlertCircle,
   BadgeCheck,
@@ -27,6 +27,7 @@ import {
   TrendChart,
   WeeklyChart,
 } from "@/app/(app)/dashboard/dashboard-charts"
+import { ShellHeader } from "@/components/shell-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -37,8 +38,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  formatCompactBdt,
-  formatCompactParts,
   formatDelta,
   formatExactBdt,
   formatRatio,
@@ -60,7 +59,7 @@ export function DashboardView({
   if (!model) {
     return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-        <h1 className="text-2xl font-medium tracking-tight">Dashboard</h1>
+        <DashboardChrome />
         <p role="alert" className="text-sm text-destructive">
           {error ?? "Could not load the dashboard."}
         </p>
@@ -83,7 +82,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
   if (!snapshot) {
     return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-        <h1 className="text-2xl font-medium tracking-tight">Dashboard</h1>
+        <DashboardChrome updatedIso={model.updatedIso} updatedLabel={model.updatedLabel} />
         <p className="text-sm text-muted-foreground">No Records Yet</p>
       </div>
     )
@@ -98,39 +97,30 @@ function DashboardSections({ model }: { model: DashboardModel }) {
 
   return (
     <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Last Updated{" "}
-            <time dateTime={model.updatedIso}>{model.updatedLabel}</time>
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            items={yearItems}
-            value={String(snapshot.year)}
-            onValueChange={(value) => {
-              if (value) setYear(Number(value))
-            }}
-          >
-            <SelectTrigger aria-label="Fiscal Year">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-              {yearItems.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button type="button" variant="outline" onClick={() => downloadDashboard(model, snapshot)}>
-            <Download aria-hidden="true" />
-            Export
-          </Button>
-        </div>
-      </header>
+      <DashboardChrome updatedIso={model.updatedIso} updatedLabel={model.updatedLabel}>
+        <Select
+          items={yearItems}
+          value={String(snapshot.year)}
+          onValueChange={(value) => {
+            if (value) setYear(Number(value))
+          }}
+        >
+          <SelectTrigger aria-label="Fiscal Year">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {yearItems.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="outline" onClick={() => downloadDashboard(model, snapshot)}>
+          <Download aria-hidden="true" />
+          Export
+        </Button>
+      </DashboardChrome>
 
       <section className="flex flex-col gap-4">
         <h2 className="sr-only">Financial Overview</h2>
@@ -171,35 +161,141 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             value={snapshot.totalExpense}
             detail={
               snapshot.expenseDelta == null
-                ? formatExactBdt(snapshot.totalExpense)
-                : `${formatExactBdt(snapshot.totalExpense)} · ${formatDelta(snapshot.expenseDelta)} Vs Last FY`
+                ? undefined
+                : `${formatDelta(snapshot.expenseDelta)} Vs Last FY`
             }
           />
           <CompactMetric
             label="Accounts Receivables"
             value={model.receivables}
-            detail={`${formatExactBdt(model.receivables)} · Current`}
+            detail="Current"
           />
           <CompactMetric
             label="Accounts Payables"
             value={model.payables}
-            detail={`${formatExactBdt(model.payables)} · Current`}
+            detail="Current"
             tone={model.payables > 0 ? "warning" : "default"}
             icon={model.payables > 0 ? AlertCircle : undefined}
           />
           <CompactMetric
             label="Forecasted Profit"
             value={model.forecastedProfit}
-            detail={`${formatExactBdt(model.forecastedProfit)} · After Open Balances`}
+            detail="After Open Balances"
             tone={model.forecastedProfit < 0 ? "negative" : "default"}
             icon={model.forecastedProfit < 0 ? TrendingDown : TrendingUp}
           />
-          <CompactMetric
-            label="Outflow"
-            value={snapshot.outflow}
-            detail={formatExactBdt(snapshot.outflow)}
-          />
+          <CompactMetric label="Outflow" value={snapshot.outflow} />
         </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base font-medium">Performance Metrics</h2>
+              <p className="text-xs text-muted-foreground">
+                {model.performance.sinceYear == null
+                  ? "No Projects Yet"
+                  : `${model.performance.projectCount} Projects Since ${model.performance.sinceYear}`}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricTile
+                icon={Gem}
+                label="High-Value Projects"
+                value={String(model.performance.highValue)}
+                hint={`${formatExactBdt(HIGH_VALUE_PROJECT_MIN)} Or More`}
+              />
+              <MetricTile
+                icon={Layers}
+                label="Low-Value Projects"
+                value={String(model.performance.lowValue)}
+                hint={`Under ${formatExactBdt(HIGH_VALUE_PROJECT_MIN)}`}
+              />
+              <MetricTile
+                icon={Hammer}
+                label="Active Projects"
+                value={String(model.performance.active)}
+                hint="In Progress"
+              />
+              <MetricTile
+                icon={Target}
+                label="Projects in Leads"
+                value={String(model.performance.openLeads)}
+                hint="Open Pipeline"
+              />
+              <MetricTile
+                icon={Users}
+                label="Clients"
+                value={String(model.performance.clients)}
+                hint="Active Accounts"
+              />
+              <MetricTile
+                icon={Wallet}
+                label="Project Lead Value"
+                value={formatExactBdt(model.performance.leadValue)}
+                hint="In Pipeline"
+              />
+              <MetricTile
+                icon={Trophy}
+                label="Win Rate"
+                value={formatRatio(model.performance.winRate)}
+                bar={model.performance.winRate}
+              />
+              <MetricTile
+                icon={BadgeCheck}
+                label="Collection Efficiency"
+                value={formatRatio(model.performance.collectionEfficiency)}
+                bar={model.performance.collectionEfficiency}
+              />
+              <MetricTile
+                icon={Clock}
+                label="Backlog Projects"
+                value={String(model.performance.backlog)}
+                hint="Expense Exceeds Collection"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex flex-col gap-4">
+            <h2 className="text-base font-medium">Expense Summary</h2>
+            <div className="relative">
+              <ExpenseDonut slices={slices} />
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-lg font-semibold tabular-nums">
+                  {formatExactBdt(snapshot.totalExpense)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Expense</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-2 text-sm">
+                <span className="font-medium">Project Expense</span>
+                <span className="font-semibold tabular-nums">
+                  {formatExactBdt(snapshot.projectExpense)}
+                </span>
+              </div>
+              {slices.map((slice) => (
+                <div key={slice.key} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+                    <span className={cn("size-2 shrink-0 rounded-full", slice.swatch)} />
+                    <span className="truncate">{slice.label}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3 tabular-nums">
+                    <span className="text-xs text-muted-foreground">
+                      {formatShare(slice.amount, snapshot.totalExpense)}
+                    </span>
+                    <span className="min-w-16 text-right font-medium">
+                      {formatExactBdt(slice.amount)}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -259,116 +355,6 @@ function DashboardSections({ model }: { model: DashboardModel }) {
                 netProfit: week.netProfit,
               }))}
             />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-            <h2 className="text-base font-medium">Expense Summary</h2>
-            <div className="relative">
-              <ExpenseDonut slices={slices} />
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-lg font-semibold tabular-nums">
-                  {formatCompactBdt(snapshot.totalExpense)}
-                </p>
-                <p className="text-xs text-muted-foreground">Total Expense</p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3 border-b border-border pb-2 text-sm">
-                <span className="font-medium">Project Expense</span>
-                <span className="font-semibold tabular-nums">
-                  {formatCompactBdt(snapshot.projectExpense)}
-                </span>
-              </div>
-              {slices.map((slice) => (
-                <div key={slice.key} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
-                    <span className={cn("size-2 shrink-0 rounded-full", slice.swatch)} />
-                    <span className="truncate">{slice.label}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-3 tabular-nums">
-                    <span className="text-xs text-muted-foreground">
-                      {formatShare(slice.amount, snapshot.totalExpense)}
-                    </span>
-                    <span className="min-w-16 text-right font-medium">
-                      {formatCompactBdt(slice.amount)}
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-medium">Performance Metrics</h2>
-              <p className="text-xs text-muted-foreground">
-                {model.performance.sinceYear == null
-                  ? "No Projects Yet"
-                  : `${model.performance.projectCount} Projects Since ${model.performance.sinceYear}`}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <MetricTile
-                icon={Gem}
-                label="High-Value Projects"
-                value={String(model.performance.highValue)}
-                hint={`${formatExactBdt(HIGH_VALUE_PROJECT_MIN)} Or More`}
-              />
-              <MetricTile
-                icon={Layers}
-                label="Low-Value Projects"
-                value={String(model.performance.lowValue)}
-                hint={`Under ${formatExactBdt(HIGH_VALUE_PROJECT_MIN)}`}
-              />
-              <MetricTile
-                icon={Hammer}
-                label="Active Projects"
-                value={String(model.performance.active)}
-                hint="In Progress"
-              />
-              <MetricTile
-                icon={Target}
-                label="Projects in Leads"
-                value={String(model.performance.openLeads)}
-                hint="Open Pipeline"
-              />
-              <MetricTile
-                icon={Users}
-                label="Clients"
-                value={String(model.performance.clients)}
-                hint="Active Accounts"
-              />
-              <MetricTile
-                icon={Wallet}
-                label="Project Lead Value"
-                value={formatCompactBdt(model.performance.leadValue)}
-                hint={`${formatExactBdt(model.performance.leadValue)} In Pipeline`}
-              />
-              <MetricTile
-                icon={Trophy}
-                label="Win Rate"
-                value={formatRatio(model.performance.winRate)}
-                bar={model.performance.winRate}
-              />
-              <MetricTile
-                icon={BadgeCheck}
-                label="Collection Efficiency"
-                value={formatRatio(model.performance.collectionEfficiency)}
-                bar={model.performance.collectionEfficiency}
-              />
-              <MetricTile
-                icon={Clock}
-                label="Backlog Projects"
-                value={String(model.performance.backlog)}
-                hint="Expense Exceeds Collection"
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -467,6 +453,32 @@ function DashboardSections({ model }: { model: DashboardModel }) {
   )
 }
 
+function DashboardChrome({
+  updatedIso,
+  updatedLabel,
+  children,
+}: {
+  updatedIso?: string
+  updatedLabel?: string
+  children?: ReactNode
+}) {
+  return (
+    <ShellHeader>
+      <div className="flex w-full min-w-0 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-medium leading-tight">Dashboard</h1>
+          {updatedLabel ? (
+            <p className="truncate text-xs text-muted-foreground">
+              Last Updated <time dateTime={updatedIso}>{updatedLabel}</time>
+            </p>
+          ) : null}
+        </div>
+        {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
+      </div>
+    </ShellHeader>
+  )
+}
+
 function KpiCard({
   label,
   value,
@@ -482,7 +494,6 @@ function KpiCard({
   spark: { label: string; value: number }[]
   sparkColor: string
 }) {
-  const parts = formatCompactParts(value)
   return (
     <Card>
       <CardContent className="flex flex-col gap-1">
@@ -496,14 +507,9 @@ function KpiCard({
             value < 0 && "text-destructive",
           )}
         >
-          {parts.text}
-          {parts.unit ? (
-            <span className="text-lg font-medium"> {parts.unit}</span>
-          ) : null}
+          {formatExactBdt(value)}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {detail ? `${formatExactBdt(value)} · ${detail}` : formatExactBdt(value)}
-        </p>
+        {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
         <Sparkline data={spark} color={sparkColor} />
       </CardContent>
     </Card>
@@ -519,7 +525,7 @@ function CompactMetric({
 }: {
   label: string
   value: number
-  detail: string
+  detail?: string
   tone?: "default" | "negative" | "warning"
   icon?: LucideIcon
 }) {
@@ -548,9 +554,9 @@ function CompactMetric({
             tone === "negative" || value < 0 ? "text-destructive" : "text-foreground",
           )}
         >
-          {formatCompactBdt(value)}
+          {formatExactBdt(value)}
         </p>
-        <p className="text-xs text-muted-foreground">{detail}</p>
+        {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
       </CardContent>
     </Card>
   )
@@ -651,7 +657,7 @@ function WeekStat({
           emphasize && (value < 0 ? "text-destructive" : "text-success-foreground"),
         )}
       >
-        {formatCompactBdt(value)}
+        {formatExactBdt(value)}
         <TrendMark direction={direction} tone={tone} />
       </p>
     </div>

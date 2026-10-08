@@ -18,7 +18,7 @@ import {
   YAxis,
 } from "recharts"
 
-import { formatAxisBdt, formatCompactBdt, type ChartPoint } from "@/lib/dashboard-metrics"
+import { formatAxisBdt, formatExactBdt, type ChartPoint } from "@/lib/dashboard-metrics"
 
 export const expenseSliceStyle = [
   {
@@ -130,8 +130,9 @@ function ChartTooltip({
     <div className="rounded-lg bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md ring-1 ring-foreground/10">
       {label != null ? <p className="mb-1 font-medium">{label}</p> : null}
       {payload.map((entry) => (
-        <p key={`${entry.name}-${entry.value}`} className="tabular-nums">
-          {entry.name}: {formatValue(entry.value ?? 0)}
+        <p key={`${entry.name ?? "value"}-${entry.value}`} className="tabular-nums">
+          {entry.name ? `${entry.name}: ` : null}
+          {formatValue(entry.value ?? 0)}
         </p>
       ))}
     </div>
@@ -146,6 +147,17 @@ function tooltipEntries(
     value: typeof entry.value === "number" ? entry.value : Number(entry.value) || 0,
     color: entry.color,
   }))
+}
+
+function pointLabel(
+  payload: ReadonlyArray<{ payload?: unknown }> | undefined,
+): string | undefined {
+  const point = payload?.[0]?.payload
+  if (point && typeof point === "object" && "label" in point) {
+    const label = point.label
+    if (typeof label === "string" && label.length > 0) return label
+  }
+  return undefined
 }
 
 export function Sparkline({
@@ -163,20 +175,23 @@ export function Sparkline({
     <div className="h-12 min-w-0" aria-hidden="true">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+          <XAxis dataKey="label" hide />
           <Tooltip
             content={(props) => (
               <ChartTooltip
                 active={props.active}
-                label={props.label}
-                payload={tooltipEntries(props.payload)}
-                formatValue={formatCompactBdt}
+                label={pointLabel(props.payload)}
+                payload={tooltipEntries(props.payload).map((entry) => ({
+                  ...entry,
+                  name: undefined,
+                }))}
+                formatValue={formatExactBdt}
               />
             )}
           />
           <Area
             type="monotone"
             dataKey="value"
-            name="Amount"
             stroke={color}
             fill={color}
             fillOpacity={0.18}
@@ -218,9 +233,9 @@ export function WeeklyChart({ data }: { data: WeekChartRow[] }) {
             content={(props) => (
               <ChartTooltip
                 active={props.active}
-                label={props.label}
+                label={pointLabel(props.payload)}
                 payload={tooltipEntries(props.payload)}
-                formatValue={formatCompactBdt}
+                formatValue={formatExactBdt}
               />
             )}
           />
@@ -281,7 +296,7 @@ export function ExpenseDonut({ slices }: { slices: ExpenseSlice[] }) {
               <ChartTooltip
                 active={props.active}
                 payload={tooltipEntries(props.payload)}
-                formatValue={formatCompactBdt}
+                formatValue={formatExactBdt}
               />
             )}
           />
@@ -330,9 +345,9 @@ export function AnnualChart({
             content={(props) => (
               <ChartTooltip
                 active={props.active}
-                label={props.label}
+                label={pointLabel(props.payload)}
                 payload={tooltipEntries(props.payload)}
-                formatValue={formatCompactBdt}
+                formatValue={formatExactBdt}
               />
             )}
           />
@@ -347,7 +362,7 @@ export function AnnualChart({
               fill: "var(--foreground)",
               fontSize: 12,
               formatter: (value) =>
-                formatCompactBdt(typeof value === "number" ? value : Number(value) || 0),
+                formatExactBdt(typeof value === "number" ? value : Number(value) || 0),
             }}
           >
             {data.map((point) => (
@@ -383,7 +398,7 @@ export function TrendChart({ data }: { data: { label: string; count: number }[] 
             content={(props) => (
               <ChartTooltip
                 active={props.active}
-                label={props.label}
+                label={pointLabel(props.payload)}
                 payload={tooltipEntries(props.payload)}
                 formatValue={(value) => String(Math.round(value))}
               />
