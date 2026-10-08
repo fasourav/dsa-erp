@@ -14,6 +14,7 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
 import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
+import { OperationalPurchaseOrdersDialog } from "@/app/(app)/purchase-orders/operational-purchase-orders-dialog"
 import { PurchaseOrderFormDialog } from "@/app/(app)/purchase-orders/purchase-order-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -98,6 +99,7 @@ export function PurchaseOrdersTable({
   })
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
+  const [formOperational, setFormOperational] = useState(false)
   const [formOrder, setFormOrder] = useState<PurchaseOrderRow | null>(null)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -137,6 +139,7 @@ export function PurchaseOrdersTable({
 
   function openForm(order: PurchaseOrderRow | null) {
     setFormOrder(order)
+    setFormOperational(order != null && order.projectId == null)
     setFormSession((current) => current + 1)
     setFormOpen(true)
   }
@@ -189,6 +192,11 @@ export function PurchaseOrdersTable({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <OperationalPurchaseOrdersDialog
+            orders={orders}
+            vendors={vendors}
+            workTypes={workTypes}
+          />
           <Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
             Assign Purchase Order
@@ -372,6 +380,7 @@ export function PurchaseOrdersTable({
         vendors={vendors}
         workTypes={workTypes}
         defaultProjectId={projectFilter?.id ?? null}
+        operational={formOperational}
       />
 
       <AlertDialog
@@ -428,6 +437,9 @@ function CellValue({
         <span className="text-muted-foreground">—</span>
       )
     case "projectName":
+      if (order.projectId == null) {
+        return <span className="text-muted-foreground">Operational</span>
+      }
       return order.projectName ? (
         <span className="font-medium">{order.projectName}</span>
       ) : (

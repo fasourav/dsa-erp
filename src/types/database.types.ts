@@ -1418,7 +1418,7 @@ export type Database = {
           id: string
           issued_on: string
           notes: string | null
-          project_id: string
+          project_id: string | null
           total_value: number
           updated_at: string
           vendor_id: string
@@ -1429,7 +1429,7 @@ export type Database = {
           id?: string
           issued_on?: string
           notes?: string | null
-          project_id: string
+          project_id?: string | null
           total_value?: number
           updated_at?: string
           vendor_id: string
@@ -1440,7 +1440,7 @@ export type Database = {
           id?: string
           issued_on?: string
           notes?: string | null
-          project_id?: string
+          project_id?: string | null
           total_value?: number
           updated_at?: string
           vendor_id?: string

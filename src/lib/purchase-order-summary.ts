@@ -15,7 +15,7 @@ export type VendorOption = {
 export type PurchaseOrderRow = {
   id: string
   issuedOn: string
-  projectId: string
+  projectId: string | null
   projectName: string
   vendorId: string
   vendorName: string

@@ -58,6 +58,7 @@ async function savePurchaseOrder(
   input: PurchaseOrderFormInput,
 ): Promise<PurchaseOrderFormResult> {
   const projectId = input.projectId.trim()
+  const operational = projectId.length === 0
   const vendorId = input.vendorId.trim()
   const issuedOn = input.issuedOn.trim()
   const workType = input.workType.trim()
@@ -65,7 +66,7 @@ async function savePurchaseOrder(
   const totalValue = parseProjectValue(input.totalValue)
   const fieldErrors: PurchaseOrderFormFieldErrors = {}
 
-  if (!idPattern.test(projectId)) {
+  if (!operational && !idPattern.test(projectId)) {
     fieldErrors.projectId = "Choose a project."
   }
 
@@ -95,7 +96,9 @@ async function savePurchaseOrder(
   }
 
   const [projectLookup, vendorLookup] = await Promise.all([
-    supabase.from("projects").select("id").eq("id", projectId).limit(1),
+    operational
+      ? Promise.resolve({ data: [{ id: "" }], error: null })
+      : supabase.from("projects").select("id").eq("id", projectId).limit(1),
     supabase.from("vendors").select("id").eq("id", vendorId).limit(1),
   ])
 
@@ -103,7 +106,7 @@ async function savePurchaseOrder(
     return { error: "Could not save this purchase order." }
   }
 
-  if (!projectLookup.data || projectLookup.data.length === 0) {
+  if (!operational && (!projectLookup.data || projectLookup.data.length === 0)) {
     return {
       error: null,
       fieldErrors: { projectId: "Choose a project." },
@@ -118,7 +121,7 @@ async function savePurchaseOrder(
   }
 
   const values = {
-    project_id: projectId,
+    project_id: operational ? null : projectId,
     vendor_id: vendorId,
     issued_on: issuedOn,
     work_type: workType || null,

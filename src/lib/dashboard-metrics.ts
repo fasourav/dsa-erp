@@ -86,7 +86,12 @@ export type DashboardInput = {
   clientCount: number
   leads: { status: string; estimatedValue: number; isOpen: boolean }[]
   revenue: { date: string; amount: number }[]
-  vendorPayments: { date: string; amount: number; workType: string | null }[]
+  vendorPayments: {
+    date: string
+    amount: number
+    workType: string | null
+    projectLinked: boolean
+  }[]
   operational: {
     date: string
     amount: number
@@ -400,7 +405,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
 
 type Books = {
   revenue: Dated[]
-  vendorPayments: (Dated & { workType: string | null })[]
+  vendorPayments: (Dated & { workType: string | null; projectLinked: boolean })[]
   operational: (Dated & { category: string; projectLinked: boolean })[]
   taxes: Dated[]
   payroll: Dated[]
@@ -501,8 +506,15 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
 
   for (const row of books.vendorPayments) {
     if (!inSpan(row.date, start, end)) continue
+    // Operational purchase orders have no project. Their payments stay in Total
+    // Expense as Operational Expense, and stay out of material, subcontractor,
+    // and project expense.
+    if (!row.projectLinked) {
+      totals.operational += row.amount
+      continue
+    }
     // Vendor payments do not store Material vs Subcontractor. Supply, material, and goods
-    // work types count as Material Cost. Every other purchase-order payment is Subcontractor Cost.
+    // work types count as Material Cost. Every other project purchase-order payment is Subcontractor Cost.
     const bucket = isMaterialWork(row.workType) ? "material" : "subcontractor"
     totals[bucket] += row.amount
   }
@@ -537,15 +549,21 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
 
 function grossBetween(
   revenue: Dated[],
-  vendorPayments: Dated[],
+  vendorPayments: (Dated & { projectLinked: boolean })[],
   operational: (Dated & { projectLinked: boolean })[],
   start: string,
   end: string,
 ): number {
-  // Matches project_financials: collections minus vendor payments minus project-linked overhead.
+  // Matches project_financials: collections minus project purchase-order payments
+  // minus project-linked overhead. Operational purchase orders have no project,
+  // so their payments stay out of project gross profit and project-cost ratios.
   return (
     totalBetween(revenue, start, end) -
-    totalBetween(vendorPayments, start, end) -
+    totalBetween(
+      vendorPayments.filter((row) => row.projectLinked),
+      start,
+      end,
+    ) -
     totalBetween(
       operational.filter((row) => row.projectLinked),
       start,

@@ -122,7 +122,9 @@ export function VendorInvoicesPanel({
             <>
               <p className="text-sm text-muted-foreground">
                 {purchaseOrder.vendorName || "Vendor"} ·{" "}
-                {purchaseOrder.projectName || "Project"}
+                {purchaseOrder.projectId
+                  ? purchaseOrder.projectName || "Project"
+                  : "Operational"}
                 {purchaseOrder.workType ? ` · ${purchaseOrder.workType}` : ""} ·{" "}
                 {purchaseOrder.issuedOn
                   ? formatIsoDate(purchaseOrder.issuedOn)

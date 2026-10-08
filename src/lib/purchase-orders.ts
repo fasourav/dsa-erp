@@ -117,7 +117,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
 
     const orders = orderRows.map((row) => {
       const balance = balancesById.get(row.id)
-      const project = projectsById.get(row.project_id)
+      const project = row.project_id ? projectsById.get(row.project_id) : undefined
       const vendor = vendorsById.get(row.vendor_id)
 
       return {
