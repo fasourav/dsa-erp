@@ -213,7 +213,6 @@ export function ClientInvoicesTable({
         onOpenChange={setFormOpen}
         invoice={formInvoice}
         projects={projects}
-        bankAccounts={bankAccounts}
         defaultProjectId={projectFilter?.id ?? null}
       />
       <ClientPaymentsDialog

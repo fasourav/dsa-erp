@@ -61,8 +61,8 @@ function sortLeads(rows: LeadRow[], sort: SortState<ColumnId>): LeadRow[] {
       case "leadName":
         cmp = a.leadName.localeCompare(b.leadName, "en", { sensitivity: "base" })
         break
-      case "createdOn":
-        cmp = a.createdOn.localeCompare(b.createdOn)
+      case "addedOn":
+        cmp = a.addedOn.localeCompare(b.addedOn)
         break
       case "projectName":
         cmp = a.projectName.localeCompare(b.projectName, "en", {
@@ -109,7 +109,7 @@ export function LeadsTable({
     getColumnServerSnapshot,
   )
   const [sort, setSort] = useState<SortState<ColumnId>>({
-    key: "createdOn",
+    key: "addedOn",
     direction: "desc",
   })
   const [page, setPage] = useState(1)
@@ -283,9 +283,9 @@ function CellValue({
           ) : null}
         </div>
       )
-    case "createdOn":
-      return lead.createdOn ? (
-        <span>{formatIsoDate(lead.createdOn)}</span>
+    case "addedOn":
+      return lead.addedOn ? (
+        <span>{formatIsoDate(lead.addedOn)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

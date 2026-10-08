@@ -20,7 +20,6 @@ export type VendorPaymentRow = {
 export type VendorInvoiceRow = {
   id: string
   issuedOn: string
-  dueOn: string
   amount: number
   status: PaymentStatus
   description: string
@@ -45,7 +44,6 @@ export type PurchaseOrderDetail = {
 
 export type VendorInvoiceColumnId =
   | "issuedOn"
-  | "dueOn"
   | "amount"
   | "paid"
   | "balance"
@@ -65,7 +63,6 @@ export type VendorInvoiceColumnVisibility = Record<
 export const vendorInvoiceColumns: readonly ListColumn<VendorInvoiceColumnId>[] =
   [
     { id: "issuedOn", label: "Issue Date", align: "left", locked: true },
-    { id: "dueOn", label: "Due Date", align: "left", locked: false },
     { id: "description", label: "Description", align: "left", locked: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
     { id: "paid", label: "Paid", align: "right", locked: false },
@@ -74,7 +71,6 @@ export const vendorInvoiceColumns: readonly ListColumn<VendorInvoiceColumnId>[] 
   ]
 
 const defaultVisibility: VendorInvoiceColumnVisibility = {
-  dueOn: true,
   description: true,
   amount: true,
   paid: true,
@@ -90,7 +86,7 @@ export function sanitizeVendorInvoiceColumns(
   value: unknown,
 ): VendorInvoiceColumnVisibility {
   return sanitizeColumnVisibility(
-    ["dueOn", "description", "amount", "paid", "balance", "status"],
+    ["description", "amount", "paid", "balance", "status"],
     defaultVendorInvoiceColumns(),
     value,
   )
@@ -124,7 +120,6 @@ function compareInvoices(
 ): number {
   switch (key) {
     case "issuedOn":
-    case "dueOn":
     case "description":
     case "status":
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })

@@ -49,7 +49,6 @@ export function VendorInvoiceFormDialog({
 }) {
   const invoiceId = invoice?.id ?? null
   const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn || todayIsoDate())
-  const [dueOn, setDueOn] = useState(invoice?.dueOn ?? "")
   const [amount, setAmount] = useState(invoice ? String(invoice.amount) : "")
   const [status, setStatus] = useState(invoice?.status ?? "unpaid")
   const [description, setDescription] = useState(invoice?.description ?? "")
@@ -63,9 +62,6 @@ export function VendorInvoiceFormDialog({
   const issuedError =
     serverErrors.issuedOn ??
     (attempted && !isIsoDate(issuedOn) ? "Enter an issued date." : null)
-  const dueError =
-    serverErrors.dueOn ??
-    (attempted && dueOn.trim() && !isIsoDate(dueOn) ? "Enter a due date." : null)
   const amountError =
     serverErrors.amount ??
     (attempted && parsedAmount === null
@@ -102,7 +98,6 @@ export function VendorInvoiceFormDialog({
 
     if (
       !isIsoDate(issuedOn) ||
-      (dueOn.trim() && !isIsoDate(dueOn)) ||
       parsedAmount === null ||
       !isPaymentStatus(status) ||
       !statusMatchesPayments(status, parsedAmount, paid)
@@ -112,7 +107,6 @@ export function VendorInvoiceFormDialog({
 
     const input = {
       issuedOn,
-      dueOn: dueOn.trim(),
       amount: amount.trim(),
       status,
       description: description.trim(),
@@ -153,39 +147,21 @@ export function VendorInvoiceFormDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-issued">Issue Date</Label>
-              <Input
-                id="vendor-invoice-issued"
-                type="date"
-                value={issuedOn}
-                disabled={pending}
-                aria-invalid={Boolean(issuedError)}
-                onChange={(event) => setIssuedOn(event.target.value)}
-              />
-              {issuedError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {issuedError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-due">Due Date</Label>
-              <Input
-                id="vendor-invoice-due"
-                type="date"
-                value={dueOn}
-                disabled={pending}
-                aria-invalid={Boolean(dueError)}
-                onChange={(event) => setDueOn(event.target.value)}
-              />
-              {dueError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dueError}
-                </p>
-              ) : null}
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="vendor-invoice-issued">Issue Date</Label>
+            <Input
+              id="vendor-invoice-issued"
+              type="date"
+              value={issuedOn}
+              disabled={pending}
+              aria-invalid={Boolean(issuedError)}
+              onChange={(event) => setIssuedOn(event.target.value)}
+            />
+            {issuedError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {issuedError}
+              </p>
+            ) : null}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">

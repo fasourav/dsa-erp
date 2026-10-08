@@ -1,5 +1,6 @@
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
+import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
 export type LeadStatusCode = string
@@ -24,7 +25,7 @@ export type LeadRow = {
   convertedClientId: string
   convertedProjectId: string
   weightedValue: number
-  createdOn: string
+  addedOn: string
 }
 
 export type CatalogOption = {
@@ -80,9 +81,10 @@ export async function getLeads(): Promise<{
         supabase
           .from("leads")
           .select(
-            "id, lead_name, kind, phone, email, project_name, project_type, source, estimated_value, current_stage, status, probability, notes, converted_client_id, converted_project_id, created_at",
+            "id, lead_name, kind, phone, email, project_name, project_type, source, estimated_value, current_stage, status, probability, notes, converted_client_id, converted_project_id, added_on",
           )
-          .order("created_at", { ascending: false })
+          .order("added_on", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, to),
       "Lead list is larger than expected.",
     )
@@ -125,7 +127,7 @@ export async function getLeads(): Promise<{
         convertedClientId: row.converted_client_id ?? "",
         convertedProjectId: row.converted_project_id ?? "",
         weightedValue,
-        createdOn: typeof row.created_at === "string" ? row.created_at.slice(0, 10) : "",
+        addedOn: dateInputValue(row.added_on ?? ""),
       }
     })
 

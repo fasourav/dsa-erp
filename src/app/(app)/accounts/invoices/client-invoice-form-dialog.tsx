@@ -7,7 +7,6 @@ import {
   updateClientInvoice,
   type ClientInvoiceFieldErrors,
 } from "@/app/(app)/accounts/invoices/actions"
-import { BankAccountField } from "@/components/bank-account-field"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -27,20 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  defaultBankAccountId,
-  type BankAccountChoice,
-} from "@/lib/bank-account"
 import type {
   ClientInvoiceRow,
   InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
-import {
-  clientInvoiceStatusLabel,
-  clientInvoiceStatuses,
-  defaultClientInvoiceStatus,
-  isClientInvoiceStatus,
-} from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue, todayIsoDate } from "@/lib/project-validation"
 
 export function ClientInvoiceFormDialog({
@@ -48,14 +37,12 @@ export function ClientInvoiceFormDialog({
   onOpenChange,
   invoice,
   projects,
-  bankAccounts,
   defaultProjectId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   invoice: ClientInvoiceRow | null
   projects: InvoiceProjectOption[]
-  bankAccounts: readonly BankAccountChoice[]
   defaultProjectId: string | null
 }) {
   const invoiceId = invoice?.id ?? null
@@ -64,14 +51,6 @@ export function ClientInvoiceFormDialog({
     invoice?.projectId ?? defaultProjectId ?? "",
   )
   const [amount, setAmount] = useState(invoice ? String(invoice.amount) : "")
-  const [status, setStatus] = useState(
-    invoice?.status ?? defaultClientInvoiceStatus,
-  )
-  const [bankAccountId, setBankAccountId] = useState(
-    defaultBankAccountId(bankAccounts, ""),
-  )
-  const [accountName, setAccountName] = useState("Operating account")
-  const [bankName, setBankName] = useState("")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ClientInvoiceFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -82,15 +61,6 @@ export function ClientInvoiceFormDialog({
     value: item.id,
     label: item.name || "—",
   }))
-  const statusItems = clientInvoiceStatuses.map((value) => ({
-    value,
-    label: clientInvoiceStatusLabel(value),
-  }))
-  const needsBankAccount =
-    status === "paid" && (invoice ? invoice.balance > 0 : true)
-  const hasAccounts =
-    bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
-  const accountError = serverErrors.bankAccountId ?? null
   const issuedError =
     serverErrors.issuedOn ??
     (attempted && !isIsoDate(issuedOn) ? "Enter an issue date." : null)
@@ -104,9 +74,6 @@ export function ClientInvoiceFormDialog({
         ? "Enter an amount greater than 0."
         : "Enter an amount."
       : null)
-  const statusError =
-    serverErrors.status ??
-    (attempted && !isClientInvoiceStatus(status) ? "Choose a status." : null)
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
@@ -125,19 +92,8 @@ export function ClientInvoiceFormDialog({
       !isIsoDate(issuedOn) ||
       !projectId ||
       parsedAmount === null ||
-      parsedAmount <= 0 ||
-      !isClientInvoiceStatus(status)
+      parsedAmount <= 0
     ) {
-      return
-    }
-
-    if (needsBankAccount && hasAccounts && !bankAccountId) {
-      setServerErrors({ bankAccountId: "Choose a bank account." })
-      return
-    }
-
-    if (needsBankAccount && !hasAccounts && !accountName.trim()) {
-      setServerErrors({ bankAccountId: "Enter an account name." })
       return
     }
 
@@ -146,10 +102,6 @@ export function ClientInvoiceFormDialog({
       issuedOn,
       dueOn: invoice?.dueOn ?? "",
       amount: amount.trim(),
-      status,
-      bankAccountId: needsBankAccount ? bankAccountId : "",
-      newAccountName: needsBankAccount && !hasAccounts ? accountName.trim() : "",
-      newBankName: needsBankAccount && !hasAccounts ? bankName.trim() : "",
     }
 
     startSubmit(async () => {
@@ -232,71 +184,22 @@ export function ClientInvoiceFormDialog({
               </p>
             ) : null}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="client-invoice-amount">Amount</Label>
-              <Input
-                id="client-invoice-amount"
-                inputMode="decimal"
-                value={amount}
-                disabled={pending}
-                aria-invalid={Boolean(amountError)}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-              {amountError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {amountError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="client-invoice-status">Status</Label>
-              <Select
-                items={statusItems}
-                value={status}
-                disabled={pending}
-                onValueChange={(value) => {
-                  if (value && isClientInvoiceStatus(value)) {
-                    setStatus(value)
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="client-invoice-status"
-                  className="w-full"
-                  aria-invalid={Boolean(statusError)}
-                >
-                  <SelectValue placeholder="Select A Status" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {statusItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {statusError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {statusError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          {needsBankAccount ? (
-            <BankAccountField
-              idPrefix="client-invoice"
-              accounts={bankAccounts}
-              accountId={bankAccountId}
-              onAccountIdChange={setBankAccountId}
-              accountName={accountName}
-              onAccountNameChange={setAccountName}
-              bankName={bankName}
-              onBankNameChange={setBankName}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="client-invoice-amount">Amount</Label>
+            <Input
+              id="client-invoice-amount"
+              inputMode="decimal"
+              value={amount}
               disabled={pending}
-              error={accountError}
+              aria-invalid={Boolean(amountError)}
+              onChange={(event) => setAmount(event.target.value)}
             />
-          ) : null}
+            {amountError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {amountError}
+              </p>
+            ) : null}
+          </div>
           {formError ? (
             <p role="alert" className="text-sm text-destructive">
               {formError}

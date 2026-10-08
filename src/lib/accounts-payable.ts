@@ -11,7 +11,6 @@ export type PayableRow = {
   projectId: string
   projectName: string
   purchaseOrderId: string
-  dueDate: string
   totalPayable: number
   totalPaid: number
   pendingPayable: number
@@ -23,7 +22,6 @@ export type PayableColumnId =
   | "totalPayable"
   | "totalPaid"
   | "pendingPayable"
-  | "dueDate"
 
 export type PayableOptionalColumnId = Exclude<
   PayableColumnId,
@@ -38,14 +36,12 @@ export const payableColumns: readonly ListColumn<PayableColumnId>[] = [
   { id: "totalPayable", label: "Total Payable", align: "right", locked: false },
   { id: "totalPaid", label: "Total Paid", align: "right", locked: false },
   { id: "pendingPayable", label: "Pending Payable", align: "right", locked: false },
-  { id: "dueDate", label: "Due Date", align: "left", locked: false },
 ]
 
 const defaultVisibility: PayableColumnVisibility = {
   totalPayable: true,
   totalPaid: true,
   pendingPayable: true,
-  dueDate: true,
 }
 
 export function defaultPayableColumns(): PayableColumnVisibility {
@@ -54,7 +50,7 @@ export function defaultPayableColumns(): PayableColumnVisibility {
 
 export function sanitizePayableColumns(value: unknown): PayableColumnVisibility {
   return sanitizeColumnVisibility(
-    ["totalPayable", "totalPaid", "pendingPayable", "dueDate"],
+    ["totalPayable", "totalPaid", "pendingPayable"],
     defaultPayableColumns(),
     value,
   )
@@ -84,7 +80,6 @@ function compareRows(
   switch (key) {
     case "vendorName":
     case "projectName":
-    case "dueDate":
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
     case "totalPayable":
     case "totalPaid":

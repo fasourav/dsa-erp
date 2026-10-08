@@ -76,7 +76,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
             supabase
               .from("vendor_invoices")
               .select(
-                "id, issued_on, due_on, amount, status, description, purchase_order_id",
+                "id, issued_on, amount, status, description, purchase_order_id",
               )
               .eq("purchase_order_id", order.id)
               .order("id", { ascending: true })
@@ -159,7 +159,6 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
         {
           id: row.id,
           issuedOn: dateInputValue(row.issued_on),
-          dueOn: row.due_on ? dateInputValue(row.due_on) : "",
           amount: toNumber(row.amount),
           status: row.status,
           description: row.description ?? "",

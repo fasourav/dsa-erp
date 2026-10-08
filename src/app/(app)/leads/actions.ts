@@ -4,11 +4,12 @@ import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
-import { parseProjectValue } from "@/lib/project-validation"
+import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
 export type LeadInput = {
   leadName: string
+  addedOn: string
   kind: string
   phone: string
   email: string
@@ -24,6 +25,7 @@ export type LeadInput = {
 
 export type LeadFieldErrors = {
   leadName?: string
+  addedOn?: string
   kind?: string
   status?: string
 }
@@ -174,6 +176,7 @@ async function saveLead(
   input: LeadInput,
 ): Promise<LeadResult> {
   const leadName = input.leadName.trim()
+  const addedOn = input.addedOn.trim()
   const kind = input.kind.trim()
   const phone = input.phone.trim()
   const email = input.email.trim()
@@ -188,6 +191,7 @@ async function saveLead(
   const fieldErrors: LeadFieldErrors = {}
 
   if (!leadName) fieldErrors.leadName = "Enter the lead name."
+  if (!isIsoDate(addedOn)) fieldErrors.addedOn = "Enter the lead add date."
   if (!validKinds.includes(kind)) fieldErrors.kind = "Choose Person or Company."
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -221,6 +225,7 @@ async function saveLead(
 
   const values = {
     lead_name: leadName,
+    added_on: addedOn,
     kind: kind as "person" | "company",
     phone: phone || null,
     email: email || null,

@@ -20,7 +20,7 @@ import {
   type PayableColumnId,
   type PayableRow,
 } from "@/lib/accounts-payable"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatMoney } from "@/lib/format"
 import { moneyCents } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
@@ -42,7 +42,7 @@ export function PayableTable({
 }) {
   const visibility = useColumnVisibility(payableColumnStore)
   const [sort, setSort] = useState<SortState<PayableColumnId>>({
-    key: "dueDate",
+    key: "vendorName",
     direction: "asc",
   })
   const [page, setPage] = useState(1)
@@ -131,12 +131,6 @@ function Cell({
       )
     case "vendorName":
       return <VendorValue row={row} />
-    case "dueDate":
-      return row.dueDate ? (
-        <span>{formatIsoDate(row.dueDate)}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )
     case "totalPayable":
     case "totalPaid":
     case "pendingPayable":

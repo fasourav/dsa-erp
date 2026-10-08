@@ -4,7 +4,7 @@ export const COLUMN_STORAGE_KEY = "dsa-erp.leads.columns"
 
 export type ColumnId =
   | "leadName"
-  | "createdOn"
+  | "addedOn"
   | "projectName"
   | "currentStage"
   | "source"
@@ -42,8 +42,8 @@ export const dataColumns: readonly DataColumn[] = [
     format: "text",
   },
   {
-    id: "createdOn",
-    label: "Date",
+    id: "addedOn",
+    label: "Lead Add Date",
     align: "left",
     locked: false,
     format: "date",
@@ -93,7 +93,7 @@ export const dataColumns: readonly DataColumn[] = [
 ]
 
 const defaultVisibility: ColumnVisibility = {
-  createdOn: true,
+  addedOn: true,
   projectName: true,
   currentStage: true,
   source: true,
