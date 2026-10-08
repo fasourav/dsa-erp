@@ -652,6 +652,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          added_on: string
           converted_client_id: string | null
           converted_project_id: string | null
           created_at: string
@@ -671,6 +672,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_on?: string
           converted_client_id?: string | null
           converted_project_id?: string | null
           created_at?: string
@@ -690,6 +692,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_on?: string
           converted_client_id?: string | null
           converted_project_id?: string | null
           created_at?: string

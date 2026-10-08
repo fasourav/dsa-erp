@@ -1,7 +1,6 @@
 import type { PayableRow } from "@/lib/accounts-payable"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
-import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
 export async function getAccountsPayable(): Promise<{
@@ -16,7 +15,7 @@ export async function getAccountsPayable(): Promise<{
         supabase
           .from("accounts_payable")
           .select(
-            "id, vendor_name, vendor_field, project_id, project_name, purchase_order_id, due_date, total_payable, total_paid, pending_payable",
+            "id, vendor_name, vendor_field, project_id, project_name, purchase_order_id, total_payable, total_paid, pending_payable",
           )
           .order("id", { ascending: true })
           .range(from, to),
@@ -36,7 +35,6 @@ export async function getAccountsPayable(): Promise<{
           projectId: row.project_id ?? "",
           projectName: row.project_name?.trim() ?? "",
           purchaseOrderId: row.purchase_order_id ?? "",
-          dueDate: row.due_date ? dateInputValue(row.due_date) : "",
           totalPayable: toNumber(row.total_payable),
           totalPaid: toNumber(row.total_paid),
           pendingPayable: toNumber(row.pending_payable),

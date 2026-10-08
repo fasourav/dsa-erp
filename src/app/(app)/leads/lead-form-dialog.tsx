@@ -30,6 +30,7 @@ import {
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
+import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 
 export function LeadFormDialog({
   open,
@@ -45,6 +46,7 @@ export function LeadFormDialog({
   const leadId = lead?.id ?? null
   const defaultStatus = lookups.statuses[0]?.code ?? "open"
   const [leadName, setLeadName] = useState(lead?.leadName ?? "")
+  const [addedOn, setAddedOn] = useState(lead?.addedOn || todayIsoDate())
   const [kind, setKind] = useState<string>(lead?.kind ?? "")
   const [phone, setPhone] = useState(lead?.phone ?? "")
   const [email, setEmail] = useState(lead?.email ?? "")
@@ -70,6 +72,9 @@ export function LeadFormDialog({
     attempted && !leadName.trim()
       ? "Enter the lead name."
       : fieldErrors.leadName
+  const addedOnError =
+    fieldErrors.addedOn ??
+    (attempted && !isIsoDate(addedOn) ? "Enter the lead add date." : null)
   const kindError =
     attempted && !kind ? "Choose a lead type." : fieldErrors.kind
 
@@ -113,10 +118,11 @@ export function LeadFormDialog({
     setFormError(null)
     setFieldErrors({})
 
-    if (!leadName.trim() || !kind) return
+    if (!leadName.trim() || !kind || !isIsoDate(addedOn)) return
 
     const input = {
       leadName: leadName.trim(),
+      addedOn,
       kind,
       phone: phone.trim(),
       email: email.trim(),
@@ -202,6 +208,23 @@ export function LeadFormDialog({
                 </p>
               ) : null}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="lead-added-on">Lead Add Date</Label>
+            <Input
+              id="lead-added-on"
+              type="date"
+              value={addedOn}
+              disabled={pending}
+              aria-invalid={Boolean(addedOnError)}
+              onChange={(event) => setAddedOn(event.target.value)}
+            />
+            {addedOnError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {addedOnError}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

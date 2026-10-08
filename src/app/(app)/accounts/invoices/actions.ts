@@ -6,12 +6,10 @@ import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import {
   clientInvoiceStatusFromPayments,
-  isClientInvoicePaid,
   isClientInvoiceStatus,
   moneyCents,
   parsePositiveAmount,
   sumAmounts,
-  type ClientInvoiceStatus,
 } from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -23,10 +21,6 @@ export type ClientInvoiceInput = {
   issuedOn: string
   dueOn: string
   amount: string
-  status: string
-  bankAccountId: string
-  newAccountName: string
-  newBankName: string
 }
 
 export type ClientInvoiceFieldErrors = {
@@ -34,8 +28,6 @@ export type ClientInvoiceFieldErrors = {
   issuedOn?: string
   dueOn?: string
   amount?: string
-  status?: string
-  bankAccountId?: string
 }
 
 export type ClientInvoiceResult = {
@@ -187,7 +179,6 @@ async function saveClientInvoice(
   const issuedOn = input.issuedOn.trim()
   const dueOn = input.dueOn.trim()
   const amount = parseProjectValue(input.amount)
-  const status = input.status.trim()
   const fieldErrors: ClientInvoiceFieldErrors = {}
 
   if (!isUuid(projectId)) {
@@ -208,16 +199,7 @@ async function saveClientInvoice(
       : "Enter an amount."
   }
 
-  if (!isClientInvoiceStatus(status)) {
-    fieldErrors.status = "Choose a status."
-  }
-
-  if (
-    Object.keys(fieldErrors).length > 0 ||
-    amount === null ||
-    amount <= 0 ||
-    !isClientInvoiceStatus(status)
-  ) {
+  if (Object.keys(fieldErrors).length > 0 || amount === null || amount <= 0) {
     return { error: null, fieldErrors }
   }
 
@@ -242,19 +224,10 @@ async function saveClientInvoice(
     return { error: null, fieldErrors: { projectId: "Choose a project." } }
   }
 
-  let previous: {
-    project_id: string
-    client_id: string
-    issued_on: string
-    due_on: string | null
-    amount: number
-    status: ClientInvoiceStatus
-  } | null = null
-
   if (id) {
     const existing = await supabase
       .from("client_invoices")
-      .select("id, project_id, client_id, issued_on, due_on, amount, status")
+      .select("id, status")
       .eq("id", id)
       .limit(1)
 
@@ -266,38 +239,11 @@ async function saveClientInvoice(
     if (!existingRow || !isClientInvoiceStatus(existingRow.status)) {
       return { error: "That invoice could not be found." }
     }
-
-    previous = {
-      project_id: existingRow.project_id,
-      client_id: existingRow.client_id,
-      issued_on: existingRow.issued_on,
-      due_on: existingRow.due_on,
-      amount: existingRow.amount,
-      status: existingRow.status,
-    }
   }
 
   const paid = id ? await paidForInvoice(supabase, id, null) : 0
   if (paid === null) {
     return { error: "Could not save this invoice." }
-  }
-
-  const remainingCents = moneyCents(amount) - moneyCents(paid)
-  let paymentBankAccountId: string | null = null
-  if (isClientInvoicePaid(status) && remainingCents > 0) {
-    const bank = await resolveBankAccountId(
-      supabase,
-      input.bankAccountId,
-      input.newAccountName,
-      input.newBankName,
-    )
-    if (bank.fieldError) {
-      return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
-    }
-    if (bank.error || !bank.id) {
-      return { error: bank.error ?? "Could not save this invoice." }
-    }
-    paymentBankAccountId = bank.id
   }
 
   if (moneyCents(amount) < moneyCents(paid)) {
@@ -309,14 +255,7 @@ async function saveClientInvoice(
     }
   }
 
-  if (!isClientInvoicePaid(status) && moneyCents(paid) > 0) {
-    return {
-      error: null,
-      fieldErrors: {
-        status: "Payments are already recorded for this invoice.",
-      },
-    }
-  }
+  const status = clientInvoiceStatusFromPayments(amount, paid)
 
   const values = {
     project_id: projectRow.id,
@@ -349,43 +288,8 @@ async function saveClientInvoice(
     return { error: "Could not save this invoice." }
   }
 
-  const savedId = data?.[0]?.id
-  if (!savedId) {
+  if (!data?.[0]?.id) {
     return { error: "That invoice could not be found." }
-  }
-
-  if (isClientInvoicePaid(status)) {
-    if (remainingCents > 0 && paymentBankAccountId) {
-      const payment = await supabase
-        .from("client_payments")
-        .insert({
-          client_invoice_id: savedId,
-          paid_on: issuedOn,
-          amount: remainingCents / 100,
-          bank_account_id: paymentBankAccountId,
-        })
-        .select("id")
-
-      if (payment.error || !payment.data || payment.data.length === 0) {
-        if (id && previous) {
-          await supabase
-            .from("client_invoices")
-            .update({
-              project_id: previous.project_id,
-              client_id: previous.client_id,
-              issued_on: previous.issued_on,
-              due_on: previous.due_on,
-              amount: previous.amount,
-              status: previous.status,
-            })
-            .eq("id", id)
-        } else {
-          await supabase.from("client_invoices").delete().eq("id", savedId)
-        }
-
-        return { error: "Could not record the invoice payment." }
-      }
-    }
   }
 
   revalidateClientMoney()

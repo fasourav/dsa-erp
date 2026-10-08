@@ -301,9 +301,8 @@ function InvoiceCell({
 }) {
   switch (columnId) {
     case "issuedOn":
-    case "dueOn":
-      return invoice[columnId] ? (
-        <span>{formatIsoDate(invoice[columnId])}</span>
+      return invoice.issuedOn ? (
+        <span>{formatIsoDate(invoice.issuedOn)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

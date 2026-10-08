@@ -20,7 +20,6 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 export type VendorInvoiceInput = {
   issuedOn: string
-  dueOn: string
   amount: string
   status: string
   description: string
@@ -28,7 +27,6 @@ export type VendorInvoiceInput = {
 
 export type VendorInvoiceFieldErrors = {
   issuedOn?: string
-  dueOn?: string
   amount?: string
   status?: string
 }
@@ -338,7 +336,6 @@ async function saveVendorInvoice(
   input: VendorInvoiceInput,
 ): Promise<VendorInvoiceResult> {
   const issuedOn = input.issuedOn.trim()
-  const dueOn = input.dueOn.trim()
   const description = input.description.trim()
   const amount = parseProjectValue(input.amount)
   const status = input.status.trim()
@@ -346,10 +343,6 @@ async function saveVendorInvoice(
 
   if (!isIsoDate(issuedOn)) {
     fieldErrors.issuedOn = "Enter an issued date."
-  }
-
-  if (dueOn && !isIsoDate(dueOn)) {
-    fieldErrors.dueOn = "Enter a due date."
   }
 
   if (amount === null) {
@@ -436,7 +429,6 @@ async function saveVendorInvoice(
   const values = {
     purchase_order_id: orderId,
     issued_on: issuedOn,
-    due_on: dueOn || null,
     amount,
     status,
     description: description || null,
