@@ -88,7 +88,7 @@ export function BrandLockup({
     <div
       className={cn(
         "flex min-w-0 gap-2",
-        stacked && "flex-col items-stretch gap-2",
+        stacked && "flex-col items-center gap-3",
         bar && "items-center",
         !stacked && !bar && "items-center md:flex-col md:items-stretch md:gap-1.5",
         className,
@@ -98,7 +98,7 @@ export function BrandLockup({
         priority={priority}
         className={cn(
           "shrink-0",
-          stacked && "h-16 w-auto self-start",
+          stacked && "h-24 w-auto self-center",
           bar && "h-8 w-auto",
           !stacked && !bar && "h-9 w-auto md:h-12 md:self-start",
         )}
