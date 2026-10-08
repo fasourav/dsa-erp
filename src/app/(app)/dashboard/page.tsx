@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation"
 
+import { DashboardView } from "@/app/(app)/dashboard/dashboard-view"
 import { getCurrentUser } from "@/lib/auth"
+import { getDashboard } from "@/lib/dashboard-data"
 
 export const metadata = {
   title: "Dashboard",
@@ -13,11 +15,7 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-medium tracking-tight">Dashboard</h1>
-      <p className="mt-6 text-sm text-muted-foreground">Signed in as</p>
-      <p className="mt-1 font-mono text-base">{user.email}</p>
-    </div>
-  )
+  const { model, error } = await getDashboard()
+
+  return <DashboardView model={model} error={error} />
 }
