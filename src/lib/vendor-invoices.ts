@@ -60,7 +60,9 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
 
     const [projectRows, vendorRows, balanceRows, invoiceRows, methodRows, categoryRows, bankAccounts] =
       await Promise.all([
-        supabase.from("projects").select("id, name").eq("id", order.project_id).limit(1),
+        order.project_id
+          ? supabase.from("projects").select("id, name").eq("id", order.project_id).limit(1)
+          : Promise.resolve({ data: [], error: null }),
         supabase
           .from("vendor_summaries")
           .select("vendor_id, display_name")

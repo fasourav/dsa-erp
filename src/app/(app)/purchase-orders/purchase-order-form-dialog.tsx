@@ -53,6 +53,7 @@ export function PurchaseOrderFormDialog({
   vendors,
   workTypes,
   defaultProjectId,
+  operational = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -61,10 +62,11 @@ export function PurchaseOrderFormDialog({
   vendors: VendorOption[]
   workTypes: readonly string[]
   defaultProjectId: string | null
+  operational?: boolean
 }) {
   const purchaseOrderId = purchaseOrder?.id ?? null
   const [projectId, setProjectId] = useState(
-    purchaseOrder?.projectId ?? defaultProjectId ?? "",
+    operational ? "" : (purchaseOrder?.projectId ?? defaultProjectId ?? ""),
   )
   const [vendorId, setVendorId] = useState(purchaseOrder?.vendorId ?? "")
   const [issuedOn, setIssuedOn] = useState(
@@ -90,9 +92,10 @@ export function PurchaseOrderFormDialog({
     value: vendor.id,
     label: vendor.displayName || "—",
   }))
-  const projectError =
-    serverErrors.projectId ??
-    (attempted && !projectId ? "Choose a project." : null)
+  const projectError = operational
+    ? null
+    : (serverErrors.projectId ??
+      (attempted && !projectId ? "Choose a project." : null))
   const vendorError =
     serverErrors.vendorId ??
     (attempted && !vendorId ? "Choose a vendor." : null)
@@ -135,12 +138,17 @@ export function PurchaseOrderFormDialog({
     setFormError(null)
 
     const parsedValue = parseProjectValue(totalValue)
-    if (!projectId || !vendorId || !isIsoDate(issuedOn) || parsedValue === null) {
+    if (
+      (!operational && !projectId) ||
+      !vendorId ||
+      !isIsoDate(issuedOn) ||
+      parsedValue === null
+    ) {
       return
     }
 
     const input = {
-      projectId,
+      projectId: operational ? "" : projectId,
       vendorId,
       issuedOn,
       workType: workType.trim(),
@@ -179,40 +187,48 @@ export function PurchaseOrderFormDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {purchaseOrderId ? "Edit Purchase Order" : "Assign Purchase Order"}
+            {operational
+              ? purchaseOrderId
+                ? "Edit Operational Purchase Order"
+                : "Add Operational Purchase Order"
+              : purchaseOrderId
+                ? "Edit Purchase Order"
+                : "Assign Purchase Order"}
           </DialogTitle>
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="po-project">Project</Label>
-            <Select
-              items={projectItems}
-              value={projectId || null}
-              disabled={pending}
-              onValueChange={(value) => setProjectId(value ?? "")}
-            >
-              <SelectTrigger
-                id="po-project"
-                className="w-full"
-                aria-invalid={Boolean(projectError)}
+          {operational ? null : (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="po-project">Project</Label>
+              <Select
+                items={projectItems}
+                value={projectId || null}
+                disabled={pending}
+                onValueChange={(value) => setProjectId(value ?? "")}
               >
-                <SelectValue placeholder="Select A Project" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {projectItems.map((project) => (
-                  <SelectItem key={project.value} value={project.value}>
-                    {project.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {projectError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {projectError}
-              </p>
-            ) : null}
-          </div>
+                <SelectTrigger
+                  id="po-project"
+                  className="w-full"
+                  aria-invalid={Boolean(projectError)}
+                >
+                  <SelectValue placeholder="Select A Project" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {projectItems.map((project) => (
+                    <SelectItem key={project.value} value={project.value}>
+                      {project.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {projectError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {projectError}
+                </p>
+              ) : null}
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="po-vendor">Vendor</Label>

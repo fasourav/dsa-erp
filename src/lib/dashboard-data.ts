@@ -91,7 +91,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("vendor_purchase_orders")
-          .select("id, work_type")
+          .select("id, work_type, project_id")
           .order("id", { ascending: true })
           .range(from, to),
       "Purchase order list is larger than expected.",
@@ -175,9 +175,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
   const purchaseOrderByInvoice = new Map(
     invoices.map((invoice) => [invoice.id, invoice.purchase_order_id]),
   )
-  const workTypeByOrder = new Map(
-    purchaseOrders.map((order) => [order.id, order.work_type]),
-  )
+  const orderById = new Map(purchaseOrders.map((order) => [order.id, order]))
   const openByStatus = new Map(statuses.map((status) => [status.code, status.is_open]))
   const payrollRunById = new Map(payrollRuns.map((run) => [run.id, run]))
   const backlogIds = new Set(
@@ -201,13 +199,18 @@ async function loadDashboardInput(): Promise<DashboardInput> {
       date: payment.paid_on,
       amount: toNumber(payment.amount),
     })),
-    vendorPayments: vendorPayments.map((payment) => ({
-      date: payment.paid_on,
-      amount: toNumber(payment.amount),
-      workType:
-        workTypeByOrder.get(purchaseOrderByInvoice.get(payment.vendor_invoice_id) ?? "") ??
-        null,
-    })),
+    vendorPayments: vendorPayments.map((payment) => {
+      const order = orderById.get(
+        purchaseOrderByInvoice.get(payment.vendor_invoice_id) ?? "",
+      )
+      return {
+        date: payment.paid_on,
+        amount: toNumber(payment.amount),
+        workType: order?.work_type ?? null,
+        // A payment whose purchase order is missing keeps the project-cost path.
+        projectLinked: order ? order.project_id != null : true,
+      }
+    }),
     operational: operational.map((expense) => ({
       date: expense.expense_date,
       amount: toNumber(expense.amount),
