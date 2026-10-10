@@ -15,7 +15,7 @@ import { useMemo, useState, useTransition } from "react"
 import { deletePayrollRun } from "@/app/(app)/hr/payroll/actions"
 import { PayrollRunFormDialog } from "@/app/(app)/hr/payroll/payroll-run-form-dialog"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -103,14 +103,6 @@ function sortRuns(
     return sort.direction === "asc" ? cmp : -cmp
   })
   return sorted
-}
-
-function statusVariant(
-  status: string,
-): "secondary" | "outline" | "destructive" {
-  if (status === "paid") return "secondary"
-  if (status === "approved") return "outline"
-  return "outline"
 }
 
 export function PayrollRunsTable({
@@ -267,12 +259,7 @@ export function PayrollRunsTable({
                     {run.paidOn ? formatIsoDate(run.paidOn) : "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={statusVariant(run.status)}
-                      className="rounded-full capitalize"
-                    >
-                      {run.status}
-                    </Badge>
+                    <StatusBadge status={run.status} />
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {run.lineCount}

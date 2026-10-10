@@ -13,7 +13,7 @@ import { useState, useTransition } from "react"
 import { deletePayrollLine } from "@/app/(app)/hr/payroll/actions"
 import { PayrollLineFormDialog } from "@/app/(app)/hr/payroll/[id]/payroll-line-form-dialog"
 import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -129,9 +129,7 @@ export function PayrollDetailPanel({
               {monthNames[run.periodMonth]} {run.periodYear}
             </h1>
             <div className="mt-1 flex items-center gap-2">
-              <Badge variant="outline" className="rounded-full capitalize">
-                {run.status}
-              </Badge>
+              <StatusBadge status={run.status} />
               <span className="text-sm text-muted-foreground">
                 {lines.length} Employee{lines.length !== 1 ? "s" : ""} ·
                 Total {formatMoney(run.totalNet)}

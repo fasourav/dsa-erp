@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { CustomizeColumns, DataList } from "@/components/data-list"
-import { PaymentStatusBadge } from "@/components/payment-status-badge"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -149,7 +149,7 @@ function Cell({
       return <span className="tabular-nums">{formatMoney(row[columnId])}</span>
     case "status":
       return row.status ? (
-        <PaymentStatusBadge status={row.status} />
+        <StatusBadge status={row.status} />
       ) : (
         <span className="text-muted-foreground">—</span>
       )

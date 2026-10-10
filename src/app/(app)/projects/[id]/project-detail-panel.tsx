@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
+import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -205,12 +206,7 @@ export function ProjectDetailPanel({
                         {formatMoney(inv.amount)}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="rounded-full capitalize"
-                        >
-                          {inv.status}
-                        </Badge>
+                        <StatusBadge status={inv.status} />
                       </TableCell>
                     </TableRow>
                   ))}

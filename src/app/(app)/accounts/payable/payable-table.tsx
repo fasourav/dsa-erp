@@ -1,10 +1,11 @@
 "use client"
 
-import { Check, Circle, FileText, MoreHorizontal } from "lucide-react"
+import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
+import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,6 @@ import {
   type PayableRow,
 } from "@/lib/accounts-payable"
 import { formatMoney } from "@/lib/format"
-import { moneyCents } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -30,8 +30,6 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
-
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function PayableTable({
   rows,
@@ -139,15 +137,8 @@ function Cell({
 }
 
 function VendorValue({ row }: { row: PayableRow }) {
-  const clear = moneyCents(row.pendingPayable) <= 0
-
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
-      {clear ? (
-        <Check aria-hidden="true" className="size-4 text-primary" />
-      ) : (
-        <Circle aria-hidden="true" className="size-4 text-foreground" />
-      )}
+    <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
       <span
         className={cn(
           "font-medium",
@@ -157,10 +148,11 @@ function VendorValue({ row }: { row: PayableRow }) {
         {row.vendorName || "—"}
       </span>
       {row.vendorField ? (
-        <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-          {row.vendorField}
-        </Badge>
+        <Badge variant="outline">{row.vendorField}</Badge>
       ) : null}
+      <StatusBadge
+        status={paymentBalanceStatus(row.totalPaid, row.pendingPayable)}
+      />
     </div>
   )
 }

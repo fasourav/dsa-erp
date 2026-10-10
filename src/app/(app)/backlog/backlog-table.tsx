@@ -5,7 +5,7 @@ import { useMemo, useState } from "react"
 
 import { RecoveryPlanDialog } from "@/app/(app)/backlog/recovery-plan-dialog"
 import { DataList } from "@/components/data-list"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -27,11 +27,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { statusLabel } from "@/lib/project-summary"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
-import { cn } from "@/lib/utils"
-
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function BacklogTable({
   rows,
@@ -139,17 +135,7 @@ function Cell({
       return <span className="tabular-nums">{formatMoney(row[columnId])}</span>
     case "status":
       return row.status ? (
-        <Badge
-          variant="secondary"
-          className={cn(
-            pillClassName,
-            row.status === "active"
-              ? "bg-primary/10 text-primary"
-              : "bg-muted text-muted-foreground",
-          )}
-        >
-          {statusLabel(row.status)}
-        </Badge>
+        <StatusBadge status={row.status} />
       ) : (
         <span className="text-muted-foreground">—</span>
       )
