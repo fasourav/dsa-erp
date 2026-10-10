@@ -16,6 +16,7 @@ import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
 import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
 import { OperationalPurchaseOrdersDialog } from "@/app/(app)/purchase-orders/operational-purchase-orders-dialog"
 import { PurchaseOrderFormDialog } from "@/app/(app)/purchase-orders/purchase-order-form-dialog"
+import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -447,20 +448,25 @@ function CellValue({
       )
     case "vendorName":
       return (
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span
-            className={cn(
-              "font-medium",
-              !order.vendorName && "text-muted-foreground",
-            )}
-          >
-            {order.vendorName || "—"}
-          </span>
-          {order.workType ? (
-            <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-              {order.workType}
-            </Badge>
-          ) : null}
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "font-medium",
+                !order.vendorName && "text-muted-foreground",
+              )}
+            >
+              {order.vendorName || "—"}
+            </span>
+            {order.workType ? (
+              <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
+                {order.workType}
+              </Badge>
+            ) : null}
+          </div>
+          <StatusBadge
+            status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
+          />
         </div>
       )
     case "totalValue":

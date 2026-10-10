@@ -1,10 +1,11 @@
 "use client"
 
-import { Check, Circle, FileText, MoreHorizontal } from "lucide-react"
+import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
+import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,6 @@ import {
   type PayableRow,
 } from "@/lib/accounts-payable"
 import { formatMoney } from "@/lib/format"
-import { moneyCents } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -139,28 +139,26 @@ function Cell({
 }
 
 function VendorValue({ row }: { row: PayableRow }) {
-  const clear = moneyCents(row.pendingPayable) <= 0
-
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
-      {clear ? (
-        <Check aria-hidden="true" className="size-4 text-primary" />
-      ) : (
-        <Circle aria-hidden="true" className="size-4 text-foreground" />
-      )}
-      <span
-        className={cn(
-          "font-medium",
-          !row.vendorName && "text-muted-foreground",
-        )}
-      >
-        {row.vendorName || "—"}
-      </span>
-      {row.vendorField ? (
-        <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-          {row.vendorField}
-        </Badge>
-      ) : null}
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <span
+          className={cn(
+            "font-medium",
+            !row.vendorName && "text-muted-foreground",
+          )}
+        >
+          {row.vendorName || "—"}
+        </span>
+        {row.workType ? (
+          <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
+            {row.workType}
+          </Badge>
+        ) : null}
+      </div>
+      <StatusBadge
+        status={paymentBalanceStatus(row.totalPaid, row.pendingPayable)}
+      />
     </div>
   )
 }

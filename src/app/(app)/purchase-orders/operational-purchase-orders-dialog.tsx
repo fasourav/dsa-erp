@@ -8,6 +8,7 @@ import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
 import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
 import { PurchaseOrderFormDialog } from "@/app/(app)/purchase-orders/purchase-order-form-dialog"
 import { DataList } from "@/components/data-list"
+import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -267,9 +268,14 @@ function OperationalCell({
       )
     case "vendorName":
       return (
-        <span className={order.vendorName ? "font-medium" : "text-muted-foreground"}>
-          {order.vendorName || "—"}
-        </span>
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <span className={order.vendorName ? "font-medium" : "text-muted-foreground"}>
+            {order.vendorName || "—"}
+          </span>
+          <StatusBadge
+            status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
+          />
+        </div>
       )
     case "totalValue":
     case "totalPaid":

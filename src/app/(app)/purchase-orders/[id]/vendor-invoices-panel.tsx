@@ -10,7 +10,7 @@ import { VendorInvoiceFormDialog } from "@/app/(app)/purchase-orders/[id]/vendor
 import { VendorPaymentsDialog } from "@/app/(app)/purchase-orders/[id]/vendor-payments-dialog"
 import { CustomizeColumns, DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
-import { PaymentStatusBadge } from "@/components/payment-status-badge"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -321,6 +321,6 @@ function InvoiceCell({
         <span className="tabular-nums">{formatMoney(invoice[columnId])}</span>
       )
     case "status":
-      return <PaymentStatusBadge status={invoice.status} />
+      return <StatusBadge status={invoice.status} />
   }
 }

@@ -9,6 +9,7 @@ import { ClientInvoiceFormDialog } from "@/app/(app)/accounts/invoices/client-in
 import { ClientPaymentsDialog } from "@/app/(app)/accounts/invoices/client-payments-dialog"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,10 +30,7 @@ import {
 import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatIsoDate, formatMoney } from "@/lib/format"
-import {
-  clientInvoiceStatusLabel,
-  isClientInvoicePaid,
-} from "@/lib/payment-status"
+import { isClientInvoicePaid } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -276,26 +274,9 @@ function InvoiceCell({
       return isClientInvoicePaid(invoice.status) ? (
         <span className="tabular-nums">{formatMoney(invoice.paid)}</span>
       ) : (
-        <Badge variant="pending" className={pillClassName}>
-          Pending
-        </Badge>
+        <StatusBadge status="pending" />
       )
     case "status":
-      return isClientInvoicePaid(invoice.status) ? (
-        <Badge variant="success" className={pillClassName}>
-          <span
-            aria-hidden="true"
-            className="size-2 rounded-full bg-primary-foreground"
-          />
-          {clientInvoiceStatusLabel(invoice.status)}
-        </Badge>
-      ) : (
-        <Badge
-          variant="destructive"
-          className={cn(pillClassName, "border-dotted border-destructive")}
-        >
-          {clientInvoiceStatusLabel(invoice.status)}
-        </Badge>
-      )
+      return <StatusBadge status={invoice.status} />
   }
 }

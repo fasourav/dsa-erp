@@ -1694,6 +1694,7 @@ export type Database = {
           vendor_field: string | null
           vendor_id: string | null
           vendor_name: string | null
+          work_type: string | null
         }
         Relationships: [
           {

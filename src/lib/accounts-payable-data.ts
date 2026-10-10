@@ -15,7 +15,7 @@ export async function getAccountsPayable(): Promise<{
         supabase
           .from("accounts_payable")
           .select(
-            "id, vendor_name, vendor_field, project_id, project_name, purchase_order_id, total_payable, total_paid, pending_payable",
+            "id, vendor_name, work_type, project_id, project_name, purchase_order_id, total_payable, total_paid, pending_payable",
           )
           .order("id", { ascending: true })
           .range(from, to),
@@ -31,7 +31,7 @@ export async function getAccountsPayable(): Promise<{
         {
           id: row.id,
           vendorName: row.vendor_name?.trim() ?? "",
-          vendorField: row.vendor_field?.trim() ?? "",
+          workType: row.work_type?.trim() ?? "",
           projectId: row.project_id ?? "",
           projectName: row.project_name?.trim() ?? "",
           purchaseOrderId: row.purchase_order_id ?? "",
