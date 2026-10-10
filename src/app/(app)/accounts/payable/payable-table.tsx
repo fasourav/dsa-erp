@@ -31,6 +31,8 @@ import {
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 
+const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
+
 export function PayableTable({
   rows,
   error,
@@ -138,18 +140,22 @@ function Cell({
 
 function VendorValue({ row }: { row: PayableRow }) {
   return (
-    <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-      <span
-        className={cn(
-          "font-medium",
-          !row.vendorName && "text-muted-foreground",
-        )}
-      >
-        {row.vendorName || "—"}
-      </span>
-      {row.vendorField ? (
-        <Badge variant="outline">{row.vendorField}</Badge>
-      ) : null}
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <span
+          className={cn(
+            "font-medium",
+            !row.vendorName && "text-muted-foreground",
+          )}
+        >
+          {row.vendorName || "—"}
+        </span>
+        {row.workType ? (
+          <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
+            {row.workType}
+          </Badge>
+        ) : null}
+      </div>
       <StatusBadge
         status={paymentBalanceStatus(row.totalPaid, row.pendingPayable)}
       />

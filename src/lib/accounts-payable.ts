@@ -7,7 +7,7 @@ import {
 export type PayableRow = {
   id: string
   vendorName: string
-  vendorField: string
+  workType: string
   projectId: string
   projectName: string
   purchaseOrderId: string
