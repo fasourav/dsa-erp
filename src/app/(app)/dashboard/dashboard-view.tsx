@@ -188,7 +188,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
@@ -259,46 +259,28 @@ function DashboardSections({ model }: { model: DashboardModel }) {
         </Card>
 
         <Card>
-          <CardContent className="flex flex-col gap-4">
-            <h2 className="text-base font-medium">Expense Summary</h2>
-            <div className="relative">
-              <ExpenseDonut slices={slices} />
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-lg font-semibold tabular-nums">
-                  {formatExactBdt(snapshot.totalExpense)}
-                </p>
-                <p className="text-xs text-muted-foreground">Total Expense</p>
-              </div>
+          <CardContent className="flex flex-col gap-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base font-medium">Margin Analysis</h2>
+              <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3 border-b border-border pb-2 text-sm">
-                <span className="font-medium">Project Expense</span>
-                <span className="font-semibold tabular-nums">
-                  {formatExactBdt(snapshot.projectExpense)}
-                </span>
-              </div>
-              {slices.map((slice) => (
-                <div key={slice.key} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
-                    <span className={cn("size-2 shrink-0 rounded-full", slice.swatch)} />
-                    <span className="truncate">{slice.label}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-3 tabular-nums">
-                    <span className="text-xs text-muted-foreground">
-                      {formatShare(slice.amount, snapshot.totalExpense)}
-                    </span>
-                    <span className="min-w-16 text-right font-medium">
-                      {formatExactBdt(slice.amount)}
-                    </span>
-                  </span>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+              <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
+              <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
+              <Ring
+                label="Gross Profit Margin"
+                value={snapshot.grossMargin}
+                tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
+              />
+              <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
+              <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
+              <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
             </div>
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -359,22 +341,40 @@ function DashboardSections({ model }: { model: DashboardModel }) {
         </Card>
 
         <Card>
-          <CardContent className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-medium">Margin Analysis</h2>
-              <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
+          <CardContent className="flex flex-col gap-4">
+            <h2 className="text-base font-medium">Expense Summary</h2>
+            <div className="relative">
+              <ExpenseDonut slices={slices} />
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-lg font-semibold tabular-nums">
+                  {formatExactBdt(snapshot.totalExpense)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Expense</p>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-              <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
-              <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
-              <Ring
-                label="Gross Profit Margin"
-                value={snapshot.grossMargin}
-                tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
-              />
-              <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
-              <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
-              <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-2 text-sm">
+                <span className="font-medium">Project Expense</span>
+                <span className="font-semibold tabular-nums">
+                  {formatExactBdt(snapshot.projectExpense)}
+                </span>
+              </div>
+              {slices.map((slice) => (
+                <div key={slice.key} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+                    <span className={cn("size-2 shrink-0 rounded-full", slice.swatch)} />
+                    <span className="truncate">{slice.label}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3 tabular-nums">
+                    <span className="text-xs text-muted-foreground">
+                      {formatShare(slice.amount, snapshot.totalExpense)}
+                    </span>
+                    <span className="min-w-16 text-right font-medium">
+                      {formatExactBdt(slice.amount)}
+                    </span>
+                  </span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

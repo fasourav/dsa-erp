@@ -30,7 +30,7 @@ import {
 import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatIsoDate, formatMoney } from "@/lib/format"
-import { isClientInvoicePaid } from "@/lib/payment-status"
+import { isClientInvoicePaid, sumAmounts } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -269,7 +269,17 @@ function InvoiceCell({
         <span className="text-muted-foreground">—</span>
       )
     case "amount":
-      return <span className="tabular-nums">{formatMoney(invoice.amount)}</span>
+      return (
+        <span className="flex flex-col items-end gap-0.5">
+          <span className="tabular-nums">{formatMoney(invoice.amount)}</span>
+          {invoice.taxAmount > 0 ? (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              Net {formatMoney(sumAmounts([invoice.amount, -invoice.taxAmount]))}{" "}
+              · VAT/Tax {formatMoney(invoice.taxAmount)}
+            </span>
+          ) : null}
+        </span>
+      )
     case "paid":
       return isClientInvoicePaid(invoice.status) ? (
         <span className="tabular-nums">{formatMoney(invoice.paid)}</span>

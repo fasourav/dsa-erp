@@ -8,6 +8,7 @@ import {
   type ClientInvoiceFieldErrors,
 } from "@/app/(app)/accounts/invoices/actions"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogBody,
@@ -30,6 +31,8 @@ import type {
   ClientInvoiceRow,
   InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
+import { formatMoney } from "@/lib/format"
+import { moneyCents, parsePositiveAmount, sumAmounts } from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue, todayIsoDate } from "@/lib/project-validation"
 
 export function ClientInvoiceFormDialog({
@@ -51,12 +54,23 @@ export function ClientInvoiceFormDialog({
     invoice?.projectId ?? defaultProjectId ?? "",
   )
   const [amount, setAmount] = useState(invoice ? String(invoice.amount) : "")
+  const [includeVat, setIncludeVat] = useState((invoice?.taxAmount ?? 0) > 0)
+  const [taxAmount, setTaxAmount] = useState(
+    invoice && invoice.taxAmount > 0 ? String(invoice.taxAmount) : "",
+  )
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ClientInvoiceFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
 
   const parsedAmount = parseProjectValue(amount)
+  const parsedTax = includeVat ? parsePositiveAmount(taxAmount) : null
+  const taxTooHigh =
+    includeVat &&
+    parsedAmount !== null &&
+    parsedAmount > 0 &&
+    parsedTax !== null &&
+    moneyCents(parsedTax) > moneyCents(parsedAmount)
   const projectItems = projects.map((item) => ({
     value: item.id,
     label: item.name || "—",
@@ -74,6 +88,21 @@ export function ClientInvoiceFormDialog({
         ? "Enter an amount greater than 0."
         : "Enter an amount."
       : null)
+  const taxError =
+    serverErrors.taxAmount ??
+    (includeVat && attempted && parsedTax === null
+      ? taxAmount.trim()
+        ? "Enter a tax amount greater than 0."
+        : "Enter a tax amount."
+      : taxTooHigh
+        ? "Tax amount cannot be more than the invoice total."
+        : null)
+  const showSplit =
+    includeVat &&
+    parsedAmount !== null &&
+    parsedAmount > 0 &&
+    parsedTax !== null &&
+    !taxTooHigh
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
@@ -92,7 +121,8 @@ export function ClientInvoiceFormDialog({
       !isIsoDate(issuedOn) ||
       !projectId ||
       parsedAmount === null ||
-      parsedAmount <= 0
+      parsedAmount <= 0 ||
+      (includeVat && (parsedTax === null || taxTooHigh))
     ) {
       return
     }
@@ -102,6 +132,8 @@ export function ClientInvoiceFormDialog({
       issuedOn,
       dueOn: invoice?.dueOn ?? "",
       amount: amount.trim(),
+      includeVat,
+      taxAmount: includeVat ? taxAmount.trim() : "",
     }
 
     startSubmit(async () => {
@@ -200,6 +232,44 @@ export function ClientInvoiceFormDialog({
               </p>
             ) : null}
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={includeVat}
+              disabled={pending}
+              onCheckedChange={(checked) => setIncludeVat(Boolean(checked))}
+            />
+            Include VAT/Tax
+          </label>
+          {includeVat ? (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="client-invoice-tax">Tax Amount</Label>
+              <Input
+                id="client-invoice-tax"
+                inputMode="decimal"
+                value={taxAmount}
+                disabled={pending}
+                aria-invalid={Boolean(taxError)}
+                onChange={(event) => setTaxAmount(event.target.value)}
+              />
+              {showSplit ? (
+                <p className="text-sm text-muted-foreground">
+                  Net work {formatMoney(sumAmounts([parsedAmount, -parsedTax]))}{" "}
+                  · VAT/Tax {formatMoney(parsedTax)} · Invoice total{" "}
+                  {formatMoney(parsedAmount)}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This amount stays the invoice total. VAT/Tax is the portion
+                  already included in it.
+                </p>
+              )}
+              {taxError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {taxError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {formError ? (
             <p role="alert" className="text-sm text-destructive">
               {formError}
