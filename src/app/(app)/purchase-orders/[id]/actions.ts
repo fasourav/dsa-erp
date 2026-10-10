@@ -556,12 +556,7 @@ async function saveVendorPayment(
     }
   }
 
-  const bank = await resolveBankAccountId(
-    supabase,
-    input.bankAccountId,
-    input.newAccountName,
-    input.newBankName,
-  )
+  const bank = await resolveBankAccountId(supabase, input.bankAccountId, "", "")
   if (bank.fieldError) {
     return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
   }

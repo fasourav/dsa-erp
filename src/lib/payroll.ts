@@ -8,6 +8,8 @@ export type PayrollRunRow = {
   paidOn: string
   status: string
   notes: string
+  bankAccountId: string
+  paymentMethod: string
   lineCount: number
   totalNet: number
 }
@@ -42,7 +44,9 @@ export async function getPayrollRuns(): Promise<{
         (from, to) =>
           supabase
             .from("payroll_runs")
-            .select("id, period_year, period_month, paid_on, status, notes")
+            .select(
+              "id, period_year, period_month, paid_on, status, notes, bank_account_id, payment_method",
+            )
             .order("period_year", { ascending: false })
             .order("period_month", { ascending: false })
             .range(from, to),
@@ -79,6 +83,8 @@ export async function getPayrollRuns(): Promise<{
         paidOn: r.paid_on ?? "",
         status: r.status ?? "draft",
         notes: r.notes ?? "",
+        bankAccountId: r.bank_account_id ?? "",
+        paymentMethod: r.payment_method ?? "",
         lineCount: agg?.count ?? 0,
         totalNet: agg?.total ?? 0,
       }
@@ -101,7 +107,9 @@ export async function getPayrollRunDetail(runId: string): Promise<{
   try {
     const { data: runData, error: runError } = await supabase
       .from("payroll_runs")
-      .select("id, period_year, period_month, paid_on, status, notes")
+      .select(
+        "id, period_year, period_month, paid_on, status, notes, bank_account_id, payment_method",
+      )
       .eq("id", runId)
       .limit(1)
 
@@ -164,6 +172,8 @@ export async function getPayrollRunDetail(runId: string): Promise<{
       paidOn: r.paid_on ?? "",
       status: r.status ?? "draft",
       notes: r.notes ?? "",
+      bankAccountId: r.bank_account_id ?? "",
+      paymentMethod: r.payment_method ?? "",
       lineCount: lines.length,
       totalNet,
     }

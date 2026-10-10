@@ -39,7 +39,9 @@ export async function getBankPage(accountId: string | null): Promise<{
           (from, to) =>
             supabase
               .from("bank_accounts")
-              .select("id, name, bank_name, currency, is_active, sort_order")
+              .select(
+                "id, name, account_holder_name, account_number, bank_name, routing_number, address, opening_balance, currency, is_active, sort_order",
+              )
               .order("sort_order", { ascending: true })
               .order("created_at", { ascending: true })
               .order("id", { ascending: true })
@@ -51,7 +53,7 @@ export async function getBankPage(accountId: string | null): Promise<{
             supabase
               .from("bank_transactions")
               .select(
-                "id, bank_account_id, transaction_date, direction, amount, source_kind, payment_method, project_id, notes, income_id, vendor_payment_id, operational_expense_id, vat_tax_payment_id",
+                "id, bank_account_id, transaction_date, direction, amount, source_kind, payment_method, project_id, notes, income_id, vendor_payment_id, operational_expense_id, vat_tax_payment_id, payroll_line_id, transfer_id",
               )
               .order("id", { ascending: true })
               .range(from, to),
@@ -81,7 +83,12 @@ export async function getBankPage(accountId: string | null): Promise<{
     const accounts = accountRows.map((row) => ({
       id: row.id,
       name: row.name?.trim() ?? "",
+      accountHolderName: row.account_holder_name?.trim() ?? "",
+      accountNumber: row.account_number?.trim() ?? "",
       bankName: row.bank_name?.trim() ?? "",
+      routingNumber: row.routing_number?.trim() ?? "",
+      address: row.address?.trim() ?? "",
+      openingBalance: toNumber(row.opening_balance),
       currency: row.currency?.trim() ?? "",
       isActive: row.is_active,
       sortOrder: row.sort_order,
@@ -94,6 +101,9 @@ export async function getBankPage(accountId: string | null): Promise<{
       )
     const projectsById = new Map(projects.map((project) => [project.id, project.name]))
 
+    const openingByAccount = new Map(
+      accounts.map((account) => [account.id, account.openingBalance]),
+    )
     const transactions = withRunningBalances(transactionRows.flatMap((row) => {
       if (!isBankDirection(row.direction) || !isBankSourceKind(row.source_kind)) {
         return []
@@ -120,11 +130,13 @@ export async function getBankPage(accountId: string | null): Promise<{
             row.income_id ||
               row.vendor_payment_id ||
               row.operational_expense_id ||
-              row.vat_tax_payment_id,
+              row.vat_tax_payment_id ||
+              row.payroll_line_id,
           ),
+          transferId: row.transfer_id ?? "",
         },
       ]
-    }))
+    }), openingByAccount)
 
     const requestedId = accountId && isUuid(accountId) ? accountId : null
     if (accountId && !requestedId) {
@@ -150,17 +162,13 @@ export async function getBankPage(accountId: string | null): Promise<{
       }
     }
 
-    const visibleTransactions = matched
-      ? transactions.filter((row) => row.bankAccountId === matched.id)
-      : transactions
-
     return {
       accounts,
-      transactions: visibleTransactions,
+      transactions,
       projects,
       paymentMethods: mergeCategorySuggestions(
         methodRows.map((row) => row.name),
-        visibleTransactions.map((row) => row.paymentMethod),
+        transactions.map((row) => row.paymentMethod),
       ),
       accountFilter: matched ? { id: matched.id, name: matched.name } : null,
       error: null,

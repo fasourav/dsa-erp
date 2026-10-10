@@ -12,6 +12,8 @@ export type PayrollRunInput = {
   paidOn: string
   status: string
   notes: string
+  bankAccountId: string
+  paymentMethod: string
 }
 
 export type PayrollRunFieldErrors = {
@@ -19,6 +21,7 @@ export type PayrollRunFieldErrors = {
   periodMonth?: string
   paidOn?: string
   status?: string
+  bankAccountId?: string
 }
 
 export type PayrollRunResult = {
@@ -91,6 +94,8 @@ export async function deletePayrollRun(id: string): Promise<DeleteResult> {
     return { error: "That payroll run could not be found." }
 
   revalidatePath("/hr/payroll")
+  revalidatePath("/accounts/bank")
+  revalidatePath("/dashboard")
   return { error: null }
 }
 
@@ -103,6 +108,8 @@ async function savePayrollRun(
   const paidOn = input.paidOn.trim()
   const status = input.status.trim()
   const notes = input.notes.trim()
+  const bankAccountId = input.bankAccountId.trim()
+  const paymentMethod = input.paymentMethod.trim()
   const fieldErrors: PayrollRunFieldErrors = {}
 
   if (!Number.isFinite(year) || year < 2000 || year > 2100) {
@@ -113,6 +120,12 @@ async function savePayrollRun(
   }
   if (paidOn && !isIsoDate(paidOn)) {
     fieldErrors.paidOn = "Enter a valid date."
+  }
+  if (status === "paid" && !isIsoDate(paidOn)) {
+    fieldErrors.paidOn = "Enter the date paid."
+  }
+  if (status === "paid" && !isUuid(bankAccountId)) {
+    fieldErrors.bankAccountId = "Choose a bank account."
   }
   if (!validStatuses.includes(status)) {
     fieldErrors.status = "Choose a status."
@@ -131,6 +144,8 @@ async function savePayrollRun(
     paid_on: paidOn || null,
     status,
     notes: notes || null,
+    bank_account_id: bankAccountId || null,
+    payment_method: paymentMethod || null,
   }
 
   const { data, error } = id
@@ -141,11 +156,18 @@ async function savePayrollRun(
         .select("id")
     : await supabase.from("payroll_runs").insert(values).select("id")
 
-  if (error) return { error: "Could not save this payroll run." }
+  if (error) {
+    if (error.code === "23503") {
+      return { error: null, fieldErrors: { bankAccountId: "Choose a bank account." } }
+    }
+    return { error: "Could not save this payroll run." }
+  }
   if (!data || data.length === 0)
     return { error: "That payroll run could not be found." }
 
   revalidatePath("/hr/payroll")
+  revalidatePath("/accounts/bank")
+  revalidatePath("/dashboard")
   return { error: null, id: data[0].id }
 }
 
@@ -185,6 +207,8 @@ export async function deletePayrollLine(
     return { error: "That payroll line could not be found." }
 
   revalidatePath("/hr/payroll")
+  revalidatePath("/accounts/bank")
+  revalidatePath("/dashboard")
   return { error: null }
 }
 
@@ -245,5 +269,7 @@ async function savePayrollLine(
     return { error: "That payroll line could not be found." }
 
   revalidatePath("/hr/payroll")
+  revalidatePath("/accounts/bank")
+  revalidatePath("/dashboard")
   return { error: null }
 }

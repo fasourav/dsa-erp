@@ -99,8 +99,13 @@ export type DashboardInput = {
     projectLinked: boolean
   }[]
   taxes: { date: string; amount: number }[]
-  payroll: { date: string; amount: number }[]
-  bank: { date: string; amount: number; direction: "inflow" | "outflow" }[]
+  bank: {
+    date: string
+    amount: number
+    direction: "inflow" | "outflow"
+    sourceKind: string
+  }[]
+  openingBalance: number
   billed: number
   ledgerPaid: number
   receivables: number
@@ -260,11 +265,10 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
   const vendorPayments = dated(input.vendorPayments)
   const operational = dated(input.operational)
   const taxes = dated(input.taxes)
-  const payroll = dated(input.payroll)
   const bank = dated(input.bank)
 
   const years = new Set<number>([currentYear])
-  for (const row of [...revenue, ...vendorPayments, ...operational, ...taxes, ...payroll, ...bank]) {
+  for (const row of [...revenue, ...vendorPayments, ...operational, ...taxes, ...bank]) {
     years.add(Number(row.date.slice(0, 4)))
   }
   for (const project of input.projects) {
@@ -282,7 +286,6 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
       vendorPayments,
       operational,
       taxes,
-      payroll,
       bank,
       collectionRate,
     }),
@@ -292,15 +295,22 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
   const allVendor = sum(vendorPayments)
   const allOperational = sum(operational)
   const allTax = sum(taxes)
-  const allPayroll = sum(payroll)
-  const allNet = allRevenue - allVendor - allOperational - allTax - allPayroll
+  // Paid salaries are bank outflows. Operational rows already categorized as
+  // salary stay inside allOperational, so they are not added again here.
+  const bankPayroll = bank
+    .filter((row) => row.sourceKind === "payroll" && row.direction === "outflow")
+    .reduce((total, row) => total + row.amount, 0)
+  const allNet = allRevenue - allVendor - allOperational - allTax - bankPayroll
   const contractValue = input.projects.reduce(
     (total, project) => total + project.totalValue,
     0,
   )
 
-  const cashBalance = balanceAsOf(bank, today)
-  const cashDelta = changePercent(cashBalance, balanceAsOf(bank, previousMonthEnd(today)))
+  const cashBalance = balanceAsOf(bank, today, input.openingBalance)
+  const cashDelta = changePercent(
+    cashBalance,
+    balanceAsOf(bank, previousMonthEnd(today), input.openingBalance),
+  )
 
   const launch = earliestDate([
     ...input.projects.map((project) => project.startedOn),
@@ -308,7 +318,6 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     ...vendorPayments.map((row) => row.date),
     ...operational.map((row) => row.date),
     ...taxes.map((row) => row.date),
-    ...payroll.map((row) => row.date),
     ...bank.map((row) => row.date),
   ], today)
   const span = calendarSpan(launch, today)
@@ -328,7 +337,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     vendorPayments,
     operational,
     taxes,
-    payroll,
+    bank,
   })
 
   const annual = axisYears.map((year) => ({
@@ -356,7 +365,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     snapshots,
     cashBalance,
     cashDelta,
-    cashSpark: monthEnds(currentYear, today, bank),
+    cashSpark: monthEnds(currentYear, today, bank, input.openingBalance),
     receivables: input.receivables,
     payables: input.payables,
     // Best effort: profit if open invoices are collected and open payables are paid.
@@ -408,8 +417,7 @@ type Books = {
   vendorPayments: (Dated & { workType: string | null; projectLinked: boolean })[]
   operational: (Dated & { category: string; projectLinked: boolean })[]
   taxes: Dated[]
-  payroll: Dated[]
-  bank: (Dated & { direction: "inflow" | "outflow" })[]
+  bank: (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[]
   collectionRate: number
 }
 
@@ -448,7 +456,9 @@ function buildYear(year: number, today: string, currentYear: number, books: Book
     totalExpense: expenses.total,
     expenseDelta: changePercent(expenses.total, priorExpenses.total),
     outflow: books.bank.reduce((total, row) => {
-      if (row.direction !== "outflow" || row.date < current.start || row.date > current.end) {
+      // Transfers, deposits, and withdrawals change the bank balance only.
+      // They are not income or expense, so they stay out of this Outflow total.
+      if (!countsAsExpenseOutflow(row) || row.date < current.start || row.date > current.end) {
         return total
       }
       return total + row.amount
@@ -529,10 +539,11 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
     totals.tax += row.amount
   }
 
-  for (const row of books.payroll) {
+  for (const row of books.bank) {
+    if (row.sourceKind !== "payroll" || row.direction !== "outflow") continue
     if (!inSpan(row.date, start, end)) continue
-    // Employee Salary is payroll net pay plus operational rows categorized as salary.
-    // Those sources are not linked, so both are included.
+    // Employee Salary is paid payroll on the bank ledger, plus operational
+    // rows categorized as salary. Draft and approved payroll is not included.
     totals.salary += row.amount
   }
 
@@ -602,7 +613,7 @@ function classifyOperational(
 function lastWeeks(
   today: string,
   count: number,
-  books: Pick<Books, "revenue" | "vendorPayments" | "operational" | "taxes" | "payroll">,
+  books: Pick<Books, "revenue" | "vendorPayments" | "operational" | "taxes" | "bank">,
 ): WeekPoint[] {
   const current = isoWeek(today)
   const weeks: WeekPoint[] = []
@@ -610,11 +621,7 @@ function lastWeeks(
   for (let offset = count - 1; offset >= 0; offset -= 1) {
     const start = addUtcDays(current.start, -7 * offset)
     const week = isoWeek(start)
-    const expenses = expenseTotals(
-      { ...books, bank: [], collectionRate: 0 },
-      week.start,
-      week.end,
-    )
+    const expenses = expenseTotals({ ...books, collectionRate: 0 }, week.start, week.end)
     const weekRevenue = totalBetween(books.revenue, week.start, week.end)
     weeks.push({
       label: `W${week.week}`,
@@ -655,6 +662,7 @@ function monthEnds(
   year: number,
   today: string,
   bank: (Dated & { direction: "inflow" | "outflow" })[],
+  openingBalance: number,
 ): ChartPoint[] {
   const lastMonth = Number(today.slice(5, 7))
   const points: ChartPoint[] = []
@@ -662,7 +670,7 @@ function monthEnds(
     const end = monthEndIso(year, month)
     points.push({
       label: MONTHS[month - 1],
-      value: balanceAsOf(bank, end < today ? end : today),
+      value: balanceAsOf(bank, end < today ? end : today, openingBalance),
     })
   }
   return points
@@ -671,14 +679,22 @@ function monthEnds(
 function balanceAsOf(
   bank: (Dated & { direction: "inflow" | "outflow" })[],
   end: string,
+  openingBalance: number,
 ): number {
-  // Cash is the bank ledger through this date, not a replay of invoices.
-  let balance = 0
+  // Cash is opening balances plus every ledger line through this date,
+  // including deposits, withdrawals, transfers, and payroll.
+  let balance = openingBalance
   for (const row of bank) {
     if (row.date > end) continue
     balance += row.direction === "inflow" ? row.amount : -row.amount
   }
   return balance
+}
+
+const balanceOnlySources = new Set(["transfer", "deposit", "withdrawal"])
+
+function countsAsExpenseOutflow(row: { direction: string; sourceKind: string }): boolean {
+  return row.direction === "outflow" && !balanceOnlySources.has(row.sourceKind)
 }
 
 function yearWindow(year: number, today: string, currentYear: number) {

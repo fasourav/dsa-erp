@@ -58,30 +58,45 @@ export type Database = {
       }
       bank_accounts: {
         Row: {
+          account_holder_name: string | null
+          account_number: string | null
+          address: string | null
           bank_name: string | null
           created_at: string
           currency: string
           id: string
           is_active: boolean
           name: string
+          opening_balance: number
+          routing_number: string | null
           sort_order: number
         }
         Insert: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          address?: string | null
           bank_name?: string | null
           created_at?: string
           currency?: string
           id?: string
           is_active?: boolean
           name: string
+          opening_balance?: number
+          routing_number?: string | null
           sort_order?: number
         }
         Update: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          address?: string | null
           bank_name?: string | null
           created_at?: string
           currency?: string
           id?: string
           is_active?: boolean
           name?: string
+          opening_balance?: number
+          routing_number?: string | null
           sort_order?: number
         }
         Relationships: []
@@ -97,9 +112,11 @@ export type Database = {
           notes: string | null
           operational_expense_id: string | null
           payment_method: string | null
+          payroll_line_id: string | null
           project_id: string | null
           source_kind: Database["public"]["Enums"]["bank_source_kind"]
           transaction_date: string
+          transfer_id: string | null
           vat_tax_payment_id: string | null
           vendor_payment_id: string | null
         }
@@ -113,9 +130,11 @@ export type Database = {
           notes?: string | null
           operational_expense_id?: string | null
           payment_method?: string | null
+          payroll_line_id?: string | null
           project_id?: string | null
           source_kind: Database["public"]["Enums"]["bank_source_kind"]
           transaction_date?: string
+          transfer_id?: string | null
           vat_tax_payment_id?: string | null
           vendor_payment_id?: string | null
         }
@@ -129,9 +148,11 @@ export type Database = {
           notes?: string | null
           operational_expense_id?: string | null
           payment_method?: string | null
+          payroll_line_id?: string | null
           project_id?: string | null
           source_kind?: Database["public"]["Enums"]["bank_source_kind"]
           transaction_date?: string
+          transfer_id?: string | null
           vat_tax_payment_id?: string | null
           vendor_payment_id?: string | null
         }
@@ -169,6 +190,13 @@ export type Database = {
             columns: ["operational_expense_id"]
             isOneToOne: true
             referencedRelation: "operational_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transactions_payroll_line_id_fkey"
+            columns: ["payroll_line_id"]
+            isOneToOne: true
+            referencedRelation: "payroll_lines"
             referencedColumns: ["id"]
           },
           {
@@ -218,6 +246,54 @@ export type Database = {
             columns: ["vendor_payment_id"]
             isOneToOne: true
             referencedRelation: "vendor_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          from_account_id: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          to_account_id: string
+          transfer_date: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          from_account_id: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          to_account_id: string
+          transfer_date: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_account_id?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          to_account_id?: string
+          transfer_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transfers_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -466,6 +542,24 @@ export type Database = {
           notes?: string | null
           person_name?: string | null
           phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_settings: {
+        Row: {
+          fiscal_year_start_month: number
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          fiscal_year_start_month?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          fiscal_year_start_month?: number
+          id?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -998,33 +1092,47 @@ export type Database = {
       }
       payroll_runs: {
         Row: {
+          bank_account_id: string | null
           created_at: string
           id: string
           notes: string | null
           paid_on: string | null
+          payment_method: string | null
           period_month: number
           period_year: number
           status: string
         }
         Insert: {
+          bank_account_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           paid_on?: string | null
+          payment_method?: string | null
           period_month: number
           period_year: number
           status?: string
         }
         Update: {
+          bank_account_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           paid_on?: string | null
+          payment_method?: string | null
           period_month?: number
           period_year?: number
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payroll_runs_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -2420,6 +2528,10 @@ export type Database = {
         | "operational_expense"
         | "vat_tax"
         | "other"
+        | "payroll"
+        | "transfer"
+        | "deposit"
+        | "withdrawal"
       party_kind: "person" | "company"
       payment_status: "unpaid" | "partial" | "paid" | "void"
       project_status: "active" | "completed"
@@ -2558,6 +2670,10 @@ export const Constants = {
         "operational_expense",
         "vat_tax",
         "other",
+        "payroll",
+        "transfer",
+        "deposit",
+        "withdrawal",
       ],
       party_kind: ["person", "company"],
       payment_status: ["unpaid", "partial", "paid", "void"],
