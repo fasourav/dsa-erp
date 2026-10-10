@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react"
 import {
   deleteBankAccount,
   setBankAccountActive,
+  updateFiscalYearStartMonth,
 } from "@/app/(app)/accounts/bank/actions"
 import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
@@ -23,6 +24,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Card,
   CardContent,
@@ -31,6 +40,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { BankAccountRow } from "@/lib/bank"
+import { formatExactBdt } from "@/lib/dashboard-metrics"
+import { fiscalMonthOptions } from "@/lib/fiscal-year"
 import {
   catalogSingularTitle,
   nextSortOrder,
@@ -46,10 +57,12 @@ type ActiveView =
 export function SettingsPanel({
   catalogs,
   bankAccounts,
+  fiscalYearStartMonth,
   error,
 }: {
   catalogs: CatalogList[]
   bankAccounts: BankAccountRow[]
+  fiscalYearStartMonth: number
   error: string | null
 }) {
   const [view, setView] = useState<ActiveView>({ kind: "home" })
@@ -79,6 +92,9 @@ export function SettingsPanel({
     useState<BankAccountRow | null>(null)
   const [bankDeleteError, setBankDeleteError] = useState<string | null>(null)
   const [deletingBank, startBankDelete] = useTransition()
+  const [fiscalMonth, setFiscalMonth] = useState(String(fiscalYearStartMonth))
+  const [fiscalError, setFiscalError] = useState<string | null>(null)
+  const [savingFiscal, startFiscalSave] = useTransition()
 
   const catalogByKey = useMemo(() => {
     return new Map(catalogs.map((catalog) => [catalog.key, catalog]))
@@ -278,8 +294,9 @@ export function SettingsPanel({
                 </Button>
                 <CardTitle>Bank Accounts</CardTitle>
                 <CardDescription>
-                  {itemCountLabel(bankAccounts.length)}. Ordered By Sort Order,
-                  Then Name.
+                  {bankAccounts.length === 0
+                    ? "Add Your First Bank Account Before Recording Payments."
+                    : `${itemCountLabel(bankAccounts.length)}. Ordered By Sort Order, Then Name.`}
                 </CardDescription>
               </div>
               <Button
@@ -293,15 +310,73 @@ export function SettingsPanel({
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+              <div className="flex flex-col gap-1">
+                <p className="font-medium">Fiscal Year</p>
+                <p className="text-sm text-muted-foreground">
+                  Statements Label A July Start As FY 2025–26. Bangladesh Tax Year Stays 1 July–30 June.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:max-w-xs">
+                <Label htmlFor="fiscal-year-start">Starts In</Label>
+                <Select
+                  items={fiscalMonthOptions}
+                  value={fiscalMonth}
+                  disabled={savingFiscal}
+                  onValueChange={(value) => setFiscalMonth(value ?? "7")}
+                >
+                  <SelectTrigger id="fiscal-year-start" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {fiscalMonthOptions.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {fiscalError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {fiscalError}
+                </p>
+              ) : null}
+              <Button
+                type="button"
+                className="w-full sm:w-fit"
+                disabled={savingFiscal}
+                onClick={() => {
+                  setFiscalError(null)
+                  startFiscalSave(async () => {
+                    const result = await updateFiscalYearStartMonth(Number(fiscalMonth))
+                    if (result.error) setFiscalError(result.error)
+                  })
+                }}
+              >
+                {savingFiscal ? "Saving…" : "Save Fiscal Year"}
+              </Button>
+            </div>
             {bankError ? (
               <p role="alert" className="text-sm text-destructive">
                 {bankError}
               </p>
             ) : null}
             {bankAccounts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No Bank Accounts Yet.
-              </p>
+              <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted p-4">
+                <p className="font-medium">Add Your First Bank Account</p>
+                <p className="text-sm text-muted-foreground">
+                  Account Holder, Account Number, Bank Name, Routing Number, And Address Are Required.
+                </p>
+                <Button
+                  type="button"
+                  className="w-full sm:w-fit"
+                  onClick={() => openBankForm(null)}
+                >
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Add Bank Account
+                </Button>
+              </div>
             ) : (
               <ul className="flex flex-col divide-y divide-border">
                 {bankAccounts.map((account) => (
@@ -317,12 +392,18 @@ export function SettingsPanel({
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {[account.bankName, account.currency]
+                        {[account.accountHolderName, account.bankName, account.currency]
                           .filter(Boolean)
-                          .join(" · ")}
+                          .join(" · ") || "Details Missing"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {account.accountNumber
+                          ? `Account Number ${account.accountNumber}`
+                          : "Account Number Missing"}
                       </p>
                       <p className="text-sm text-muted-foreground tabular-nums">
-                        Sort Order {account.sortOrder}
+                        Opening Balance {formatExactBdt(account.openingBalance)} · Sort Order{" "}
+                        {account.sortOrder}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">

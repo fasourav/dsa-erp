@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, type ReactNode } from "react"
 
 import {
   addBankAccount,
@@ -26,8 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import type { BankAccountRow } from "@/lib/bank"
 import { parseSortOrder } from "@/lib/lookup-catalogs"
+import { parseProjectValue } from "@/lib/project-validation"
 
 export function BankAccountFormDialog({
   open,
@@ -42,7 +44,14 @@ export function BankAccountFormDialog({
 }) {
   const accountId = account?.id ?? null
   const [name, setName] = useState(account?.name ?? "")
+  const [accountHolderName, setAccountHolderName] = useState(account?.accountHolderName ?? "")
+  const [accountNumber, setAccountNumber] = useState(account?.accountNumber ?? "")
   const [bankName, setBankName] = useState(account?.bankName ?? "")
+  const [routingNumber, setRoutingNumber] = useState(account?.routingNumber ?? "")
+  const [address, setAddress] = useState(account?.address ?? "")
+  const [openingBalance, setOpeningBalance] = useState(
+    account ? String(account.openingBalance) : "",
+  )
   const [currency, setCurrency] = useState(account?.currency || "BDT")
   const [sortOrder, setSortOrder] = useState(
     String(account?.sortOrder ?? suggestedSortOrder),
@@ -55,14 +64,33 @@ export function BankAccountFormDialog({
 
   const nameError =
     serverErrors.name ?? (attempted && !name.trim() ? "Enter an account name." : null)
+  const holderError =
+    serverErrors.accountHolderName ??
+    (attempted && !accountHolderName.trim() ? "Enter the account holder name." : null)
+  const numberError =
+    serverErrors.accountNumber ??
+    (attempted && !accountNumber.trim() ? "Enter the account number." : null)
+  const bankError =
+    serverErrors.bankName ??
+    (attempted && !bankName.trim() ? "Enter the bank name." : null)
+  const routingError =
+    serverErrors.routingNumber ??
+    (attempted && !routingNumber.trim() ? "Enter the routing number." : null)
+  const addressError =
+    serverErrors.address ?? (attempted && !address.trim() ? "Enter the address." : null)
+  const openingError =
+    serverErrors.openingBalance ??
+    (!accountId && attempted && parseProjectValue(openingBalance) === null
+      ? openingBalance.trim()
+        ? "Enter an opening balance of 0 or more."
+        : "Enter the opening balance."
+      : null)
   const currencyError =
     serverErrors.currency ??
     (attempted && !currency.trim() ? "Enter a currency." : null)
   const sortOrderError =
     serverErrors.sortOrder ??
-    (attempted && parseSortOrder(sortOrder) === null
-      ? "Enter a whole number."
-      : null)
+    (attempted && parseSortOrder(sortOrder) === null ? "Enter a whole number." : null)
   const statusItems = [
     { value: "active", label: "Active" },
     { value: "inactive", label: "Inactive" },
@@ -72,7 +100,6 @@ export function BankAccountFormDialog({
     if (!nextOpen && pending) {
       return
     }
-
     onOpenChange(nextOpen)
   }
 
@@ -82,13 +109,29 @@ export function BankAccountFormDialog({
     setFormError(null)
 
     const parsedSortOrder = parseSortOrder(sortOrder)
-    if (!name.trim() || !currency.trim() || parsedSortOrder === null) {
+    const parsedOpening = parseProjectValue(openingBalance)
+    if (
+      !name.trim() ||
+      !accountHolderName.trim() ||
+      !accountNumber.trim() ||
+      !bankName.trim() ||
+      !routingNumber.trim() ||
+      !address.trim() ||
+      !currency.trim() ||
+      parsedSortOrder === null ||
+      (!accountId && parsedOpening === null)
+    ) {
       return
     }
 
     const input = {
       name: name.trim(),
+      accountHolderName: accountHolderName.trim(),
+      accountNumber: accountNumber.trim(),
       bankName: bankName.trim(),
+      routingNumber: routingNumber.trim(),
+      address: address.trim(),
+      openingBalance: accountId ? String(account?.openingBalance ?? 0) : openingBalance.trim(),
       currency: currency.trim(),
       isActive,
       sortOrder: parsedSortOrder,
@@ -99,17 +142,14 @@ export function BankAccountFormDialog({
         const result = accountId
           ? await updateBankAccount(accountId, input)
           : await addBankAccount(input)
-
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
           return
         }
-
         if (result.error) {
           setFormError(result.error)
           return
         }
-
         onOpenChange(false)
       } catch {
         setFormError("Could not save this bank account.")
@@ -119,18 +159,12 @@ export function BankAccountFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="overflow-hidden sm:max-w-lg"
-        showCloseButton={!pending}
-      >
+      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
-          <DialogTitle>
-            {accountId ? "Edit Bank Account" : "Add Bank Account"}
-          </DialogTitle>
+          <DialogTitle>{accountId ? "Edit Bank Account" : "Add Bank Account"}</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-account-name">Account Name</Label>
+          <Field id="bank-account-name" label="Account Name" error={nameError}>
             <Input
               id="bank-account-name"
               value={name}
@@ -138,24 +172,71 @@ export function BankAccountFormDialog({
               aria-invalid={Boolean(nameError)}
               onChange={(event) => setName(event.target.value)}
             />
-            {nameError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {nameError}
-              </p>
-            ) : null}
-          </div>
+          </Field>
+          <Field id="bank-account-holder" label="Account Holder Name" error={holderError}>
+            <Input
+              id="bank-account-holder"
+              value={accountHolderName}
+              disabled={pending}
+              aria-invalid={Boolean(holderError)}
+              onChange={(event) => setAccountHolderName(event.target.value)}
+            />
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bank-account-bank">Bank</Label>
+            <Field id="bank-account-number" label="Account Number" error={numberError}>
+              <Input
+                id="bank-account-number"
+                value={accountNumber}
+                disabled={pending}
+                aria-invalid={Boolean(numberError)}
+                onChange={(event) => setAccountNumber(event.target.value)}
+              />
+            </Field>
+            <Field id="bank-account-bank" label="Bank Name" error={bankError}>
               <Input
                 id="bank-account-bank"
                 value={bankName}
                 disabled={pending}
+                aria-invalid={Boolean(bankError)}
                 onChange={(event) => setBankName(event.target.value)}
               />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bank-account-currency">Currency</Label>
+            </Field>
+          </div>
+          <Field id="bank-account-routing" label="Routing Number" error={routingError}>
+            <Input
+              id="bank-account-routing"
+              value={routingNumber}
+              disabled={pending}
+              aria-invalid={Boolean(routingError)}
+              onChange={(event) => setRoutingNumber(event.target.value)}
+            />
+          </Field>
+          <Field id="bank-account-address" label="Address" error={addressError}>
+            <Textarea
+              id="bank-account-address"
+              value={address}
+              disabled={pending}
+              aria-invalid={Boolean(addressError)}
+              onChange={(event) => setAddress(event.target.value)}
+            />
+          </Field>
+          <Field id="bank-account-opening" label="Opening Balance" error={openingError}>
+            <Input
+              id="bank-account-opening"
+              inputMode="decimal"
+              value={openingBalance}
+              disabled={pending || Boolean(accountId)}
+              aria-invalid={Boolean(openingError)}
+              onChange={(event) => setOpeningBalance(event.target.value)}
+            />
+            {accountId ? (
+              <p className="text-sm text-muted-foreground">
+                Opening balance is set when the account is created.
+              </p>
+            ) : null}
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="bank-account-currency" label="Currency" error={currencyError}>
               <Input
                 id="bank-account-currency"
                 value={currency}
@@ -163,28 +244,17 @@ export function BankAccountFormDialog({
                 aria-invalid={Boolean(currencyError)}
                 onChange={(event) => setCurrency(event.target.value)}
               />
-              {currencyError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {currencyError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-account-sort-order">Sort Order</Label>
-            <Input
-              id="bank-account-sort-order"
-              inputMode="numeric"
-              value={sortOrder}
-              disabled={pending}
-              aria-invalid={Boolean(sortOrderError)}
-              onChange={(event) => setSortOrder(event.target.value)}
-            />
-            {sortOrderError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {sortOrderError}
-              </p>
-            ) : null}
+            </Field>
+            <Field id="bank-account-sort-order" label="Sort Order" error={sortOrderError}>
+              <Input
+                id="bank-account-sort-order"
+                inputMode="numeric"
+                value={sortOrder}
+                disabled={pending}
+                aria-invalid={Boolean(sortOrderError)}
+                onChange={(event) => setSortOrder(event.target.value)}
+              />
+            </Field>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="bank-account-status">Status</Label>
@@ -213,11 +283,7 @@ export function BankAccountFormDialog({
           ) : null}
         </DialogBody>
         <DialogFooter>
-          <DialogClose
-            render={
-              <Button type="button" variant="outline" disabled={pending} />
-            }
-          >
+          <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
@@ -226,5 +292,29 @@ export function BankAccountFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function Field({
+  id,
+  label,
+  error,
+  children,
+}: {
+  id: string
+  label: string
+  error: string | null
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      {children}
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </div>
   )
 }

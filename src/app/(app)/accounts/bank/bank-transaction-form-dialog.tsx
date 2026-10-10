@@ -3,11 +3,13 @@
 import { useState, useTransition } from "react"
 
 import {
-  addBankTransaction,
-  updateBankTransaction,
-  type BankTransactionFieldErrors,
+  addBankMovement,
+  addBankTransfer,
+  updateBankMovement,
+  type BankMovementFieldErrors,
+  type BankTransferFieldErrors,
 } from "@/app/(app)/accounts/bank/actions"
-import { NameCombobox } from "@/components/name-combobox"
+import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -27,300 +28,301 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  bankDirectionLabel,
-  bankDirections,
-  isBankDirection,
-  type BankAccountRow,
-  type BankTransactionRow,
-} from "@/lib/bank"
-import type { NamedOption } from "@/lib/operational-expenses"
+import type { BankAccountChoice } from "@/lib/bank-account"
+import { defaultBankAccountId } from "@/lib/bank-account"
+import type { BankAccountRow, BankTransactionRow } from "@/lib/bank"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 
-const noneValue = "__none__"
+function accountChoices(accounts: readonly BankAccountRow[]): BankAccountChoice[] {
+  return accounts.map((account) => ({
+    id: account.id,
+    name: account.name,
+    isActive: account.isActive,
+  }))
+}
 
-export function BankTransactionFormDialog({
+export function BankMovementDialog({
   open,
   onOpenChange,
+  kind,
   transaction,
   accounts,
-  projects,
   paymentMethods,
   defaultAccountId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  kind: "deposit" | "withdrawal"
   transaction: BankTransactionRow | null
   accounts: readonly BankAccountRow[]
-  projects: readonly NamedOption[]
   paymentMethods: readonly string[]
   defaultAccountId: string | null
 }) {
+  const choices = accountChoices(accounts)
   const transactionId = transaction?.id ?? null
-  const [bankAccountId, setBankAccountId] = useState(
-    transaction?.bankAccountId ||
-      defaultAccountId ||
-      accounts.find((account) => account.isActive)?.id ||
-      "",
-  )
-  const [transactionDate, setTransactionDate] = useState(
-    transaction?.transactionDate || todayIsoDate(),
-  )
-  const [direction, setDirection] = useState(transaction?.direction ?? "outflow")
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : "")
+  const [date, setDate] = useState(transaction?.transactionDate || todayIsoDate())
+  const [bankAccountId, setBankAccountId] = useState(
+    defaultBankAccountId(choices, transaction?.bankAccountId || defaultAccountId || ""),
+  )
   const [paymentMethod, setPaymentMethod] = useState(transaction?.paymentMethod ?? "")
-  const [projectId, setProjectId] = useState(transaction?.projectId ?? "")
   const [notes, setNotes] = useState(transaction?.notes ?? "")
   const [attempted, setAttempted] = useState(false)
-  const [serverErrors, setServerErrors] = useState<BankTransactionFieldErrors>({})
+  const [serverErrors, setServerErrors] = useState<BankMovementFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
-
   const parsedAmount = parsePositiveAmount(amount)
-  const accountItems = accounts
-    .filter((account) => account.isActive || account.id === bankAccountId)
-    .map((account) => ({
-      value: account.id,
-      label: account.name || "—",
-    }))
-  const directionItems = bankDirections.map((value) => ({
-    value,
-    label: bankDirectionLabel(value),
-  }))
-  const projectItems = [
-    { value: noneValue, label: "None" },
-    ...projects.map((project) => ({
-      value: project.id,
-      label: project.name || "—",
-    })),
-  ]
-  const accountError =
-    serverErrors.bankAccountId ??
-    (attempted && !bankAccountId ? "Choose a bank account." : null)
-  const dateError =
-    serverErrors.transactionDate ??
-    (attempted && !isIsoDate(transactionDate) ? "Enter a date." : null)
-  const amountError =
-    serverErrors.amount ??
-    (attempted && parsedAmount === null
-      ? amount.trim()
-        ? "Enter an amount greater than 0."
-        : "Enter an amount."
-      : null)
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen && pending) {
-      return
-    }
-
-    onOpenChange(nextOpen)
-  }
+  const title = kind === "deposit" ? "Deposit" : "Withdrawal"
 
   function handleSubmit() {
     setAttempted(true)
     setServerErrors({})
     setFormError(null)
-
-    if (
-      !bankAccountId ||
-      !isIsoDate(transactionDate) ||
-      !isBankDirection(direction) ||
-      parsedAmount === null
-    ) {
+    if (!isIsoDate(date) || parsedAmount === null || !bankAccountId) {
+      if (!bankAccountId) {
+        setServerErrors({ bankAccountId: "Choose a bank account." })
+      }
       return
     }
 
     const input = {
+      kind,
       bankAccountId,
-      transactionDate,
-      direction,
+      transactionDate: date,
       amount: amount.trim(),
-      sourceKind: "other",
-      paymentMethod: paymentMethod.trim(),
-      projectId,
-      notes: notes.trim(),
+      paymentMethod,
+      notes,
     }
 
     startSubmit(async () => {
       try {
         const result = transactionId
-          ? await updateBankTransaction(transactionId, input)
-          : await addBankTransaction(input)
-
+          ? await updateBankMovement(transactionId, input)
+          : await addBankMovement(input)
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
           return
         }
-
         if (result.error) {
           setFormError(result.error)
           return
         }
-
         onOpenChange(false)
       } catch {
-        setFormError("Could not save this transaction.")
+        setFormError(`Could not save this ${title.toLowerCase()}.`)
       }
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="overflow-hidden sm:max-w-lg"
-        showCloseButton={!pending}
-      >
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && pending) return
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
-          <DialogTitle>
-            {transactionId ? "Edit Bank Transaction" : "Add Bank Transaction"}
-          </DialogTitle>
+          <DialogTitle>{transactionId ? `Edit ${title}` : title}</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <RecordPaymentFields
+            idPrefix={`bank-${kind}`}
+            amount={amount}
+            onAmountChange={setAmount}
+            date={date}
+            onDateChange={setDate}
+            bankAccountId={bankAccountId}
+            onBankAccountIdChange={setBankAccountId}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={setPaymentMethod}
+            notes={notes}
+            onNotesChange={setNotes}
+            accounts={choices}
+            paymentMethods={paymentMethods}
+            disabled={pending}
+            amountError={
+              serverErrors.amount ??
+              (attempted && parsedAmount === null
+                ? amount.trim()
+                  ? "Enter an amount greater than 0."
+                  : "Enter an amount."
+                : null)
+            }
+            dateError={
+              serverErrors.transactionDate ??
+              (attempted && !isIsoDate(date) ? "Enter a date." : null)
+            }
+            accountError={serverErrors.bankAccountId ?? null}
+          />
+          {formError ? (
+            <p role="alert" className="mt-4 text-sm text-destructive">
+              {formError}
+            </p>
+          ) : null}
+        </DialogBody>
+        <DialogFooter>
+          <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>
+            Cancel
+          </DialogClose>
+          <Button type="button" disabled={pending} onClick={handleSubmit}>
+            {pending ? "Saving…" : transactionId ? "Save Changes" : `Save ${title}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function BankTransferDialog({
+  open,
+  onOpenChange,
+  accounts,
+  paymentMethods,
+  defaultAccountId,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  accounts: readonly BankAccountRow[]
+  paymentMethods: readonly string[]
+  defaultAccountId: string | null
+}) {
+  const choices = accountChoices(accounts)
+  const [amount, setAmount] = useState("")
+  const [date, setDate] = useState(todayIsoDate())
+  const [fromAccountId, setFromAccountId] = useState(
+    defaultBankAccountId(choices, defaultAccountId ?? ""),
+  )
+  const [toAccountId, setToAccountId] = useState(
+    choices.find((account) => account.id !== fromAccountId)?.id ?? "",
+  )
+  const [paymentMethod, setPaymentMethod] = useState("")
+  const [notes, setNotes] = useState("")
+  const [attempted, setAttempted] = useState(false)
+  const [serverErrors, setServerErrors] = useState<BankTransferFieldErrors>({})
+  const [formError, setFormError] = useState<string | null>(null)
+  const [pending, startSubmit] = useTransition()
+  const parsedAmount = parsePositiveAmount(amount)
+  const items = choices.map((account) => ({
+    value: account.id,
+    label: account.name || "Account",
+  }))
+
+  function handleSubmit() {
+    setAttempted(true)
+    setServerErrors({})
+    setFormError(null)
+    if (
+      !isIsoDate(date) ||
+      parsedAmount === null ||
+      !fromAccountId ||
+      !toAccountId ||
+      fromAccountId === toAccountId
+    ) {
+      return
+    }
+
+    startSubmit(async () => {
+      try {
+        const result = await addBankTransfer({
+          fromAccountId,
+          toAccountId,
+          transactionDate: date,
+          amount: amount.trim(),
+          paymentMethod,
+          notes,
+        })
+        if (result.fieldErrors) {
+          setServerErrors(result.fieldErrors)
+          return
+        }
+        if (result.error) {
+          setFormError(result.error)
+          return
+        }
+        onOpenChange(false)
+      } catch {
+        setFormError("Could not save this transfer.")
+      }
+    })
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && pending) return
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+        <DialogHeader>
+          <DialogTitle>Transfer</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
+          <RecordPaymentFields
+            idPrefix="bank-transfer"
+            amount={amount}
+            onAmountChange={setAmount}
+            date={date}
+            onDateChange={setDate}
+            bankAccountId={fromAccountId}
+            onBankAccountIdChange={setFromAccountId}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={setPaymentMethod}
+            notes={notes}
+            onNotesChange={setNotes}
+            accounts={choices}
+            paymentMethods={paymentMethods}
+            disabled={pending}
+            amountError={
+              serverErrors.amount ??
+              (attempted && parsedAmount === null
+                ? amount.trim()
+                  ? "Enter an amount greater than 0."
+                  : "Enter an amount."
+                : null)
+            }
+            dateError={
+              serverErrors.transactionDate ??
+              (attempted && !isIsoDate(date) ? "Enter a date." : null)
+            }
+            accountError={serverErrors.fromAccountId ?? null}
+            accountLabel="From Account"
+          />
           <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-tx-account">Bank Account</Label>
+            <Label htmlFor="bank-transfer-to">To Account</Label>
             <Select
-              items={accountItems}
-              value={bankAccountId || null}
+              items={items}
+              value={toAccountId}
               disabled={pending}
-              onValueChange={(value) => setBankAccountId(value ?? "")}
+              onValueChange={(value) => setToAccountId(value ?? "")}
             >
-              <SelectTrigger
-                id="bank-tx-account"
-                className="w-full"
-                aria-invalid={Boolean(accountError)}
-              >
-                <SelectValue placeholder="Select An Account" />
+              <SelectTrigger id="bank-transfer-to" className="w-full">
+                <SelectValue placeholder="Choose An Account" />
               </SelectTrigger>
               <SelectContent align="start">
-                {accountItems.map((item) => (
+                {items.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
                     {item.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {accountError ? (
+            {serverErrors.toAccountId ||
+            (attempted && fromAccountId && fromAccountId === toAccountId) ? (
               <p role="alert" className="text-sm text-destructive">
-                {accountError}
+                {serverErrors.toAccountId ?? "Choose a different account."}
               </p>
             ) : null}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bank-tx-date">Date</Label>
-              <Input
-                id="bank-tx-date"
-                type="date"
-                value={transactionDate}
-                disabled={pending}
-                aria-invalid={Boolean(dateError)}
-                onChange={(event) => setTransactionDate(event.target.value)}
-              />
-              {dateError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dateError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bank-tx-amount">Amount</Label>
-              <Input
-                id="bank-tx-amount"
-                inputMode="decimal"
-                value={amount}
-                disabled={pending}
-                aria-invalid={Boolean(amountError)}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-              {amountError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {amountError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-tx-direction">Direction</Label>
-            <Select
-              items={directionItems}
-              value={direction}
-              disabled={pending}
-              onValueChange={(value) => {
-                if (value && isBankDirection(value)) {
-                  setDirection(value)
-                }
-              }}
-            >
-              <SelectTrigger id="bank-tx-direction" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {directionItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {choices.length < 2 ? (
             <p className="text-sm text-muted-foreground">
-              Client payments, vendor payments, and operational expenses are
-              recorded on those pages and show up here.
+              Add another bank account before transferring.
             </p>
-            {serverErrors.sourceKind ? (
-              <p role="alert" className="text-sm text-destructive">
-                {serverErrors.sourceKind}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-tx-method">Payment Method</Label>
-            <NameCombobox
-              id="bank-tx-method"
-              value={paymentMethod}
-              names={paymentMethods}
-              disabled={pending}
-              placeholder="Search Payment Methods"
-              onValueChange={setPaymentMethod}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-tx-project">Project</Label>
-            <Select
-              items={projectItems}
-              value={projectId || noneValue}
-              disabled={pending}
-              onValueChange={(value) =>
-                setProjectId(!value || value === noneValue ? "" : value)
-              }
-            >
-              <SelectTrigger id="bank-tx-project" className="w-full">
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {projectItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {serverErrors.projectId ? (
-              <p role="alert" className="text-sm text-destructive">
-                {serverErrors.projectId}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-tx-notes">Notes</Label>
-            <Textarea
-              id="bank-tx-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
+          ) : null}
           {formError ? (
             <p role="alert" className="text-sm text-destructive">
               {formError}
@@ -328,19 +330,15 @@ export function BankTransactionFormDialog({
           ) : null}
         </DialogBody>
         <DialogFooter>
-          <DialogClose
-            render={
-              <Button type="button" variant="outline" disabled={pending} />
-            }
-          >
+          <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>
             Cancel
           </DialogClose>
-          <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending
-              ? "Saving…"
-              : transactionId
-                ? "Save Changes"
-                : "Save Transaction"}
+          <Button
+            type="button"
+            disabled={pending || choices.length < 2}
+            onClick={handleSubmit}
+          >
+            {pending ? "Saving…" : "Save Transfer"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -14,6 +14,10 @@ export const bankSourceKinds = [
   "operational_expense",
   "vat_tax",
   "other",
+  "payroll",
+  "transfer",
+  "deposit",
+  "withdrawal",
 ] as const
 export type BankSourceKind = (typeof bankSourceKinds)[number]
 
@@ -41,6 +45,14 @@ export function bankSourceLabel(source: BankSourceKind): string {
       return "VAT / Tax"
     case "other":
       return "Other"
+    case "payroll":
+      return "Payroll"
+    case "transfer":
+      return "Transfer"
+    case "deposit":
+      return "Deposit"
+    case "withdrawal":
+      return "Withdrawal"
   }
 }
 
@@ -51,7 +63,12 @@ export function bankFlowLabel(direction: BankDirection): string {
 export type BankAccountRow = {
   id: string
   name: string
+  accountHolderName: string
+  accountNumber: string
   bankName: string
+  routingNumber: string
+  address: string
+  openingBalance: number
   currency: string
   isActive: boolean
   sortOrder: number
@@ -71,6 +88,7 @@ export type BankTransactionRow = {
   notes: string
   balance: number
   linked: boolean
+  transferId: string
 }
 
 export type AccountFilter = {
@@ -224,6 +242,7 @@ function compareTransactions(
 
 export function withRunningBalances(
   rows: readonly Omit<BankTransactionRow, "balance">[],
+  openingByAccount: ReadonlyMap<string, number>,
 ): BankTransactionRow[] {
   const groups = new Map<string, Omit<BankTransactionRow, "balance">[]>()
 
@@ -246,7 +265,8 @@ export function withRunningBalances(
       return left.id.localeCompare(right.id)
     })
 
-    let cents = 0
+    const accountId = ordered[0]?.bankAccountId ?? ""
+    let cents = moneyCents(openingByAccount.get(accountId) ?? 0)
     for (const row of ordered) {
       const signed =
         row.direction === "inflow"

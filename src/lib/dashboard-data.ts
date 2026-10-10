@@ -33,8 +33,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
     purchaseOrders,
     operational,
     taxes,
-    payrollLines,
-    payrollRuns,
+    bankAccounts,
     bank,
     receivables,
     payables,
@@ -117,28 +116,17 @@ async function loadDashboardInput(): Promise<DashboardInput> {
     fetchAllPages(
       (from, to) =>
         supabase
-          .from("payroll_lines")
-          .select(
-            "net_salary, basic_salary, allowance, bonus, deductions, payroll_run_id",
-          )
+          .from("bank_accounts")
+          .select("opening_balance")
           .order("id", { ascending: true })
           .range(from, to),
-      "Payroll list is larger than expected.",
-    ),
-    fetchAllPages(
-      (from, to) =>
-        supabase
-          .from("payroll_runs")
-          .select("id, period_year, period_month, paid_on")
-          .order("id", { ascending: true })
-          .range(from, to),
-      "Payroll run list is larger than expected.",
+      "Bank account list is larger than expected.",
     ),
     fetchAllPages(
       (from, to) =>
         supabase
           .from("bank_transactions")
-          .select("amount, direction, transaction_date")
+          .select("amount, direction, transaction_date, source_kind")
           .order("id", { ascending: true })
           .range(from, to),
       "Bank ledger is larger than expected.",
@@ -177,7 +165,6 @@ async function loadDashboardInput(): Promise<DashboardInput> {
   )
   const orderById = new Map(purchaseOrders.map((order) => [order.id, order]))
   const openByStatus = new Map(statuses.map((status) => [status.code, status.is_open]))
-  const payrollRunById = new Map(payrollRuns.map((run) => [run.id, run]))
   const backlogIds = new Set(
     backlogs.flatMap((row) => (row.project_id ? [row.project_id] : [])),
   )
@@ -221,18 +208,6 @@ async function loadDashboardInput(): Promise<DashboardInput> {
       date: payment.paid_on,
       amount: toNumber(payment.amount),
     })),
-    payroll: payrollLines.flatMap((line) => {
-      const run = payrollRunById.get(line.payroll_run_id)
-      if (!run) return []
-      const net =
-        line.net_salary == null
-          ? toNumber(line.basic_salary) +
-            toNumber(line.allowance) +
-            toNumber(line.bonus) -
-            toNumber(line.deductions)
-          : toNumber(line.net_salary)
-      return [{ date: payrollDate(run), amount: net }]
-    }),
     bank: bank.flatMap((transaction) => {
       if (transaction.direction !== "inflow" && transaction.direction !== "outflow") {
         return []
@@ -242,27 +217,20 @@ async function loadDashboardInput(): Promise<DashboardInput> {
           date: transaction.transaction_date,
           amount: toNumber(transaction.amount),
           direction: transaction.direction,
+          sourceKind: transaction.source_kind,
         },
       ]
     }),
+    openingBalance: bankAccounts.reduce(
+      (total, account) => total + toNumber(account.opening_balance),
+      0,
+    ),
     billed: receivables.reduce((total, row) => total + toNumber(row.billed_amount), 0),
     ledgerPaid: receivables.reduce((total, row) => total + toNumber(row.paid), 0),
     receivables: receivables.reduce((total, row) => total + toNumber(row.due), 0),
     payables: payables.reduce((total, row) => total + toNumber(row.pending_payable), 0),
     backlogCount: backlogIds.size,
   }
-}
-
-function payrollDate(run: {
-  period_year: number
-  period_month: number
-  paid_on: string | null
-}): string {
-  // Runs without a paid date are placed on the first day of the payroll period.
-  if (run.paid_on && /^\d{4}-\d{2}-\d{2}/.test(run.paid_on)) {
-    return run.paid_on.slice(0, 10)
-  }
-  return `${run.period_year}-${String(run.period_month).padStart(2, "0")}-01`
 }
 
 async function countClients(

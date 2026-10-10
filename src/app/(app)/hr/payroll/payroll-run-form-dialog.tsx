@@ -7,6 +7,7 @@ import {
   updatePayrollRun,
   type PayrollRunFieldErrors,
 } from "@/app/(app)/hr/payroll/actions"
+import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -27,6 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import type { BankAccountChoice } from "@/lib/bank-account"
+import { defaultBankAccountId } from "@/lib/bank-account"
 import type { PayrollRunRow } from "@/lib/payroll"
 
 const monthNames = [
@@ -59,11 +62,15 @@ export function PayrollRunFormDialog({
   open,
   onOpenChange,
   run,
+  bankAccounts,
+  paymentMethods,
   onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   run: PayrollRunRow | null
+  bankAccounts: readonly BankAccountChoice[]
+  paymentMethods: readonly string[]
   onCreated?: (id: string) => void
 }) {
   const runId = run?.id ?? null
@@ -77,6 +84,10 @@ export function PayrollRunFormDialog({
   const [paidOn, setPaidOn] = useState(run?.paidOn ?? "")
   const [status, setStatus] = useState(run?.status ?? "draft")
   const [notes, setNotes] = useState(run?.notes ?? "")
+  const [bankAccountId, setBankAccountId] = useState(
+    defaultBankAccountId(bankAccounts, run?.bankAccountId ?? ""),
+  )
+  const [paymentMethod, setPaymentMethod] = useState(run?.paymentMethod ?? "")
 
   const [fieldErrors, setFieldErrors] = useState<PayrollRunFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -97,6 +108,8 @@ export function PayrollRunFormDialog({
       paidOn: paidOn.trim(),
       status,
       notes: notes.trim(),
+      bankAccountId,
+      paymentMethod,
     }
 
     startSubmit(async () => {
@@ -214,6 +227,59 @@ export function PayrollRunFormDialog({
               </Select>
             </div>
           </div>
+          {status === "paid" ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="pr-account">Bank Account</Label>
+                {bankAccounts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Add a bank account in Settings before marking this run paid.
+                  </p>
+                ) : (
+                  <Select
+                    items={bankAccounts.map((account) => ({
+                      value: account.id,
+                      label: account.name || "Account",
+                    }))}
+                    value={bankAccountId}
+                    disabled={pending}
+                    onValueChange={(value) => setBankAccountId(value ?? "")}
+                  >
+                    <SelectTrigger
+                      id="pr-account"
+                      className="w-full"
+                      aria-invalid={Boolean(fieldErrors.bankAccountId)}
+                    >
+                      <SelectValue placeholder="Choose An Account" />
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      {bankAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name || "Account"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {fieldErrors.bankAccountId ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {fieldErrors.bankAccountId}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="pr-method">Payment Method</Label>
+                <NameCombobox
+                  id="pr-method"
+                  value={paymentMethod}
+                  names={paymentMethods}
+                  disabled={pending}
+                  placeholder="Search Payment Methods"
+                  onValueChange={setPaymentMethod}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="pr-notes">Notes</Label>
             <Textarea

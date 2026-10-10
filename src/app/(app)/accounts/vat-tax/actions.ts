@@ -55,12 +55,7 @@ export async function addVatTaxPayment(
   const { data: auth, error: authErr } = await supabase.auth.getUser()
   if (authErr || !auth.user) return { error: "You must be signed in." }
 
-  const bank = await resolveBankAccountId(
-    supabase,
-    input.bankAccountId,
-    input.newAccountName,
-    input.newBankName,
-  )
+  const bank = await resolveBankAccountId(supabase, input.bankAccountId, "", "")
   if (bank.fieldError) {
     return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
   }

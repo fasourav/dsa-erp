@@ -55,6 +55,7 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { formatIsoDate, formatMoney } from "@/lib/format"
+import type { BankAccountChoice } from "@/lib/bank-account"
 import type { PayrollRunRow } from "@/lib/payroll"
 
 const monthNames = [
@@ -114,9 +115,13 @@ function statusVariant(
 
 export function PayrollRunsTable({
   runs,
+  bankAccounts,
+  paymentMethods,
   error,
 }: {
   runs: PayrollRunRow[]
+  bankAccounts: BankAccountChoice[]
+  paymentMethods: string[]
   error: string | null
 }) {
   const [sort, setSort] = useState<SortState<ColId>>({
@@ -393,6 +398,8 @@ export function PayrollRunsTable({
         open={formOpen}
         onOpenChange={setFormOpen}
         run={formRun}
+        bankAccounts={bankAccounts}
+        paymentMethods={paymentMethods}
       />
 
       <AlertDialog

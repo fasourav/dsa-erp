@@ -9,9 +9,8 @@ import {
   updateClientPayment,
   type ClientPaymentFieldErrors,
 } from "@/app/(app)/accounts/invoices/actions"
-import { BankAccountField } from "@/components/bank-account-field"
+import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
-import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,9 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   defaultBankAccountId,
   type BankAccountChoice,
@@ -238,14 +234,12 @@ function PaymentForm({
   const [paidOn, setPaidOn] = useState(payment?.paidOn || todayIsoDate())
   const [amount, setAmount] = useState(payment ? String(payment.amount) : "")
   const [method, setMethod] = useState(payment?.method ?? "")
-  const [reference, setReference] = useState(payment?.reference ?? "")
+  const [reference] = useState(payment?.reference ?? "")
   const [notes, setNotes] = useState(payment?.notes ?? "")
-  const [remarks, setRemarks] = useState(payment?.remarks ?? "")
+  const [remarks] = useState(payment?.remarks ?? "")
   const [bankAccountId, setBankAccountId] = useState(
     defaultBankAccountId(bankAccounts, payment?.bankAccountId ?? ""),
   )
-  const [accountName, setAccountName] = useState("Operating account")
-  const [bankName, setBankName] = useState("")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ClientPaymentFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -263,24 +257,16 @@ function PaymentForm({
         : "Enter a payment amount."
       : null)
   const accountError = serverErrors.bankAccountId ?? null
-  const hasAccounts = bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
 
   function handleSubmit() {
     setAttempted(true)
     setServerErrors({})
     setFormError(null)
 
-    if (!isIsoDate(paidOn) || parsedAmount === null) {
-      return
-    }
-
-    if (hasAccounts && !bankAccountId) {
-      setServerErrors({ bankAccountId: "Choose a bank account." })
-      return
-    }
-
-    if (!hasAccounts && !accountName.trim()) {
-      setServerErrors({ bankAccountId: "Enter an account name." })
+    if (!isIsoDate(paidOn) || parsedAmount === null || !bankAccountId) {
+      if (!bankAccountId) {
+        setServerErrors({ bankAccountId: "Choose a bank account." })
+      }
       return
     }
 
@@ -292,8 +278,8 @@ function PaymentForm({
       notes: notes.trim(),
       remarks: remarks.trim(),
       bankAccountId,
-      newAccountName: hasAccounts ? "" : accountName.trim(),
-      newBankName: hasAccounts ? "" : bankName.trim(),
+      newAccountName: "",
+      newBankName: "",
     }
 
     startSubmit(async () => {
@@ -322,90 +308,25 @@ function PaymentForm({
   return (
     <>
       <DialogBody className="flex flex-col gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-payment-date">Payment Date</Label>
-            <Input
-              id="client-payment-date"
-              type="date"
-              value={paidOn}
-              disabled={pending}
-              aria-invalid={Boolean(dateError)}
-              onChange={(event) => setPaidOn(event.target.value)}
-            />
-            {dateError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {dateError}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-payment-amount">Amount</Label>
-            <Input
-              id="client-payment-amount"
-              inputMode="decimal"
-              value={amount}
-              disabled={pending}
-              aria-invalid={Boolean(amountError)}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-            {amountError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {amountError}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <BankAccountField
+        <RecordPaymentFields
           idPrefix="client-payment"
+          amount={amount}
+          onAmountChange={setAmount}
+          date={paidOn}
+          onDateChange={setPaidOn}
+          bankAccountId={bankAccountId}
+          onBankAccountIdChange={setBankAccountId}
+          paymentMethod={method}
+          onPaymentMethodChange={setMethod}
+          notes={notes}
+          onNotesChange={setNotes}
           accounts={bankAccounts}
-          accountId={bankAccountId}
-          onAccountIdChange={setBankAccountId}
-          accountName={accountName}
-          onAccountNameChange={setAccountName}
-          bankName={bankName}
-          onBankNameChange={setBankName}
+          paymentMethods={paymentMethods}
           disabled={pending}
-          error={accountError}
+          amountError={amountError}
+          dateError={dateError}
+          accountError={accountError}
         />
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="client-payment-method">Payment Method</Label>
-          <NameCombobox
-            id="client-payment-method"
-            value={method}
-            names={paymentMethods}
-            disabled={pending}
-            placeholder="Search Payment Methods"
-            onValueChange={setMethod}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="client-payment-reference">Reference</Label>
-          <Input
-            id="client-payment-reference"
-            value={reference}
-            disabled={pending}
-            onChange={(event) => setReference(event.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="client-payment-notes">Notes</Label>
-          <Textarea
-            id="client-payment-notes"
-            value={notes}
-            disabled={pending}
-            onChange={(event) => setNotes(event.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="client-payment-remarks">Remarks</Label>
-          <Textarea
-            id="client-payment-remarks"
-            value={remarks}
-            disabled={pending}
-            onChange={(event) => setRemarks(event.target.value)}
-          />
-        </div>
         {formError ? (
           <p role="alert" className="text-sm text-destructive">
             {formError}

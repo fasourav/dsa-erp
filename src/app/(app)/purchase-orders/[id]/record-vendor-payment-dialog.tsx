@@ -6,8 +6,7 @@ import {
   recordPurchaseOrderPayment,
   type RecordVendorPaymentFieldErrors,
 } from "@/app/(app)/purchase-orders/[id]/actions"
-import { BankAccountField } from "@/components/bank-account-field"
-import { NameCombobox } from "@/components/name-combobox"
+import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,9 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   defaultBankAccountId,
   type BankAccountChoice,
@@ -52,8 +48,6 @@ export function RecordVendorPaymentDialog({
   const [bankAccountId, setBankAccountId] = useState(
     defaultBankAccountId(bankAccounts, ""),
   )
-  const [accountName, setAccountName] = useState("Operating account")
-  const [bankName, setBankName] = useState("")
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<RecordVendorPaymentFieldErrors>(
     {},
@@ -73,8 +67,6 @@ export function RecordVendorPaymentDialog({
         : "Enter a payment amount."
       : null)
   const accountError = serverErrors.bankAccountId ?? null
-  const hasAccounts =
-    bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
@@ -89,17 +81,10 @@ export function RecordVendorPaymentDialog({
     setServerErrors({})
     setFormError(null)
 
-    if (!isIsoDate(paidOn) || parsedAmount === null) {
-      return
-    }
-
-    if (hasAccounts && !bankAccountId) {
-      setServerErrors({ bankAccountId: "Choose a bank account." })
-      return
-    }
-
-    if (!hasAccounts && !accountName.trim()) {
-      setServerErrors({ bankAccountId: "Enter an account name." })
+    if (!isIsoDate(paidOn) || parsedAmount === null || !bankAccountId) {
+      if (!bankAccountId) {
+        setServerErrors({ bankAccountId: "Choose a bank account." })
+      }
       return
     }
 
@@ -111,8 +96,8 @@ export function RecordVendorPaymentDialog({
           method: method.trim(),
           notes: notes.trim(),
           bankAccountId,
-          newAccountName: hasAccounts ? "" : accountName.trim(),
-          newBankName: hasAccounts ? "" : bankName.trim(),
+          newAccountName: "",
+          newBankName: "",
           separateInvoice: false,
           invoiceIssuedOn: "",
           invoiceDueOn: "",
@@ -155,72 +140,25 @@ export function RecordVendorPaymentDialog({
             Enter what you paid the vendor. It applies to the amount still due
             on this purchase order.
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="record-payment-amount">Amount</Label>
-              <Input
-                id="record-payment-amount"
-                inputMode="decimal"
-                value={amount}
-                disabled={pending}
-                aria-invalid={Boolean(amountError)}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-              {amountError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {amountError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="record-payment-date">Payment Date</Label>
-              <Input
-                id="record-payment-date"
-                type="date"
-                value={paidOn}
-                disabled={pending}
-                aria-invalid={Boolean(dateError)}
-                onChange={(event) => setPaidOn(event.target.value)}
-              />
-              {dateError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dateError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <BankAccountField
+          <RecordPaymentFields
             idPrefix="record-payment"
+            amount={amount}
+            onAmountChange={setAmount}
+            date={paidOn}
+            onDateChange={setPaidOn}
+            bankAccountId={bankAccountId}
+            onBankAccountIdChange={setBankAccountId}
+            paymentMethod={method}
+            onPaymentMethodChange={setMethod}
+            notes={notes}
+            onNotesChange={setNotes}
             accounts={bankAccounts}
-            accountId={bankAccountId}
-            onAccountIdChange={setBankAccountId}
-            accountName={accountName}
-            onAccountNameChange={setAccountName}
-            bankName={bankName}
-            onBankNameChange={setBankName}
+            paymentMethods={paymentMethods}
             disabled={pending}
-            error={accountError}
+            amountError={amountError}
+            dateError={dateError}
+            accountError={accountError}
           />
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="record-payment-method">Payment Method</Label>
-            <NameCombobox
-              id="record-payment-method"
-              value={method}
-              names={paymentMethods}
-              disabled={pending}
-              placeholder="Search Payment Methods"
-              onValueChange={setMethod}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="record-payment-notes">Notes</Label>
-            <Textarea
-              id="record-payment-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
           {formError ? (
             <p role="alert" className="text-sm text-destructive">
               {formError}
