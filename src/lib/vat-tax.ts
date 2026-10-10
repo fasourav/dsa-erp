@@ -11,6 +11,7 @@ export type VatTaxRow = {
   paymentMethod: string
   notes: string
   bankAccountId: string
+  collectedOnInvoice: boolean
 }
 
 export type ProjectOption = {
@@ -71,13 +72,16 @@ export async function getVatTaxPayments(): Promise<{
       (from, to) =>
         supabase
           .from("vat_tax_payments")
-          .select("id, bank_account_id")
+          .select("id, bank_account_id, collected_on_invoice")
           .order("id", { ascending: true })
           .range(from, to),
       "VAT tax list is larger than expected.",
     )
 
     const bankMap = new Map(rawVat.map((v) => [v.id, v.bank_account_id ?? ""]))
+    const collectedMap = new Map(
+      rawVat.map((v) => [v.id, v.collected_on_invoice === true]),
+    )
 
     const payments: VatTaxRow[] = vatRows.map((r) => ({
       id: r.vat_tax_id ?? "",
@@ -88,6 +92,7 @@ export async function getVatTaxPayments(): Promise<{
       paymentMethod: r.payment_method ?? "",
       notes: r.notes ?? "",
       bankAccountId: bankMap.get(r.vat_tax_id ?? "") ?? "",
+      collectedOnInvoice: collectedMap.get(r.vat_tax_id ?? "") ?? false,
     }))
 
     const projects: ProjectOption[] = projectRows.map((p) => ({

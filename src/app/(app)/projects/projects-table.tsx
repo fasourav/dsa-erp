@@ -282,14 +282,15 @@ function CellValue({
     case "name":
       return (
         <div className="flex w-full min-w-0 flex-col gap-1">
-          <span
+          <Link
+            href={`/projects/${project.id}`}
             className={cn(
-              "font-medium",
+              "font-medium underline underline-offset-4",
               !project.name && "text-muted-foreground",
             )}
           >
             {project.name || "—"}
-          </span>
+          </Link>
           {(project.clientName || project.projectType) ? (
             <span className="inline-flex w-fit max-w-full items-center rounded-md border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground opacity-90">
               <span className="truncate">

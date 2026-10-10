@@ -26,6 +26,7 @@ export type ClientInvoiceRow = {
   issuedOn: string
   dueOn: string
   amount: number
+  taxAmount: number
   status: ClientInvoiceStatus
   description: string
   paid: number

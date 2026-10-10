@@ -17,12 +17,13 @@ import {
 } from "@/lib/list-paging"
 import type { ProjectOption, VatTaxRow } from "@/lib/vat-tax"
 
-type ColId = "projectName" | "paidOn" | "amount" | "paymentMethod"
+type ColId = "projectName" | "paidOn" | "amount" | "kind" | "paymentMethod"
 
 const columns: readonly ListColumn<ColId>[] = [
   { id: "projectName", label: "Project", align: "left", locked: true },
   { id: "paidOn", label: "Paid On", align: "left", locked: true },
   { id: "amount", label: "Amount", align: "right", locked: true },
+  { id: "kind", label: "Kind", align: "left", locked: true },
   { id: "paymentMethod", label: "Payment Method", align: "left", locked: true },
 ]
 
@@ -38,6 +39,13 @@ function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
         break
       case "paidOn":
         cmp = a.paidOn.localeCompare(b.paidOn)
+        break
+      case "kind":
+        cmp = (a.collectedOnInvoice ? "Collected" : "Paid").localeCompare(
+          b.collectedOnInvoice ? "Collected" : "Paid",
+          "en",
+          { sensitivity: "base" },
+        )
         break
       case "amount":
         cmp = a.amount - b.amount
@@ -80,7 +88,14 @@ export function VatTaxTable({
     setFormOpen(true)
   }
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0)
+  const paidAmount = payments.reduce(
+    (sum, payment) => (payment.collectedOnInvoice ? sum : sum + payment.amount),
+    0,
+  )
+  const collectedAmount = payments.reduce(
+    (sum, payment) => (payment.collectedOnInvoice ? sum + payment.amount : sum),
+    0,
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -90,7 +105,10 @@ export function VatTaxTable({
             VAT / Tax Payments
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Total: {formatMoney(totalAmount)}
+            Tax Paid: {formatMoney(paidAmount)} · Collected On Invoices:{" "}
+            {formatMoney(collectedAmount)}. Collected tax is the VAT/Tax split
+            out of a client invoice. It stays inside that invoice and does not
+            leave the bank.
           </p>
         </div>
         <Button type="button" onClick={openForm}>
@@ -159,6 +177,8 @@ function Cell({
       )
     case "amount":
       return <span className="tabular-nums">{formatMoney(payment.amount)}</span>
+    case "kind":
+      return <span>{payment.collectedOnInvoice ? "Collected" : "Paid"}</span>
     case "paymentMethod":
       return payment.paymentMethod ? (
         <span>{payment.paymentMethod}</span>

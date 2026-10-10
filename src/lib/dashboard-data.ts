@@ -108,7 +108,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("vat_tax_payments")
-          .select("amount, paid_on")
+          .select("amount, paid_on, collected_on_invoice")
           .order("id", { ascending: true })
           .range(from, to),
       "Tax payment list is larger than expected.",
@@ -204,10 +204,16 @@ async function loadDashboardInput(): Promise<DashboardInput> {
       category: expense.category,
       projectLinked: expense.project_id != null,
     })),
-    taxes: taxes.map((payment) => ({
-      date: payment.paid_on,
-      amount: toNumber(payment.amount),
-    })),
+    taxes: taxes.flatMap((payment) =>
+      payment.collected_on_invoice
+        ? []
+        : [
+            {
+              date: payment.paid_on,
+              amount: toNumber(payment.amount),
+            },
+          ],
+    ),
     bank: bank.flatMap((transaction) => {
       if (transaction.direction !== "inflow" && transaction.direction !== "outflow") {
         return []

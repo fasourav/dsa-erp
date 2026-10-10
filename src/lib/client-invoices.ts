@@ -42,7 +42,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
   const supabase = await createClient()
 
   try {
-    const [projectRows, clientRows, invoiceRows, paymentRows, methodRows, bankAccounts] =
+    const [projectRows, clientRows, invoiceRows, paymentRows, taxRows, methodRows, bankAccounts] =
       await Promise.all([
         fetchAllPages(
           (from, to) =>
@@ -87,6 +87,16 @@ export async function getClientInvoices(projectId: string | null): Promise<{
         fetchAllPages(
           (from, to) =>
             supabase
+              .from("vat_tax_payments")
+              .select("client_invoice_id, amount")
+              .eq("collected_on_invoice", true)
+              .order("id", { ascending: true })
+              .range(from, to),
+          "VAT tax list is larger than expected.",
+        ),
+        fetchAllPages(
+          (from, to) =>
+            supabase
               .from("payment_methods")
               .select("name, sort_order")
               .order("sort_order", { ascending: true })
@@ -116,6 +126,18 @@ export async function getClientInvoices(projectId: string | null): Promise<{
 
     const projectsById = new Map(projects.map((project) => [project.id, project]))
     const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
+    const taxByInvoice = new Map<string, number>()
+    for (const row of taxRows) {
+      if (!row.client_invoice_id) continue
+      taxByInvoice.set(
+        row.client_invoice_id,
+        sumAmounts([
+          taxByInvoice.get(row.client_invoice_id) ?? 0,
+          toNumber(row.amount),
+        ]),
+      )
+    }
+
     const paymentsByInvoice = new Map<string, ClientPaymentRow[]>()
 
     for (const row of paymentRows) {
@@ -159,6 +181,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
           issuedOn: dateInputValue(row.issued_on),
           dueOn: row.due_on ? dateInputValue(row.due_on) : "",
           amount: toNumber(row.amount),
+          taxAmount: taxByInvoice.get(row.id) ?? 0,
           status: row.status,
           description: row.description ?? "",
           paid,
