@@ -311,7 +311,7 @@ export function BankPanel({
                 {transaction.linked ? (
                   <DropdownMenuItem disabled>
                     {transaction.sourceKind === "payroll"
-                      ? "From Payroll"
+                      ? "From Monthly Salary"
                       : "From A Payment Or Expense"}
                   </DropdownMenuItem>
                 ) : transaction.transferId ? (

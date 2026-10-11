@@ -52,13 +52,15 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { formatIsoDate } from "@/lib/format"
+import { formatIsoDate, formatTaka } from "@/lib/format"
 import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 
 type ColumnId =
   | "fullName"
   | "department"
   | "designation"
+  | "monthlySalary"
+  | "allowance"
   | "joiningDate"
   | "isActive"
 
@@ -66,6 +68,8 @@ const columns: { id: ColumnId; label: string; align: "left" | "right" }[] = [
   { id: "fullName", label: "Name", align: "left" },
   { id: "department", label: "Department", align: "left" },
   { id: "designation", label: "Designation", align: "left" },
+  { id: "monthlySalary", label: "Monthly Salary", align: "right" },
+  { id: "allowance", label: "Allowance", align: "right" },
   { id: "joiningDate", label: "Joining Date", align: "left" },
   { id: "isActive", label: "Status", align: "left" },
 ]
@@ -92,6 +96,12 @@ function sortEmployees(
         cmp = a.designation.localeCompare(b.designation, "en", {
           sensitivity: "base",
         })
+        break
+      case "monthlySalary":
+        cmp = a.monthlySalary - b.monthlySalary
+        break
+      case "allowance":
+        cmp = a.allowance - b.allowance
         break
       case "joiningDate":
         cmp = a.joiningDate.localeCompare(b.joiningDate)
@@ -190,12 +200,15 @@ export function EmployeesTable({
                           : "descending"
                         : "none"
                     }
+                    className={col.align === "right" ? "text-right" : ""}
                   >
-                    <div className="flex">
+                    <div
+                      className={`flex ${col.align === "right" ? "justify-end" : ""}`}
+                    >
                       <Button
                         type="button"
                         variant="ghost"
-                        className="-ml-2"
+                        className={col.align === "right" ? "-mr-2" : "-ml-2"}
                         onClick={() => {
                           setSort(toggleSort(sort, col.id))
                           setPage(1)
@@ -240,6 +253,12 @@ export function EmployeesTable({
                   </TableCell>
                   <TableCell>{emp.department || "—"}</TableCell>
                   <TableCell>{emp.designation || "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatTaka(emp.monthlySalary)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatTaka(emp.allowance)}
+                  </TableCell>
                   <TableCell>
                     {emp.joiningDate ? formatIsoDate(emp.joiningDate) : "—"}
                   </TableCell>

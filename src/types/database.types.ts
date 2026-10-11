@@ -590,6 +590,7 @@ export type Database = {
       }
       employees: {
         Row: {
+          allowance: number
           created_at: string
           department: string | null
           department_id: string | null
@@ -600,11 +601,13 @@ export type Database = {
           is_active: boolean
           joining_date: string
           leave_date: string | null
+          monthly_salary: number
           notes: string | null
           phone: string | null
           updated_at: string
         }
         Insert: {
+          allowance?: number
           created_at?: string
           department?: string | null
           department_id?: string | null
@@ -615,11 +618,13 @@ export type Database = {
           is_active?: boolean
           joining_date: string
           leave_date?: string | null
+          monthly_salary: number
           notes?: string | null
           phone?: string | null
           updated_at?: string
         }
         Update: {
+          allowance?: number
           created_at?: string
           department?: string | null
           department_id?: string | null
@@ -630,6 +635,7 @@ export type Database = {
           is_active?: boolean
           joining_date?: string
           leave_date?: string | null
+          monthly_salary?: number
           notes?: string | null
           phone?: string | null
           updated_at?: string

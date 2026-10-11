@@ -1,19 +1,21 @@
-import { PayrollRunsTable } from "@/app/(app)/hr/payroll/payroll-runs-table"
+import { PayrollTable } from "@/app/(app)/hr/payroll/payroll-table"
 import { listBankAccounts, listPaymentMethodNames } from "@/lib/bank-accounts"
-import { getPayrollRuns } from "@/lib/payroll"
+import { getPayrollPageData } from "@/lib/payroll"
 
 export const metadata = { title: "Payroll" }
 
 export default async function PayrollPage() {
-  const [{ runs, error }, bankAccounts, paymentMethods] = await Promise.all([
-    getPayrollRuns(),
-    listBankAccounts().catch(() => []),
-    listPaymentMethodNames().catch(() => []),
-  ])
+  const [{ salaries, employees, error }, bankAccounts, paymentMethods] =
+    await Promise.all([
+      getPayrollPageData(),
+      listBankAccounts().catch(() => []),
+      listPaymentMethodNames().catch(() => []),
+    ])
 
   return (
-    <PayrollRunsTable
-      runs={runs}
+    <PayrollTable
+      salaries={salaries}
+      employees={employees}
       bankAccounts={bankAccounts}
       paymentMethods={paymentMethods}
       error={error}

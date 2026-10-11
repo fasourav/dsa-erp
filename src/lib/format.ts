@@ -22,6 +22,14 @@ export function formatMoney(value: number): string {
   return moneyFormatter.format(value)
 }
 
+export function formatTaka(value: number): string {
+  if (value < 0) {
+    return `-৳${formatMoney(Math.abs(value))}`
+  }
+
+  return `৳${formatMoney(value)}`
+}
+
 export function formatCount(value: number): string {
   return String(Math.trunc(value))
 }

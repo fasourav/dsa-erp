@@ -1,51 +1,56 @@
 import { fetchAllPages } from "@/lib/fetch-pages"
+import { toNumber } from "@/lib/format"
+import { roundMoney } from "@/lib/payroll-month"
 import { createClient } from "@/lib/supabase/server"
 
-export type PayrollRunRow = {
+export type SalaryEmployee = {
+  id: string
+  fullName: string
+  monthlySalary: number
+  allowance: number
+  joiningDate: string
+  leaveDate: string
+  isActive: boolean
+}
+
+export type SalaryLine = {
+  id: string
+  employeeId: string
+  employeeName: string
+  salary: number
+  allowance: number
+  bonus: number
+  deduction: number
+  netPay: number
+}
+
+export type MonthlySalary = {
   id: string
   periodYear: number
   periodMonth: number
   paidOn: string
-  status: string
-  notes: string
   bankAccountId: string
   paymentMethod: string
+  lines: SalaryLine[]
   lineCount: number
-  totalNet: number
+  totalPaid: number
 }
 
-export type PayrollLineRow = {
-  id: string
-  payrollRunId: string
-  employeeId: string
-  employeeName: string
-  basicSalary: number
-  allowance: number
-  bonus: number
-  deductions: number
-  netSalary: number
-  notes: string
-}
-
-export type EmployeeOption = {
-  id: string
-  name: string
-}
-
-export async function getPayrollRuns(): Promise<{
-  runs: PayrollRunRow[]
+export async function getPayrollPageData(): Promise<{
+  salaries: MonthlySalary[]
+  employees: SalaryEmployee[]
   error: string | null
 }> {
   const supabase = await createClient()
 
   try {
-    const [runRows, lineRows] = await Promise.all([
+    const [runRows, lineRows, employees] = await Promise.all([
       fetchAllPages(
         (from, to) =>
           supabase
             .from("payroll_runs")
             .select(
-              "id, period_year, period_month, paid_on, status, notes, bank_account_id, payment_method",
+              "id, period_year, period_month, paid_on, bank_account_id, payment_method",
             )
             .order("period_year", { ascending: false })
             .order("period_month", { ascending: false })
@@ -56,140 +61,162 @@ export async function getPayrollRuns(): Promise<{
         (from, to) =>
           supabase
             .from("payroll_lines")
-            .select("payroll_run_id, net_salary")
+            .select(
+              "id, payroll_run_id, employee_id, basic_salary, allowance, bonus, deductions, net_salary",
+            )
             .order("id", { ascending: true })
             .range(from, to),
         "Payroll lines are larger than expected.",
       ),
+      listSalaryEmployees(),
     ])
 
-    const linesByRun = new Map<string, { count: number; total: number }>()
+    const names = new Map(employees.map((employee) => [employee.id, employee.fullName]))
+    const linesByRun = new Map<string, SalaryLine[]>()
+
     for (const line of lineRows) {
-      const existing = linesByRun.get(line.payroll_run_id) ?? {
-        count: 0,
-        total: 0,
-      }
-      existing.count += 1
-      existing.total += line.net_salary ?? 0
-      linesByRun.set(line.payroll_run_id, existing)
+      const rows = linesByRun.get(line.payroll_run_id) ?? []
+      rows.push(toSalaryLine(line, names.get(line.employee_id) ?? ""))
+      linesByRun.set(line.payroll_run_id, rows)
     }
 
-    const runs: PayrollRunRow[] = runRows.map((r) => {
-      const agg = linesByRun.get(r.id)
-      return {
-        id: r.id,
-        periodYear: r.period_year,
-        periodMonth: r.period_month,
-        paidOn: r.paid_on ?? "",
-        status: r.status ?? "draft",
-        notes: r.notes ?? "",
-        bankAccountId: r.bank_account_id ?? "",
-        paymentMethod: r.payment_method ?? "",
-        lineCount: agg?.count ?? 0,
-        totalNet: agg?.total ?? 0,
-      }
-    })
+    const salaries = runRows.map((run) =>
+      toMonthlySalary(run, linesByRun.get(run.id) ?? []),
+    )
 
-    return { runs, error: null }
+    return { salaries, employees, error: null }
   } catch {
-    return { runs: [], error: "Could not load payroll runs." }
+    return { salaries: [], employees: [], error: "Could not load payroll." }
   }
 }
 
-export async function getPayrollRunDetail(runId: string): Promise<{
-  run: PayrollRunRow | null
-  lines: PayrollLineRow[]
-  employees: EmployeeOption[]
+export async function getMonthlySalary(id: string): Promise<{
+  salary: MonthlySalary | null
+  employees: SalaryEmployee[]
   error: string | null
 }> {
   const supabase = await createClient()
 
   try {
-    const { data: runData, error: runError } = await supabase
+    const { data, error } = await supabase
       .from("payroll_runs")
       .select(
-        "id, period_year, period_month, paid_on, status, notes, bank_account_id, payment_method",
+        "id, period_year, period_month, paid_on, bank_account_id, payment_method",
       )
-      .eq("id", runId)
+      .eq("id", id)
       .limit(1)
 
-    if (runError) throw runError
-    if (!runData || runData.length === 0) {
-      return { run: null, lines: [], employees: [], error: "Payroll run not found." }
+    if (error) {
+      throw error
     }
 
-    const r = runData[0]
+    if (!data || data.length === 0) {
+      return { salary: null, employees: [], error: null }
+    }
 
-    const [lineRows, empRows] = await Promise.all([
+    const [lineRows, employees] = await Promise.all([
       fetchAllPages(
         (from, to) =>
           supabase
             .from("payroll_lines")
             .select(
-              "id, payroll_run_id, employee_id, basic_salary, allowance, bonus, deductions, net_salary, notes",
+              "id, payroll_run_id, employee_id, basic_salary, allowance, bonus, deductions, net_salary",
             )
-            .eq("payroll_run_id", runId)
-            .order("created_at", { ascending: true })
+            .eq("payroll_run_id", id)
+            .order("id", { ascending: true })
             .range(from, to),
         "Payroll lines are larger than expected.",
       ),
-      fetchAllPages(
-        (from, to) =>
-          supabase
-            .from("employees")
-            .select("id, full_name")
-            .eq("is_active", true)
-            .order("full_name", { ascending: true })
-            .range(from, to),
-        "Employee list is larger than expected.",
-      ),
+      listSalaryEmployees(),
     ])
 
-    const empMap = new Map(empRows.map((e) => [e.id, e.full_name]))
+    const names = new Map(employees.map((employee) => [employee.id, employee.fullName]))
+    const lines = lineRows.map((line) =>
+      toSalaryLine(line, names.get(line.employee_id) ?? ""),
+    )
 
-    let totalNet = 0
-    const lines: PayrollLineRow[] = lineRows.map((l) => {
-      const net = l.net_salary ?? 0
-      totalNet += net
-      return {
-        id: l.id,
-        payrollRunId: l.payroll_run_id,
-        employeeId: l.employee_id,
-        employeeName: empMap.get(l.employee_id) ?? "",
-        basicSalary: l.basic_salary ?? 0,
-        allowance: l.allowance ?? 0,
-        bonus: l.bonus ?? 0,
-        deductions: l.deductions ?? 0,
-        netSalary: net,
-        notes: l.notes ?? "",
-      }
-    })
-
-    const run: PayrollRunRow = {
-      id: r.id,
-      periodYear: r.period_year,
-      periodMonth: r.period_month,
-      paidOn: r.paid_on ?? "",
-      status: r.status ?? "draft",
-      notes: r.notes ?? "",
-      bankAccountId: r.bank_account_id ?? "",
-      paymentMethod: r.payment_method ?? "",
-      lineCount: lines.length,
-      totalNet,
-    }
-
-    const employees: EmployeeOption[] = empRows.map((e) => ({
-      id: e.id,
-      name: e.full_name,
-    }))
-
-    return { run, lines, employees, error: null }
+    return { salary: toMonthlySalary(data[0], lines), employees, error: null }
   } catch {
-    return {
-      run: null,
-      lines: [],
-      employees: [],
-      error: "Could not load payroll run.",
-    }
+    return { salary: null, employees: [], error: "Could not load this monthly salary." }
+  }
+}
+
+export async function listSalaryEmployees(): Promise<SalaryEmployee[]> {
+  const supabase = await createClient()
+  const rows = await fetchAllPages(
+    (from, to) =>
+      supabase
+        .from("employees")
+        .select(
+          "id, full_name, monthly_salary, allowance, joining_date, leave_date, is_active",
+        )
+        .order("full_name", { ascending: true })
+        .range(from, to),
+    "Employee list is larger than expected.",
+  )
+
+  return rows.map((row) => ({
+    id: row.id,
+    fullName: row.full_name?.trim() ?? "",
+    monthlySalary: toNumber(row.monthly_salary),
+    allowance: toNumber(row.allowance),
+    joiningDate: row.joining_date ?? "",
+    leaveDate: row.leave_date ?? "",
+    isActive: row.is_active ?? true,
+  }))
+}
+
+function toSalaryLine(
+  line: {
+    id: string
+    employee_id: string
+    basic_salary: number
+    allowance: number
+    bonus: number
+    deductions: number
+    net_salary: number | null
+  },
+  employeeName: string,
+): SalaryLine {
+  return {
+    id: line.id,
+    employeeId: line.employee_id,
+    employeeName,
+    salary: toNumber(line.basic_salary),
+    allowance: toNumber(line.allowance),
+    bonus: toNumber(line.bonus),
+    deduction: toNumber(line.deductions),
+    netPay: toNumber(line.net_salary),
+  }
+}
+
+function toMonthlySalary(
+  run: {
+    id: string
+    period_year: number
+    period_month: number
+    paid_on: string | null
+    bank_account_id: string | null
+    payment_method: string | null
+  },
+  lines: SalaryLine[],
+): MonthlySalary {
+  const sorted = [...lines].sort((left, right) =>
+    left.employeeName.localeCompare(right.employeeName, "en", {
+      sensitivity: "base",
+    }),
+  )
+  const totalPaid = roundMoney(sorted.reduce((sum, line) => sum + line.netPay, 0))
+
+  return {
+    id: run.id,
+    periodYear: run.period_year,
+    periodMonth: run.period_month,
+    paidOn: run.paid_on ?? "",
+    bankAccountId: run.bank_account_id ?? "",
+    paymentMethod: run.payment_method ?? "",
+    lines: sorted,
+    lineCount: sorted.length,
+    totalPaid,
   }
 }

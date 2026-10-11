@@ -1,4 +1,5 @@
 import { fetchAllPages } from "@/lib/fetch-pages"
+import { toNumber } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 
 export type EmployeeRow = {
@@ -6,6 +7,8 @@ export type EmployeeRow = {
   fullName: string
   department: string
   designation: string
+  monthlySalary: number
+  allowance: number
   joiningDate: string
   leaveDate: string
   isActive: boolean
@@ -34,7 +37,7 @@ export async function getEmployees(): Promise<{
         supabase
           .from("employees")
           .select(
-            "id, full_name, department, department_id, designation, email, phone, joining_date, leave_date, is_active, notes",
+            "id, full_name, department, department_id, designation, monthly_salary, allowance, email, phone, joining_date, leave_date, is_active, notes",
           )
           .order("full_name", { ascending: true })
           .range(from, to),
@@ -50,6 +53,8 @@ export async function getEmployees(): Promise<{
         fullName: row.full_name?.trim() ?? "",
         department: storedName || names.get(departmentId) || "",
         designation: row.designation?.trim() ?? "",
+        monthlySalary: toNumber(row.monthly_salary),
+        allowance: toNumber(row.allowance),
         joiningDate: row.joining_date ?? "",
         leaveDate: row.leave_date ?? "",
         isActive: row.is_active ?? true,

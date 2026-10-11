@@ -46,7 +46,7 @@ export function bankSourceLabel(source: BankSourceKind): string {
     case "other":
       return "Other"
     case "payroll":
-      return "Payroll"
+      return "Monthly Salary"
     case "transfer":
       return "Transfer"
     case "deposit":
