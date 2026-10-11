@@ -1,277 +1,238 @@
 "use client"
 
-import {
-  ArrowLeft,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { useMemo, useState, useTransition } from "react"
 
-import { deletePayrollLine } from "@/app/(app)/hr/payroll/actions"
-import { PayrollLineFormDialog } from "@/app/(app)/hr/payroll/[id]/payroll-line-form-dialog"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { deleteMonthlySalary } from "@/app/(app)/hr/payroll/actions"
+import { PaySalariesDialog } from "@/app/(app)/hr/payroll/pay-salaries-dialog"
+import { DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
+import type { BankAccountChoice } from "@/lib/bank-account"
+import { formatIsoDate, formatTaka } from "@/lib/format"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { formatMoney } from "@/lib/format"
-import type {
-  EmployeeOption,
-  PayrollLineRow,
-  PayrollRunRow,
-} from "@/lib/payroll"
+  paginateRows,
+  rangeLabel,
+  toggleSort,
+  type ListColumn,
+  type SortState,
+} from "@/lib/list-paging"
+import type { MonthlySalary, SalaryEmployee, SalaryLine } from "@/lib/payroll"
+import { monthLabel } from "@/lib/payroll-month"
 
-const monthNames = [
-  "",
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+type ColumnId = "employee" | "salary" | "allowance" | "bonus" | "deduction" | "netPay"
+
+const columns: readonly ListColumn<ColumnId>[] = [
+  { id: "employee", label: "Employee", align: "left", locked: true },
+  { id: "salary", label: "Salary", align: "right", locked: true },
+  { id: "allowance", label: "Allowance", align: "right", locked: true },
+  { id: "bonus", label: "Bonus", align: "right", locked: true },
+  { id: "deduction", label: "Deduction", align: "right", locked: true },
+  { id: "netPay", label: "Net Pay", align: "right", locked: true },
 ]
 
+function sortLines(rows: SalaryLine[], sort: SortState<ColumnId>): SalaryLine[] {
+  const sorted = [...rows]
+  sorted.sort((left, right) => {
+    let cmp = 0
+    switch (sort.key) {
+      case "employee":
+        cmp = left.employeeName.localeCompare(right.employeeName, "en", {
+          sensitivity: "base",
+        })
+        break
+      case "salary":
+        cmp = left.salary - right.salary
+        break
+      case "allowance":
+        cmp = left.allowance - right.allowance
+        break
+      case "bonus":
+        cmp = left.bonus - right.bonus
+        break
+      case "deduction":
+        cmp = left.deduction - right.deduction
+        break
+      case "netPay":
+        cmp = left.netPay - right.netPay
+        break
+    }
+    return sort.direction === "asc" ? cmp : -cmp
+  })
+  return sorted
+}
+
 export function PayrollDetailPanel({
-  run,
-  lines,
+  salary,
   employees,
+  bankAccounts,
+  paymentMethods,
 }: {
-  run: PayrollRunRow
-  lines: PayrollLineRow[]
-  employees: EmployeeOption[]
+  salary: MonthlySalary
+  employees: SalaryEmployee[]
+  bankAccounts: BankAccountChoice[]
+  paymentMethods: string[]
 }) {
+  const router = useRouter()
+  const [sort, setSort] = useState<SortState<ColumnId>>({
+    key: "employee",
+    direction: "asc",
+  })
+  const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
-  const [formLine, setFormLine] = useState<PayrollLineRow | null>(null)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [pendingDelete, setPendingDelete] = useState<PayrollLineRow | null>(
-    null,
-  )
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  function openForm(line: PayrollLineRow | null) {
-    setFormLine(line)
-    setFormSession((s) => s + 1)
-    setFormOpen(true)
-  }
-
-  function askDelete(line: PayrollLineRow) {
-    setDeleteError(null)
-    setPendingDelete(line)
-    setDeleteOpen(true)
-  }
+  const sorted = useMemo(
+    () => sortLines(salary.lines, sort),
+    [salary.lines, sort],
+  )
+  const pageResult = paginateRows(sorted, page)
+  const bankAccount =
+    bankAccounts.find((account) => account.id === salary.bankAccountId)?.name ??
+    ""
+  const label = monthLabel(salary.periodYear, salary.periodMonth)
 
   function confirmDelete() {
-    if (!pendingDelete) return
-    const id = pendingDelete.id
     startDelete(async () => {
       try {
-        const result = await deletePayrollLine(id)
+        const result = await deleteMonthlySalary(salary.id)
         if (result.error) {
           setDeleteError(result.error)
           return
         }
-        setDeleteOpen(false)
-        setDeleteError(null)
+        router.push("/hr/payroll")
       } catch {
-        setDeleteError("Could not delete this payroll line.")
+        setDeleteError("Could not delete this monthly salary.")
       }
     })
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             nativeButton={false}
-            render={<Link href="/hr/payroll" aria-label="Back to payroll" />}
+            render={<Link href="/hr/payroll" aria-label="Back to Payroll" />}
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-medium tracking-tight">
-              {monthNames[run.periodMonth]} {run.periodYear}
-            </h1>
-            <div className="mt-1 flex items-center gap-2">
-              <StatusBadge status={run.status} />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-medium tracking-tight">{label}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <StatusBadge status="paid" />
               <span className="text-sm text-muted-foreground">
-                {lines.length} Employee{lines.length !== 1 ? "s" : ""} ·
-                Total {formatMoney(run.totalNet)}
+                {salary.lineCount} Employees · Total {formatTaka(salary.totalPaid)}
               </span>
             </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Paid On {salary.paidOn ? formatIsoDate(salary.paidOn) : "—"}
+              {bankAccount ? ` · ${bankAccount}` : ""}
+              {salary.paymentMethod ? ` · ${salary.paymentMethod}` : ""}
+            </p>
           </div>
         </div>
-        <Button type="button" onClick={() => openForm(null)}>
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Add Payroll Line
-        </Button>
-      </div>
-
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <div className="overflow-x-auto">
-          <Table className="min-w-max">
-            <TableHeader>
-              <TableRow className="bg-muted hover:bg-muted">
-                <TableHead>Employee</TableHead>
-                <TableHead className="text-right">Basic Salary</TableHead>
-                <TableHead className="text-right">Allowance</TableHead>
-                <TableHead className="text-right">Bonus</TableHead>
-                <TableHead className="text-right">Deductions</TableHead>
-                <TableHead className="text-right">Net Salary</TableHead>
-                <TableHead className="sticky right-0 z-10 w-16 bg-muted">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lines.length === 0 ? (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell
-                    colSpan={7}
-                    className="py-8 text-center whitespace-normal text-muted-foreground"
-                  >
-                    No Payroll Lines Yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                lines.map((line) => (
-                  <TableRow key={line.id} className="group">
-                    <TableCell className="font-medium">
-                      {line.employeeName || "—"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(line.basicSalary)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(line.allowance)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(line.bonus)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(line.deductions)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">
-                      {formatMoney(line.netSalary)}
-                    </TableCell>
-                    <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Actions for ${line.employeeName}`}
-                            />
-                          }
-                        >
-                          <MoreHorizontal
-                            aria-hidden="true"
-                            className="size-4"
-                          />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem onClick={() => openForm(line)}>
-                            <Pencil aria-hidden="true" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => askDelete(line)}
-                          >
-                            <Trash2 aria-hidden="true" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setFormSession((current) => current + 1)
+              setFormOpen(true)
+            }}
+          >
+            <Pencil aria-hidden="true" data-icon="inline-start" />
+            Edit
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setDeleteError(null)
+              setDeleteOpen(true)
+            }}
+          >
+            <Trash2 aria-hidden="true" data-icon="inline-start" />
+            Delete
+          </Button>
         </div>
       </div>
 
-      <PayrollLineFormDialog
+      <DataList
+        columns={columns}
+        rows={pageResult.rows}
+        rowKey={(line) => line.id}
+        sort={sort}
+        onSort={(key) => {
+          setSort((current) => toggleSort(current, key))
+          setPage(1)
+        }}
+        visibility={{}}
+        error={null}
+        emptyMessage="No Employees On This Salary."
+        rangeText={rangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          pageResult.total,
+          "employee",
+          "employees",
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Salary slips pagination"
+        renderCell={(line, columnId) => <Cell line={line} columnId={columnId} />}
+      />
+
+      <PaySalariesDialog
         key={formSession}
         open={formOpen}
         onOpenChange={setFormOpen}
-        runId={run.id}
-        line={formLine}
+        salary={salary}
         employees={employees}
+        takenMonths={[]}
+        bankAccounts={bankAccounts}
+        paymentMethods={paymentMethods}
       />
-
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
-        onOpenChange={(open) => {
-          if (open || deleting) return
+        onOpenChange={(nextOpen) => {
+          if (nextOpen || deleting) return
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Payroll Line</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
-            <HoldToDeleteButton
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Monthly Salary"
+        error={deleteError}
+        pending={deleting}
+        confirmKey={salary.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
+}
+
+function Cell({ line, columnId }: { line: SalaryLine; columnId: ColumnId }) {
+  switch (columnId) {
+    case "employee":
+      return <span className="font-medium">{line.employeeName || "—"}</span>
+    case "salary":
+      return <span>{formatTaka(line.salary)}</span>
+    case "allowance":
+      return <span>{formatTaka(line.allowance)}</span>
+    case "bonus":
+      return <span>{formatTaka(line.bonus)}</span>
+    case "deduction":
+      return <span>{formatTaka(line.deduction)}</span>
+    case "netPay":
+      return <span className="font-medium">{formatTaka(line.netPay)}</span>
+  }
 }

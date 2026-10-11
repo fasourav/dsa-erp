@@ -3,13 +3,16 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
-import { isIsoDate } from "@/lib/project-validation"
+import { roundMoney } from "@/lib/payroll-month"
+import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
 export type EmployeeInput = {
   fullName: string
   departmentId: string
   designation: string
+  monthlySalary: string
+  allowance: string
   joiningDate: string
   leaveDate: string
   isActive: boolean
@@ -21,6 +24,8 @@ export type EmployeeInput = {
 export type EmployeeFieldErrors = {
   fullName?: string
   departmentId?: string
+  monthlySalary?: string
+  allowance?: string
   joiningDate?: string
   leaveDate?: string
   email?: string
@@ -74,7 +79,7 @@ export async function deleteEmployee(id: string): Promise<DeleteResult> {
     if (error.code === "23503" || /foreign key/i.test(error.message)) {
       return {
         error:
-          "This employee is linked to payroll records and cannot be deleted.",
+          "This employee is linked to monthly salary records and cannot be deleted.",
       }
     }
 
@@ -95,6 +100,8 @@ async function saveEmployee(
 ): Promise<EmployeeResult> {
   const fullName = input.fullName.trim()
   const designation = input.designation.trim()
+  const monthlySalary = parseProjectValue(input.monthlySalary)
+  const allowance = parseProjectValue(input.allowance.trim() || "0")
   const phone = input.phone.trim()
   const email = input.email.trim()
   const notes = input.notes.trim()
@@ -105,6 +112,16 @@ async function saveEmployee(
 
   if (!fullName) {
     fieldErrors.fullName = "Enter the employee name."
+  }
+
+  if (monthlySalary === null) {
+    fieldErrors.monthlySalary = input.monthlySalary.trim()
+      ? "Enter a valid monthly salary."
+      : "Enter a monthly salary."
+  }
+
+  if (allowance === null) {
+    fieldErrors.allowance = "Enter a valid allowance."
   }
 
   if (!isIsoDate(joiningDate)) {
@@ -144,6 +161,8 @@ async function saveEmployee(
     department: departmentName,
     department_id: departmentId || null,
     designation: designation || null,
+    monthly_salary: roundMoney(monthlySalary ?? 0),
+    allowance: roundMoney(allowance ?? 0),
     joining_date: joiningDate,
     leave_date: leaveDate || null,
     is_active: input.isActive,
@@ -173,5 +192,6 @@ async function saveEmployee(
   }
 
   revalidatePath("/hr/employees")
+  revalidatePath("/hr/payroll")
   return { error: null }
 }

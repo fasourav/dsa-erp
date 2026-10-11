@@ -542,8 +542,8 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
   for (const row of books.bank) {
     if (row.sourceKind !== "payroll" || row.direction !== "outflow") continue
     if (!inSpan(row.date, start, end)) continue
-    // Employee Salary is paid payroll on the bank ledger, plus operational
-    // rows categorized as salary. Draft and approved payroll is not included.
+    // Employee Salary is payroll outflows on the bank ledger, plus operational
+    // rows categorized as salary.
     totals.salary += row.amount
   }
 

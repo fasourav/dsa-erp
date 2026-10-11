@@ -47,6 +47,12 @@ export function EmployeeFormDialog({
     employee?.departmentId ?? "",
   )
   const [designation, setDesignation] = useState(employee?.designation ?? "")
+  const [monthlySalary, setMonthlySalary] = useState(
+    employee ? String(employee.monthlySalary) : "",
+  )
+  const [allowance, setAllowance] = useState(
+    employee ? String(employee.allowance) : "",
+  )
   const [joiningDate, setJoiningDate] = useState(employee?.joiningDate ?? "")
   const [leaveDate, setLeaveDate] = useState(employee?.leaveDate ?? "")
   const [isActive, setIsActive] = useState(employee?.isActive ?? true)
@@ -61,6 +67,10 @@ export function EmployeeFormDialog({
 
   const nameError =
     attempted && !fullName.trim() ? "Enter the employee name." : fieldErrors.fullName
+  const salaryError =
+    attempted && !monthlySalary.trim()
+      ? "Enter a monthly salary."
+      : fieldErrors.monthlySalary
   const joiningError =
     attempted && !joiningDate.trim()
       ? "Enter a joining date."
@@ -76,12 +86,14 @@ export function EmployeeFormDialog({
     setFormError(null)
     setFieldErrors({})
 
-    if (!fullName.trim() || !joiningDate.trim()) return
+    if (!fullName.trim() || !joiningDate.trim() || !monthlySalary.trim()) return
 
     const input = {
       fullName: fullName.trim(),
       departmentId,
       designation: designation.trim(),
+      monthlySalary: monthlySalary.trim(),
+      allowance: allowance.trim(),
       joiningDate: joiningDate.trim(),
       leaveDate: leaveDate.trim(),
       isActive,
@@ -187,6 +199,48 @@ export function EmployeeFormDialog({
                 disabled={pending}
                 onChange={(e) => setDesignation(e.target.value)}
               />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="emp-salary">Monthly Salary</Label>
+              <Input
+                id="emp-salary"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={monthlySalary}
+                disabled={pending}
+                aria-invalid={Boolean(salaryError)}
+                onChange={(e) => setMonthlySalary(e.target.value)}
+              />
+              {salaryError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {salaryError}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="emp-allowance">Allowance</Label>
+              <Input
+                id="emp-allowance"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={allowance}
+                disabled={pending}
+                placeholder="0"
+                aria-invalid={Boolean(fieldErrors.allowance)}
+                onChange={(e) => setAllowance(e.target.value)}
+              />
+              {fieldErrors.allowance ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {fieldErrors.allowance}
+                </p>
+              ) : null}
             </div>
           </div>
 
