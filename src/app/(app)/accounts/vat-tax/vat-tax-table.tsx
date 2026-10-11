@@ -1,11 +1,19 @@
 "use client"
 
-import { Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
+import { useMemo, useState, useTransition } from "react"
 
+import { deleteVatTaxPayment } from "@/app/(app)/accounts/vat-tax/actions"
 import { VatTaxFormDialog } from "@/app/(app)/accounts/vat-tax/vat-tax-form-dialog"
 import { DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
@@ -71,6 +79,10 @@ export function VatTaxTable({
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
   const [formSession, setFormSession] = useState(0)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<VatTaxRow | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortVat(payments, sort), [payments, sort])
   const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
@@ -78,6 +90,28 @@ export function VatTaxTable({
   function openForm() {
     setFormSession((s) => s + 1)
     setFormOpen(true)
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) {
+      return
+    }
+
+    const id = pendingDelete.id
+    startDelete(async () => {
+      try {
+        const result = await deleteVatTaxPayment(id)
+        if (result.error) {
+          setDeleteError(result.error)
+          return
+        }
+
+        setDeleteOpen(false)
+        setDeleteError(null)
+      } catch {
+        setDeleteError("Could not delete this payment.")
+      }
+    })
   }
 
   const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0)
@@ -125,6 +159,35 @@ export function VatTaxTable({
         renderCell={(payment, columnId) => (
           <Cell payment={payment} columnId={columnId} />
         )}
+        renderActions={(payment) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Actions for ${payment.projectName || "VAT tax payment"}`}
+                />
+              }
+            >
+              <MoreHorizontal aria-hidden="true" className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => {
+                  setDeleteError(null)
+                  setPendingDelete(payment)
+                  setDeleteOpen(true)
+                }}
+              >
+                <Trash2 aria-hidden="true" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       />
 
       <VatTaxFormDialog
@@ -134,6 +197,23 @@ export function VatTaxTable({
         projects={projects}
         bankAccounts={bankAccounts}
         paymentMethods={paymentMethods}
+      />
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen || deleting) {
+            return
+          }
+
+          setDeleteOpen(false)
+          setDeleteError(null)
+        }}
+        title="Delete VAT / Tax Payment"
+        itemName={pendingDelete?.projectName}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
       />
     </div>
   )

@@ -30,6 +30,10 @@ export type VatTaxResult = {
   fieldErrors?: VatTaxFieldErrors
 }
 
+export type DeleteResult = {
+  error: string | null
+}
+
 export async function addVatTaxPayment(
   input: VatTaxInput,
 ): Promise<VatTaxResult> {
@@ -84,10 +88,52 @@ export async function addVatTaxPayment(
   if (!data || data.length === 0)
     return { error: "Could not save this payment." }
 
+  revalidateVatTax()
+  return { error: null }
+}
+
+export async function deleteVatTaxPayment(id: string): Promise<DeleteResult> {
+  if (!isUuid(id)) {
+    return { error: "That payment could not be found." }
+  }
+
+  const supabase = await createClient()
+  const { data: auth, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !auth.user) return { error: "You must be signed in." }
+
+  const { data, error } = await supabase
+    .from("vat_tax_payments")
+    .delete()
+    .eq("id", id)
+    .select("id")
+
+  if (error) return { error: vatDeleteMessage(error) }
+  if (!data || data.length === 0) {
+    return { error: "That payment could not be found." }
+  }
+
+  revalidateVatTax()
+  return { error: null }
+}
+
+function vatDeleteMessage(error: { code?: string; message: string }): string {
+  const message = error.message ?? ""
+  if (error.code === "23503" || /foreign key/i.test(message)) {
+    return "This payment is used elsewhere and cannot be deleted."
+  }
+  if (
+    error.code === "42501" ||
+    /row-level security|permission denied/i.test(message)
+  ) {
+    return "You do not have permission to delete this payment."
+  }
+  return "Could not delete this payment."
+}
+
+function revalidateVatTax() {
   revalidatePath("/accounts/vat-tax")
   revalidatePath("/accounts/bank")
   revalidatePath("/dashboard")
   revalidatePath("/projects")
   revalidatePath("/projects/[id]", "page")
-  return { error: null }
 }
