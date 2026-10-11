@@ -285,7 +285,7 @@ function CellValue({
           <Link
             href={`/projects/${project.id}`}
             className={cn(
-              "font-medium underline underline-offset-4",
+              "cursor-pointer font-medium hover:text-primary",
               !project.name && "text-muted-foreground",
             )}
           >

@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 import { ProjectSummarySection } from "@/app/(app)/projects/[id]/project-summary-section"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatExactBdt } from "@/lib/dashboard-metrics"
@@ -33,14 +33,15 @@ export function ProjectDetailPanel({
           <ArrowLeft aria-hidden="true" className="size-4" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-medium tracking-tight">{project.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <Badge variant="outline" className="rounded-full capitalize">
-              {project.status}
-            </Badge>
-            {project.projectType ? <span>{project.projectType}</span> : null}
-            {project.currentPhase ? <span>· {project.currentPhase}</span> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-medium tracking-tight">{project.name}</h1>
+            <StatusBadge status={project.status} />
           </div>
+          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <span>{project.clientName || "—"}</span>
+            {project.projectType ? <span>{project.projectType}</span> : null}
+            {project.location ? <span>{project.location}</span> : null}
+          </p>
         </div>
       </div>
 
@@ -51,8 +52,9 @@ export function ProjectDetailPanel({
           <CardTitle>Project Info</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm">
-          <InfoRow label="Client" value={project.clientName} />
-          <InfoRow label="Location" value={project.location} />
+          {project.currentPhase ? (
+            <InfoRow label="Phase" value={project.currentPhase} />
+          ) : null}
           <InfoRow
             label="Started On"
             value={project.startedOn ? formatIsoDate(project.startedOn) : ""}
@@ -60,7 +62,6 @@ export function ProjectDetailPanel({
           {project.completedOn ? (
             <InfoRow label="Completed On" value={formatIsoDate(project.completedOn)} />
           ) : null}
-          <InfoRow label="Total Value" value={formatExactBdt(project.totalValue)} />
           {project.details ? (
             <div>
               <span className="text-muted-foreground">Details</span>

@@ -188,8 +188,8 @@ function DashboardSections({ model }: { model: DashboardModel }) {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <section>
+        <Card>
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-medium">Performance Metrics</h2>
@@ -257,32 +257,11 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-medium">Margin Analysis</h2>
-              <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-              <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
-              <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
-              <Ring
-                label="Gross Profit Margin"
-                value={snapshot.grossMargin}
-                tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
-              />
-              <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
-              <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
-              <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
-            </div>
-          </CardContent>
-        </Card>
       </section>
 
-      <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardContent className="flex flex-col gap-4">
+      <section className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-5">
+        <Card className="h-full xl:col-span-3">
+          <CardContent className="flex h-full flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-base font-medium">Weekly Financial Overview</h2>
@@ -340,8 +319,8 @@ function DashboardSections({ model }: { model: DashboardModel }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="flex flex-col gap-4">
+        <Card className="h-full xl:col-span-2">
+          <CardContent className="flex h-full flex-col gap-4">
             <h2 className="text-base font-medium">Expense Summary</h2>
             <div className="relative">
               <ExpenseDonut slices={slices} />
@@ -375,6 +354,29 @@ function DashboardSections({ model }: { model: DashboardModel }) {
                   </span>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card>
+          <CardContent className="flex flex-col gap-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base font-medium">Margin Analysis</h2>
+              <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+              <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
+              <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
+              <Ring
+                label="Gross Profit Margin"
+                value={snapshot.grossMargin}
+                tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
+              />
+              <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
+              <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
+              <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
             </div>
           </CardContent>
         </Card>

@@ -39,81 +39,39 @@ export function ProjectSummarySection({
   })
   const expenseTotal = slices.reduce((total, slice) => total + slice.amount, 0)
 
+  const margin = formatPercent(overview.grossProfit, overview.projectValue)
+
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Project Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Figure label="Project Value" value={formatExactBdt(overview.projectValue)} />
-            <Figure label="Total Invoiced" value={formatExactBdt(overview.totalInvoiced)} />
-            <Figure
-              label="Unbilled"
-              value={formatExactBdt(overview.unbilled)}
-              detail="Project value not yet invoiced"
-            />
-            <Figure
-              label="Received"
-              value={formatExactBdt(overview.received)}
-              detail="Client payments deposited to the bank"
-            />
-            <Figure
-              label="Receivable"
-              value={formatExactBdt(overview.receivable)}
-              detail="Open invoice balance"
-            />
-            <Figure
-              label="Contract Balance"
-              value={formatExactBdt(overview.contractBalance)}
-              detail="Project value still uncollected"
-            />
-            <Figure
-              label="Vendor PO Commitments"
-              value={formatExactBdt(overview.poCommitments)}
-            />
-            <Figure label="Paid to Vendors" value={formatExactBdt(overview.paidToVendors)} />
-            <Figure label="Payable" value={formatExactBdt(overview.payable)} />
-            <Figure
-              label="Project Operational Expense"
-              value={formatExactBdt(overview.operational)}
-            />
-            <Figure
-              label="Tax Paid"
-              value={formatExactBdt(overview.taxPaid)}
-              detail="VAT/Tax payments recorded for this project"
-            />
-            <Figure
-              label="Gross Profit"
-              value={formatExactBdt(overview.grossProfit)}
-              detail="Client payments minus vendor payments and project operational expense."
-            />
-            <Figure
-              label="Margin"
-              value={formatPercent(overview.grossProfit, overview.projectValue)}
-              detail="Gross profit over project value"
-            />
-            <Figure
-              label="Profit After Tax"
-              value={formatExactBdt(overview.profitAfterTax)}
-              detail="Gross profit minus tax paid from the bank"
-            />
-          </dl>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <Kpi label="Project Value" value={formatExactBdt(overview.projectValue)} />
+        <Kpi label="Received" value={formatExactBdt(overview.received)} />
+        <Kpi label="Receivable" value={formatExactBdt(overview.receivable)} />
+        <Kpi label="Paid To Vendors" value={formatExactBdt(overview.paidToVendors)} />
+        <Kpi label="Payable" value={formatExactBdt(overview.payable)} />
+        <Kpi
+          label="Gross Profit"
+          value={formatExactBdt(overview.grossProfit)}
+          detail={margin}
+        />
+      </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <Mini label="Unbilled" value={formatExactBdt(overview.unbilled)} />
+        <Mini label="Total Invoiced" value={formatExactBdt(overview.totalInvoiced)} />
+        <Mini label="Contract Balance" value={formatExactBdt(overview.contractBalance)} />
+        <Mini label="Total Vendor PO Value" value={formatExactBdt(overview.poCommitments)} />
+        <Mini label="Operational Expense" value={formatExactBdt(overview.operational)} />
+        <Mini label="Tax Paid" value={formatExactBdt(overview.taxPaid)} />
+        <Mini label="Profit After Tax" value={formatExactBdt(overview.profitAfterTax)} />
+      </div>
+
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>Income vs Expenses</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-              Income is client payments deposited to the bank. Expenses are
-              vendor payments, project operational expenses, and tax paid from
-              the bank.
-            </p>
+          <CardContent className="flex h-full flex-col gap-4">
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
               <LegendDot className="bg-chart-1" label="Revenue" />
               <LegendDot className="bg-chart-4" label="Total Expense" />
@@ -129,11 +87,11 @@ export function ProjectSummarySection({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>Expense Breakdown</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex h-full flex-col gap-4">
             {slices.length > 0 ? (
               <>
                 <div className="relative">
@@ -309,7 +267,7 @@ export function ProjectSummarySection({
   )
 }
 
-function Figure({
+function Kpi({
   label,
   value,
   detail,
@@ -319,10 +277,21 @@ function Figure({
   detail?: string
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="text-lg font-medium tabular-nums">{value}</dd>
-      {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
+    <Card>
+      <CardContent className="flex flex-col gap-1">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-lg font-medium tabular-nums">{value}</p>
+        {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-xl border border-border bg-muted/40 px-3 py-2">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium tabular-nums">{value}</p>
     </div>
   )
 }
