@@ -22,7 +22,7 @@ export function isIsoDate(value: string): boolean {
 }
 
 export function parseProjectValue(value: string): number | null {
-  const trimmed = value.trim()
+  const trimmed = value.trim().replace(/,/g, "")
   if (!trimmed) {
     return null
   }

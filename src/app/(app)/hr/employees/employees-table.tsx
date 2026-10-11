@@ -44,7 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import {
   paginateRows,
   paginationItems,
@@ -370,7 +370,7 @@ export function EmployeesTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Employee</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              Are You Sure To Delete This Item? Slide To Delete.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -382,7 +382,7 @@ export function EmployeesTable({
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}

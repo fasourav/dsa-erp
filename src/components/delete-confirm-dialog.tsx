@@ -1,6 +1,6 @@
 "use client"
 
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -34,7 +34,7 @@ export function DeleteConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure to delete this item? If yes, Press and Hold
+            Are You Sure To Delete This Item? Slide To Delete.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (
@@ -46,7 +46,7 @@ export function DeleteConfirmDialog({
           <AlertDialogCancel type="button" disabled={pending}>
             Cancel
           </AlertDialogCancel>
-          <HoldToDeleteButton
+          <SlideToDelete
             key={confirmKey}
             pending={pending}
             onConfirm={onConfirm}

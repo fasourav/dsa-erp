@@ -13,7 +13,7 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { deleteClient } from "@/app/(app)/clients/actions"
 import { ClientContactDialog } from "@/app/(app)/clients/client-contact-dialog"
 import { ClientFormDialog } from "@/app/(app)/clients/client-form-dialog"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -250,7 +250,7 @@ export function ClientsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Client</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              Are You Sure To Delete This Item? Slide To Delete.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -262,7 +262,7 @@ export function ClientsTable({
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}

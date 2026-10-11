@@ -14,7 +14,7 @@ import {
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
 import { DataList } from "@/components/data-list"
@@ -247,7 +247,7 @@ export function ProjectsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              Are You Sure To Delete This Item? Slide To Delete.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -259,7 +259,7 @@ export function ProjectsTable({
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}

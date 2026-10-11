@@ -12,7 +12,7 @@ import {
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
 import { OperationalPurchaseOrdersDialog } from "@/app/(app)/purchase-orders/operational-purchase-orders-dialog"
 import { PurchaseOrderFormDialog } from "@/app/(app)/purchase-orders/purchase-order-form-dialog"
@@ -399,7 +399,7 @@ export function PurchaseOrdersTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              Are You Sure To Delete This Item? Slide To Delete.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -411,7 +411,7 @@ export function PurchaseOrdersTable({
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}

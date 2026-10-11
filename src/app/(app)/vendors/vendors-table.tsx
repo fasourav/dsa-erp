@@ -12,7 +12,7 @@ import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVendor } from "@/app/(app)/vendors/actions"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { VendorContactDialog } from "@/app/(app)/vendors/vendor-contact-dialog"
 import { VendorFormDialog } from "@/app/(app)/vendors/vendor-form-dialog"
 import { MailtoLink, TelLink } from "@/components/contact-links"
@@ -358,7 +358,7 @@ export function VendorsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Vendor</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              Are You Sure To Delete This Item? Slide To Delete.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -370,7 +370,7 @@ export function VendorsTable({
             <AlertDialogCancel type="button" disabled={deleting}>
               Cancel
             </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}

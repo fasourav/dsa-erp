@@ -12,7 +12,7 @@ import { useMemo, useState, useTransition } from "react"
 
 import { deleteBudget } from "@/app/(app)/accounts/budgets/actions"
 import { BudgetFormDialog } from "@/app/(app)/accounts/budgets/budget-form-dialog"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -246,12 +246,12 @@ export function BudgetsTable({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Budget</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure to delete this item? If yes, Press and Hold</AlertDialogDescription>
+            <AlertDialogDescription>Are You Sure To Delete This Item? Slide To Delete.</AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? <p role="alert" className="text-sm text-destructive">{deleteError}</p> : null}
           <AlertDialogFooter>
             <AlertDialogCancel type="button" disabled={deleting}>Cancel</AlertDialogCancel>
-            <HoldToDeleteButton key={pendingDelete?.id} pending={deleting} onConfirm={confirmDelete} />
+            <SlideToDelete key={pendingDelete?.id} pending={deleting} onConfirm={confirmDelete} />
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
