@@ -80,14 +80,9 @@ export function ProjectSummarySection({
               value={formatExactBdt(overview.operational)}
             />
             <Figure
-              label="VAT/Tax On Invoices"
-              value={formatExactBdt(overview.collectedTax)}
-              detail="Split out of invoice totals. Still inside the amount the client pays."
-            />
-            <Figure
               label="Tax Paid"
               value={formatExactBdt(overview.taxPaid)}
-              detail="Paid from the bank. Separate from the invoice split."
+              detail="VAT/Tax payments recorded for this project"
             />
             <Figure
               label="Gross Profit"

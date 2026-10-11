@@ -89,7 +89,6 @@ export type ProjectOverview = {
   paidToVendors: number
   payable: number
   operational: number
-  collectedTax: number
   taxPaid: number
   grossProfit: number
   profitAfterTax: number
@@ -194,7 +193,7 @@ export async function getProjectDetail(projectId: string): Promise<{
         (from, to) =>
           supabase
             .from("vat_tax_payments")
-            .select("amount, paid_on, collected_on_invoice, client_invoice_id")
+            .select("amount, paid_on")
             .eq("project_id", projectId)
             .order("id", { ascending: true })
             .range(from, to),
@@ -353,8 +352,6 @@ function buildOverview(input: {
   taxes: {
     amount: number
     paid_on: string
-    collected_on_invoice: boolean
-    client_invoice_id: string | null
   }[]
 }): ProjectOverview {
   const activeInvoiceIds = new Set(
@@ -365,20 +362,7 @@ function buildOverview(input: {
   const payments = input.payments.filter((payment) =>
     activeInvoiceIds.has(payment.client_invoice_id),
   )
-  let collectedTax = 0
-  let taxPaid = 0
-
-  for (const tax of input.taxes) {
-    const amount = toNumber(tax.amount)
-    if (tax.collected_on_invoice) {
-      if (!tax.client_invoice_id || !activeInvoiceIds.has(tax.client_invoice_id)) {
-        continue
-      }
-      collectedTax = sumAmounts([collectedTax, amount])
-      continue
-    }
-    taxPaid = sumAmounts([taxPaid, amount])
-  }
+  const taxPaid = sumAmounts(input.taxes.map((tax) => toNumber(tax.amount)))
 
   const received = sumAmounts(payments.map((payment) => toNumber(payment.amount)))
   const totalInvoiced = sumAmounts(
@@ -448,7 +432,6 @@ function buildOverview(input: {
   }
 
   for (const tax of input.taxes) {
-    if (tax.collected_on_invoice) continue
     const amount = toNumber(tax.amount)
     addBucket("tax", amount)
     addMonth(tax.paid_on, "expense", amount)
@@ -481,7 +464,6 @@ function buildOverview(input: {
     paidToVendors,
     payable,
     operational,
-    collectedTax,
     taxPaid,
     grossProfit,
     profitAfterTax: sumAmounts([grossProfit, -taxPaid]),

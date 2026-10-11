@@ -70,7 +70,6 @@ export async function addVatTaxPayment(
     payment_method: paymentMethod || null,
     notes: notes || null,
     bank_account_id: bank.id,
-    collected_on_invoice: false,
   }
 
   const { data, error } = await supabase

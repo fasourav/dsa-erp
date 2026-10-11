@@ -21,8 +21,6 @@ export type ClientInvoiceInput = {
   issuedOn: string
   dueOn: string
   amount: string
-  includeVat: boolean
-  taxAmount: string
 }
 
 export type ClientInvoiceFieldErrors = {
@@ -30,7 +28,6 @@ export type ClientInvoiceFieldErrors = {
   issuedOn?: string
   dueOn?: string
   amount?: string
-  taxAmount?: string
 }
 
 export type ClientInvoiceResult = {
@@ -183,7 +180,6 @@ async function saveClientInvoice(
   const dueOn = input.dueOn.trim()
   const amount = parseProjectValue(input.amount)
   const fieldErrors: ClientInvoiceFieldErrors = {}
-  let tax = 0
 
   if (!isUuid(projectId)) {
     fieldErrors.projectId = "Choose a project."
@@ -201,17 +197,6 @@ async function saveClientInvoice(
     fieldErrors.amount = input.amount.trim()
       ? "Enter an amount greater than 0."
       : "Enter an amount."
-  } else if (input.includeVat) {
-    const parsedTax = parsePositiveAmount(input.taxAmount)
-    if (parsedTax === null) {
-      fieldErrors.taxAmount = input.taxAmount.trim()
-        ? "Enter a tax amount greater than 0."
-        : "Enter a tax amount."
-    } else if (moneyCents(parsedTax) > moneyCents(amount)) {
-      fieldErrors.taxAmount = "Tax amount cannot be more than the invoice total."
-    } else {
-      tax = parsedTax
-    }
   }
 
   if (Object.keys(fieldErrors).length > 0 || amount === null || amount <= 0) {
@@ -303,19 +288,8 @@ async function saveClientInvoice(
     return { error: "Could not save this invoice." }
   }
 
-  const invoiceId = data?.[0]?.id
-  if (!invoiceId) {
+  if (!data?.[0]?.id) {
     return { error: "That invoice could not be found." }
-  }
-
-  const vatError = await syncCollectedVat(supabase, invoiceId, {
-    include: input.includeVat && tax > 0,
-    amount: tax,
-    projectId: projectRow.id,
-    paidOn: issuedOn,
-  })
-  if (vatError) {
-    return { error: vatError }
   }
 
   revalidateClientMoney()
@@ -523,62 +497,6 @@ async function paidForInvoice(
       .filter((row) => row.id !== exceptPaymentId)
       .map((row) => Number(row.amount)),
   )
-}
-
-async function syncCollectedVat(
-  supabase: SupabaseClient,
-  invoiceId: string,
-  input: {
-    include: boolean
-    amount: number
-    projectId: string
-    paidOn: string
-  },
-): Promise<string | null> {
-  if (!input.include || input.amount <= 0) {
-    const deleted = await supabase
-      .from("vat_tax_payments")
-      .delete()
-      .eq("client_invoice_id", invoiceId)
-      .eq("collected_on_invoice", true)
-
-    return deleted.error ? "Could not update the linked VAT/Tax record." : null
-  }
-
-  const existing = await supabase
-    .from("vat_tax_payments")
-    .select("id")
-    .eq("client_invoice_id", invoiceId)
-    .limit(1)
-
-  if (existing.error) {
-    return "Could not update the linked VAT/Tax record."
-  }
-
-  const values = {
-    project_id: input.projectId,
-    paid_on: input.paidOn,
-    amount: input.amount,
-    payment_method: null,
-    notes: "Collected on client invoice",
-    bank_account_id: null,
-    client_invoice_id: invoiceId,
-    collected_on_invoice: true,
-  }
-
-  const saved = existing.data?.[0]
-    ? await supabase
-        .from("vat_tax_payments")
-        .update(values)
-        .eq("id", existing.data[0].id)
-        .select("id")
-    : await supabase.from("vat_tax_payments").insert(values).select("id")
-
-  if (saved.error || !saved.data?.length) {
-    return "Could not save the linked VAT/Tax record."
-  }
-
-  return null
 }
 
 async function authorizedClient(): Promise<{

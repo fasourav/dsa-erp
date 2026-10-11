@@ -1321,9 +1321,7 @@ export type Database = {
       vat_tax_payments: {
         Row: {
           amount: number
-          bank_account_id: string | null
-          client_invoice_id: string | null
-          collected_on_invoice: boolean
+          bank_account_id: string
           created_at: string
           id: string
           notes: string | null
@@ -1333,9 +1331,7 @@ export type Database = {
         }
         Insert: {
           amount: number
-          bank_account_id?: string | null
-          client_invoice_id?: string | null
-          collected_on_invoice?: boolean
+          bank_account_id: string
           created_at?: string
           id?: string
           notes?: string | null
@@ -1345,9 +1341,7 @@ export type Database = {
         }
         Update: {
           amount?: number
-          bank_account_id?: string | null
-          client_invoice_id?: string | null
-          collected_on_invoice?: boolean
+          bank_account_id?: string
           created_at?: string
           id?: string
           notes?: string | null
@@ -1356,13 +1350,6 @@ export type Database = {
           project_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "vat_tax_payments_client_invoice_id_fkey"
-            columns: ["client_invoice_id"]
-            isOneToOne: true
-            referencedRelation: "client_invoices"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "vat_tax_payments_bank_account_id_fkey"
             columns: ["bank_account_id"]
