@@ -12,6 +12,7 @@ import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVendor } from "@/app/(app)/vendors/actions"
+import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import { VendorContactDialog } from "@/app/(app)/vendors/vendor-contact-dialog"
 import { VendorFormDialog } from "@/app/(app)/vendors/vendor-form-dialog"
@@ -27,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -358,7 +358,7 @@ export function VendorsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Vendor</AlertDialogTitle>
             <AlertDialogDescription>
-              Are You Sure To Delete This Item? Slide To Delete.
+              {deleteConfirmMessage(pendingDelete?.displayName)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -367,13 +367,15 @@ export function VendorsTable({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
             <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

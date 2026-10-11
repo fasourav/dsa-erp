@@ -207,6 +207,7 @@ export function ClientPaymentsDialog({
           setDeleteError(null)
         }}
         title="Delete Client Payment"
+        itemName={pendingDelete?.reference}
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

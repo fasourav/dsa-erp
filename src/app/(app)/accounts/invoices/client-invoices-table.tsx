@@ -231,6 +231,7 @@ export function ClientInvoicesTable({
           setDeleteError(null)
         }}
         title="Delete Client Invoice"
+        itemName={pendingDelete?.projectName}
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

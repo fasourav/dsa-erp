@@ -248,6 +248,11 @@ export function PayrollTable({
           setDeleteError(null)
         }}
         title="Delete Monthly Salary"
+        itemName={
+          pendingDelete
+            ? monthLabel(pendingDelete.periodYear, pendingDelete.periodMonth)
+            : null
+        }
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

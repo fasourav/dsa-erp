@@ -13,10 +13,9 @@ import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-fo
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
 import { CatalogFormDialog } from "@/app/(app)/settings/catalog-form-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
-import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { DeleteConfirmDialog, deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -518,6 +517,7 @@ export function SettingsPanel({
           setBankDeleteError(null)
         }}
         title={`Delete ${pendingBankDelete?.name ?? "Bank Account"}`}
+        itemName={pendingBankDelete?.name}
         error={bankDeleteError}
         pending={deletingBank}
         confirmKey={pendingBankDelete?.id}
@@ -549,7 +549,7 @@ export function SettingsPanel({
               Delete {pendingDelete?.item.name ?? "item"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are You Sure To Delete This Item? Slide To Delete.
+              {deleteConfirmMessage(pendingDelete?.item.name)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -558,13 +558,15 @@ export function SettingsPanel({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
             <SlideToDelete
               key={pendingDelete?.item.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

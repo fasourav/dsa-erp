@@ -12,6 +12,7 @@ import {
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
+import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
 import { OperationalPurchaseOrdersDialog } from "@/app/(app)/purchase-orders/operational-purchase-orders-dialog"
@@ -28,7 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -399,7 +399,7 @@ export function PurchaseOrdersTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
             <AlertDialogDescription>
-              Are You Sure To Delete This Item? Slide To Delete.
+              {deleteConfirmMessage(pendingDelete?.vendorName)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -408,13 +408,15 @@ export function PurchaseOrdersTable({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
             <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

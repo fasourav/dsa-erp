@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -44,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import {
   paginateRows,
@@ -370,7 +370,7 @@ export function EmployeesTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Employee</AlertDialogTitle>
             <AlertDialogDescription>
-              Are You Sure To Delete This Item? Slide To Delete.
+              {deleteConfirmMessage(pendingDelete?.fullName)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -379,13 +379,15 @@ export function EmployeesTable({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
             <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

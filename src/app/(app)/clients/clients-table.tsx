@@ -13,6 +13,7 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { deleteClient } from "@/app/(app)/clients/actions"
 import { ClientContactDialog } from "@/app/(app)/clients/client-contact-dialog"
 import { ClientFormDialog } from "@/app/(app)/clients/client-form-dialog"
+import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -250,7 +250,7 @@ export function ClientsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Client</AlertDialogTitle>
             <AlertDialogDescription>
-              Are You Sure To Delete This Item? Slide To Delete.
+              {deleteConfirmMessage(pendingDelete?.displayName)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -259,13 +259,15 @@ export function ClientsTable({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
             <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

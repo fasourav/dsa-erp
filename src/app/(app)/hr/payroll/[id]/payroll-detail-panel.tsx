@@ -211,6 +211,7 @@ export function PayrollDetailPanel({
           setDeleteError(null)
         }}
         title="Delete Monthly Salary"
+        itemName={label}
         error={deleteError}
         pending={deleting}
         confirmKey={salary.id}

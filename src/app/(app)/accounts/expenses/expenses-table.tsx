@@ -192,6 +192,7 @@ export function ExpensesTable({
           setDeleteError(null)
         }}
         title="Delete Operational Expense"
+        itemName={pendingDelete?.vendorName || pendingDelete?.category}
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

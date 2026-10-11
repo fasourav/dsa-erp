@@ -408,6 +408,7 @@ export function BankPanel({
           setDeleteError(null)
         }}
         title="Delete Bank Transaction"
+        itemName={pendingDelete?.projectName}
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}
