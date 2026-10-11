@@ -1,9 +1,8 @@
 "use client"
 
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -11,10 +10,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+export function deleteConfirmMessage(name?: string | null): string {
+  const label = name?.replace(/\s+/g, " ").trim()
+  if (!label) {
+    return "This can't be undone."
+  }
+
+  return `${label} will be permanently deleted. This can't be undone.`
+}
+
 export function DeleteConfirmDialog({
   open,
   onOpenChange,
   title,
+  itemName,
   error,
   pending,
   confirmKey,
@@ -23,6 +32,7 @@ export function DeleteConfirmDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
+  itemName?: string | null
   error: string | null
   pending: boolean
   confirmKey: string | undefined
@@ -34,7 +44,7 @@ export function DeleteConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure to delete this item? If yes, Press and Hold
+            {deleteConfirmMessage(itemName)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (
@@ -43,13 +53,15 @@ export function DeleteConfirmDialog({
           </p>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel type="button" disabled={pending}>
-            Cancel
-          </AlertDialogCancel>
-          <HoldToDeleteButton
+          <SlideToDelete
             key={confirmKey}
             pending={pending}
             onConfirm={onConfirm}
+            onCancel={() => {
+              if (!pending) {
+                onOpenChange(false)
+              }
+            }}
           />
         </AlertDialogFooter>
       </AlertDialogContent>

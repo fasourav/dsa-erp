@@ -22,7 +22,7 @@ import {
   fiscalYearPeriod,
   taxYearPeriod,
 } from "@/lib/fiscal-year"
-import { formatIsoDate } from "@/lib/format"
+import { formatIsoDate, formatMoney } from "@/lib/format"
 import { dhakaToday } from "@/lib/dashboard-metrics"
 import { isIsoDate } from "@/lib/project-validation"
 
@@ -305,7 +305,7 @@ export function BankStatementView({
 }
 
 function money(value: number): string {
-  return value.toFixed(2)
+  return formatMoney(value)
 }
 
 function csvCell(value: string): string {

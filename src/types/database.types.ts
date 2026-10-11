@@ -550,16 +550,19 @@ export type Database = {
         Row: {
           fiscal_year_start_month: number
           id: boolean
+          launch_date: string
           updated_at: string
         }
         Insert: {
           fiscal_year_start_month?: number
           id?: boolean
+          launch_date?: string
           updated_at?: string
         }
         Update: {
           fiscal_year_start_month?: number
           id?: boolean
+          launch_date?: string
           updated_at?: string
         }
         Relationships: []

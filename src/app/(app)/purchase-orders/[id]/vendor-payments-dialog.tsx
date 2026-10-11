@@ -211,6 +211,7 @@ export function VendorPaymentsDialog({
           setDeleteError(null)
         }}
         title="Delete Vendor Payment"
+        itemName={pendingDelete?.reference}
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

@@ -14,7 +14,8 @@ import {
   deleteLead,
 } from "@/app/(app)/leads/actions"
 import { LeadFormDialog } from "@/app/(app)/leads/lead-form-dialog"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -238,11 +238,7 @@ export function LeadsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Lead?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently deletes{" "}
-              <span className="font-medium text-foreground">
-                {pendingDelete?.leadName || "this lead"}
-              </span>
-              . Hold Delete to confirm.
+              {deleteConfirmMessage(pendingDelete?.leadName)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -251,10 +247,13 @@ export function LeadsTable({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
-            <HoldToDeleteButton pending={deleting} onConfirm={confirmDelete} />
+            <SlideToDelete
+              pending={deleting}
+              onConfirm={confirmDelete}
+              onCancel={() => {
+                if (!deleting) setDeleteOpen(false)
+              }}
+            />
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

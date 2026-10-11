@@ -1,5 +1,8 @@
 // FY labels are calendar years. Nothing in the database stores a separate fiscal calendar.
 // Selected-year figures are year-to-date when that year is still in progress.
+// Operational tenure uses company_settings.launch_date.
+
+import { formatDayMonYear, formatGroupedAmount, formatGroupedCount, normalizeLaunchDate } from "@/lib/format"
 
 export const HIGH_VALUE_PROJECT_MIN = 50_000
 
@@ -111,6 +114,7 @@ export type DashboardInput = {
   receivables: number
   payables: number
   backlogCount: number
+  launchDate: string
 }
 
 export type DashboardModel = {
@@ -184,11 +188,7 @@ function signed(value: number): { sign: string; abs: number } {
 export function formatExactBdt(value: number): string {
   const { sign, abs } = signed(value)
   const hasFraction = Math.round(abs * 100) % 100 !== 0
-  const formatted = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: hasFraction ? 2 : 0,
-    maximumFractionDigits: 2,
-  }).format(abs)
-  return `${sign}৳${formatted}`
+  return `${sign}৳${formatGroupedAmount(abs, hasFraction ? 2 : 0)}`
 }
 
 export function formatCompactBdt(value: number): string {
@@ -312,15 +312,8 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     balanceAsOf(bank, previousMonthEnd(today), input.openingBalance),
   )
 
-  const launch = earliestDate([
-    ...input.projects.map((project) => project.startedOn),
-    ...revenue.map((row) => row.date),
-    ...vendorPayments.map((row) => row.date),
-    ...operational.map((row) => row.date),
-    ...taxes.map((row) => row.date),
-    ...bank.map((row) => row.date),
-  ], today)
-  const span = calendarSpan(launch, today)
+  const launch = normalizeLaunchDate(input.launchDate)
+  const span = calendarSpan(launch <= today ? launch : today, today)
   // Launch day itself is a full day of operation, so a same-day span still divides by 1.
   const operatingDays = Math.max(span.totalDays, 1)
 
@@ -403,9 +396,9 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
       backlog: input.backlogCount,
     },
     tenure: {
-      launchDateLabel: formatLongDate(launch),
+      launchDateLabel: formatDayMonYear(launch),
       inOperation: formatOperation(span),
-      daysLabel: `${span.totalDays.toLocaleString("en-US")} Days Since Launch`,
+      daysLabel: `${formatGroupedCount(span.totalDays)} Days Since Launch`,
       revenuePerDay: Math.round(allRevenue / operatingDays),
       netProfitPerDay: Math.round(allNet / operatingDays),
     },
@@ -784,15 +777,6 @@ function dated<T extends { date: string; amount: number }>(rows: T[]): T[] {
   })
 }
 
-function earliestDate(values: string[], today: string): string {
-  // No launch date is stored in settings. Use the earliest business date on file.
-  const dates = values
-    .map((value) => value.slice(0, 10))
-    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= today)
-  dates.sort()
-  return dates[0] ?? today
-}
-
 function calendarSpan(start: string, end: string) {
   const from = parseIsoDate(start)
   const to = parseIsoDate(end)
@@ -825,15 +809,6 @@ function formatOperation(span: { years: number; months: number; days: number }):
 
 function unit(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`
-}
-
-function formatLongDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(parseIsoDate(iso))
 }
 
 function formatRange(start: string, end: string): string {

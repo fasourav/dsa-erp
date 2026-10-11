@@ -14,7 +14,8 @@ import {
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
 import { DataList } from "@/components/data-list"
@@ -30,7 +31,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -247,7 +247,7 @@ export function ProjectsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              {deleteConfirmMessage(pendingDelete?.name)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -256,13 +256,15 @@ export function ProjectsTable({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

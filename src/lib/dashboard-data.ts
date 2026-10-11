@@ -1,5 +1,5 @@
 import { fetchAllPages } from "@/lib/fetch-pages"
-import { toNumber } from "@/lib/format"
+import { normalizeLaunchDate, toNumber } from "@/lib/format"
 import {
   buildDashboard,
   type DashboardInput,
@@ -38,6 +38,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
     receivables,
     payables,
     backlogs,
+    companySettings,
   ] = await Promise.all([
     fetchAllPages(
       (from, to) =>
@@ -158,6 +159,11 @@ async function loadDashboardInput(): Promise<DashboardInput> {
           .range(from, to),
       "Backlog list is larger than expected.",
     ),
+    supabase
+      .from("company_settings")
+      .select("launch_date")
+      .eq("id", true)
+      .maybeSingle(),
   ])
 
   const purchaseOrderByInvoice = new Map(
@@ -230,6 +236,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
     receivables: receivables.reduce((total, row) => total + toNumber(row.due), 0),
     payables: payables.reduce((total, row) => total + toNumber(row.pending_payable), 0),
     backlogCount: backlogIds.size,
+    launchDate: normalizeLaunchDate(companySettings.data?.launch_date),
   }
 }
 

@@ -304,6 +304,7 @@ export function VendorInvoicesPanel({
           setDeleteError(null)
         }}
         title="Delete Vendor Payment"
+        itemName={pendingDelete?.description}
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}

@@ -7,15 +7,15 @@ import {
   deleteBankAccount,
   setBankAccountActive,
   updateFiscalYearStartMonth,
+  updateLaunchDate,
 } from "@/app/(app)/accounts/bank/actions"
 import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
 import { CatalogFormDialog } from "@/app/(app)/settings/catalog-form-dialog"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
-import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { SlideToDelete } from "@/components/slide-to-delete"
+import { DeleteConfirmDialog, deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/card"
 import type { BankAccountRow } from "@/lib/bank"
 import { formatExactBdt } from "@/lib/dashboard-metrics"
+import { formatDayMonYear } from "@/lib/format"
 import { fiscalMonthOptions } from "@/lib/fiscal-year"
 import {
   catalogSingularTitle,
@@ -58,11 +60,13 @@ export function SettingsPanel({
   catalogs,
   bankAccounts,
   fiscalYearStartMonth,
+  launchDate: initialLaunchDate,
   error,
 }: {
   catalogs: CatalogList[]
   bankAccounts: BankAccountRow[]
   fiscalYearStartMonth: number
+  launchDate: string
   error: string | null
 }) {
   const [view, setView] = useState<ActiveView>({ kind: "home" })
@@ -95,6 +99,9 @@ export function SettingsPanel({
   const [fiscalMonth, setFiscalMonth] = useState(String(fiscalYearStartMonth))
   const [fiscalError, setFiscalError] = useState<string | null>(null)
   const [savingFiscal, startFiscalSave] = useTransition()
+  const [launchDate, setLaunchDate] = useState(initialLaunchDate)
+  const [launchError, setLaunchError] = useState<string | null>(null)
+  const [savingLaunch, startLaunchSave] = useTransition()
 
   const catalogByKey = useMemo(() => {
     return new Map(catalogs.map((catalog) => [catalog.key, catalog]))
@@ -213,6 +220,53 @@ export function SettingsPanel({
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
+      ) : null}
+
+      {view.kind === "home" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Operational Tenure</CardTitle>
+            <CardDescription>
+              Revenue Per Day And Net Profit Per Day Count From This Launch Date.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 sm:max-w-xs">
+              <Label htmlFor="launch-date">Launch Date</Label>
+              <Input
+                id="launch-date"
+                type="date"
+                value={launchDate}
+                disabled={savingLaunch}
+                onChange={(event) => setLaunchDate(event.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Shown As {formatDayMonYear(launchDate)}
+              </p>
+            </div>
+            {launchError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {launchError}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              className="w-full sm:w-fit"
+              disabled={savingLaunch}
+              onClick={() => {
+                setLaunchError(null)
+                startLaunchSave(async () => {
+                  const result = await updateLaunchDate(launchDate)
+                  if (result.error) {
+                    setLaunchError(result.error)
+                  }
+                })
+              }}
+            >
+              {savingLaunch ? "Saving…" : "Save Launch Date"}
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
 
       {view.kind === "home" ? (
@@ -463,6 +517,7 @@ export function SettingsPanel({
           setBankDeleteError(null)
         }}
         title={`Delete ${pendingBankDelete?.name ?? "Bank Account"}`}
+        itemName={pendingBankDelete?.name}
         error={bankDeleteError}
         pending={deletingBank}
         confirmKey={pendingBankDelete?.id}
@@ -494,7 +549,7 @@ export function SettingsPanel({
               Delete {pendingDelete?.item.name ?? "item"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              {deleteConfirmMessage(pendingDelete?.item.name)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -503,13 +558,15 @@ export function SettingsPanel({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.item.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

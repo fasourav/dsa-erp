@@ -13,7 +13,8 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { deleteClient } from "@/app/(app)/clients/actions"
 import { ClientContactDialog } from "@/app/(app)/clients/client-contact-dialog"
 import { ClientFormDialog } from "@/app/(app)/clients/client-form-dialog"
-import { HoldToDeleteButton } from "@/app/(app)/clients/hold-to-delete-button"
+import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
+import { SlideToDelete } from "@/components/slide-to-delete"
 import { DataList } from "@/components/data-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -250,7 +250,7 @@ export function ClientsTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Client</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure to delete this item? If yes, Press and Hold
+              {deleteConfirmMessage(pendingDelete?.displayName)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError ? (
@@ -259,13 +259,15 @@ export function ClientsTable({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button" disabled={deleting}>
-              Cancel
-            </AlertDialogCancel>
-            <HoldToDeleteButton
+            <SlideToDelete
               key={pendingDelete?.id}
               pending={deleting}
               onConfirm={confirmDelete}
+              onCancel={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteError(null)
+              }}
             />
           </AlertDialogFooter>
         </AlertDialogContent>

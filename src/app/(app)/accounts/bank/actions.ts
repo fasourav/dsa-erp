@@ -280,6 +280,36 @@ export async function updateFiscalYearStartMonth(
   return { error: null }
 }
 
+export async function updateLaunchDate(
+  launchDate: string,
+): Promise<{ error: string | null }> {
+  if (!isIsoDate(launchDate)) {
+    return { error: "Enter a valid launch date." }
+  }
+
+  const supabase = await createClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user) {
+    return { error: "You must be signed in." }
+  }
+
+  const { error } = await supabase
+    .from("company_settings")
+    .update({
+      launch_date: launchDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true)
+
+  if (error) {
+    return { error: "Could not save the launch date." }
+  }
+
+  revalidatePath("/settings")
+  revalidatePath("/dashboard")
+  return { error: null }
+}
+
 export async function deleteBankTransaction(id: string): Promise<DeleteResult> {
   if (!isUuid(id)) {
     return { error: "That transaction could not be found." }
