@@ -583,12 +583,12 @@ function grossBetween(
   )
 }
 
-function isMaterialWork(workType: string | null): boolean {
+export function isMaterialWork(workType: string | null): boolean {
   const name = (workType ?? "").toLowerCase()
   return name.includes("material") || name.includes("supply") || name.includes("goods")
 }
 
-function classifyOperational(
+export function classifyOperational(
   category: string,
 ): "admin" | "operational" | "marketing" | "salary" {
   const name = category.trim().toLowerCase()

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteBankTransaction } from "@/app/(app)/accounts/bank/actions"
+import { ManualEntriesDialog } from "@/app/(app)/accounts/bank/manual-entries-dialog"
 import { BankStatementView } from "@/app/(app)/accounts/bank/bank-statement-view"
 import {
   BankMovementDialog,
@@ -70,6 +71,7 @@ export function BankPanel({
   })
   const [page, setPage] = useState(1)
   const [movementOpen, setMovementOpen] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
   const [movementKind, setMovementKind] = useState<"deposit" | "withdrawal">("deposit")
   const [transferOpen, setTransferOpen] = useState(false)
   const [formTransaction, setFormTransaction] = useState<BankTransactionRow | null>(
@@ -91,6 +93,9 @@ export function BankPanel({
     [visibleTransactions, sort],
   )
   const pageResult = paginateRows(sorted, page)
+  const manualEntries = visibleTransactions.filter(
+    (row) => row.sourceKind === "deposit" || row.sourceKind === "withdrawal",
+  )
 
   function openMovement(
     kind: "deposit" | "withdrawal",
@@ -256,6 +261,9 @@ export function BankPanel({
               >
                 Statement
               </Button>
+              <Button type="button" variant="outline" onClick={() => setManualOpen(true)}>
+                Deposits & Withdrawals
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -350,6 +358,22 @@ export function BankPanel({
           )}
         />
       </section>
+      <ManualEntriesDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        rows={manualEntries}
+        onEdit={(transaction) =>
+          openMovement(
+            transaction.direction === "outflow" ? "withdrawal" : "deposit",
+            transaction,
+          )
+        }
+        onDelete={(transaction) => {
+          setDeleteError(null)
+          setPendingDelete(transaction)
+          setDeleteOpen(true)
+        }}
+      />
       <BankMovementDialog
         key={formSession}
         open={movementOpen}

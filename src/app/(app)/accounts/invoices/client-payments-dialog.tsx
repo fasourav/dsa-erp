@@ -30,7 +30,7 @@ import type {
   ClientPaymentRow,
 } from "@/lib/client-invoice-summary"
 import { formatIsoDate, formatMoney } from "@/lib/format"
-import { parsePositiveAmount } from "@/lib/payment-status"
+import { moneyCents, parsePositiveAmount, sumAmounts } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 
 export function ClientPaymentsDialog({
@@ -263,10 +263,20 @@ function PaymentForm({
     setServerErrors({})
     setFormError(null)
 
-    if (!isIsoDate(paidOn) || parsedAmount === null || !bankAccountId) {
+    if (
+      !isIsoDate(paidOn) ||
+      parsedAmount === null ||
+      !bankAccountId
+    ) {
       if (!bankAccountId) {
         setServerErrors({ bankAccountId: "Choose a bank account." })
       }
+      return
+    }
+
+    const room = sumAmounts([invoice.balance, payment?.amount ?? 0])
+    if (moneyCents(parsedAmount) > moneyCents(room)) {
+      setServerErrors({ amount: "Payment is more than the amount still due." })
       return
     }
 

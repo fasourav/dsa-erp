@@ -14,16 +14,13 @@ export default async function ProjectDetailPage({
   const { id } = await params
   if (!isUuid(id)) notFound()
 
-  const { project, financial, purchaseOrders, invoices, backlog } =
-    await getProjectDetail(id)
-  if (!project) notFound()
+  const { project, overview, backlog } = await getProjectDetail(id)
+  if (!project || !overview) notFound()
 
   return (
     <ProjectDetailPanel
       project={project}
-      financial={financial}
-      purchaseOrders={purchaseOrders}
-      invoices={invoices}
+      overview={overview}
       backlog={backlog}
     />
   )

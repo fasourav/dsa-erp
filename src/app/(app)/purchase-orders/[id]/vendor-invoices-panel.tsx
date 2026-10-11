@@ -8,10 +8,12 @@ import { deleteVendorInvoice } from "@/app/(app)/purchase-orders/[id]/actions"
 import { RecordVendorPaymentDialog } from "@/app/(app)/purchase-orders/[id]/record-vendor-payment-dialog"
 import { VendorInvoiceFormDialog } from "@/app/(app)/purchase-orders/[id]/vendor-invoice-form-dialog"
 import { VendorPaymentsDialog } from "@/app/(app)/purchase-orders/[id]/vendor-payments-dialog"
-import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
-import { StatusBadge } from "@/components/status-badge"
+import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
+import { formatExactBdt } from "@/lib/dashboard-metrics"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
@@ -27,8 +30,6 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { useColumnVisibility } from "@/lib/use-column-visibility"
-import { vendorInvoiceColumnStore } from "@/lib/vendor-invoice-column-store"
 import {
   sortVendorInvoices,
   vendorInvoiceColumns,
@@ -52,7 +53,6 @@ export function VendorInvoicesPanel({
   bankAccounts: BankAccountChoice[]
   error: string | null
 }) {
-  const visibility = useColumnVisibility(vendorInvoiceColumnStore)
   const [sort, setSort] = useState<SortState<VendorInvoiceColumnId>>({
     key: "issuedOn",
     direction: "desc",
@@ -110,43 +110,88 @@ export function VendorInvoicesPanel({
     })
   }
 
+  const paidShare =
+    purchaseOrder && purchaseOrder.totalValue > 0
+      ? Math.min(100, (purchaseOrder.totalPaid / purchaseOrder.totalValue) * 100)
+      : 0
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-medium tracking-tight">Vendor Payments</h1>
-          <p className="text-sm text-muted-foreground">
-            Pay the vendor against this purchase order.
-          </p>
-          {purchaseOrder ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {purchaseOrder.vendorName || "Vendor"} ·{" "}
-                {purchaseOrder.projectId
-                  ? purchaseOrder.projectName || "Project"
-                  : "Operational"}
-                {purchaseOrder.workType ? ` · ${purchaseOrder.workType}` : ""} ·{" "}
-                {purchaseOrder.issuedOn
-                  ? formatIsoDate(purchaseOrder.issuedOn)
-                  : "—"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Purchase Order Value {formatMoney(purchaseOrder.totalValue)} ·
-                Paid {formatMoney(purchaseOrder.totalPaid)} · Pending{" "}
-                {formatMoney(purchaseOrder.totalPending)}
-              </p>
-            </>
-          ) : null}
-          <p className="text-sm text-muted-foreground">
-            <Link
-              href="/purchase-orders"
-              className="font-medium text-foreground underline underline-offset-4"
-            >
-              All Purchase Orders
-            </Link>
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">Vendor Payments</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/purchase-orders"
+            className="text-sm font-medium underline underline-offset-4"
+          >
+            All Purchase Orders
+          </Link>
+          <Button
+            type="button"
+            disabled={!purchaseOrder}
+            onClick={() => {
+              setRecordSession((current) => current + 1)
+              setRecordOpen(true)
+            }}
+          >
+            <Wallet aria-hidden="true" data-icon="inline-start" />
+            Record Payment
+          </Button>
         </div>
       </div>
+
+      {purchaseOrder ? (
+        <Card>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-lg font-medium">
+                    {purchaseOrder.vendorName || "Vendor"}
+                  </p>
+                  {purchaseOrder.workType ? (
+                    <Badge variant="outline">{purchaseOrder.workType}</Badge>
+                  ) : null}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {purchaseOrder.projectId
+                    ? purchaseOrder.projectName || "Project"
+                    : "Operational"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {purchaseOrder.issuedOn
+                    ? formatIsoDate(purchaseOrder.issuedOn)
+                    : "—"}
+                </p>
+              </div>
+              <StatusBadge
+                status={paymentBalanceStatus(
+                  purchaseOrder.totalPaid,
+                  purchaseOrder.totalPending,
+                )}
+              />
+            </div>
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Stat label="Purchase Order Value" value={formatExactBdt(purchaseOrder.totalValue)} />
+              <Stat label="Paid" value={formatExactBdt(purchaseOrder.totalPaid)} />
+              <Stat label="Pending" value={formatExactBdt(purchaseOrder.totalPending)} />
+            </dl>
+            <div
+              className="h-2 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(paidShare)}
+              aria-label="Paid share of purchase order value"
+            >
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${paidShare}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <DataList
         columns={vendorInvoiceColumns}
@@ -157,7 +202,7 @@ export function VendorInvoicesPanel({
           setSort((current) => toggleSort(current, key))
           setPage(1)
         }}
-        visibility={visibility}
+        visibility={{}}
         error={error}
         emptyMessage="No Vendor Payments For This Purchase Order."
         rangeText={rangeLabel(
@@ -171,32 +216,6 @@ export function VendorInvoicesPanel({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Vendor Payments pagination"
-        toolbar={
-          <>
-            <CustomizeColumns
-              columns={vendorInvoiceColumns}
-              visibility={visibility}
-              onVisibilityChange={(id, checked) => {
-                if (id === "issuedOn") {
-                  return
-                }
-
-                vendorInvoiceColumnStore.write({ ...visibility, [id]: checked })
-              }}
-            />
-            <Button
-              type="button"
-              disabled={!purchaseOrder}
-              onClick={() => {
-                setRecordSession((current) => current + 1)
-                setRecordOpen(true)
-              }}
-            >
-              <Wallet aria-hidden="true" data-icon="inline-start" />
-              Record Payment
-            </Button>
-          </>
-        }
         renderCell={(invoice, columnId) => (
           <InvoiceCell invoice={invoice} columnId={columnId} />
         )}
@@ -290,6 +309,15 @@ export function VendorInvoicesPanel({
         confirmKey={pendingDelete?.id}
         onConfirm={confirmDelete}
       />
+    </div>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-xl border border-border bg-muted/40 px-3 py-3">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="text-lg font-medium tabular-nums">{value}</dd>
     </div>
   )
 }

@@ -208,10 +208,10 @@ export function Sparkline({
 export function WeeklyChart({ data }: { data: WeekChartRow[] }) {
   const ready = useChartReady()
   const reduced = useReducedMotion()
-  if (!ready) return <div className="h-64" />
+  if (!ready) return <div className="min-h-64 flex-1" />
 
   return (
-    <div className="h-64 min-w-0" aria-hidden="true">
+    <div className="min-h-64 min-w-0 flex-1" aria-hidden="true">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" vertical={false} />

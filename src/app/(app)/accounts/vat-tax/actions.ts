@@ -86,5 +86,8 @@ export async function addVatTaxPayment(
 
   revalidatePath("/accounts/vat-tax")
   revalidatePath("/accounts/bank")
+  revalidatePath("/dashboard")
+  revalidatePath("/projects")
+  revalidatePath("/projects/[id]", "page")
   return { error: null }
 }

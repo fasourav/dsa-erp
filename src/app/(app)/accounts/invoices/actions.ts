@@ -415,11 +415,17 @@ async function saveClientPayment(
     return { error: "Could not save this payment." }
   }
 
-  if (!data || data.length === 0) {
+  const paymentId = data?.[0]?.id
+  if (!paymentId) {
     return { error: "That payment could not be found." }
   }
 
-  const nextStatus = clientInvoiceStatusFromPayments(invoiceRow.amount, nextPaid)
+  const paid = await paidForInvoice(supabase, invoiceId, null)
+  if (paid === null) {
+    return { error: "Could not update the invoice status." }
+  }
+
+  const nextStatus = clientInvoiceStatusFromPayments(invoiceRow.amount, paid)
   const statusUpdate = await supabase
     .from("client_invoices")
     .update({ status: nextStatus })
@@ -487,9 +493,9 @@ async function paidForInvoice(
   }
 
   return sumAmounts(
-    data.flatMap((row) =>
-      row.id === exceptPaymentId ? [] : [Number(row.amount)],
-    ),
+    data
+      .filter((row) => row.id !== exceptPaymentId)
+      .map((row) => Number(row.amount)),
   )
 }
 
@@ -511,6 +517,10 @@ function revalidateClientMoney() {
   revalidatePath("/accounts/invoices")
   revalidatePath("/accounts/receivable")
   revalidatePath("/accounts/bank")
+  revalidatePath("/accounts/vat-tax")
   revalidatePath("/projects")
+  revalidatePath("/projects/[id]", "page")
   revalidatePath("/clients")
+  revalidatePath("/dashboard")
+  revalidatePath("/income")
 }
