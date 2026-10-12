@@ -63,7 +63,7 @@ const defaultSiteUrl = "https://dsa-erp.vercel.app"
 function inviteRedirect(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim()
   const site = (configured || defaultSiteUrl).replace(/\/+$/, "")
-  return `${site}/auth/confirm?next=/set-password`
+  return `${site}/auth/accept`
 }
 
 async function replacePermissions(
