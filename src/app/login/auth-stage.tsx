@@ -13,11 +13,21 @@ export function AuthStage({
   children: ReactNode
 }) {
   return (
-    <main className="flex min-h-svh overflow-x-hidden bg-background">
+    <main
+      className="flex min-h-svh overflow-x-hidden"
+      style={{
+        background:
+          "radial-gradient(ellipse at center, #243418 0%, #10180c 52%, #070c06 100%)",
+      }}
+    >
       <div className="m-auto px-3 py-6">
         <div className="relative aspect-square w-[min(760px,max(90vmin,34rem))]">
           <div
             className="absolute inset-0 overflow-hidden rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 42%, #4d6b30 0%, #243418 38%, #10180c 72%)",
+            }}
             aria-hidden="true"
           >
             <LoginBackground />

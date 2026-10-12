@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 const initialState: SignInState = {}
 
 const fieldClassName =
-  "h-11 rounded-xl border-border/80 bg-background/45 px-3.5 shadow-sm backdrop-blur-md backdrop-saturate-150"
+  "h-11 rounded-xl border-border/80 bg-background/80 px-3.5 text-foreground shadow-sm backdrop-blur-md backdrop-saturate-150"
 
 export function LoginForm({ notice }: { notice?: string }) {
   const [state, formAction, pending] = useActionState(signIn, initialState)

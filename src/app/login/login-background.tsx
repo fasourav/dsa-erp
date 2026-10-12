@@ -1,23 +1,30 @@
 "use client"
 
-import dynamic from "next/dynamic"
-import { Component, type ReactNode } from "react"
+import { Component, useEffect, useState, type ComponentType, type ReactNode } from "react"
 
 // Registry emerald clashes with the olive mark, so the swirl stays in the brand olive.
 const orbColors = ["#45632d", "#8fad55", "#10180c"]
 
-const Orb = dynamic(
-  () =>
-    import("@/components/Orb").catch((error: unknown) => {
-      console.error("Orb unavailable", error)
-      return {
-        default: function OrbFallback() {
-          return null
-        },
-      }
-    }),
-  { ssr: false, loading: () => null },
-)
+type OrbProps = {
+  colors?: string[]
+  hue?: number
+  backgroundColor?: string
+  size?: number
+  glow?: number
+  bleed?: number
+  wobble?: number
+  highlight?: number
+  trail?: number
+  tiltX?: number
+  tiltY?: number
+  speed?: number
+  hoverIntensity?: number
+  rotateOnHover?: boolean
+  forceHoverState?: boolean
+  followCursor?: boolean
+  clickPulse?: boolean
+  intro?: boolean
+}
 
 type BoundaryProps = {
   children: ReactNode
@@ -45,6 +52,26 @@ class OrbBoundary extends Component<BoundaryProps, BoundaryState> {
 }
 
 export function LoginBackground() {
+  const [Orb, setOrb] = useState<ComponentType<OrbProps> | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    // Import after mount. next/dynamic({ ssr: false }) bails out of SSR and
+    // Next's dev overlay treats that bailout as an issue, so the canvas never stays up.
+    void import("@/components/Orb")
+      .then((mod) => {
+        if (!cancelled) setOrb(() => mod.default as ComponentType<OrbProps>)
+      })
+      .catch((error: unknown) => {
+        console.error("Orb unavailable", error)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (!Orb) return null
+
   return (
     <OrbBoundary>
       <div className="h-full w-full">
@@ -52,7 +79,7 @@ export function LoginBackground() {
         <Orb
           colors={orbColors}
           hue={354}
-          backgroundColor="#635d5d"
+          backgroundColor="#10180c"
           size={0.96}
           glow={1.9}
           bleed={1}

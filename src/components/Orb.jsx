@@ -167,6 +167,7 @@ const compile = (gl, type, source) => {
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (gl.getShaderParameter(shader, gl.COMPILE_STATUS)) return shader;
+  console.error("Orb shader failed", gl.getShaderInfoLog(shader));
   gl.deleteShader(shader);
   return null;
 };
@@ -542,7 +543,8 @@ const Orb = ({
       gl.deleteProgram(program.program);
       gl.deleteBuffer(buffer);
       gl.deleteVertexArray(vao);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      // Do not call loseContext(). React Strict Mode remounts this effect in dev,
+      // and a lost context cannot be recreated on the same canvas, so the orb stays blank.
     };
   }, []);
 
