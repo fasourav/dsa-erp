@@ -40,6 +40,7 @@ export type YearSnapshot = {
   netDelta: number | null
   totalExpense: number
   expenseDelta: number | null
+  expenseSpark: ChartPoint[]
   outflow: number
   material: number
   subcontractor: number
@@ -481,6 +482,7 @@ function buildYear(year: number, today: string, currentYear: number, books: Book
       const monthRevenue = totalBetween(books.revenue, start, end)
       return monthRevenue - expenseTotals(books, start, end).total
     }),
+    expenseSpark: monthSpark(year, today, (start, end) => expenseTotals(books, start, end).total),
   }
 }
 
