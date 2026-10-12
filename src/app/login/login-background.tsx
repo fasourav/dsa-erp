@@ -1,20 +1,30 @@
 "use client"
 
-import dynamic from "next/dynamic"
-import { Component, type ReactNode } from "react"
+import { Component, useEffect, useState, type ComponentType, type ReactNode } from "react"
 
-const linesGradient = ["#06B6D4", "#3B82F6", "#4547f5"]
+// Registry emerald clashes with the olive mark, so the swirl stays in the brand olive.
+const orbColors = ["#45632d", "#8fad55", "#10180c"]
 
-const FloatingLines = dynamic(
-  () =>
-    import("@/components/FloatingLines").catch((error: unknown) => {
-      console.error("FloatingLines unavailable", error)
-      return { default: function FloatingLinesFallback() {
-        return null
-      } }
-    }),
-  { ssr: false, loading: () => null },
-)
+type OrbProps = {
+  colors?: string[]
+  hue?: number
+  backgroundColor?: string
+  size?: number
+  glow?: number
+  bleed?: number
+  wobble?: number
+  highlight?: number
+  trail?: number
+  tiltX?: number
+  tiltY?: number
+  speed?: number
+  hoverIntensity?: number
+  rotateOnHover?: boolean
+  forceHoverState?: boolean
+  followCursor?: boolean
+  clickPulse?: boolean
+  intro?: boolean
+}
 
 type BoundaryProps = {
   children: ReactNode
@@ -24,7 +34,7 @@ type BoundaryState = {
   failed: boolean
 }
 
-class FloatingLinesBoundary extends Component<BoundaryProps, BoundaryState> {
+class OrbBoundary extends Component<BoundaryProps, BoundaryState> {
   state: BoundaryState = { failed: false }
 
   static getDerivedStateFromError(): BoundaryState {
@@ -32,7 +42,7 @@ class FloatingLinesBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 
   componentDidCatch(error: unknown) {
-    console.error("FloatingLines unavailable", error)
+    console.error("Orb unavailable", error)
   }
 
   render() {
@@ -41,23 +51,52 @@ class FloatingLinesBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 }
 
-export function LoginBackground({ lightMode }: { lightMode: boolean }) {
+export function LoginBackground() {
+  const [Orb, setOrb] = useState<ComponentType<OrbProps> | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    // Import after mount. next/dynamic({ ssr: false }) bails out of SSR and
+    // Next's dev overlay treats that bailout as an issue, so the canvas never stays up.
+    void import("@/components/Orb")
+      .then((mod) => {
+        if (!cancelled) setOrb(() => mod.default as ComponentType<OrbProps>)
+      })
+      .catch((error: unknown) => {
+        console.error("Orb unavailable", error)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (!Orb) return null
+
   return (
-    <FloatingLinesBoundary>
+    <OrbBoundary>
       <div className="h-full w-full">
-        <FloatingLines
-          linesGradient={linesGradient}
-          animationSpeed={1}
-          interactive
-          bendRadius={5}
-          bendStrength={-0.2}
-          mouseDamping={0.09}
-          parallax
-          parallaxStrength={0.2}
-          mixBlendMode="normal"
-          lightMode={lightMode}
+        {/* Orb pauses motion, intro, and click pulse when prefers-reduced-motion is set. */}
+        <Orb
+          colors={orbColors}
+          hue={354}
+          backgroundColor="#10180c"
+          size={0.96}
+          glow={1.9}
+          bleed={1}
+          wobble={1}
+          highlight={1.2}
+          trail={1}
+          tiltX={0}
+          tiltY={0}
+          speed={1}
+          hoverIntensity={1}
+          rotateOnHover
+          forceHoverState
+          followCursor
+          clickPulse
+          intro
         />
       </div>
-    </FloatingLinesBoundary>
+    </OrbBoundary>
   )
 }

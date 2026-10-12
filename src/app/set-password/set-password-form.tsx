@@ -10,16 +10,18 @@ import { Label } from "@/components/ui/label"
 const initialState: SetPasswordState = {}
 
 const fieldClassName =
-  "h-11 rounded-xl border-border/80 bg-background/45 px-3.5 shadow-sm backdrop-blur-md backdrop-saturate-150"
+  "h-11 rounded-xl border-border/80 bg-background/80 px-3.5 text-foreground shadow-sm backdrop-blur-md backdrop-saturate-150"
 
 export function SetPasswordForm() {
   const [state, formAction, pending] = useActionState(setPassword, initialState)
   const invalid = state.error ? true : undefined
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form action={formAction} className="flex w-full flex-col gap-3 sm:gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password" className="text-primary-foreground">
+          Password
+        </Label>
         <Input
           id="password"
           name="password"
@@ -32,7 +34,9 @@ export function SetPasswordForm() {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="confirm-password">Confirm Password</Label>
+        <Label htmlFor="confirm-password" className="text-primary-foreground">
+          Confirm Password
+        </Label>
         <Input
           id="confirm-password"
           name="confirmPassword"
