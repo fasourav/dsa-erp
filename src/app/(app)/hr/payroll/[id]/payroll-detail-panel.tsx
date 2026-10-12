@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteMonthlySalary } from "@/app/(app)/hr/payroll/actions"
+import { useAccess, useCan } from "@/components/access-provider"
 import { PaySalariesDialog } from "@/app/(app)/hr/payroll/pay-salaries-dialog"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
@@ -76,6 +77,10 @@ export function PayrollDetailPanel({
   bankAccounts: BankAccountChoice[]
   paymentMethods: string[]
 }) {
+  const showFinancials = useAccess().showFinancials
+  const canEdit = useCan("payroll", "edit")
+  const canDelete = useCan("payroll", "delete")
+
   const router = useRouter()
   const [sort, setSort] = useState<SortState<ColumnId>>({
     key: "employee",
@@ -131,7 +136,8 @@ export function PayrollDetailPanel({
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <StatusBadge status="paid" />
               <span className="text-sm text-muted-foreground">
-                {salary.lineCount} Employees · Total {formatTaka(salary.totalPaid)}
+                {salary.lineCount} Employees · Total{" "}
+                {showFinancials ? formatTaka(salary.totalPaid) : "Hidden"}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -142,7 +148,7 @@ export function PayrollDetailPanel({
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
+          {canEdit ? (<Button
             type="button"
             variant="outline"
             onClick={() => {
@@ -152,8 +158,8 @@ export function PayrollDetailPanel({
           >
             <Pencil aria-hidden="true" data-icon="inline-start" />
             Edit
-          </Button>
-          <Button
+          </Button>) : null}
+          {canDelete ? (<Button
             type="button"
             variant="outline"
             onClick={() => {
@@ -163,7 +169,7 @@ export function PayrollDetailPanel({
           >
             <Trash2 aria-hidden="true" data-icon="inline-start" />
             Delete
-          </Button>
+          </Button>) : null}
         </div>
       </div>
 
@@ -222,18 +228,20 @@ export function PayrollDetailPanel({
 }
 
 function Cell({ line, columnId }: { line: SalaryLine; columnId: ColumnId }) {
+  const showFinancials = useAccess().showFinancials
+  const money = (value: number) => (showFinancials ? formatTaka(value) : "Hidden")
   switch (columnId) {
     case "employee":
       return <span className="font-medium">{line.employeeName || "—"}</span>
     case "salary":
-      return <span>{formatTaka(line.salary)}</span>
+      return <span>{money(line.salary)}</span>
     case "allowance":
-      return <span>{formatTaka(line.allowance)}</span>
+      return <span>{money(line.allowance)}</span>
     case "bonus":
-      return <span>{formatTaka(line.bonus)}</span>
+      return <span>{money(line.bonus)}</span>
     case "deduction":
-      return <span>{formatTaka(line.deduction)}</span>
+      return <span>{money(line.deduction)}</span>
     case "netPay":
-      return <span className="font-medium">{formatTaka(line.netPay)}</span>
+      return <span className="font-medium">{money(line.netPay)}</span>
   }
 }

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteMonthlySalary } from "@/app/(app)/hr/payroll/actions"
+import { useAccess, useCan } from "@/components/access-provider"
 import { PaySalariesDialog } from "@/app/(app)/hr/payroll/pay-salaries-dialog"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
@@ -98,6 +99,10 @@ export function PayrollTable({
   paymentMethods: string[]
   error: string | null
 }) {
+  const canAdd = useCan("payroll", "add")
+  const canEdit = useCan("payroll", "edit")
+  const canDelete = useCan("payroll", "delete")
+
   const [sort, setSort] = useState<SortState<ColumnId>>({
     key: "month",
     direction: "desc",
@@ -176,10 +181,12 @@ export function PayrollTable({
         onPageChange={setPage}
         pagingLabel="Payroll pagination"
         toolbar={
-          <Button type="button" onClick={() => openForm(null)}>
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Pay Salaries
-          </Button>
+          canAdd ? (
+            <Button type="button" onClick={() => openForm(null)}>
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Pay Salaries
+            </Button>
+          ) : null
         }
         renderCell={(salary, columnId) => (
           <Cell
@@ -210,12 +217,12 @@ export function PayrollTable({
                 <Eye aria-hidden="true" />
                 View
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openForm(salary)}>
+              {canEdit ? (<DropdownMenuItem onClick={() => openForm(salary)}>
                 <Pencil aria-hidden="true" />
                 Edit
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {canDelete ? (<DropdownMenuItem
                 variant="destructive"
                 onClick={() => {
                   setDeleteError(null)
@@ -225,7 +232,7 @@ export function PayrollTable({
               >
                 <Trash2 aria-hidden="true" />
                 Delete
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -271,6 +278,7 @@ function Cell({
   columnId: ColumnId
   bankAccount: string
 }) {
+  const showFinancials = useAccess().showFinancials
   switch (columnId) {
     case "month":
       return (
@@ -284,7 +292,7 @@ function Cell({
     case "employees":
       return <span>{salary.lineCount}</span>
     case "totalPaid":
-      return <span>{formatTaka(salary.totalPaid)}</span>
+      return <span>{showFinancials ? formatTaka(salary.totalPaid) : "Hidden"}</span>
     case "paidOn":
       return salary.paidOn ? (
         <span>{formatIsoDate(salary.paidOn)}</span>

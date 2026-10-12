@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { denyUnless } from "@/lib/permissions"
 import {
   isIsoDate,
   parseProjectValue,
@@ -39,6 +40,8 @@ export type DeletePurchaseOrderResult = {
 export async function addPurchaseOrder(
   input: PurchaseOrderFormInput,
 ): Promise<PurchaseOrderFormResult> {
+  const denied = await denyUnless("purchase_orders", "add")
+  if (denied) return { error: denied }
   return savePurchaseOrder(null, input)
 }
 
@@ -46,6 +49,8 @@ export async function updatePurchaseOrder(
   id: string,
   input: PurchaseOrderFormInput,
 ): Promise<PurchaseOrderFormResult> {
+  const denied = await denyUnless("purchase_orders", "edit")
+  if (denied) return { error: denied }
   if (!idPattern.test(id)) {
     return { error: "That purchase order could not be found." }
   }
@@ -178,6 +183,8 @@ async function savePurchaseOrder(
 export async function deletePurchaseOrder(
   id: string,
 ): Promise<DeletePurchaseOrderResult> {
+  const denied = await denyUnless("purchase_orders", "delete")
+  if (denied) return { error: denied }
   if (!idPattern.test(id)) {
     return { error: "That purchase order could not be found." }
   }

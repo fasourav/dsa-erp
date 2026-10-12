@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
@@ -57,6 +59,10 @@ export function ClientInvoicesTable({
   projectFilter: InvoiceProjectFilter | null
   error: string | null
 }) {
+  const canAdd = useCan("client_invoices", "add")
+  const canEdit = useCan("client_invoices", "edit")
+  const canDelete = useCan("client_invoices", "delete")
+
   const visibility = useColumnVisibility(clientInvoiceColumnStore)
   const [sort, setSort] = useState<SortState<ClientInvoiceColumnId>>({
     key: "issuedOn",
@@ -153,10 +159,12 @@ export function ClientInvoicesTable({
         onPageChange={setPage}
         pagingLabel="Client Invoices pagination"
         toolbar={
-          <Button type="button" onClick={() => openForm(null)}>
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add Client Invoice
-          </Button>
+          canAdd ? (
+            <Button type="button" onClick={() => openForm(null)}>
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Add Client Invoice
+            </Button>
+          ) : null
         }
         renderCell={(invoice, columnId) => (
           <InvoiceCell invoice={invoice} columnId={columnId} />
@@ -176,10 +184,10 @@ export function ClientInvoicesTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={() => openForm(invoice)}>
+              {canEdit ? (<DropdownMenuItem onClick={() => openForm(invoice)}>
                 <Pencil aria-hidden="true" />
                 Edit
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
               <DropdownMenuItem
                 onClick={() => {
                   setPaymentsInvoiceId(invoice.id)
@@ -190,7 +198,7 @@ export function ClientInvoicesTable({
                 Payments
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {canDelete ? (<DropdownMenuItem
                 variant="destructive"
                 onClick={() => {
                   setDeleteError(null)
@@ -200,7 +208,7 @@ export function ClientInvoicesTable({
               >
                 <Trash2 aria-hidden="true" />
                 Delete
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

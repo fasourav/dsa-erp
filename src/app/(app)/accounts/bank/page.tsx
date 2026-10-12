@@ -1,6 +1,7 @@
 import { BankPanel } from "@/app/(app)/accounts/bank/bank-panel"
 import { getBankPage } from "@/lib/bank-data"
 import { getFiscalYearStartMonth } from "@/lib/company-settings"
+import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Bank" }
 
@@ -9,6 +10,7 @@ export default async function BankPage({
 }: {
   searchParams: Promise<{ account?: string | string[]; view?: string | string[] }>
 }) {
+  await requireModule("banking")
   const params = await searchParams
   const accountParam = Array.isArray(params.account)
     ? params.account[0]

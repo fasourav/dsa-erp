@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import {
   Check,
   ChevronDown,
@@ -74,6 +76,8 @@ export function ProjectsTable({
   projectPhases: CatalogOption[]
   error: string | null
 }) {
+  const canAdd = useCan("projects", "add")
+
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
     getColumnSnapshot,
@@ -186,10 +190,12 @@ export function ProjectsTable({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          {canAdd ? (
           <Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add New Project
           </Button>
+          ) : null}
         </div>
       </div>
 
@@ -420,6 +426,8 @@ function RowActions({
   onEdit: (project: ProjectRow) => void
   onDelete: (project: ProjectRow) => void
 }) {
+  const canEdit = useCan("projects", "edit")
+  const canDelete = useCan("projects", "delete")
   const label = project.name || "project"
 
   return (
@@ -437,10 +445,10 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onClick={() => onEdit(project)}>
+        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(project)}>
           <Pencil aria-hidden="true" />
           Edit
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
         <DropdownMenuItem
           nativeButton={false}
           render={<Link href={`/accounts/invoices?project=${project.id}`} />}
@@ -458,13 +466,13 @@ function RowActions({
           Purchase orders
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
+        {canDelete ? (<DropdownMenuItem
           variant="destructive"
           onClick={() => onDelete(project)}
         >
           <Trash2 aria-hidden="true" />
           Delete
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

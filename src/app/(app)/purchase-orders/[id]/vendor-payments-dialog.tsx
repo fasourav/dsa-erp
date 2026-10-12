@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { useState, useTransition } from "react"
 
@@ -48,6 +50,10 @@ export function VendorPaymentsDialog({
   expenseCategories: readonly string[]
   bankAccounts: readonly BankAccountChoice[]
 }) {
+  const canAdd = useCan("vendor_payments", "add")
+  const canEdit = useCan("vendor_payments", "edit")
+  const canDelete = useCan("vendor_payments", "delete")
+
   void expenseCategories
   const [payment, setPayment] = useState<VendorPaymentRow | null>(null)
   const [editing, setEditing] = useState(false)
@@ -159,15 +165,15 @@ export function VendorPaymentsDialog({
                       ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button
+                      {canEdit ? (<Button
                         type="button"
                         variant="outline"
                         onClick={() => openForm(row)}
                       >
                         <Pencil aria-hidden="true" data-icon="inline-start" />
                         Edit
-                      </Button>
-                      <Button
+                      </Button>) : null}
+                      {canDelete ? (<Button
                         type="button"
                         variant="outline"
                         onClick={() => {
@@ -178,7 +184,7 @@ export function VendorPaymentsDialog({
                       >
                         <Trash2 aria-hidden="true" data-icon="inline-start" />
                         Delete
-                      </Button>
+                      </Button>) : null}
                     </div>
                   </div>
                 ))}
@@ -187,6 +193,7 @@ export function VendorPaymentsDialog({
                 <DialogClose render={<Button type="button" variant="outline" />}>
                   Close
                 </DialogClose>
+                {canAdd ? (
                 <Button
                   type="button"
                   disabled={!invoice || invoice.status === "void"}
@@ -195,6 +202,7 @@ export function VendorPaymentsDialog({
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   Record Payment
                 </Button>
+                ) : null}
               </DialogFooter>
             </>
           )}

@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { MoreHorizontal, Pencil, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
@@ -53,6 +55,10 @@ export function VendorInvoicesPanel({
   bankAccounts: BankAccountChoice[]
   error: string | null
 }) {
+  const canAdd = useCan("vendor_payments", "add")
+  const canEdit = useCan("vendor_payments", "edit")
+  const canDelete = useCan("vendor_payments", "delete")
+
   const [sort, setSort] = useState<SortState<VendorInvoiceColumnId>>({
     key: "issuedOn",
     direction: "desc",
@@ -126,7 +132,7 @@ export function VendorInvoicesPanel({
           >
             All Purchase Orders
           </Link>
-          <Button
+          {canAdd ? (<Button
             type="button"
             disabled={!purchaseOrder}
             onClick={() => {
@@ -136,7 +142,7 @@ export function VendorInvoicesPanel({
           >
             <Wallet aria-hidden="true" data-icon="inline-start" />
             Record Payment
-          </Button>
+          </Button>) : null}
         </div>
       </div>
 
@@ -234,10 +240,10 @@ export function VendorInvoicesPanel({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => openForm(invoice)}>
+              {canEdit ? (<DropdownMenuItem onClick={() => openForm(invoice)}>
                 <Pencil aria-hidden="true" />
                 Edit
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
               <DropdownMenuItem
                 onClick={() => {
                   setPaymentsInvoiceId(invoice.id)
@@ -248,7 +254,7 @@ export function VendorInvoicesPanel({
                 Payments
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {canDelete ? (<DropdownMenuItem
                 variant="destructive"
                 onClick={() => {
                   setDeleteError(null)
@@ -258,7 +264,7 @@ export function VendorInvoicesPanel({
               >
                 <Trash2 aria-hidden="true" />
                 Delete
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

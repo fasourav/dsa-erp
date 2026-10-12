@@ -6,6 +6,7 @@ import { isUuid } from "@/lib/ids"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { createClient } from "@/lib/supabase/server"
+import { denyUnless } from "@/lib/permissions"
 
 export type VatTaxInput = {
   projectId: string
@@ -37,6 +38,8 @@ export type DeleteResult = {
 export async function addVatTaxPayment(
   input: VatTaxInput,
 ): Promise<VatTaxResult> {
+  const denied = await denyUnless("vat_tax", "add")
+  if (denied) return { error: denied }
   const projectId = input.projectId.trim()
   const paidOn = input.paidOn.trim()
   const amount = parseProjectValue(input.amount)
@@ -93,6 +96,8 @@ export async function addVatTaxPayment(
 }
 
 export async function deleteVatTaxPayment(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("vat_tax", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
   }

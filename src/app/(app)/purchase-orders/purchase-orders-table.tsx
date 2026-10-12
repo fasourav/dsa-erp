@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -89,6 +91,8 @@ export function PurchaseOrdersTable({
   projectFilter: ProjectFilter | null
   error: string | null
 }) {
+  const canAdd = useCan("purchase_orders", "add")
+
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
     getColumnSnapshot,
@@ -198,10 +202,12 @@ export function PurchaseOrdersTable({
             vendors={vendors}
             workTypes={workTypes}
           />
-          <Button type="button" onClick={() => openForm(null)}>
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Assign Purchase Order
-          </Button>
+          {canAdd ? (
+            <Button type="button" onClick={() => openForm(null)}>
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Assign Purchase Order
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -489,6 +495,8 @@ function RowActions({
   onEdit: (order: PurchaseOrderRow) => void
   onDelete: (order: PurchaseOrderRow) => void
 }) {
+  const canEdit = useCan("purchase_orders", "edit")
+  const canDelete = useCan("purchase_orders", "delete")
   const label = order.vendorName || order.projectName || "purchase order"
 
   return (
@@ -506,10 +514,10 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onClick={() => onEdit(order)}>
+        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(order)}>
           <Pencil aria-hidden="true" />
           Edit
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
         <DropdownMenuItem
           nativeButton={false}
           render={<Link href={`/purchase-orders/${order.id}`} />}
@@ -518,10 +526,10 @@ function RowActions({
           Vendor Payments
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>
+        {canDelete ? (<DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>
           <Trash2 aria-hidden="true" />
           Delete
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { ProjectDetailPanel } from "@/app/(app)/projects/[id]/project-detail-panel"
 import { isUuid } from "@/lib/ids"
 import { getProjectDetail } from "@/lib/project-detail"
+import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Project Detail" }
 
@@ -11,6 +12,7 @@ export default async function ProjectDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireModule("projects")
   const { id } = await params
   if (!isUuid(id)) notFound()
 

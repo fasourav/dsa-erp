@@ -1,46 +1,401 @@
 "use server"
 
+import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 
+import type { AccessInput } from "@/app/(app)/settings/users/types"
 import { isUuid } from "@/lib/ids"
+import { denyUnlessOwner, getAccess } from "@/lib/permissions"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 
-const validRoles = ["owner", "accountant", "staff"]
-
-export type UpdateRoleResult = {
+export type ActionResult = {
   error: string | null
 }
 
-export async function updateUserRole(
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function friendly(message: string | undefined, fallback: string): string {
+  if (!message) return fallback
+  if (/at least one active owner/i.test(message)) {
+    return "At least one active owner must remain."
+  }
+  if (/cannot change your own/i.test(message)) {
+    return "You cannot change your own role or permissions."
+  }
+  if (/already been registered|already exists/i.test(message)) {
+    return "A user with this email already exists."
+  }
+  return fallback
+}
+
+function cleanInput(input: AccessInput): { error: string } | { value: AccessInput } {
+  const displayName = input.displayName.replace(/\s+/g, " ").trim()
+  const email = input.email.trim().toLowerCase()
+  const role = input.role.trim()
+
+  if (!displayName) return { error: "Enter a full name." }
+  if (displayName.length > 120) return { error: "Use a shorter name." }
+  if (!emailPattern.test(email)) return { error: "Enter a valid email." }
+  if (!role) return { error: "Choose a role template." }
+  if (!Array.isArray(input.permissions)) return { error: "Choose module access." }
+
+  return {
+    value: {
+      displayName,
+      email,
+      role,
+      showFinancials: Boolean(input.showFinancials),
+      permissions: input.permissions.filter(
+        (row) =>
+          row &&
+          typeof row.module === "string" &&
+          typeof row.canView === "boolean" &&
+          typeof row.canAdd === "boolean" &&
+          typeof row.canEdit === "boolean" &&
+          typeof row.canDelete === "boolean",
+      ),
+    },
+  }
+}
+
+async function inviteRedirect(): Promise<string | undefined> {
+  const headerStore = await headers()
+  const origin = headerStore.get("origin")
+  if (!origin) return undefined
+  return `${origin}/login`
+}
+
+async function replacePermissions(
   userId: string,
   role: string,
-): Promise<UpdateRoleResult> {
+  permissions: AccessInput["permissions"],
+) {
+  const supabase = await createClient()
+  const { data: modules, error: moduleError } = await supabase
+    .from("permission_modules")
+    .select("key, owners_only")
+
+  if (moduleError) return "Could not save permissions."
+
+  const allowed = new Map((modules ?? []).map((row) => [row.key, row.owners_only]))
+  const rows = permissions.flatMap((row) => {
+    if (!allowed.has(row.module)) return []
+    const ownersOnly = allowed.get(row.module) === true
+    const locked = ownersOnly && role !== "owner"
+    return [
+      {
+        user_id: userId,
+        module: row.module,
+        can_view: locked ? false : row.canView,
+        can_add: locked ? false : row.canAdd,
+        can_edit: locked ? false : row.canEdit,
+        can_delete: locked ? false : row.canDelete,
+      },
+    ]
+  })
+
+  const { error: deleteError } = await supabase
+    .from("user_permissions")
+    .delete()
+    .eq("user_id", userId)
+
+  if (deleteError) return friendly(deleteError.message, "Could not save permissions.")
+  if (rows.length === 0) return null
+
+  const { error: insertError } = await supabase.from("user_permissions").insert(rows)
+  if (insertError) return friendly(insertError.message, "Could not save permissions.")
+  return null
+}
+
+async function assertRole(role: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("role_templates")
+    .select("key")
+    .eq("key", role)
+    .maybeSingle()
+
+  if (error || !data) return "Choose a valid role."
+  return null
+}
+
+export async function inviteUser(input: AccessInput): Promise<ActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
+
+  const cleaned = cleanInput(input)
+  if ("error" in cleaned) return { error: cleaned.error }
+
+  const roleError = await assertRole(cleaned.value.role)
+  if (roleError) return { error: roleError }
+
+  const admin = createAdminClient()
+  if (!admin) {
+    return { error: "Invites are not configured. Add the service role key on the server." }
+  }
+
+  const invited = await admin.auth.admin.inviteUserByEmail(cleaned.value.email, {
+    data: {
+      display_name: cleaned.value.displayName,
+      role: cleaned.value.role,
+      show_financials: cleaned.value.showFinancials,
+    },
+    redirectTo: await inviteRedirect(),
+  })
+
+  if (invited.error || !invited.data.user) {
+    return { error: friendly(invited.error?.message, "Could not send this invite.") }
+  }
+
+  const userId = invited.data.user.id
+  const supabase = await createClient()
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: userId,
+    display_name: cleaned.value.displayName,
+    email: cleaned.value.email,
+    role: cleaned.value.role,
+    status: "invited",
+    show_financials: cleaned.value.showFinancials,
+  })
+
+  if (profileError) {
+    await admin.auth.admin.deleteUser(userId)
+    return { error: friendly(profileError.message, "Could not send this invite.") }
+  }
+
+  const permissionError = await replacePermissions(
+    userId,
+    cleaned.value.role,
+    cleaned.value.permissions,
+  )
+  if (permissionError) {
+    await admin.auth.admin.deleteUser(userId)
+    return { error: permissionError }
+  }
+
+  revalidatePath("/settings/users")
+  return { error: null }
+}
+
+export async function saveUserAccess(
+  userId: string,
+  input: AccessInput,
+): Promise<ActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
   if (!isUuid(userId)) return { error: "That user could not be found." }
-  if (!validRoles.includes(role)) return { error: "Choose a valid role." }
+
+  const cleaned = cleanInput(input)
+  if ("error" in cleaned) return { error: cleaned.error }
+
+  const access = await getAccess()
+  if (!access) return { error: "You must be signed in." }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
 
-  const { data: myProfile } = await supabase
+  if (userId === access.userId) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ display_name: cleaned.value.displayName })
+      .eq("id", userId)
+      .select("id")
+
+    if (error) return { error: friendly(error.message, "Could not update this user.") }
+    revalidatePath("/settings/users")
+    return { error: null }
+  }
+
+  const roleError = await assertRole(cleaned.value.role)
+  if (roleError) return { error: roleError }
+
+  const { data, error } = await supabase
     .from("profiles")
-    .select("role")
-    .eq("id", auth.user.id)
-    .limit(1)
+    .update({
+      display_name: cleaned.value.displayName,
+      role: cleaned.value.role,
+      show_financials: cleaned.value.showFinancials,
+    })
+    .eq("id", userId)
+    .select("id")
 
-  if (!myProfile || myProfile.length === 0 || myProfile[0].role !== "owner") {
-    return { error: "Only owners can change roles." }
+  if (error) return { error: friendly(error.message, "Could not update this user.") }
+  if (!data || data.length === 0) return { error: "That user could not be found." }
+
+  const permissionError = await replacePermissions(
+    userId,
+    cleaned.value.role,
+    cleaned.value.permissions,
+  )
+  if (permissionError) return { error: permissionError }
+
+  revalidatePath("/settings/users")
+  return { error: null }
+}
+
+export async function resendInvite(userId: string): Promise<ActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
+  if (!isUuid(userId)) return { error: "That user could not be found." }
+
+  const supabase = await createClient()
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("email, status")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (error || !profile) return { error: "That user could not be found." }
+  if (profile.status !== "invited" || !profile.email) {
+    return { error: "This invite is no longer pending." }
+  }
+
+  const admin = createAdminClient()
+  if (!admin) {
+    return { error: "Invites are not configured. Add the service role key on the server." }
+  }
+
+  const sent = await admin.auth.admin.inviteUserByEmail(profile.email, {
+    redirectTo: await inviteRedirect(),
+  })
+  if (sent.error) return { error: friendly(sent.error.message, "Could not resend this invite.") }
+
+  revalidatePath("/settings/users")
+  return { error: null }
+}
+
+export async function cancelInvite(userId: string): Promise<ActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
+  if (!isUuid(userId)) return { error: "That user could not be found." }
+
+  const access = await getAccess()
+  if (access?.userId === userId) return { error: "You cannot cancel your own access." }
+
+  const supabase = await createClient()
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("status")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (error || !profile) return { error: "That user could not be found." }
+  if (profile.status !== "invited") return { error: "This invite is no longer pending." }
+
+  const admin = createAdminClient()
+  if (!admin) {
+    return { error: "Invites are not configured. Add the service role key on the server." }
+  }
+
+  const removed = await admin.auth.admin.deleteUser(userId)
+  if (removed.error) return { error: friendly(removed.error.message, "Could not cancel this invite.") }
+
+  revalidatePath("/settings/users")
+  return { error: null }
+}
+
+export async function setUserActive(userId: string, active: boolean): Promise<ActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
+  if (!isUuid(userId)) return { error: "That user could not be found." }
+
+  const access = await getAccess()
+  if (access?.userId === userId) {
+    return { error: active ? "You are already signed in." : "You cannot deactivate yourself." }
+  }
+
+  const admin = createAdminClient()
+  if (!admin) {
+    return { error: "User status is not configured. Add the service role key on the server." }
+  }
+
+  const supabase = await createClient()
+  const ban = await admin.auth.admin.updateUserById(userId, {
+    ban_duration: active ? "none" : "876000h",
+  })
+  if (ban.error) {
+    return { error: active ? "Could not reactivate this user." : "Could not deactivate this user." }
   }
 
   const { data, error } = await supabase
     .from("profiles")
-    .update({ role })
+    .update({ status: active ? "active" : "deactivated" })
     .eq("id", userId)
     .select("id")
 
-  if (error) return { error: "Could not update this user's role." }
-  if (!data || data.length === 0)
-    return { error: "That user could not be found." }
+  if (error || !data || data.length === 0) {
+    await admin.auth.admin.updateUserById(userId, {
+      ban_duration: active ? "876000h" : "none",
+    })
+    return {
+      error: friendly(
+        error?.message,
+        active ? "Could not reactivate this user." : "Could not deactivate this user.",
+      ),
+    }
+  }
+
+  revalidatePath("/settings/users")
+  return { error: null }
+}
+
+export async function saveRoleTemplate(
+  templateId: string,
+  showFinancials: boolean,
+  permissions: AccessInput["permissions"],
+): Promise<ActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
+  if (!isUuid(templateId)) return { error: "That role template could not be found." }
+
+  const supabase = await createClient()
+  const { data: template, error: templateError } = await supabase
+    .from("role_templates")
+    .select("id, key")
+    .eq("id", templateId)
+    .maybeSingle()
+
+  if (templateError || !template) return { error: "That role template could not be found." }
+
+  const { error: updateError } = await supabase
+    .from("role_templates")
+    .update({ show_financials: showFinancials })
+    .eq("id", templateId)
+
+  if (updateError) return { error: "Could not update this role template." }
+
+  const { data: modules, error: moduleError } = await supabase
+    .from("permission_modules")
+    .select("key, owners_only")
+
+  if (moduleError) return { error: "Could not update this role template." }
+
+  const allowed = new Map((modules ?? []).map((row) => [row.key, row.owners_only]))
+  const rows = permissions.flatMap((row) => {
+    if (!allowed.has(row.module)) return []
+    const locked = allowed.get(row.module) === true && template.key !== "owner"
+    return [
+      {
+        template_id: templateId,
+        module: row.module,
+        can_view: locked ? false : row.canView,
+        can_add: locked ? false : row.canAdd,
+        can_edit: locked ? false : row.canEdit,
+        can_delete: locked ? false : row.canDelete,
+      },
+    ]
+  })
+
+  const { error: deleteError } = await supabase
+    .from("role_template_permissions")
+    .delete()
+    .eq("template_id", templateId)
+
+  if (deleteError) return { error: "Could not update this role template." }
+  if (rows.length > 0) {
+    const { error: insertError } = await supabase.from("role_template_permissions").insert(rows)
+    if (insertError) return { error: "Could not update this role template." }
+  }
 
   revalidatePath("/settings/users")
   return { error: null }

@@ -1,5 +1,7 @@
 "use client"
 
+import { useAccess, useCan } from "@/components/access-provider"
+
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
@@ -64,6 +66,11 @@ export function BankPanel({
   fiscalYearStartMonth: number
   view: "ledger" | "statement"
 }) {
+  const showFinancials = useAccess().showFinancials
+  const canAdd = useCan("banking", "add")
+  const canEdit = useCan("banking", "edit")
+  const canDelete = useCan("banking", "delete")
+
   const visibility = useColumnVisibility(bankTransactionColumnStore)
   const [sort, setSort] = useState<SortState<BankTransactionColumnId>>({
     key: "transactionDate",
@@ -195,7 +202,7 @@ export function BankPanel({
               <CardContent>
                 <p className="text-sm text-muted-foreground">Balance</p>
                 <p className="text-2xl font-medium tabular-nums">
-                  {formatExactBdt(account.balance)}
+                  {showFinancials ? formatExactBdt(account.balance) : "Hidden"}
                 </p>
               </CardContent>
             </Card>
@@ -261,33 +268,41 @@ export function BankPanel({
               >
                 Statement
               </Button>
-              <Button type="button" variant="outline" onClick={() => setManualOpen(true)}>
-                Deposits & Withdrawals
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={accounts.length < 2}
-                onClick={() => setTransferOpen(true)}
-              >
-                Transfer
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={accounts.length === 0}
-                onClick={() => openMovement("withdrawal", null)}
-              >
-                Withdrawal
-              </Button>
-              <Button
-                type="button"
-                disabled={accounts.length === 0}
-                onClick={() => openMovement("deposit", null)}
-              >
-                <Plus aria-hidden="true" data-icon="inline-start" />
-                Deposit
-              </Button>
+              {canAdd ? (
+                <Button type="button" variant="outline" onClick={() => setManualOpen(true)}>
+                  Deposits & Withdrawals
+                </Button>
+              ) : null}
+              {canAdd ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={accounts.length < 2}
+                  onClick={() => setTransferOpen(true)}
+                >
+                  Transfer
+                </Button>
+              ) : null}
+              {canAdd ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={accounts.length === 0}
+                  onClick={() => openMovement("withdrawal", null)}
+                >
+                  Withdrawal
+                </Button>
+              ) : null}
+              {canAdd ? (
+                <Button
+                  type="button"
+                  disabled={accounts.length === 0}
+                  onClick={() => openMovement("deposit", null)}
+                >
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Deposit
+                </Button>
+              ) : null}
             </div>
           }
           renderCell={(transaction, columnId) => (
@@ -315,6 +330,7 @@ export function BankPanel({
                       : "From A Payment Or Expense"}
                   </DropdownMenuItem>
                 ) : transaction.transferId ? (
+                  canDelete ? (
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={() => {
@@ -326,9 +342,10 @@ export function BankPanel({
                     <Trash2 aria-hidden="true" />
                     Delete Transfer
                   </DropdownMenuItem>
+                  ) : null
                 ) : (
                   <>
-                    <DropdownMenuItem
+                    {canEdit ? (<DropdownMenuItem
                       onClick={() =>
                         openMovement(
                           transaction.direction === "outflow" ? "withdrawal" : "deposit",
@@ -338,9 +355,9 @@ export function BankPanel({
                     >
                       <Pencil aria-hidden="true" />
                       Edit
-                    </DropdownMenuItem>
+                    </DropdownMenuItem>) : null}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem
+                    {canDelete ? (<DropdownMenuItem
                       variant="destructive"
                       onClick={() => {
                         setDeleteError(null)
@@ -350,7 +367,7 @@ export function BankPanel({
                     >
                       <Trash2 aria-hidden="true" />
                       Delete
-                    </DropdownMenuItem>
+                    </DropdownMenuItem>) : null}
                   </>
                 )}
               </DropdownMenuContent>
@@ -425,6 +442,7 @@ function TransactionCell({
   transaction: BankTransactionRow
   columnId: BankTransactionColumnId
 }) {
+  const showFinancials = useAccess().showFinancials
   switch (columnId) {
     case "transactionDate":
       return transaction.transactionDate ? (
@@ -457,7 +475,9 @@ function TransactionCell({
     case "amount":
     case "balance":
       return (
-        <span className="tabular-nums">{formatExactBdt(transaction[columnId])}</span>
+        <span className="tabular-nums">
+          {showFinancials ? formatExactBdt(transaction[columnId]) : "Hidden"}
+        </span>
       )
   }
 }

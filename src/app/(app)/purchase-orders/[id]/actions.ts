@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
+import { denyUnless } from "@/lib/permissions"
 import {
   derivePaymentStatus,
   isPaymentStatus,
@@ -67,6 +68,8 @@ export async function addVendorInvoice(
   purchaseOrderId: string,
   input: VendorInvoiceInput,
 ): Promise<VendorInvoiceResult> {
+  const denied = await denyUnless("vendor_payments", "add")
+  if (denied) return { error: denied }
   if (!isUuid(purchaseOrderId)) {
     return { error: "That purchase order could not be found." }
   }
@@ -78,6 +81,8 @@ export async function updateVendorInvoice(
   id: string,
   input: VendorInvoiceInput,
 ): Promise<VendorInvoiceResult> {
+  const denied = await denyUnless("vendor_payments", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
   }
@@ -86,6 +91,8 @@ export async function updateVendorInvoice(
 }
 
 export async function deleteVendorInvoice(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("vendor_payments", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
   }
@@ -123,6 +130,8 @@ export async function addVendorPayment(
   vendorInvoiceId: string,
   input: VendorPaymentInput,
 ): Promise<VendorPaymentResult> {
+  const denied = await denyUnless("vendor_payments", "add")
+  if (denied) return { error: denied }
   if (!isUuid(vendorInvoiceId)) {
     return { error: "That payment could not be found." }
   }
@@ -134,6 +143,8 @@ export async function updateVendorPayment(
   id: string,
   input: VendorPaymentInput,
 ): Promise<VendorPaymentResult> {
+  const denied = await denyUnless("vendor_payments", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
   }
@@ -170,6 +181,8 @@ export async function recordPurchaseOrderPayment(
   purchaseOrderId: string,
   input: RecordVendorPaymentInput,
 ): Promise<RecordVendorPaymentResult> {
+  const denied = await denyUnless("vendor_payments", "add")
+  if (denied) return { error: denied }
   if (!isUuid(purchaseOrderId)) {
     return { error: "That purchase order could not be found." }
   }
@@ -285,6 +298,8 @@ export async function recordPurchaseOrderPayment(
 }
 
 export async function deleteVendorPayment(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("vendor_payments", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
   }

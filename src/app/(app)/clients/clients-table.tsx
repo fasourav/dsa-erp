@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import {
   ChevronDown,
   Columns3,
@@ -61,6 +63,8 @@ export function ClientsTable({
   clients: ClientSummary[]
   error: string | null
 }) {
+  const canAdd = useCan("clients", "add")
+
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
     getColumnSnapshot,
@@ -181,10 +185,12 @@ export function ClientsTable({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          {canAdd ? (
           <Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add New Client
           </Button>
+          ) : null}
         </div>
       </div>
 
@@ -354,6 +360,8 @@ function RowActions({
   onEdit: (client: ClientSummary) => void
   onDelete: (client: ClientSummary) => void
 }) {
+  const canEdit = useCan("clients", "edit")
+  const canDelete = useCan("clients", "delete")
   const label = client.displayName || "client"
 
   return (
@@ -371,15 +379,15 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem onClick={() => onEdit(client)}>
+        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(client)}>
           <Pencil aria-hidden="true" />
           Edit
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(client)}>
+        {canDelete ? (<DropdownMenuItem variant="destructive" onClick={() => onDelete(client)}>
           <Trash2 aria-hidden="true" />
           Delete
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

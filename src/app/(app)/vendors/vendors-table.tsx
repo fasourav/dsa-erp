@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -72,6 +74,8 @@ export function VendorsTable({
   categories: string[]
   error: string | null
 }) {
+  const canAdd = useCan("vendors", "add")
+
   const [sort, setSort] = useState<SortState>({
     key: "displayName",
     direction: "asc",
@@ -160,10 +164,10 @@ export function VendorsTable({
           >
             Purchase Orders
           </Button>
-          <Button type="button" onClick={() => openForm(null)}>
+          {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add New Vendor
-          </Button>
+          </Button>) : null}
         </div>
       </div>
 
@@ -460,6 +464,8 @@ function RowActions({
   onEdit: (vendor: VendorSummary) => void
   onDelete: (vendor: VendorSummary) => void
 }) {
+  const canEdit = useCan("vendors", "edit")
+  const canDelete = useCan("vendors", "delete")
   const label = vendor.displayName || "vendor"
 
   return (
@@ -477,18 +483,18 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem onClick={() => onEdit(vendor)}>
+        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(vendor)}>
           <Pencil aria-hidden="true" />
           Edit
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem
+        {canDelete ? (<DropdownMenuItem
           variant="destructive"
           onClick={() => onDelete(vendor)}
         >
           <Trash2 aria-hidden="true" />
           Delete
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

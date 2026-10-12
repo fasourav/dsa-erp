@@ -8,6 +8,7 @@ import { isSortOrder } from "@/lib/lookup-catalogs"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { denyUnless, denyUnlessOwner } from "@/lib/permissions"
 
 export type BankAccountInput = {
   name: string
@@ -88,6 +89,8 @@ export type DeleteResult = {
 export async function addBankAccount(
   input: BankAccountInput,
 ): Promise<BankAccountResult> {
+  const denied = await denyUnless("banking", "add")
+  if (denied) return { error: denied }
   return saveBankAccount(null, input)
 }
 
@@ -95,6 +98,8 @@ export async function updateBankAccount(
   id: string,
   input: BankAccountInput,
 ): Promise<BankAccountResult> {
+  const denied = await denyUnless("banking", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That bank account could not be found." }
   }
@@ -106,6 +111,8 @@ export async function setBankAccountActive(
   id: string,
   isActive: boolean,
 ): Promise<BankAccountResult> {
+  const denied = await denyUnless("banking", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That bank account could not be found." }
   }
@@ -139,6 +146,8 @@ export async function setBankAccountActive(
 }
 
 export async function deleteBankAccount(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("banking", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That bank account could not be found." }
   }
@@ -176,6 +185,8 @@ export async function deleteBankAccount(id: string): Promise<DeleteResult> {
 export async function addBankMovement(
   input: BankMovementInput,
 ): Promise<BankMovementResult> {
+  const denied = await denyUnless("banking", "add")
+  if (denied) return { error: denied }
   return saveBankMovement(null, input)
 }
 
@@ -183,6 +194,8 @@ export async function updateBankMovement(
   id: string,
   input: BankMovementInput,
 ): Promise<BankMovementResult> {
+  const denied = await denyUnless("banking", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That transaction could not be found." }
   }
@@ -193,6 +206,8 @@ export async function updateBankMovement(
 export async function addBankTransfer(
   input: BankTransferInput,
 ): Promise<BankTransferResult> {
+  const denied = await denyUnless("banking", "add")
+  if (denied) return { error: denied }
   const fromAccountId = input.fromAccountId.trim()
   const toAccountId = input.toAccountId.trim()
   const transactionDate = input.transactionDate.trim()
@@ -253,6 +268,8 @@ export async function addBankTransfer(
 export async function updateFiscalYearStartMonth(
   month: number,
 ): Promise<{ error: string | null }> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
   if (!Number.isInteger(month) || month < 1 || month > 12) {
     return { error: "Choose a month from January to December." }
   }
@@ -283,6 +300,8 @@ export async function updateFiscalYearStartMonth(
 export async function updateLaunchDate(
   launchDate: string,
 ): Promise<{ error: string | null }> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
   if (!isIsoDate(launchDate)) {
     return { error: "Enter a valid launch date." }
   }
@@ -311,6 +330,8 @@ export async function updateLaunchDate(
 }
 
 export async function deleteBankTransaction(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("banking", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That transaction could not be found." }
   }

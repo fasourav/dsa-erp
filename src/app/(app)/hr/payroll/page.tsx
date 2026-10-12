@@ -1,10 +1,12 @@
 import { PayrollTable } from "@/app/(app)/hr/payroll/payroll-table"
 import { listBankAccounts, listPaymentMethodNames } from "@/lib/bank-accounts"
 import { getPayrollPageData } from "@/lib/payroll"
+import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Payroll" }
 
 export default async function PayrollPage() {
+  await requireModule("payroll")
   const [{ salaries, employees, error }, bankAccounts, paymentMethods] =
     await Promise.all([
       getPayrollPageData(),

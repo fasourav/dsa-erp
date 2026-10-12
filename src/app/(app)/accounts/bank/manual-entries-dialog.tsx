@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -62,6 +64,9 @@ export function ManualEntriesDialog({
   onEdit: (row: BankTransactionRow) => void
   onDelete: (row: BankTransactionRow) => void
 }) {
+  const canEdit = useCan("banking", "edit")
+  const canDelete = useCan("banking", "delete")
+
   const [sort, setSort] = useState<SortState<ColumnId>>({
     key: "transactionDate",
     direction: "desc",
@@ -118,15 +123,15 @@ export function ManualEntriesDialog({
                   <MoreHorizontal aria-hidden="true" className="size-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem onClick={() => onEdit(row)}>
+                  {canEdit ? (<DropdownMenuItem onClick={() => onEdit(row)}>
                     <Pencil aria-hidden="true" />
                     Edit
-                  </DropdownMenuItem>
+                  </DropdownMenuItem>) : null}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" onClick={() => onDelete(row)}>
+                  {canDelete ? (<DropdownMenuItem variant="destructive" onClick={() => onDelete(row)}>
                     <Trash2 aria-hidden="true" />
                     Delete
-                  </DropdownMenuItem>
+                  </DropdownMenuItem>) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

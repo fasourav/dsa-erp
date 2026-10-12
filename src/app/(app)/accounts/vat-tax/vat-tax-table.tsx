@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState, useTransition } from "react"
 
@@ -72,6 +74,9 @@ export function VatTaxTable({
   paymentMethods: string[]
   error: string | null
 }) {
+  const canAdd = useCan("vat_tax", "add")
+  const canDelete = useCan("vat_tax", "delete")
+
   const [sort, setSort] = useState<SortState<ColId>>({
     key: "paidOn",
     direction: "desc",
@@ -127,10 +132,10 @@ export function VatTaxTable({
             Total: {formatMoney(totalAmount)}
           </p>
         </div>
-        <Button type="button" onClick={openForm}>
+        {canAdd ? (<Button type="button" onClick={openForm}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add Payment
-        </Button>
+        </Button>) : null}
       </div>
 
       <DataList
@@ -174,7 +179,7 @@ export function VatTaxTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem
+              {canDelete ? (<DropdownMenuItem
                 variant="destructive"
                 onClick={() => {
                   setDeleteError(null)
@@ -184,7 +189,7 @@ export function VatTaxTable({
               >
                 <Trash2 aria-hidden="true" />
                 Delete
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

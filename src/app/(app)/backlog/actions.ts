@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { denyUnless } from "@/lib/permissions"
 import {
   recoveryPlanError,
   recoveryPlanValue,
@@ -22,6 +23,8 @@ export async function saveRecoveryPlan(
   projectId: string,
   recoveryPlan: string,
 ): Promise<RecoveryPlanResult> {
+  const denied = await denyUnless("backlog", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(projectId)) {
     return { error: "That project could not be found." }
   }

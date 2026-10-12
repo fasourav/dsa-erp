@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import type { ClientKind } from "@/lib/client-summary"
+import { denyUnless } from "@/lib/permissions"
 import {
   escapeLikePattern,
   hasMinDigits,
@@ -40,6 +41,8 @@ export type ClientFormResult = {
 export async function addClient(
   input: ClientFormInput,
 ): Promise<ClientFormResult> {
+  const denied = await denyUnless("clients", "add")
+  if (denied) return { error: denied }
   return saveClient(null, input)
 }
 
@@ -47,6 +50,8 @@ export async function updateClient(
   id: string,
   input: ClientFormInput,
 ): Promise<ClientFormResult> {
+  const denied = await denyUnless("clients", "edit")
+  if (denied) return { error: denied }
   if (!clientIdPattern.test(id)) {
     return { error: "That client could not be found." }
   }
@@ -166,6 +171,8 @@ async function saveClient(
 }
 
 export async function deleteClient(id: string): Promise<DeleteClientResult> {
+  const denied = await denyUnless("clients", "delete")
+  if (denied) return { error: denied }
   if (!clientIdPattern.test(id)) {
     return { error: "That client could not be found." }
   }

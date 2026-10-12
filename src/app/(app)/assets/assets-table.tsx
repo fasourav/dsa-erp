@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -104,6 +106,10 @@ export function AssetsTable({
   categories: string[]
   error: string | null
 }) {
+  const canAdd = useCan("assets", "add")
+  const canEdit = useCan("assets", "edit")
+  const canDelete = useCan("assets", "delete")
+
   const [sort, setSort] = useState<SortState<ColId>>({
     key: "name",
     direction: "asc",
@@ -155,10 +161,10 @@ export function AssetsTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Assets</h1>
-        <Button type="button" onClick={() => openForm(null)}>
+        {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add New Asset
-        </Button>
+        </Button>) : null}
       </div>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
@@ -252,18 +258,18 @@ export function AssetsTable({
                         <MoreHorizontal aria-hidden="true" className="size-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={() => openForm(asset)}>
+                        {canEdit ? (<DropdownMenuItem onClick={() => openForm(asset)}>
                           <Pencil aria-hidden="true" />
                           Edit
-                        </DropdownMenuItem>
+                        </DropdownMenuItem>) : null}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
+                        {canDelete ? (<DropdownMenuItem
                           variant="destructive"
                           onClick={() => askDelete(asset)}
                         >
                           <Trash2 aria-hidden="true" />
                           Delete
-                        </DropdownMenuItem>
+                        </DropdownMenuItem>) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

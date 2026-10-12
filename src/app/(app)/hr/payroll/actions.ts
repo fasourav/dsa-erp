@@ -7,6 +7,7 @@ import { netPay, roundMoney, workedInMonth } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { toNumber } from "@/lib/format"
+import { denyUnless } from "@/lib/permissions"
 
 export type PayLineInput = {
   employeeId: string
@@ -45,6 +46,8 @@ const alreadyPaid = "Salaries for this month are already paid."
 export async function payMonthlySalary(
   input: PaySalaryInput,
 ): Promise<PaySalaryResult> {
+  const denied = await denyUnless("payroll", "add")
+  if (denied) return { error: denied }
   return saveMonthlySalary(null, input)
 }
 
@@ -52,6 +55,8 @@ export async function updateMonthlySalary(
   id: string,
   input: PaySalaryInput,
 ): Promise<PaySalaryResult> {
+  const denied = await denyUnless("payroll", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That monthly salary could not be found." }
   }
@@ -60,6 +65,8 @@ export async function updateMonthlySalary(
 }
 
 export async function deleteMonthlySalary(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("payroll", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That monthly salary could not be found." }
   }

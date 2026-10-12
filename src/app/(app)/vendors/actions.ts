@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { denyUnless } from "@/lib/permissions"
 import {
   escapeLikePattern,
   hasMinDigits,
@@ -53,6 +54,8 @@ export type VendorCategoryOptionsResult = {
 }
 
 export async function loadVendorCategoryOptions(): Promise<VendorCategoryOptionsResult> {
+  const denied = await denyUnless("vendors", "view")
+  if (denied) return { categories: null }
   const supabase = await createClient()
   const { data: authData, error: authError } = await supabase.auth.getUser()
 
@@ -86,6 +89,8 @@ export async function loadVendorCategoryOptions(): Promise<VendorCategoryOptions
 export async function addVendor(
   input: VendorFormInput,
 ): Promise<VendorFormResult> {
+  const denied = await denyUnless("vendors", "add")
+  if (denied) return { error: denied }
   return saveVendor(null, input)
 }
 
@@ -93,6 +98,8 @@ export async function updateVendor(
   id: string,
   input: VendorFormInput,
 ): Promise<VendorFormResult> {
+  const denied = await denyUnless("vendors", "edit")
+  if (denied) return { error: denied }
   if (!vendorIdPattern.test(id)) {
     return { error: "That vendor could not be found." }
   }
@@ -304,6 +311,8 @@ function phonesMatch(normalizedPhone: string, stored: string | null): boolean {
 }
 
 export async function deleteVendor(id: string): Promise<DeleteVendorResult> {
+  const denied = await denyUnless("vendors", "delete")
+  if (denied) return { error: denied }
   if (!vendorIdPattern.test(id)) {
     return { error: "That vendor could not be found." }
   }

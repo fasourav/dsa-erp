@@ -6,6 +6,7 @@ import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { denyUnless } from "@/lib/permissions"
 
 export type ExpenseInput = {
   expenseDate: string
@@ -41,6 +42,8 @@ export type DeleteResult = {
 export async function addOperationalExpense(
   input: ExpenseInput,
 ): Promise<ExpenseResult> {
+  const denied = await denyUnless("expenses", "add")
+  if (denied) return { error: denied }
   return saveExpense(null, input)
 }
 
@@ -48,6 +51,8 @@ export async function updateOperationalExpense(
   id: string,
   input: ExpenseInput,
 ): Promise<ExpenseResult> {
+  const denied = await denyUnless("expenses", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That expense could not be found." }
   }
@@ -58,6 +63,8 @@ export async function updateOperationalExpense(
 export async function deleteOperationalExpense(
   id: string,
 ): Promise<DeleteResult> {
+  const denied = await denyUnless("expenses", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That expense could not be found." }
   }

@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState, useTransition } from "react"
 
@@ -50,6 +52,10 @@ export function ExpensesTable({
   bankAccounts: BankAccountChoice[]
   error: string | null
 }) {
+  const canAdd = useCan("expenses", "add")
+  const canEdit = useCan("expenses", "edit")
+  const canDelete = useCan("expenses", "delete")
+
   const visibility = useColumnVisibility(expenseColumnStore)
   const [sort, setSort] = useState<SortState<ExpenseColumnId>>({
     key: "expenseDate",
@@ -127,10 +133,12 @@ export function ExpensesTable({
         onPageChange={setPage}
         pagingLabel="Operational Expenses pagination"
         toolbar={
-          <Button type="button" onClick={() => openForm(null)}>
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add Expense
-          </Button>
+          canAdd ? (
+            <Button type="button" onClick={() => openForm(null)}>
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Add Expense
+            </Button>
+          ) : null
         }
         renderCell={(expense, columnId) => (
           <Cell expense={expense} columnId={columnId} />
@@ -150,12 +158,12 @@ export function ExpensesTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => openForm(expense)}>
+              {canEdit ? (<DropdownMenuItem onClick={() => openForm(expense)}>
                 <Pencil aria-hidden="true" />
                 Edit
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {canDelete ? (<DropdownMenuItem
                 variant="destructive"
                 onClick={() => {
                   setDeleteError(null)
@@ -165,7 +173,7 @@ export function ExpensesTable({
               >
                 <Trash2 aria-hidden="true" />
                 Delete
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
