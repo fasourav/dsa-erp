@@ -17,6 +17,7 @@ import { AssetFormDialog } from "@/app/(app)/assets/asset-form-dialog"
 import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,7 +54,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatIsoDate, formatMoney, formatTaka } from "@/lib/format"
 import type { AssetRow } from "@/lib/assets"
 import { cn } from "@/lib/utils"
 
@@ -124,6 +125,10 @@ export function AssetsTable({
   const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortAssets(assets, sort), [assets, sort])
+  const totalAssetValue = useMemo(() => {
+    const total = assets.reduce((sum, asset) => sum + asset.currentValue, 0)
+    return Math.round(total * 100) / 100
+  }, [assets])
   const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
@@ -166,6 +171,19 @@ export function AssetsTable({
           Add New Asset
         </Button>) : null}
       </div>
+
+      {error ? null : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="flex flex-col gap-1">
+              <p className="text-sm text-muted-foreground">Total Asset Value</p>
+              <p className="text-2xl font-medium tabular-nums">
+                {formatTaka(totalAssetValue)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
         <Table className="min-w-max">
