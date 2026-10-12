@@ -48,6 +48,7 @@ export function BrandLockup({
         width={lockup.width}
         height={lockup.height}
         priority={priority}
+        loading="eager"
         className="h-12 w-auto max-w-full dark:hidden"
       />
       <Image
@@ -55,6 +56,8 @@ export function BrandLockup({
         alt=""
         width={lockup.width}
         height={lockup.height}
+        priority={priority}
+        loading="eager"
         className="hidden h-12 w-auto max-w-full dark:block"
       />
     </span>

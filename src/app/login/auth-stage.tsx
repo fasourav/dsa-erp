@@ -40,6 +40,7 @@ export function AuthStage({
                 width={2864}
                 height={1002}
                 priority
+                loading="eager"
                 className="h-auto w-full"
               />
               <div className="flex w-full flex-col gap-1 text-center">

@@ -86,7 +86,7 @@ export function AppSidebar({
         )}
       >
         <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
-          <BrandLockup />
+          <BrandLockup priority />
         </div>
         <BrandMark className={cn("hidden size-8", collapsed && "md:inline-flex md:size-7")} />
         <Button
