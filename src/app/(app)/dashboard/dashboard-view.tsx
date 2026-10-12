@@ -190,7 +190,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             tone={model.forecastedProfit < 0 ? "negative" : "default"}
             icon={model.forecastedProfit < 0 ? TrendingDown : TrendingUp}
           />
-          <CompactMetric label="Outflow" value={snapshot.outflow} />
+          <CompactMetric label="Withdrawal" value={snapshot.withdrawal} />
         </div>
       </section>
 
@@ -372,7 +372,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
               <h2 className="text-base font-medium">Margin Analysis</h2>
               <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
               <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
               <Ring
@@ -380,6 +380,12 @@ function DashboardSections({ model }: { model: DashboardModel }) {
                 value={snapshot.grossMargin}
                 tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
               />
+              <Ring
+                label="Net Profit Margin"
+                value={snapshot.netMargin}
+                tone={snapshot.netMargin < 0 ? "text-destructive" : "text-chart-2"}
+              />
+              <Ring label="Withdrawal Ratio" value={snapshot.withdrawalRatio} tone="text-chart-4" />
               <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
               <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
               <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
@@ -746,10 +752,11 @@ function downloadDashboard(
     ["Accounts Receivable", formatExactBdt(model.receivables)],
     ["Accounts Payable", formatExactBdt(model.payables)],
     ["Forecasted Profit", formatExactBdt(model.forecastedProfit)],
-    ["Outflow", formatExactBdt(snapshot.outflow)],
+    ["Withdrawal", formatExactBdt(snapshot.withdrawal)],
     ["Project Expense", formatExactBdt(snapshot.projectExpense)],
     ["Material Cost", formatExactBdt(snapshot.material)],
     ["Subcontractor Cost", formatExactBdt(snapshot.subcontractor)],
+    ["Project Overhead", formatExactBdt(snapshot.projectOverhead)],
     ["Tax Paid", formatExactBdt(snapshot.tax)],
     ["Admin Expense", formatExactBdt(snapshot.admin)],
     ["Operational Expense", formatExactBdt(snapshot.operational)],
@@ -758,6 +765,8 @@ function downloadDashboard(
     ["Collection Rate", snapshot.collectionRate],
     ["Expense Ratio", snapshot.expenseRatio],
     ["Gross Profit Margin", snapshot.grossMargin],
+    ["Net Profit Margin", snapshot.netMargin],
+    ["Withdrawal Ratio", snapshot.withdrawalRatio],
     ["Project Cost Ratio", snapshot.projectCostRatio],
     ["Tax Ratio", snapshot.taxRatio],
     ["Admin Expense Ratio", snapshot.adminRatio],

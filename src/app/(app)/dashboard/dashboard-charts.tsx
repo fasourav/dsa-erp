@@ -36,6 +36,13 @@ export const expenseSliceStyle = [
     opacity: 1,
   },
   {
+    key: "projectOverhead",
+    label: "Project Overhead",
+    fill: "var(--chart-2)",
+    swatch: "bg-chart-2",
+    opacity: 1,
+  },
+  {
     key: "tax",
     label: "Tax Paid",
     fill: "var(--chart-3)",
