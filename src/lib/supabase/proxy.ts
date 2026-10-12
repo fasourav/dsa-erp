@@ -64,7 +64,12 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = Boolean(data?.claims)
   const { pathname } = request.nextUrl
 
-  if (!isAuthenticated && pathname !== "/login") {
+  // Invite links hit /auth/confirm before a session exists, then /set-password
+  // after it does. Keep both open so neither bounce creates a redirect loop.
+  const isOpenPath =
+    pathname === "/login" || pathname === "/auth/confirm" || pathname === "/set-password"
+
+  if (!isAuthenticated && !isOpenPath) {
     return redirectWithSession(request, supabaseResponse, "/login")
   }
 

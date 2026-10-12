@@ -1,6 +1,5 @@
 "use server"
 
-import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 
 import type { AccessInput } from "@/app/(app)/settings/users/types"
@@ -59,11 +58,12 @@ function cleanInput(input: AccessInput): { error: string } | { value: AccessInpu
   }
 }
 
-async function inviteRedirect(): Promise<string | undefined> {
-  const headerStore = await headers()
-  const origin = headerStore.get("origin")
-  if (!origin) return undefined
-  return `${origin}/login`
+const defaultSiteUrl = "https://dsa-erp.vercel.app"
+
+function inviteRedirect(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  const site = (configured || defaultSiteUrl).replace(/\/+$/, "")
+  return `${site}/auth/confirm?next=/set-password`
 }
 
 async function replacePermissions(
@@ -141,7 +141,7 @@ export async function inviteUser(input: AccessInput): Promise<ActionResult> {
       role: cleaned.value.role,
       show_financials: cleaned.value.showFinancials,
     },
-    redirectTo: await inviteRedirect(),
+    redirectTo: inviteRedirect(),
   })
 
   if (invited.error || !invited.data.user) {
@@ -256,7 +256,7 @@ export async function resendInvite(userId: string): Promise<ActionResult> {
   }
 
   const sent = await admin.auth.admin.inviteUserByEmail(profile.email, {
-    redirectTo: await inviteRedirect(),
+    redirectTo: inviteRedirect(),
   })
   if (sent.error) return { error: friendly(sent.error.message, "Could not resend this invite.") }
 

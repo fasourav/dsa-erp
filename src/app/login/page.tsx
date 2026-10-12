@@ -17,12 +17,23 @@ export const metadata = {
   title: "Sign in",
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string | string[] }>
+}) {
   const user = await getCurrentUser()
 
   if (user) {
     redirect("/dashboard")
   }
+
+  const params = await searchParams
+  const error = Array.isArray(params.error) ? params.error[0] : params.error
+  const inviteError =
+    error === "invite"
+      ? "That invite link is invalid or has expired. Ask an owner to send a new invite."
+      : undefined
 
   const cookieStore = await cookies()
   const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value)
@@ -44,7 +55,7 @@ export default async function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LoginForm />
+            <LoginForm notice={inviteError} />
           </CardContent>
         </Card>
       </div>

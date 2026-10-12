@@ -12,7 +12,7 @@ const initialState: SignInState = {}
 const fieldClassName =
   "h-11 rounded-xl border-border/80 bg-background/45 px-3.5 shadow-sm backdrop-blur-md backdrop-saturate-150"
 
-export function LoginForm() {
+export function LoginForm({ notice }: { notice?: string }) {
   const [state, formAction, pending] = useActionState(signIn, initialState)
 
   return (
@@ -42,6 +42,11 @@ export function LoginForm() {
           className={fieldClassName}
         />
       </div>
+      {notice ? (
+        <p role="alert" className="text-sm text-destructive">
+          {notice}
+        </p>
+      ) : null}
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
           {state.error}
