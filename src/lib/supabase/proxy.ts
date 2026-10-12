@@ -64,7 +64,16 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = Boolean(data?.claims)
   const { pathname } = request.nextUrl
 
-  if (!isAuthenticated && pathname !== "/login") {
+  // Default invites land on /auth/accept with the session in the hash. token_hash
+  // links still use /auth/confirm. Both run before a session exists, then
+  // /set-password runs after. Keep them open so neither bounce loops.
+  const isOpenPath =
+    pathname === "/login" ||
+    pathname === "/auth/confirm" ||
+    pathname === "/auth/accept" ||
+    pathname === "/set-password"
+
+  if (!isAuthenticated && !isOpenPath) {
     return redirectWithSession(request, supabaseResponse, "/login")
   }
 
