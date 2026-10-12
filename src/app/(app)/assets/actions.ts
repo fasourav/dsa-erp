@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { isUuid } from "@/lib/ids"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { denyUnless } from "@/lib/permissions"
 
 export type AssetInput = {
   purchaseDate: string
@@ -34,6 +35,8 @@ export type DeleteResult = {
 }
 
 export async function addAsset(input: AssetInput): Promise<AssetResult> {
+  const denied = await denyUnless("assets", "add")
+  if (denied) return { error: denied }
   return saveAsset(null, input)
 }
 
@@ -41,11 +44,15 @@ export async function updateAsset(
   id: string,
   input: AssetInput,
 ): Promise<AssetResult> {
+  const denied = await denyUnless("assets", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) return { error: "That asset could not be found." }
   return saveAsset(id, input)
 }
 
 export async function deleteAsset(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("assets", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) return { error: "That asset could not be found." }
 
   const supabase = await createClient()

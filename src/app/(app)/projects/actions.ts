@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import type { ProjectStatus } from "@/lib/project-summary"
+import { denyUnless } from "@/lib/permissions"
 import {
   isIsoDate,
   isProjectStatus,
@@ -47,6 +48,8 @@ export type DeleteProjectResult = {
 export async function addProject(
   input: ProjectFormInput,
 ): Promise<ProjectFormResult> {
+  const denied = await denyUnless("projects", "add")
+  if (denied) return { error: denied }
   return saveProject(null, input)
 }
 
@@ -54,6 +57,8 @@ export async function updateProject(
   id: string,
   input: ProjectFormInput,
 ): Promise<ProjectFormResult> {
+  const denied = await denyUnless("projects", "edit")
+  if (denied) return { error: denied }
   if (!idPattern.test(id)) {
     return { error: "That project could not be found." }
   }
@@ -209,6 +214,8 @@ async function saveProject(
 }
 
 export async function deleteProject(id: string): Promise<DeleteProjectResult> {
+  const denied = await denyUnless("projects", "delete")
+  if (denied) return { error: denied }
   if (!idPattern.test(id)) {
     return { error: "That project could not be found." }
   }

@@ -27,6 +27,7 @@ import {
   TrendChart,
   WeeklyChart,
 } from "@/app/(app)/dashboard/dashboard-charts"
+import { useAccess } from "@/components/access-provider"
 import { ShellHeader } from "@/components/shell-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -71,6 +72,7 @@ export function DashboardView({
 }
 
 function DashboardSections({ model }: { model: DashboardModel }) {
+  const showFinancials = useAccess().showFinancials
   const [year, setYear] = useState(model.defaultYear)
   const snapshot =
     model.snapshots.find((item) => item.year === year) ?? model.snapshots[0]
@@ -116,7 +118,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             ))}
           </SelectContent>
         </Select>
-        <Button type="button" variant="outline" onClick={() => downloadDashboard(model, snapshot)}>
+        <Button type="button" variant="outline" onClick={() => downloadDashboard(model, snapshot, showFinancials)}>
           <Download aria-hidden="true" />
           Export
         </Button>
@@ -139,14 +141,16 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             spark={snapshot.netSpark}
             sparkColor="var(--chart-1)"
           />
-          <KpiCard
-            label="Cash Balance"
-            value={model.cashBalance}
-            detail="Current"
-            delta={model.cashDelta}
-            spark={model.cashSpark}
-            sparkColor="var(--chart-4)"
-          />
+          {showFinancials ? (
+            <KpiCard
+              label="Cash Balance"
+              value={model.cashBalance}
+              detail="Current"
+              delta={model.cashDelta}
+              spark={model.cashSpark}
+              sparkColor="var(--chart-4)"
+            />
+          ) : null}
           <KpiCard
             label="Gross Profit"
             value={snapshot.grossProfit}
@@ -711,7 +715,11 @@ function LegendDot({ className, label }: { className: string; label: string }) {
   )
 }
 
-function downloadDashboard(model: DashboardModel, snapshot: YearSnapshot) {
+function downloadDashboard(
+  model: DashboardModel,
+  snapshot: YearSnapshot,
+  showFinancials: boolean,
+) {
   const rows: (string | number)[][] = [
     ["Dashboard", "DSA ERP"],
     ["Fiscal Year", `FY${snapshot.year}`],
@@ -722,7 +730,7 @@ function downloadDashboard(model: DashboardModel, snapshot: YearSnapshot) {
     ["Total Expense", formatExactBdt(snapshot.totalExpense)],
     ["Gross Profit", formatExactBdt(snapshot.grossProfit)],
     ["Net Profit", formatExactBdt(snapshot.netProfit)],
-    ["Cash Balance", formatExactBdt(model.cashBalance)],
+    ...(showFinancials ? [["Cash Balance", formatExactBdt(model.cashBalance)] as (string | number)[]] : []),
     ["Accounts Receivables", formatExactBdt(model.receivables)],
     ["Accounts Payables", formatExactBdt(model.payables)],
     ["Forecasted Profit", formatExactBdt(model.forecastedProfit)],

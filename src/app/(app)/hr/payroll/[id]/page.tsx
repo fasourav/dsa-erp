@@ -4,6 +4,7 @@ import { PayrollDetailPanel } from "@/app/(app)/hr/payroll/[id]/payroll-detail-p
 import { listBankAccounts, listPaymentMethodNames } from "@/lib/bank-accounts"
 import { isUuid } from "@/lib/ids"
 import { getMonthlySalary } from "@/lib/payroll"
+import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Monthly Salary" }
 
@@ -12,6 +13,7 @@ export default async function MonthlySalaryPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireModule("payroll")
   const { id } = await params
   if (!isUuid(id)) notFound()
 

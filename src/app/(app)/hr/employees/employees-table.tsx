@@ -11,6 +11,7 @@ import {
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteEmployee } from "@/app/(app)/hr/employees/actions"
+import { useAccess, useCan } from "@/components/access-provider"
 import { EmployeeFormDialog } from "@/app/(app)/hr/employees/employee-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -124,6 +125,9 @@ export function EmployeesTable({
   departments: DepartmentOption[]
   error: string | null
 }) {
+  const showFinancials = useAccess().showFinancials
+  const canAdd = useCan("employees", "add")
+
   const [sort, setSort] = useState<SortState<ColumnId>>({
     key: "fullName",
     direction: "asc",
@@ -178,10 +182,10 @@ export function EmployeesTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Employees</h1>
-        <Button type="button" onClick={() => openForm(null)}>
+        {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add New Employee
-        </Button>
+        </Button>) : null}
       </div>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
@@ -254,10 +258,10 @@ export function EmployeesTable({
                   <TableCell>{emp.department || "—"}</TableCell>
                   <TableCell>{emp.designation || "—"}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatTaka(emp.monthlySalary)}
+                    {showFinancials ? formatTaka(emp.monthlySalary) : "Hidden"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatTaka(emp.allowance)}
+                    {showFinancials ? formatTaka(emp.allowance) : "Hidden"}
                   </TableCell>
                   <TableCell>
                     {emp.joiningDate ? formatIsoDate(emp.joiningDate) : "—"}
@@ -405,6 +409,8 @@ function RowActions({
   onEdit: (emp: EmployeeRow) => void
   onDelete: (emp: EmployeeRow) => void
 }) {
+  const canEdit = useCan("employees", "edit")
+  const canDelete = useCan("employees", "delete")
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -420,18 +426,18 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem onClick={() => onEdit(employee)}>
+        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(employee)}>
           <Pencil aria-hidden="true" />
           Edit
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem
+        {canDelete ? (<DropdownMenuItem
           variant="destructive"
           onClick={() => onDelete(employee)}
         >
           <Trash2 aria-hidden="true" />
           Delete
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

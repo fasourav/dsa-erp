@@ -6,6 +6,7 @@ import { isUuid } from "@/lib/ids"
 import { roundMoney } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { denyUnless } from "@/lib/permissions"
 
 export type EmployeeInput = {
   fullName: string
@@ -44,6 +45,8 @@ export type DeleteResult = {
 export async function addEmployee(
   input: EmployeeInput,
 ): Promise<EmployeeResult> {
+  const denied = await denyUnless("employees", "add")
+  if (denied) return { error: denied }
   return saveEmployee(null, input)
 }
 
@@ -51,6 +54,8 @@ export async function updateEmployee(
   id: string,
   input: EmployeeInput,
 ): Promise<EmployeeResult> {
+  const denied = await denyUnless("employees", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That employee could not be found." }
   }
@@ -59,6 +64,8 @@ export async function updateEmployee(
 }
 
 export async function deleteEmployee(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("employees", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That employee could not be found." }
   }

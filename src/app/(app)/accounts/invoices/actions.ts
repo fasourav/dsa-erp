@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
+import { denyUnless } from "@/lib/permissions"
 import {
   clientInvoiceStatusFromPayments,
   isClientInvoiceStatus,
@@ -65,6 +66,8 @@ export type DeleteResult = {
 export async function addClientInvoice(
   input: ClientInvoiceInput,
 ): Promise<ClientInvoiceResult> {
+  const denied = await denyUnless("client_invoices", "add")
+  if (denied) return { error: denied }
   return saveClientInvoice(null, input)
 }
 
@@ -72,6 +75,8 @@ export async function updateClientInvoice(
   id: string,
   input: ClientInvoiceInput,
 ): Promise<ClientInvoiceResult> {
+  const denied = await denyUnless("client_invoices", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That invoice could not be found." }
   }
@@ -80,6 +85,8 @@ export async function updateClientInvoice(
 }
 
 export async function deleteClientInvoice(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("client_invoices", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That invoice could not be found." }
   }
@@ -115,6 +122,8 @@ export async function addClientPayment(
   clientInvoiceId: string,
   input: ClientPaymentInput,
 ): Promise<ClientPaymentResult> {
+  const denied = await denyUnless("client_invoices", "add")
+  if (denied) return { error: denied }
   if (!isUuid(clientInvoiceId)) {
     return { error: "That invoice could not be found." }
   }
@@ -126,6 +135,8 @@ export async function updateClientPayment(
   id: string,
   input: ClientPaymentInput,
 ): Promise<ClientPaymentResult> {
+  const denied = await denyUnless("client_invoices", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
   }
@@ -134,6 +145,8 @@ export async function updateClientPayment(
 }
 
 export async function deleteClientPayment(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("client_invoices", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) {
     return { error: "That payment could not be found." }
   }

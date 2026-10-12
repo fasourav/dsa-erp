@@ -6,6 +6,7 @@ import { isUuid } from "@/lib/ids"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { denyUnless } from "@/lib/permissions"
 
 export type LeadInput = {
   leadName: string
@@ -48,6 +49,8 @@ export type ConvertResult = {
 const validKinds = ["person", "company"]
 
 export async function addLead(input: LeadInput): Promise<LeadResult> {
+  const denied = await denyUnless("leads", "add")
+  if (denied) return { error: denied }
   return saveLead(null, input)
 }
 
@@ -55,11 +58,15 @@ export async function updateLead(
   id: string,
   input: LeadInput,
 ): Promise<LeadResult> {
+  const denied = await denyUnless("leads", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) return { error: "That lead could not be found." }
   return saveLead(id, input)
 }
 
 export async function deleteLead(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("leads", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) return { error: "That lead could not be found." }
 
   const supabase = await createClient()
@@ -89,6 +96,12 @@ export async function deleteLead(id: string): Promise<DeleteResult> {
 }
 
 export async function convertLead(leadId: string): Promise<ConvertResult> {
+  const denied = await denyUnless("leads", "edit")
+  if (denied) return { error: denied }
+  const deniedClient = await denyUnless("clients", "add")
+  if (deniedClient) return { error: deniedClient }
+  const deniedProject = await denyUnless("projects", "add")
+  if (deniedProject) return { error: deniedProject }
   if (!isUuid(leadId)) return { error: "That lead could not be found." }
 
   const supabase = await createClient()

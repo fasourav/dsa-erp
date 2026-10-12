@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { isUuid } from "@/lib/ids"
 import { parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { denyUnless } from "@/lib/permissions"
 
 export type BudgetInput = {
   departmentId: string
@@ -31,6 +32,8 @@ export type DeleteResult = {
 }
 
 export async function addBudget(input: BudgetInput): Promise<BudgetResult> {
+  const denied = await denyUnless("budgets", "add")
+  if (denied) return { error: denied }
   return saveBudget(null, input)
 }
 
@@ -38,11 +41,15 @@ export async function updateBudget(
   id: string,
   input: BudgetInput,
 ): Promise<BudgetResult> {
+  const denied = await denyUnless("budgets", "edit")
+  if (denied) return { error: denied }
   if (!isUuid(id)) return { error: "That budget could not be found." }
   return saveBudget(id, input)
 }
 
 export async function deleteBudget(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("budgets", "delete")
+  if (denied) return { error: denied }
   if (!isUuid(id)) return { error: "That budget could not be found." }
 
   const supabase = await createClient()

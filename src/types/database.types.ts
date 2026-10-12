@@ -1143,24 +1143,111 @@ export type Database = {
           },
         ]
       }
+      permission_modules: {
+        Row: {
+          key: string
+          label: string
+          owners_only: boolean
+          sort_order: number
+        }
+        Insert: {
+          key: string
+          label: string
+          owners_only?: boolean
+          sort_order: number
+        }
+        Update: {
+          key?: string
+          label?: string
+          owners_only?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           display_name: string | null
+          email: string | null
           id: string
+          last_sign_in_at: string | null
           role: string
+          show_financials: boolean
+          status: string
         }
         Insert: {
           created_at?: string
           display_name?: string | null
+          email?: string | null
           id: string
+          last_sign_in_at?: string | null
           role?: string
+          show_financials?: boolean
+          status?: string
         }
         Update: {
           created_at?: string
           display_name?: string | null
+          email?: string | null
           id?: string
+          last_sign_in_at?: string | null
           role?: string
+          show_financials?: boolean
+          status?: string
+        }
+        Relationships: []
+      }
+      role_template_permissions: {
+        Row: {
+          can_add: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
+          module: string
+          template_id: string
+        }
+        Insert: {
+          can_add?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          module: string
+          template_id: string
+        }
+        Update: {
+          can_add?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          module?: string
+          template_id?: string
+        }
+        Relationships: []
+      }
+      role_templates: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          label: string
+          show_financials: boolean
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          label: string
+          show_financials?: boolean
+          sort_order: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          label?: string
+          show_financials?: boolean
+          sort_order?: number
         }
         Relationships: []
       }
@@ -2525,9 +2612,68 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          module: string
+          record_id: string | null
+          summary: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          module: string
+          record_id?: string | null
+          summary: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          module?: string
+          record_id?: string | null
+          summary?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
+      user_permissions: {
+        Row: {
+          can_add: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
+          module: string
+          user_id: string
+        }
+        Insert: {
+          can_add?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          module: string
+          user_id: string
+        }
+        Update: {
+          can_add?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          module?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      has_erp_role: { Args: { allowed_roles: string[] }; Returns: boolean }
       resolve_bank_account_id: { Args: { preferred: string }; Returns: string }
     }
     Enums: {

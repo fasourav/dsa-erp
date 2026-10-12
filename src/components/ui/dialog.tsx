@@ -43,9 +43,11 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  variant = "default",
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  variant?: "default" | "drawer"
 }) {
   const releaseLockRef = React.useRef<(() => void) | null>(null)
   const viewportNodeRef = React.useRef<HTMLDivElement | null>(null)
@@ -66,12 +68,19 @@ function DialogContent({
       <DialogPrimitive.Viewport
         ref={setViewportNode}
         data-slot="dialog-viewport"
-        className="fixed inset-x-0 top-0 z-50 flex h-dvh w-full flex-col items-center justify-center overflow-hidden overscroll-none pt-[max(1rem,env(safe-area-inset-top,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))]"
+        className={cn(
+          "fixed inset-x-0 top-0 z-50 flex h-dvh w-full overflow-hidden overscroll-none",
+          variant === "drawer"
+            ? "items-stretch justify-end"
+            : "flex-col items-center justify-center pt-[max(1rem,env(safe-area-inset-top,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))]",
+        )}
       >
         <DialogPrimitive.Popup
           data-slot="dialog-content"
           className={cn(
-            "relative flex max-h-full min-h-0 w-full min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            variant === "drawer"
+              ? "relative ml-auto flex h-full max-h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-popover text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none sm:max-w-xl"
+              : "relative flex max-h-full min-h-0 w-full min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className
           )}
           {...props}

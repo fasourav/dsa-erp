@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { useState, useTransition } from "react"
 
@@ -46,6 +48,10 @@ export function ClientPaymentsDialog({
   paymentMethods: readonly string[]
   bankAccounts: readonly BankAccountChoice[]
 }) {
+  const canAdd = useCan("client_invoices", "add")
+  const canEdit = useCan("client_invoices", "edit")
+  const canDelete = useCan("client_invoices", "delete")
+
   const [payment, setPayment] = useState<ClientPaymentRow | null>(null)
   const [editing, setEditing] = useState(false)
   const [formSession, setFormSession] = useState(0)
@@ -159,11 +165,11 @@ export function ClientPaymentsDialog({
                       ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" onClick={() => openForm(row)}>
+                      {canEdit ? (<Button type="button" variant="outline" onClick={() => openForm(row)}>
                         <Pencil aria-hidden="true" data-icon="inline-start" />
                         Edit
-                      </Button>
-                      <Button
+                      </Button>) : null}
+                      {canDelete ? (<Button
                         type="button"
                         variant="outline"
                         onClick={() => {
@@ -174,7 +180,7 @@ export function ClientPaymentsDialog({
                       >
                         <Trash2 aria-hidden="true" data-icon="inline-start" />
                         Delete
-                      </Button>
+                      </Button>) : null}
                     </div>
                   </div>
                 ))}
@@ -183,6 +189,7 @@ export function ClientPaymentsDialog({
                 <DialogClose render={<Button type="button" variant="outline" />}>
                   Close
                 </DialogClose>
+                {canAdd ? (
                 <Button
                   type="button"
                   disabled={!invoice}
@@ -191,6 +198,7 @@ export function ClientPaymentsDialog({
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   Record Payment
                 </Button>
+                ) : null}
               </DialogFooter>
             </>
           )}

@@ -1,10 +1,21 @@
 import { UsersPanel } from "@/app/(app)/settings/users/users-panel"
-import { getProfiles } from "@/lib/profiles"
+import { getUserDirectory } from "@/app/(app)/settings/users/queries"
+import { getAccess, requireOwner } from "@/lib/permissions"
 
-export const metadata = { title: "Users & Roles" }
+export const metadata = { title: "Users & Permissions" }
 
 export default async function UsersPage() {
-  const { profiles, error } = await getProfiles()
+  await requireOwner()
+  const access = await getAccess()
+  const directory = await getUserDirectory()
 
-  return <UsersPanel profiles={profiles} error={error} />
+  return (
+    <UsersPanel
+      currentUserId={access?.userId ?? ""}
+      users={directory.users}
+      modules={directory.modules}
+      templates={directory.templates}
+      error={directory.error}
+    />
+  )
 }

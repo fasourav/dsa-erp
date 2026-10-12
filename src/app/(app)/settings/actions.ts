@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { denyUnlessOwner } from "@/lib/permissions"
 import {
   catalogByKey,
   duplicateNameMessage,
@@ -42,6 +43,8 @@ export type CatalogItemInput = {
 export async function addCatalogItem(
   input: CatalogItemInput,
 ): Promise<CatalogActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
   return saveCatalogItem(null, input)
 }
 
@@ -49,6 +52,8 @@ export async function updateCatalogItem(
   id: string,
   input: CatalogItemInput,
 ): Promise<CatalogActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
   return saveCatalogItem(id, input)
 }
 
@@ -56,6 +61,8 @@ export async function deleteCatalogItem(
   catalog: string,
   id: string,
 ): Promise<CatalogActionResult> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
   if (!isCatalogKey(catalog)) {
     return { error: "That list could not be found." }
   }

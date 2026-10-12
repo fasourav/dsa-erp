@@ -1,5 +1,6 @@
 import { PurchaseOrdersTable } from "./purchase-orders-table"
 import { getPurchaseOrders } from "@/lib/purchase-orders"
+import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Purchase Orders" }
 
@@ -8,6 +9,7 @@ export default async function PurchaseOrdersPage({
 }: {
   searchParams: Promise<{ project?: string | string[] }>
 }) {
+  await requireModule("purchase_orders")
   const params = await searchParams
   const projectParam = Array.isArray(params.project)
     ? params.project[0]

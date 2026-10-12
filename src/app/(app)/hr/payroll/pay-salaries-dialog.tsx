@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react"
 
+import { useAccess } from "@/components/access-provider"
+
 import {
   payMonthlySalary,
   updateMonthlySalary,
@@ -82,6 +84,8 @@ export function PaySalariesDialog({
   bankAccounts: readonly BankAccountChoice[]
   paymentMethods: readonly string[]
 }) {
+  const showFinancials = useAccess().showFinancials
+  const money = (value: number) => (showFinancials ? formatTaka(value) : "Hidden")
   const salaryId = salary?.id ?? null
   const [month, setMonth] = useState(
     salary
@@ -304,12 +308,13 @@ export function PaySalariesDialog({
                         </TableCell>
                         <TableCell className="font-medium">{row.name}</TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {formatTaka(row.salary)}
+                          {money(row.salary)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {formatTaka(row.allowance)}
+                          {money(row.allowance)}
                         </TableCell>
                         <TableCell className="text-right">
+                          {showFinancials ? (
                           <Input
                             type="number"
                             min="0"
@@ -323,8 +328,12 @@ export function PaySalariesDialog({
                               patchRow(row, { bonus: event.target.value })
                             }
                           />
+                          ) : (
+                            <span className="text-muted-foreground">Hidden</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
+                          {showFinancials ? (
                           <Input
                             type="number"
                             min="0"
@@ -338,6 +347,9 @@ export function PaySalariesDialog({
                               patchRow(row, { deduction: event.target.value })
                             }
                           />
+                          ) : (
+                            <span className="text-muted-foreground">Hidden</span>
+                          )}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -345,7 +357,7 @@ export function PaySalariesDialog({
                             net !== null && net < 0 && "text-destructive",
                           )}
                         >
-                          {net === null ? "—" : formatTaka(net)}
+                          {net === null ? "—" : money(net)}
                         </TableCell>
                       </TableRow>
                     )
@@ -455,7 +467,7 @@ export function PaySalariesDialog({
         </DialogBody>
         <DialogFooter className="flex-col sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-medium" aria-live="polite">
-            Total {formatTaka(total)}
+            Total {money(total)}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <DialogClose

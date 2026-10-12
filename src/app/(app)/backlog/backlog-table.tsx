@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import { MoreHorizontal, Pencil } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -36,6 +38,8 @@ export function BacklogTable({
   rows: BacklogRow[]
   error: string | null
 }) {
+  const canEdit = useCan("backlog", "edit")
+
   const visibility = useColumnVisibility(backlogColumnStore)
   const [sort, setSort] = useState<SortState<BacklogColumnId>>({
     key: "backlogAmount",
@@ -96,10 +100,10 @@ export function BacklogTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => openPlan(row)}>
+              {canEdit ? (<DropdownMenuItem onClick={() => openPlan(row)}>
                 <Pencil aria-hidden="true" />
                 {row.recoveryPlan ? "Edit Recovery Plan" : "Add Recovery Plan"}
-              </DropdownMenuItem>
+              </DropdownMenuItem>) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

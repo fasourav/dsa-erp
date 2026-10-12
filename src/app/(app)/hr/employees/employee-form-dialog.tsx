@@ -7,6 +7,7 @@ import {
   updateEmployee,
   type EmployeeFieldErrors,
 } from "@/app/(app)/hr/employees/actions"
+import { useAccess } from "@/components/access-provider"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -41,6 +42,8 @@ export function EmployeeFormDialog({
   employee: EmployeeRow | null
   departments: readonly DepartmentOption[]
 }) {
+  const showFinancials = useAccess().showFinancials
+  const hidePay = Boolean(employee) && !showFinancials
   const employeeId = employee?.id ?? null
   const [fullName, setFullName] = useState(employee?.fullName ?? "")
   const [departmentId, setDepartmentId] = useState(
@@ -205,6 +208,11 @@ export function EmployeeFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="emp-salary">Monthly Salary</Label>
+              {hidePay ? (
+                <p id="emp-salary" className="flex h-8 items-center text-sm text-muted-foreground">
+                  Hidden
+                </p>
+              ) : (
               <Input
                 id="emp-salary"
                 type="number"
@@ -216,6 +224,7 @@ export function EmployeeFormDialog({
                 aria-invalid={Boolean(salaryError)}
                 onChange={(e) => setMonthlySalary(e.target.value)}
               />
+              )}
               {salaryError ? (
                 <p role="alert" className="text-sm text-destructive">
                   {salaryError}
@@ -224,6 +233,11 @@ export function EmployeeFormDialog({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="emp-allowance">Allowance</Label>
+              {hidePay ? (
+                <p id="emp-allowance" className="flex h-8 items-center text-sm text-muted-foreground">
+                  Hidden
+                </p>
+              ) : (
               <Input
                 id="emp-allowance"
                 type="number"
@@ -236,6 +250,7 @@ export function EmployeeFormDialog({
                 aria-invalid={Boolean(fieldErrors.allowance)}
                 onChange={(e) => setAllowance(e.target.value)}
               />
+              )}
               {fieldErrors.allowance ? (
                 <p role="alert" className="text-sm text-destructive">
                   {fieldErrors.allowance}

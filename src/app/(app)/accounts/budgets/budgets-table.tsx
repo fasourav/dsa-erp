@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -105,6 +107,10 @@ export function BudgetsTable({
   departments: DepartmentOption[]
   error: string | null
 }) {
+  const canAdd = useCan("budgets", "add")
+  const canEdit = useCan("budgets", "edit")
+  const canDelete = useCan("budgets", "delete")
+
   const [sort, setSort] = useState<SortState<ColId>>({
     key: "period",
     direction: "desc",
@@ -151,10 +157,10 @@ export function BudgetsTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Budgets</h1>
-        <Button type="button" onClick={() => openForm(null)}>
+        {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add New Budget
-        </Button>
+        </Button>) : null}
       </div>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
@@ -203,9 +209,9 @@ export function BudgetsTable({
                         <MoreHorizontal aria-hidden="true" className="size-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={() => openForm(b)}><Pencil aria-hidden="true" />Edit</DropdownMenuItem>
+                        {canEdit ? (<DropdownMenuItem onClick={() => openForm(b)}><Pencil aria-hidden="true" />Edit</DropdownMenuItem>) : null}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onClick={() => askDelete(b)}><Trash2 aria-hidden="true" />Delete</DropdownMenuItem>
+                        {canDelete ? (<DropdownMenuItem variant="destructive" onClick={() => askDelete(b)}><Trash2 aria-hidden="true" />Delete</DropdownMenuItem>) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

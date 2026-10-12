@@ -17,7 +17,9 @@ import {
   PanelLeftOpen,
   PiggyBank,
   Receipt,
+  ScrollText,
   Settings,
+  Shield,
   Truck,
   UserPlus,
   Users,
@@ -28,32 +30,36 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { useAccess } from "@/components/access-provider"
 import { BrandLockup, BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
+import { canSeeNav, navItems } from "@/lib/access"
 import { cn } from "@/lib/utils"
 
-const navItems: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/leads", label: "Leads", icon: UserPlus },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/vendors", label: "Vendors", icon: Truck },
-  { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
-  { href: "/accounts/invoices", label: "Client Invoices", icon: FileText },
-  { href: "/accounts/receivable", label: "Accounts Receivable", icon: ArrowDownLeft },
-  { href: "/income", label: "Income", icon: HandCoins },
-  { href: "/accounts/payable", label: "Accounts Payable", icon: ArrowUpRight },
-  { href: "/expense", label: "Expense", icon: WalletCards },
-  { href: "/accounts/expenses", label: "Operational Expense", icon: Wallet },
-  { href: "/backlog", label: "Backlog", icon: ListTodo },
-  { href: "/accounts/vat-tax", label: "VAT/Tax", icon: Calculator },
-  { href: "/accounts/bank", label: "Bank", icon: Landmark },
-  { href: "/accounts/budgets", label: "Budgets", icon: PiggyBank },
-  { href: "/assets", label: "Assets", icon: Box },
-  { href: "/hr/employees", label: "Employees", icon: Contact },
-  { href: "/hr/payroll", label: "Payroll", icon: Banknote },
-  { href: "/settings", label: "Settings", icon: Settings },
-]
+const navIcons: Record<string, LucideIcon> = {
+  "/dashboard": LayoutDashboard,
+  "/leads": UserPlus,
+  "/clients": Users,
+  "/projects": FolderKanban,
+  "/vendors": Truck,
+  "/purchase-orders": Receipt,
+  "/accounts/invoices": FileText,
+  "/accounts/receivable": ArrowDownLeft,
+  "/income": HandCoins,
+  "/accounts/payable": ArrowUpRight,
+  "/expense": WalletCards,
+  "/accounts/expenses": Wallet,
+  "/backlog": ListTodo,
+  "/accounts/vat-tax": Calculator,
+  "/accounts/bank": Landmark,
+  "/accounts/budgets": PiggyBank,
+  "/assets": Box,
+  "/hr/employees": Contact,
+  "/hr/payroll": Banknote,
+  "/settings/users": Shield,
+  "/activity": ScrollText,
+  "/settings": Settings,
+}
 
 export function AppSidebar({
   collapsed,
@@ -63,6 +69,8 @@ export function AppSidebar({
   onToggle: () => void
 }) {
   const pathname = usePathname()
+  const access = useAccess()
+  const visibleItems = navItems.filter((item) => canSeeNav(access, item))
 
   return (
     <aside
@@ -106,11 +114,27 @@ export function AppSidebar({
           collapsed ? "hidden md:flex" : "flex",
         )}
       >
-        {navItems.map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+        {visibleItems.map((item) => (
+          <NavLink
+            key={item.href}
+            item={{ ...item, icon: navIcons[item.href] }}
+            pathname={pathname}
+            collapsed={collapsed}
+          />
         ))}
       </nav>
     </aside>
+  )
+}
+
+function isNavActive(pathname: string, href: string) {
+  const matches = pathname === href || pathname.startsWith(`${href}/`)
+  if (!matches) return false
+  return !navItems.some(
+    (item) =>
+      item.href !== href &&
+      item.href.startsWith(`${href}/`) &&
+      (pathname === item.href || pathname.startsWith(`${item.href}/`)),
   )
 }
 
@@ -119,12 +143,13 @@ function NavLink({
   pathname,
   collapsed,
 }: {
-  item: { href: string; label: string; icon: LucideIcon }
+  item: { href: string; label: string; icon: LucideIcon | undefined }
   pathname: string
   collapsed: boolean
 }) {
-  const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+  const active = isNavActive(pathname, item.href)
   const Icon = item.icon
+  if (!Icon) return null
 
   return (
     <Link

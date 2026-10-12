@@ -1,5 +1,7 @@
 "use client"
 
+import { useCan } from "@/components/access-provider"
+
 import {
   ArrowRightLeft,
   MoreHorizontal,
@@ -103,6 +105,8 @@ export function LeadsTable({
   lookups: LeadLookups
   error: string | null
 }) {
+  const canAdd = useCan("leads", "add")
+
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
     getColumnSnapshot,
@@ -175,10 +179,10 @@ export function LeadsTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Leads</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={() => openForm(null)}>
+          {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add New Lead
-          </Button>
+          </Button>) : null}
         </div>
       </div>
 
@@ -356,6 +360,8 @@ function RowActions({
   onConvert: (lead: LeadRow) => void
   onDelete: (lead: LeadRow) => void
 }) {
+  const canEdit = useCan("leads", "edit")
+  const canDelete = useCan("leads", "delete")
   const alreadyConverted = Boolean(
     lead.convertedClientId || lead.convertedProjectId,
   )
@@ -375,22 +381,22 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onClick={() => onEdit(lead)}>
+        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(lead)}>
           <Pencil aria-hidden="true" />
           Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem
+        </DropdownMenuItem>) : null}
+        {canEdit ? (<DropdownMenuItem
           disabled={alreadyConverted || converting}
           onClick={() => onConvert(lead)}
         >
           <ArrowRightLeft aria-hidden="true" />
           Convert To Client
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(lead)}>
+        {canDelete ? (<DropdownMenuItem variant="destructive" onClick={() => onDelete(lead)}>
           <Trash2 aria-hidden="true" />
           Delete
-        </DropdownMenuItem>
+        </DropdownMenuItem>) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
