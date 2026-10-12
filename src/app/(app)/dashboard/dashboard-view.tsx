@@ -126,13 +126,21 @@ function DashboardSections({ model }: { model: DashboardModel }) {
 
       <section className="flex flex-col gap-4">
         <h2 className="sr-only">Financial Overview</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             label="Total Revenue"
             value={snapshot.revenue}
             delta={snapshot.revenueDelta}
             spark={snapshot.revenueSpark}
             sparkColor="var(--chart-1)"
+          />
+          <KpiCard
+            label="Total Expense"
+            value={snapshot.totalExpense}
+            delta={snapshot.expenseDelta}
+            lowerIsBetter
+            spark={snapshot.expenseSpark}
+            sparkColor="var(--chart-4)"
           />
           <KpiCard
             label="Net Profit"
@@ -151,31 +159,25 @@ function DashboardSections({ model }: { model: DashboardModel }) {
               sparkColor="var(--chart-4)"
             />
           ) : null}
-          <KpiCard
+        </div>
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <CompactMetric
             label="Gross Profit"
             value={snapshot.grossProfit}
-            delta={snapshot.grossDelta}
-            spark={snapshot.grossSpark}
-            sparkColor="var(--chart-1)"
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <CompactMetric
-            label="Total Expense"
-            value={snapshot.totalExpense}
             detail={
-              snapshot.expenseDelta == null
+              snapshot.grossDelta == null
                 ? undefined
-                : `${formatDelta(snapshot.expenseDelta)} Vs Last FY`
+                : `${formatDelta(snapshot.grossDelta)} Vs Last FY`
             }
+            tone={snapshot.grossProfit < 0 ? "negative" : "default"}
           />
           <CompactMetric
-            label="Accounts Receivables"
+            label="Accounts Receivable"
             value={model.receivables}
             detail="Current"
           />
           <CompactMetric
-            label="Accounts Payables"
+            label="Accounts Payable"
             value={model.payables}
             detail="Current"
             tone={model.payables > 0 ? "warning" : "default"}
@@ -188,7 +190,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             tone={model.forecastedProfit < 0 ? "negative" : "default"}
             icon={model.forecastedProfit < 0 ? TrendingDown : TrendingUp}
           />
-          <CompactMetric label="Outflow" value={snapshot.outflow} />
+          <CompactMetric label="Withdrawal" value={snapshot.withdrawal} />
         </div>
       </section>
 
@@ -370,7 +372,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
               <h2 className="text-base font-medium">Margin Analysis</h2>
               <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
               <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
               <Ring
@@ -378,6 +380,12 @@ function DashboardSections({ model }: { model: DashboardModel }) {
                 value={snapshot.grossMargin}
                 tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
               />
+              <Ring
+                label="Net Profit Margin"
+                value={snapshot.netMargin}
+                tone={snapshot.netMargin < 0 ? "text-destructive" : "text-chart-2"}
+              />
+              <Ring label="Withdrawal Ratio" value={snapshot.withdrawalRatio} tone="text-chart-4" />
               <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
               <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
               <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
@@ -490,6 +498,7 @@ function KpiCard({
   value,
   detail,
   delta,
+  lowerIsBetter = false,
   spark,
   sparkColor,
 }: {
@@ -497,19 +506,20 @@ function KpiCard({
   value: number
   detail?: string
   delta: number | null
+  lowerIsBetter?: boolean
   spark: { label: string; value: number }[]
   sparkColor: string
 }) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardContent className="flex flex-col gap-1">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          {delta != null ? <DeltaBadge value={delta} /> : null}
+          <p className="min-w-0 text-sm font-medium text-muted-foreground">{label}</p>
+          {delta != null ? <DeltaBadge value={delta} lowerIsBetter={lowerIsBetter} /> : null}
         </div>
         <p
           className={cn(
-            "text-2xl font-semibold tabular-nums",
+            "min-w-0 overflow-x-auto text-2xl font-semibold tabular-nums",
             value < 0 && "text-destructive",
           )}
         >
@@ -538,6 +548,7 @@ function CompactMetric({
   return (
     <Card
       className={cn(
+        "min-w-0",
         tone === "negative" && "bg-destructive/5",
         tone === "warning" && "bg-warning/10",
       )}
@@ -556,7 +567,7 @@ function CompactMetric({
         </p>
         <p
           className={cn(
-            "text-lg font-semibold tabular-nums",
+            "min-w-0 overflow-x-auto text-lg font-semibold tabular-nums",
             tone === "negative" || value < 0 ? "text-destructive" : "text-foreground",
           )}
         >
@@ -690,14 +701,21 @@ function TrendMark({
   )
 }
 
-function DeltaBadge({ value }: { value: number }) {
+function DeltaBadge({
+  value,
+  lowerIsBetter = false,
+}: {
+  value: number
+  lowerIsBetter?: boolean
+}) {
   const rising = value > 0
   const Icon = rising ? TrendingUp : value < 0 ? TrendingDown : Minus
+  const favorable = lowerIsBetter ? value < 0 : rising
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-        rising ? "bg-success/15 text-success-foreground" : "bg-destructive/10 text-destructive",
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+        favorable ? "bg-success/15 text-success-foreground" : "bg-destructive/10 text-destructive",
       )}
     >
       <Icon aria-hidden="true" className="size-4" />
@@ -728,16 +746,17 @@ function downloadDashboard(
     ["Metric", "Amount"],
     ["Total Revenue", formatExactBdt(snapshot.revenue)],
     ["Total Expense", formatExactBdt(snapshot.totalExpense)],
-    ["Gross Profit", formatExactBdt(snapshot.grossProfit)],
     ["Net Profit", formatExactBdt(snapshot.netProfit)],
     ...(showFinancials ? [["Cash Balance", formatExactBdt(model.cashBalance)] as (string | number)[]] : []),
-    ["Accounts Receivables", formatExactBdt(model.receivables)],
-    ["Accounts Payables", formatExactBdt(model.payables)],
+    ["Gross Profit", formatExactBdt(snapshot.grossProfit)],
+    ["Accounts Receivable", formatExactBdt(model.receivables)],
+    ["Accounts Payable", formatExactBdt(model.payables)],
     ["Forecasted Profit", formatExactBdt(model.forecastedProfit)],
-    ["Outflow", formatExactBdt(snapshot.outflow)],
+    ["Withdrawal", formatExactBdt(snapshot.withdrawal)],
     ["Project Expense", formatExactBdt(snapshot.projectExpense)],
     ["Material Cost", formatExactBdt(snapshot.material)],
     ["Subcontractor Cost", formatExactBdt(snapshot.subcontractor)],
+    ["Project Overhead", formatExactBdt(snapshot.projectOverhead)],
     ["Tax Paid", formatExactBdt(snapshot.tax)],
     ["Admin Expense", formatExactBdt(snapshot.admin)],
     ["Operational Expense", formatExactBdt(snapshot.operational)],
@@ -746,6 +765,8 @@ function downloadDashboard(
     ["Collection Rate", snapshot.collectionRate],
     ["Expense Ratio", snapshot.expenseRatio],
     ["Gross Profit Margin", snapshot.grossMargin],
+    ["Net Profit Margin", snapshot.netMargin],
+    ["Withdrawal Ratio", snapshot.withdrawalRatio],
     ["Project Cost Ratio", snapshot.projectCostRatio],
     ["Tax Ratio", snapshot.taxRatio],
     ["Admin Expense Ratio", snapshot.adminRatio],

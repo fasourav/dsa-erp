@@ -40,9 +40,11 @@ export type YearSnapshot = {
   netDelta: number | null
   totalExpense: number
   expenseDelta: number | null
-  outflow: number
+  expenseSpark: ChartPoint[]
+  withdrawal: number
   material: number
   subcontractor: number
+  projectOverhead: number
   tax: number
   admin: number
   operational: number
@@ -52,6 +54,8 @@ export type YearSnapshot = {
   collectionRate: number
   expenseRatio: number
   grossMargin: number
+  netMargin: number
+  withdrawalRatio: number
   projectCostRatio: number
   taxRatio: number
   adminRatio: number
@@ -291,16 +295,17 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     }),
   )
 
-  const allRevenue = sum(revenue)
-  const allVendor = sum(vendorPayments)
-  const allOperational = sum(operational)
-  const allTax = sum(taxes)
-  // Paid salaries are bank outflows. Operational rows already categorized as
-  // salary stay inside allOperational, so they are not added again here.
-  const bankPayroll = bank
-    .filter((row) => row.sourceKind === "payroll" && row.direction === "outflow")
-    .reduce((total, row) => total + row.amount, 0)
-  const allNet = allRevenue - allVendor - allOperational - allTax - bankPayroll
+  const lifetimeBooks: Books = {
+    revenue,
+    vendorPayments,
+    operational,
+    taxes,
+    bank,
+    collectionRate,
+  }
+  const lifetime = expenseTotals(lifetimeBooks, "0001-01-01", "9999-12-31")
+  const allRevenue = totalBetween(revenue, "0001-01-01", "9999-12-31")
+  const allNet = netProfitOf(allRevenue, lifetime)
   const contractValue = input.projects.reduce(
     (total, project) => total + project.totalValue,
     0,
@@ -339,6 +344,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
       revenue,
       vendorPayments,
       operational,
+      taxes,
       `${year}-01-01`,
       year === currentYear ? today : `${year}-12-31`,
     ),
@@ -361,8 +367,8 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     cashSpark: monthEnds(currentYear, today, bank, input.openingBalance),
     receivables: input.receivables,
     payables: input.payables,
-    // Best effort: profit if open invoices are collected and open payables are paid.
-    // Uncommitted future costs are not included.
+    // Net profit, using the same formula as the KPI, if open invoices are collected
+    // and open payables are paid. Uncommitted future costs are not included.
     forecastedProfit: allNet + input.receivables - input.payables,
     weeks,
     weekCaption: `${formatRange(latestWeek.start, latestWeek.end)} (W${latestWeek.week}) · Last 12 Weeks`,
@@ -391,7 +397,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
       // Won leads divided by won + lost. Open, on hold, and cancelled leads are not decided.
       winRate: percentOf(won, won + lost),
       // Cash collected over contracted project value. Collection Rate uses the invoice ledger.
-      collectionEfficiency: percentOf(allRevenue, contractValue),
+      collectionEfficiency: percentOf(sum(revenue), contractValue),
       // project_backlogs: spend already above collections, not a not-started phase.
       backlog: input.backlogCount,
     },
@@ -399,7 +405,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
       launchDateLabel: formatDayMonYear(launch),
       inOperation: formatOperation(span),
       daysLabel: `${formatGroupedCount(span.totalDays)} Days Since Launch`,
-      revenuePerDay: Math.round(allRevenue / operatingDays),
+      revenuePerDay: Math.round(sum(revenue) / operatingDays),
       netProfitPerDay: Math.round(allNet / operatingDays),
     },
   }
@@ -421,22 +427,12 @@ function buildYear(year: number, today: string, currentYear: number, books: Book
   const priorExpenses = expenseTotals(books, prior.start, prior.end)
   const revenue = totalBetween(books.revenue, current.start, current.end)
   const priorRevenue = totalBetween(books.revenue, prior.start, prior.end)
-  const grossProfit = grossBetween(
-    books.revenue,
-    books.vendorPayments,
-    books.operational,
-    current.start,
-    current.end,
-  )
-  const priorGross = grossBetween(
-    books.revenue,
-    books.vendorPayments,
-    books.operational,
-    prior.start,
-    prior.end,
-  )
-  const netProfit = revenue - expenses.total
-  const priorNet = priorRevenue - priorExpenses.total
+  const grossProfit = grossProfitOf(revenue, expenses)
+  const priorGross = grossProfitOf(priorRevenue, priorExpenses)
+  const netProfit = netProfitOf(revenue, expenses)
+  const priorNet = netProfitOf(priorRevenue, priorExpenses)
+  const projectExpense = projectExpenseOf(expenses)
+  const withdrawal = totalWithdrawals(books.bank, current.start, current.end)
 
   return {
     year,
@@ -448,45 +444,42 @@ function buildYear(year: number, today: string, currentYear: number, books: Book
     netDelta: changePercent(netProfit, priorNet),
     totalExpense: expenses.total,
     expenseDelta: changePercent(expenses.total, priorExpenses.total),
-    outflow: books.bank.reduce((total, row) => {
-      // Transfers, deposits, and withdrawals change the bank balance only.
-      // They are not income or expense, so they stay out of this Outflow total.
-      if (!countsAsExpenseOutflow(row) || row.date < current.start || row.date > current.end) {
-        return total
-      }
-      return total + row.amount
-    }, 0),
+    withdrawal,
     material: expenses.material,
     subcontractor: expenses.subcontractor,
+    projectOverhead: expenses.projectOverhead,
     tax: expenses.tax,
     admin: expenses.admin,
     operational: expenses.operational,
     marketing: expenses.marketing,
     salary: expenses.salary,
-    projectExpense: expenses.material + expenses.subcontractor,
+    projectExpense,
     // Whole receivable ledger. Invoice dates do not make a clean fiscal cut of this rate.
     collectionRate: books.collectionRate,
     expenseRatio: percentOf(expenses.total, revenue),
     grossMargin: percentOf(grossProfit, revenue),
-    projectCostRatio: percentOf(expenses.material + expenses.subcontractor, expenses.total),
+    netMargin: percentOf(netProfit, revenue),
+    withdrawalRatio: percentOf(withdrawal, revenue),
+    projectCostRatio: percentOf(projectExpense, expenses.total),
     taxRatio: percentOf(expenses.tax, revenue),
-    adminRatio: percentOf(expenses.admin, revenue),
+    adminRatio: percentOf(adminExpenseOf(expenses), revenue),
     revenueSpark: monthSpark(year, today, (start, end) =>
       totalBetween(books.revenue, start, end),
     ),
     grossSpark: monthSpark(year, today, (start, end) =>
-      grossBetween(books.revenue, books.vendorPayments, books.operational, start, end),
+      grossProfitOf(totalBetween(books.revenue, start, end), expenseTotals(books, start, end)),
     ),
-    netSpark: monthSpark(year, today, (start, end) => {
-      const monthRevenue = totalBetween(books.revenue, start, end)
-      return monthRevenue - expenseTotals(books, start, end).total
-    }),
+    netSpark: monthSpark(year, today, (start, end) =>
+      netProfitOf(totalBetween(books.revenue, start, end), expenseTotals(books, start, end)),
+    ),
+    expenseSpark: monthSpark(year, today, (start, end) => expenseTotals(books, start, end).total),
   }
 }
 
 type ExpenseTotals = {
   material: number
   subcontractor: number
+  projectOverhead: number
   tax: number
   admin: number
   operational: number
@@ -495,10 +488,31 @@ type ExpenseTotals = {
   total: number
 }
 
+function projectExpenseOf(expenses: ExpenseTotals): number {
+  return expenses.material + expenses.subcontractor + expenses.projectOverhead
+}
+
+function adminExpenseOf(expenses: ExpenseTotals): number {
+  // Non-project operational cost, marketing, salary, and the admin category.
+  // Project-linked costs and VAT/Tax records are not in these buckets.
+  return expenses.operational + expenses.marketing + expenses.salary + expenses.admin
+}
+
+function grossProfitOf(revenue: number, expenses: ExpenseTotals): number {
+  // Project revenue is client collections. Every client invoice belongs to a project.
+  // Project expense is project-linked cost. Tax is the VAT/Tax ledger, counted only here.
+  return revenue - projectExpenseOf(expenses) - expenses.tax
+}
+
+function netProfitOf(revenue: number, expenses: ExpenseTotals): number {
+  return grossProfitOf(revenue, expenses) - adminExpenseOf(expenses)
+}
+
 function expenseTotals(books: Books, start: string, end: string): ExpenseTotals {
   const totals: ExpenseTotals = {
     material: 0,
     subcontractor: 0,
+    projectOverhead: 0,
     tax: 0,
     admin: 0,
     operational: 0,
@@ -524,6 +538,12 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
 
   for (const row of books.operational) {
     if (!inSpan(row.date, start, end)) continue
+    // A project-linked operational row is a project cost. It is not also
+    // operational expense, salary, admin, or marketing.
+    if (row.projectLinked) {
+      totals.projectOverhead += row.amount
+      continue
+    }
     totals[classifyOperational(row.category)] += row.amount
   }
 
@@ -536,13 +556,14 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
     if (row.sourceKind !== "payroll" || row.direction !== "outflow") continue
     if (!inSpan(row.date, start, end)) continue
     // Employee Salary is payroll outflows on the bank ledger, plus operational
-    // rows categorized as salary.
+    // rows categorized as salary that are not linked to a project.
     totals.salary += row.amount
   }
 
   totals.total =
     totals.material +
     totals.subcontractor +
+    totals.projectOverhead +
     totals.tax +
     totals.admin +
     totals.operational +
@@ -553,27 +574,26 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
 
 function grossBetween(
   revenue: Dated[],
-  vendorPayments: (Dated & { projectLinked: boolean })[],
-  operational: (Dated & { projectLinked: boolean })[],
+  vendorPayments: (Dated & { workType: string | null; projectLinked: boolean })[],
+  operational: (Dated & { category: string; projectLinked: boolean })[],
+  taxes: Dated[],
   start: string,
   end: string,
 ): number {
-  // Matches project_financials: collections minus project purchase-order payments
-  // minus project-linked overhead. Operational purchase orders have no project,
-  // so their payments stay out of project gross profit and project-cost ratios.
-  return (
-    totalBetween(revenue, start, end) -
-    totalBetween(
-      vendorPayments.filter((row) => row.projectLinked),
-      start,
-      end,
-    ) -
-    totalBetween(
-      operational.filter((row) => row.projectLinked),
-      start,
-      end,
-    )
+  const collected = totalBetween(revenue, start, end)
+  const expenses = expenseTotals(
+    {
+      revenue,
+      vendorPayments,
+      operational,
+      taxes,
+      bank: [],
+      collectionRate: 0,
+    },
+    start,
+    end,
   )
+  return grossProfitOf(collected, expenses)
 }
 
 export function isMaterialWork(workType: string | null): boolean {
@@ -619,10 +639,10 @@ function lastWeeks(
     weeks.push({
       label: `W${week.week}`,
       revenue: weekRevenue,
-      projectExpense: expenses.material + expenses.subcontractor,
-      adminExpense: expenses.admin,
+      projectExpense: projectExpenseOf(expenses),
+      adminExpense: adminExpenseOf(expenses),
       totalExpense: expenses.total,
-      netProfit: weekRevenue - expenses.total,
+      netProfit: netProfitOf(weekRevenue, expenses),
     })
   }
 
@@ -684,10 +704,19 @@ function balanceAsOf(
   return balance
 }
 
-const balanceOnlySources = new Set(["transfer", "deposit", "withdrawal"])
-
-function countsAsExpenseOutflow(row: { direction: string; sourceKind: string }): boolean {
-  return row.direction === "outflow" && !balanceOnlySources.has(row.sourceKind)
+function totalWithdrawals(
+  bank: (Dated & { direction: string; sourceKind: string })[],
+  start: string,
+  end: string,
+): number {
+  // Manual withdrawals from Banking. Deposits, transfers, and payment outflows stay out.
+  let total = 0
+  for (const row of bank) {
+    if (row.sourceKind !== "withdrawal" || row.direction !== "outflow") continue
+    if (!inSpan(row.date, start, end)) continue
+    total += row.amount
+  }
+  return total
 }
 
 function yearWindow(year: number, today: string, currentYear: number) {
@@ -745,6 +774,7 @@ function inSpan(date: string, start: string, end: string): boolean {
 }
 
 function percentOf(part: number, whole: number): number {
+  // Zero revenue, and any other zero denominator, is 0% rather than an infinite ratio.
   if (whole === 0) return 0
   return (part / whole) * 100
 }
