@@ -23,14 +23,6 @@ export const metadata: Metadata = {
     template: "%s · DSA ERP",
   },
   description: "Internal ERP for DynamicSpace Architects & Engineers.",
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/brand/icon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/brand/icon-16.png", type: "image/png", sizes: "16x16" },
-    ],
-    apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180" }],
-  },
 };
 
 export default async function RootLayout({

@@ -3,9 +3,6 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import { LoginBackground } from "@/app/login/login-background"
-import { BrandLockup } from "@/components/brand-mark"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 
 const inviteError =
@@ -29,7 +26,7 @@ function clearInviteUrl() {
   window.history.replaceState(window.history.state, "", window.location.pathname)
 }
 
-export function AcceptInvite({ lightMode }: { lightMode: boolean }) {
+export function AcceptInvite() {
   const router = useRouter()
   const [failed, setFailed] = useState(false)
 
@@ -96,32 +93,13 @@ export function AcceptInvite({ lightMode }: { lightMode: boolean }) {
     }
   }, [router])
 
-  return (
-    <main className="relative flex min-h-svh items-center justify-center overflow-x-hidden px-4 py-10 sm:py-16">
-      <div className="absolute inset-0" aria-hidden="true">
-        <LoginBackground lightMode={lightMode} />
-      </div>
-      <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-8">
-        <BrandLockup layout="stacked" priority className="w-full" />
-        <Card className="relative w-full rounded-3xl border border-foreground/10 bg-card/70 shadow-2xl ring-foreground/10 backdrop-blur-2xl backdrop-saturate-150 before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-foreground/25">
-          <CardHeader className="gap-1.5">
-            <h1 className="font-heading text-2xl leading-tight font-medium tracking-tight">
-              Accept Invite
-            </h1>
-          </CardHeader>
-          <CardContent>
-            {failed ? (
-              <p role="alert" className="text-sm leading-relaxed text-destructive">
-                {inviteError}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                Signing you in from your invite.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+  return failed ? (
+    <p role="alert" className="text-sm leading-relaxed text-destructive">
+      {inviteError}
+    </p>
+  ) : (
+    <p className="text-sm leading-relaxed text-primary-foreground/80" aria-live="polite">
+      Signing you in from your invite.
+    </p>
   )
 }
