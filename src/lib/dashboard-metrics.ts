@@ -344,6 +344,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
       revenue,
       vendorPayments,
       operational,
+      taxes,
       `${year}-01-01`,
       year === currentYear ? today : `${year}-12-31`,
     ),
@@ -461,7 +462,7 @@ function buildYear(year: number, today: string, currentYear: number, books: Book
     withdrawalRatio: percentOf(withdrawal, revenue),
     projectCostRatio: percentOf(projectExpense, expenses.total),
     taxRatio: percentOf(expenses.tax, revenue),
-    adminRatio: percentOf(expenses.admin, revenue),
+    adminRatio: percentOf(adminExpenseOf(expenses), revenue),
     revenueSpark: monthSpark(year, today, (start, end) =>
       totalBetween(books.revenue, start, end),
     ),
@@ -491,16 +492,20 @@ function projectExpenseOf(expenses: ExpenseTotals): number {
   return expenses.material + expenses.subcontractor + expenses.projectOverhead
 }
 
+function adminExpenseOf(expenses: ExpenseTotals): number {
+  // Non-project operational cost, marketing, salary, and the admin category.
+  // Project-linked costs and VAT/Tax records are not in these buckets.
+  return expenses.operational + expenses.marketing + expenses.salary + expenses.admin
+}
+
 function grossProfitOf(revenue: number, expenses: ExpenseTotals): number {
   // Project revenue is client collections. Every client invoice belongs to a project.
-  // Project expense is project-linked cost: project purchase-order payments plus
-  // operational expenses that name a project.
-  return revenue - projectExpenseOf(expenses)
+  // Project expense is project-linked cost. Tax is the VAT/Tax ledger, counted only here.
+  return revenue - projectExpenseOf(expenses) - expenses.tax
 }
 
 function netProfitOf(revenue: number, expenses: ExpenseTotals): number {
-  // Tax, admin, and marketing stay in Total Expense and out of this profit.
-  return grossProfitOf(revenue, expenses) - expenses.operational - expenses.salary
+  return grossProfitOf(revenue, expenses) - adminExpenseOf(expenses)
 }
 
 function expenseTotals(books: Books, start: string, end: string): ExpenseTotals {
@@ -571,6 +576,7 @@ function grossBetween(
   revenue: Dated[],
   vendorPayments: (Dated & { workType: string | null; projectLinked: boolean })[],
   operational: (Dated & { category: string; projectLinked: boolean })[],
+  taxes: Dated[],
   start: string,
   end: string,
 ): number {
@@ -580,7 +586,7 @@ function grossBetween(
       revenue,
       vendorPayments,
       operational,
-      taxes: [],
+      taxes,
       bank: [],
       collectionRate: 0,
     },
@@ -634,7 +640,7 @@ function lastWeeks(
       label: `W${week.week}`,
       revenue: weekRevenue,
       projectExpense: projectExpenseOf(expenses),
-      adminExpense: expenses.admin,
+      adminExpense: adminExpenseOf(expenses),
       totalExpense: expenses.total,
       netProfit: netProfitOf(weekRevenue, expenses),
     })
