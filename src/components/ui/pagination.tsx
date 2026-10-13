@@ -48,7 +48,10 @@ function PaginationLink({
     <Button
       variant={isActive ? "outline" : "ghost"}
       size={size}
-      className={cn(className)}
+      className={cn(
+        "font-label text-muted-foreground aria-[current=page]:bg-solid aria-[current=page]:text-foreground aria-[current=page]:shadow-segment",
+        className
+      )}
       nativeButton={false}
       render={
         <a
@@ -107,7 +110,7 @@ function PaginationEllipsis({
       aria-hidden
       data-slot="pagination-ellipsis"
       className={cn(
-        "flex size-8 items-center justify-center [&_svg:not([class*='size-'])]:size-4",
+        "flex size-11 items-center justify-center text-muted-foreground md:size-8 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

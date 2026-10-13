@@ -31,7 +31,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 min-h-dvh bg-black/10 duration-100 supports-[-webkit-touch-callout:none]:absolute supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 min-h-dvh bg-scrim duration-300 supports-[-webkit-touch-callout:none]:absolute supports-backdrop-filter:backdrop-blur-[2px] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 md:duration-200",
         className
       )}
       {...props}
@@ -44,10 +44,17 @@ function DialogContent({
   children,
   showCloseButton = true,
   variant = "default",
+  mobileLayout = "stack",
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
   variant?: "default" | "drawer"
+  /**
+   * Phone layout of a bottom sheet. "nav" puts the footer's first action
+   * (Cancel) and last action (Save) beside the title, like an iOS sheet.
+   * Use it only when the footer holds exactly those two buttons.
+   */
+  mobileLayout?: "stack" | "nav"
 }) {
   const releaseLockRef = React.useRef<(() => void) | null>(null)
   const viewportNodeRef = React.useRef<HTMLDivElement | null>(null)
@@ -71,28 +78,37 @@ function DialogContent({
         className={cn(
           "fixed inset-x-0 top-0 z-50 flex h-dvh w-full overflow-hidden overscroll-none",
           variant === "drawer"
-            ? "items-stretch justify-end"
-            : "flex-col items-center justify-center pt-[max(1rem,env(safe-area-inset-top,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))]",
+            ? "flex-col items-stretch justify-end px-1.5 pt-[max(3.5rem,calc(env(safe-area-inset-top,0px)+0.75rem))] pb-1.5 md:flex-row md:justify-end md:p-3.5"
+            : "flex-col items-center justify-end px-1.5 pt-[max(3.5rem,calc(env(safe-area-inset-top,0px)+0.75rem))] pb-1.5 md:justify-center md:pt-[max(1rem,env(safe-area-inset-top,0px))] md:pr-[max(1rem,env(safe-area-inset-right,0px))] md:pb-[max(1rem,env(safe-area-inset-bottom,0px))] md:pl-[max(1rem,env(safe-area-inset-left,0px))]",
         )}
       >
         <DialogPrimitive.Popup
           data-slot="dialog-content"
+          data-layout={variant === "drawer" ? undefined : mobileLayout}
           className={cn(
+            "group/dialog outline-none",
             variant === "drawer"
-              ? "relative ml-auto flex h-full max-h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-popover text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none sm:max-w-xl"
-              : "relative flex max-h-full min-h-0 w-full min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+              ? "relative flex h-full max-h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-sheet glass-sheet pb-[env(safe-area-inset-bottom,0px)] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom sm:max-w-xl md:ml-auto md:rounded-dialog md:bg-surface-strong md:pb-0 md:text-sm md:glass-float md:data-open:slide-in-from-right md:data-open:slide-in-from-bottom-0 md:data-closed:slide-out-to-right md:data-closed:slide-out-to-bottom-0"
+              : "relative flex max-h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-y-auto overscroll-contain rounded-sheet glass-sheet px-4 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom data-[layout=nav]:grid data-[layout=nav]:grid-cols-[auto_minmax(0,1fr)_auto] data-[layout=nav]:grid-rows-[auto_auto_minmax(0,1fr)] data-[layout=nav]:items-center data-[layout=nav]:gap-x-2 sm:max-w-sm md:gap-4 md:rounded-dialog md:bg-dialog md:p-6 md:text-sm md:duration-200 md:ease-out md:glass-float md:data-open:fade-in-0 md:data-open:zoom-in-95 md:data-open:slide-in-from-bottom-2 md:data-closed:fade-out-0 md:data-closed:zoom-out-95 md:data-closed:slide-out-to-bottom-2 md:data-[layout=nav]:flex",
             className
           )}
           {...props}
         >
+          {variant === "default" ? (
+            <div
+              aria-hidden="true"
+              data-slot="dialog-grab"
+              className="col-span-3 mx-auto h-1.25 w-9.5 shrink-0 rounded-full bg-subtle-foreground/50 md:hidden"
+            />
+          ) : null}
           {children}
           {showCloseButton && (
             <DialogPrimitive.Close
               data-slot="dialog-close"
               render={
                 <Button
-                  variant="ghost"
-                  className="absolute top-2 right-2"
+                  variant="secondary"
+                  className="absolute top-5 right-3.5 group-data-[layout=nav]/dialog:hidden md:top-5 md:right-6 md:group-data-[layout=nav]/dialog:inline-flex"
                   size="icon-sm"
                 />
               }
@@ -113,7 +129,7 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-body"
       className={cn(
-        "min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain scroll-py-2",
+        "-mx-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain scroll-py-2 px-1 py-1 group-data-[layout=nav]/dialog:col-span-3 group-data-[layout=nav]/dialog:row-start-3 group-data-[layout=nav]/dialog:self-stretch",
         className
       )}
       {...props}
@@ -125,7 +141,10 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex shrink-0 flex-col gap-2", className)}
+      className={cn(
+        "flex shrink-0 flex-col gap-1.5 pt-2.5 pr-12 group-data-[layout=nav]/dialog:col-start-2 group-data-[layout=nav]/dialog:row-start-2 group-data-[layout=nav]/dialog:pt-0 group-data-[layout=nav]/dialog:pr-0 group-data-[layout=nav]/dialog:text-center md:pt-0 md:pr-12 md:group-data-[layout=nav]/dialog:pr-12 md:group-data-[layout=nav]/dialog:text-left",
+        className
+      )}
       {...props}
     />
   )
@@ -143,7 +162,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex shrink-0 flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-wrap gap-2.5 pt-1 *:min-w-0 *:flex-1 group-data-[layout=nav]/dialog:contents group-data-[layout=nav]/dialog:*:row-start-2 group-data-[layout=nav]/dialog:*:flex-none group-data-[layout=nav]/dialog:*:first:col-start-1 group-data-[layout=nav]/dialog:*:first:glass-control group-data-[layout=nav]/dialog:*:last:col-start-3 md:-mx-6 md:-mb-6 md:justify-end md:border-t md:border-border md:px-6 md:py-4 md:*:flex-none md:group-data-[layout=nav]/dialog:flex",
         className
       )}
       {...props}
@@ -163,7 +182,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "font-heading text-base leading-none font-medium",
+        "font-heading text-panel-title leading-tight font-bold tracking-[-0.02em] group-data-[layout=nav]/dialog:truncate md:text-dialog-title",
         className
       )}
       {...props}
@@ -179,7 +198,7 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        "text-sm leading-normal text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className
       )}
       {...props}

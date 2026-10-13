@@ -1,52 +1,84 @@
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Inter } from "next/font/google"
+import localFont from "next/font/local"
 import { cookies } from "next/headers"
 
+import { ServiceWorker } from "@/components/service-worker"
 import { Toaster } from "@/components/ui/sonner"
-import { parseTheme, THEME_COOKIE } from "@/lib/theme"
+import { APP_DESCRIPTION, APP_NAME, startupImages } from "@/lib/pwa"
+import { parseTheme, THEME_COOKIE, themeColors } from "@/lib/theme"
 import { cn } from "@/lib/utils"
 
 import "./globals.css"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-});
+  axes: ["opsz"],
+})
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// U+09F3 only: the taka sign renders in Noto Sans Bengali, everything else in Inter.
+const taka = localFont({
+  src: "./fonts/taka.woff2",
+  variable: "--font-taka",
+  weight: "100 900",
+  display: "swap",
+  adjustFontFallback: false,
+  fallback: [],
+  declarations: [{ prop: "unicode-range", value: "U+09F3" }],
+})
 
-export const metadata: Metadata = {
-  title: {
-    default: "DSA ERP",
-    template: "%s · DSA ERP",
-  },
-  description: "Internal ERP for DynamicSpace Architects & Engineers.",
-};
+async function currentTheme() {
+  const cookieStore = await cookies()
+  return parseTheme(cookieStore.get(THEME_COOKIE)?.value)
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const theme = await currentTheme()
+  return {
+    title: {
+      default: APP_NAME,
+      template: `%s · ${APP_NAME}`,
+    },
+    description: APP_DESCRIPTION,
+    applicationName: APP_NAME,
+    appleWebApp: {
+      capable: true,
+      title: APP_NAME,
+      statusBarStyle: theme === "dark" ? "black" : "default",
+      startupImage: startupImages(),
+    },
+    formatDetection: { telephone: false },
+  }
+}
+
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await currentTheme()
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    themeColor: themeColors[theme],
+    colorScheme: theme,
+  }
+}
 
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const cookieStore = await cookies()
-  const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value)
+  const theme = await currentTheme()
 
   return (
     <html
       lang="en"
-      className={cn(
-        geistSans.variable,
-        geistMono.variable,
-        "h-full antialiased",
-        theme === "dark" && "dark",
-      )}
+      className={cn(inter.variable, taka.variable, "h-full", theme === "dark" && "dark")}
     >
       <body className="flex min-h-full flex-col">
         {children}
         <Toaster />
+        <ServiceWorker />
       </body>
     </html>
   )

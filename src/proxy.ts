@@ -10,8 +10,9 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except static assets. Auth checks must not
-     * intercept CSS, JS, or images.
+     * intercept CSS, JS, images, or the PWA files (service worker, manifest,
+     * offline page), which must load before anyone signs in.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2)$).*)",
   ],
 }
