@@ -8,6 +8,7 @@ import { overdraftMessage } from "@/lib/insufficient-balance"
 import { netPay, roundMoney, workedInMonth } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { toNumber } from "@/lib/format"
 import { denyUnless } from "@/lib/permissions"
 
@@ -102,6 +103,7 @@ export async function deleteMonthlySalary(id: string): Promise<DeleteResult> {
     return { error: "That monthly salary could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePayroll(id)
   return { error: null }
 }
@@ -198,6 +200,7 @@ async function saveMonthlySalary(
   }
 
   let existingLineIds = new Map<string, string>()
+  const paidAt = new Map<string, { salary: number; allowance: number }>()
   if (id) {
     const { data: currentRows, error: currentError } = await supabase
       .from("payroll_runs")
@@ -220,7 +223,7 @@ async function saveMonthlySalary(
 
     const { data: lineRows, error: lineError } = await supabase
       .from("payroll_lines")
-      .select("id, employee_id")
+      .select("id, employee_id, basic_salary, allowance")
       .eq("payroll_run_id", id)
 
     if (lineError) {
@@ -230,6 +233,12 @@ async function saveMonthlySalary(
     existingLineIds = new Map(
       (lineRows ?? []).map((line) => [line.employee_id, line.id]),
     )
+    for (const line of lineRows ?? []) {
+      paidAt.set(line.employee_id, {
+        salary: roundMoney(toNumber(line.basic_salary)),
+        allowance: roundMoney(toNumber(line.allowance)),
+      })
+    }
   } else {
     const { data: takenRows, error: takenError } = await supabase
       .from("payroll_runs")
@@ -293,8 +302,10 @@ async function saveMonthlySalary(
       return { error: "Salary figures are hidden for this account." }
     }
 
-    const salary = roundMoney(toNumber(employee.monthly_salary))
-    const allowance = roundMoney(toNumber(employee.allowance))
+    // A slip line keeps the pay it was issued at. Later raises only apply to new lines.
+    const stored = paidAt.get(employeeId)
+    const salary = stored?.salary ?? roundMoney(toNumber(employee.monthly_salary))
+    const allowance = stored?.allowance ?? roundMoney(toNumber(employee.allowance))
     if (netPay(salary, allowance, bonusAmount, deductionAmount) < 0) {
       return { error: `Deduction is higher than pay for ${name}.` }
     }
@@ -418,6 +429,7 @@ async function saveMonthlySalary(
     if (error) {
       return { error: friendlyDbError(error, "Could not save this monthly salary.") }
     }
+    cleanUpDeletedAttachmentFiles()
   }
 
   revalidatePayroll(salaryId)

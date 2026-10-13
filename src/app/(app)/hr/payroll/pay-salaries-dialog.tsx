@@ -128,8 +128,8 @@ export function PaySalariesDialog({
         return {
           employeeId: employee.id,
           name: employee.fullName || "Employee",
-          salary: employee.monthlySalary,
-          allowance: employee.allowance,
+          salary: saved ? saved.salary : employee.monthlySalary,
+          allowance: saved ? saved.allowance : employee.allowance,
           bonus: adjustment?.bonus ?? (saved ? String(saved.bonus) : "0"),
           deduction:
             adjustment?.deduction ?? (saved ? String(saved.deduction) : "0"),
