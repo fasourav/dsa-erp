@@ -187,7 +187,7 @@ function PreviewStage({
   return (
     <aside
       aria-label="Live preview"
-      className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-8"
+      className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-0"
     >
       <div ref={frame} className="flex min-w-0 justify-center rounded-xl bg-muted p-4 sm:p-6">
         <div
@@ -309,29 +309,49 @@ function offsetWithin(element: HTMLElement, root: HTMLElement) {
   return offset
 }
 
+type Block = { top: number; bottom: number; rows: number[]; line: { top: number; height: number } | null }
+
+const unbreakable = ".doc-header, .doc-card, .doc-total, .doc-signs, table"
+
+// Mirrors how the print engine breaks .doc-stack: a block that avoids breaks moves
+// whole to the next page, a block taller than a page splits between table rows,
+// and plain text splits between lines.
 function paginate(root: HTMLElement, bodyHeight: number): PageSlice[] {
   const total = root.offsetHeight
-  const breaks = new Set<number>()
   const stack = root.querySelector<HTMLElement>(".doc-stack")
-  for (const child of Array.from(stack?.children ?? [])) {
-    breaks.add(offsetWithin(child as HTMLElement, root))
-  }
-  for (const table of Array.from(root.querySelectorAll<HTMLElement>("table"))) {
-    if (table.offsetHeight <= bodyHeight) continue
-    for (const row of Array.from(table.querySelectorAll<HTMLElement>("tr"))) {
-      breaks.add(offsetWithin(row, root))
+  const blocks: Block[] = Array.from(stack?.children ?? []).map((node) => {
+    const element = node as HTMLElement
+    const top = offsetWithin(element, root)
+    const avoids = element.matches(unbreakable) || element.querySelector(unbreakable) != null
+    const text = avoids ? null : element.querySelector<HTMLElement>("p") ?? element
+    const lineHeight = text ? parseFloat(getComputedStyle(text).lineHeight) : NaN
+    return {
+      top,
+      bottom: top + element.offsetHeight,
+      rows: Array.from(element.querySelectorAll<HTMLElement>("tbody tr")).map((row) =>
+        offsetWithin(row, root),
+      ),
+      line:
+        text && lineHeight > 0 ? { top: offsetWithin(text, root), height: lineHeight } : null,
     }
-  }
-  const candidates = Array.from(breaks).sort((a, b) => a - b)
+  })
 
   const slices: PageSlice[] = []
   let start = 0
   while (total - start > bodyHeight + 0.5 && slices.length < 50) {
     const limit = start + bodyHeight
+    const block = blocks.find((item) => item.bottom > limit)
     let end = limit
-    for (const candidate of candidates) {
-      if (candidate > limit) break
-      if (candidate > start + bodyHeight * 0.2) end = candidate
+    if (block && block.top <= limit) {
+      const lines = block.line ? Math.floor((limit - block.line.top) / block.line.height) : 0
+      if (block.line && lines >= 1) {
+        end = block.line.top + lines * block.line.height
+      } else if (block.top > start + 0.5) {
+        end = block.top
+      } else {
+        const cut = block.rows.filter((row) => row > start + 0.5 && row <= limit).pop()
+        if (cut != null) end = cut
+      }
     }
     slices.push({ start, end })
     start = end

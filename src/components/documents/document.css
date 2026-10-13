@@ -64,7 +64,7 @@
 
 .doc-pad-contact {
   position: absolute;
-  top: 277.6mm;
+  top: 277.1mm;
   left: 11mm;
   width: 80mm;
   font-size: 3.05mm;
@@ -83,12 +83,12 @@
 }
 
 .doc-pad-web {
-  letter-spacing: 0.52em;
+  letter-spacing: 0.47em;
 }
 
 .doc-pad-services {
   position: absolute;
-  top: 278.4mm;
+  top: 277.8mm;
   right: 49.2mm;
   font-size: 2.65mm;
   line-height: 3.5mm;
