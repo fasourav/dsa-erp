@@ -343,6 +343,47 @@ export async function updateLaunchDate(
   return { error: null }
 }
 
+export async function updatePrintMargins(
+  topMm: number,
+  bottomMm: number,
+): Promise<{ error: string | null }> {
+  const denied = await denyUnlessOwner()
+  if (denied) return { error: denied }
+  if (
+    !Number.isInteger(topMm) ||
+    !Number.isInteger(bottomMm) ||
+    topMm < 0 ||
+    bottomMm < 0 ||
+    topMm > 80 ||
+    bottomMm > 80
+  ) {
+    return { error: "Enter top and bottom margins from 0 to 80 mm." }
+  }
+
+  const supabase = await createClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError || !authData.user) {
+    return { error: "You must be signed in." }
+  }
+
+  const { error } = await supabase
+    .from("company_settings")
+    .update({
+      print_margin_top_mm: topMm,
+      print_margin_bottom_mm: bottomMm,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true)
+
+  if (error) {
+    return { error: "Could not save the print margins." }
+  }
+
+  revalidatePath("/settings")
+  revalidatePath("/documents")
+  return { error: null }
+}
+
 export async function deleteBankTransaction(id: string): Promise<DeleteResult> {
   const denied = await denyUnless("banking", "delete")
   if (denied) return { error: denied }

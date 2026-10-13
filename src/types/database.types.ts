@@ -580,19 +580,319 @@ export type Database = {
           fiscal_year_start_month: number
           id: boolean
           launch_date: string
+          print_margin_bottom_mm: number
+          print_margin_top_mm: number
           updated_at: string
         }
         Insert: {
           fiscal_year_start_month?: number
           id?: boolean
           launch_date?: string
+          print_margin_bottom_mm?: number
+          print_margin_top_mm?: number
           updated_at?: string
         }
         Update: {
           fiscal_year_start_month?: number
           id?: boolean
           launch_date?: string
+          print_margin_bottom_mm?: number
+          print_margin_top_mm?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      issued_documents: {
+        Row: {
+          body: Json
+          client_invoice_id: string | null
+          client_payment_id: string | null
+          created_at: string
+          document_no: string
+          id: string
+          issued_on: string
+          kind: string
+          purchase_order_id: string | null
+          status: string
+          total: number
+          updated_at: string
+          verify_token: string
+        }
+        Insert: {
+          body?: Json
+          client_invoice_id?: string | null
+          client_payment_id?: string | null
+          created_at?: string
+          document_no: string
+          id?: string
+          issued_on: string
+          kind: string
+          purchase_order_id?: string | null
+          status: string
+          total: number
+          updated_at?: string
+          verify_token: string
+        }
+        Update: {
+          body?: Json
+          client_invoice_id?: string | null
+          client_payment_id?: string | null
+          created_at?: string
+          document_no?: string
+          id?: string
+          issued_on?: string
+          kind?: string
+          purchase_order_id?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+          verify_token?: string
+        }
+        Relationships: []
+      }
+      quotation_lines: {
+        Row: {
+          id: string
+          item: string
+          quantity: number | null
+          quotation_id: string
+          section_name: string
+          sort_order: number
+          specification: string
+          unit: string
+          unit_price: number | null
+        }
+        Insert: {
+          id?: string
+          item: string
+          quantity?: number | null
+          quotation_id: string
+          section_name?: string
+          sort_order: number
+          specification?: string
+          unit?: string
+          unit_price?: number | null
+        }
+        Update: {
+          id?: string
+          item?: string
+          quantity?: number | null
+          quotation_id?: string
+          section_name?: string
+          sort_order?: number
+          specification?: string
+          unit?: string
+          unit_price?: number | null
+        }
+        Relationships: []
+      }
+      quotation_milestones: {
+        Row: {
+          id: string
+          label: string
+          percent: number
+          quotation_id: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          label: string
+          percent: number
+          quotation_id: string
+          sort_order: number
+        }
+        Update: {
+          id?: string
+          label?: string
+          percent?: number
+          quotation_id?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      quotations: {
+        Row: {
+          ait_percent: number
+          area: string
+          authorized_by: string
+          client_id: string
+          created_at: string
+          document_no: string
+          exclusions: string
+          id: string
+          issued_on: string
+          prepared_by: string
+          project_id: string | null
+          status: string
+          subject: string
+          terms: string
+          total: number
+          updated_at: string
+          valid_until: string | null
+          verify_token: string
+        }
+        Insert: {
+          ait_percent?: number
+          area?: string
+          authorized_by?: string
+          client_id: string
+          created_at?: string
+          document_no: string
+          exclusions?: string
+          id?: string
+          issued_on: string
+          prepared_by?: string
+          project_id?: string | null
+          status?: string
+          subject?: string
+          terms?: string
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+          verify_token: string
+        }
+        Update: {
+          ait_percent?: number
+          area?: string
+          authorized_by?: string
+          client_id?: string
+          created_at?: string
+          document_no?: string
+          exclusions?: string
+          id?: string
+          issued_on?: string
+          prepared_by?: string
+          project_id?: string | null
+          status?: string
+          subject?: string
+          terms?: string
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+          verify_token?: string
+        }
+        Relationships: []
+      }
+      work_order_lines: {
+        Row: {
+          id: string
+          item: string
+          quantity: number | null
+          section_name: string
+          sort_order: number
+          specification: string
+          unit: string
+          unit_price: number | null
+          work_order_id: string
+        }
+        Insert: {
+          id?: string
+          item: string
+          quantity?: number | null
+          section_name?: string
+          sort_order: number
+          specification?: string
+          unit?: string
+          unit_price?: number | null
+          work_order_id: string
+        }
+        Update: {
+          id?: string
+          item?: string
+          quantity?: number | null
+          section_name?: string
+          sort_order?: number
+          specification?: string
+          unit?: string
+          unit_price?: number | null
+          work_order_id?: string
+        }
+        Relationships: []
+      }
+      work_order_milestones: {
+        Row: {
+          id: string
+          label: string
+          percent: number
+          sort_order: number
+          work_order_id: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          percent: number
+          sort_order: number
+          work_order_id: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          percent?: number
+          sort_order?: number
+          work_order_id?: string
+        }
+        Relationships: []
+      }
+      work_orders: {
+        Row: {
+          authorized_by: string
+          created_at: string
+          document_no: string
+          id: string
+          introduction: string
+          issued_on: string
+          prepared_by: string
+          project_id: string | null
+          proposal_on: string | null
+          status: string
+          subject: string
+          terms: string
+          total: number
+          updated_at: string
+          vendor_id: string
+          verify_token: string
+          work_end: string | null
+          work_start: string | null
+        }
+        Insert: {
+          authorized_by?: string
+          created_at?: string
+          document_no: string
+          id?: string
+          introduction?: string
+          issued_on: string
+          prepared_by?: string
+          project_id?: string | null
+          proposal_on?: string | null
+          status?: string
+          subject?: string
+          terms?: string
+          total?: number
+          updated_at?: string
+          vendor_id: string
+          verify_token: string
+          work_end?: string | null
+          work_start?: string | null
+        }
+        Update: {
+          authorized_by?: string
+          created_at?: string
+          document_no?: string
+          id?: string
+          introduction?: string
+          issued_on?: string
+          prepared_by?: string
+          project_id?: string | null
+          proposal_on?: string | null
+          status?: string
+          subject?: string
+          terms?: string
+          total?: number
+          updated_at?: string
+          vendor_id?: string
+          verify_token?: string
+          work_end?: string | null
+          work_start?: string | null
         }
         Relationships: []
       }
@@ -2795,6 +3095,16 @@ export type Database = {
     }
     Functions: {
       dashboard_feed: { Args: never; Returns: Json }
+      verify_business_document: {
+        Args: { p_token: string }
+        Returns: {
+          document_no: string | null
+          issued_on: string | null
+          outcome: string
+          status: string | null
+          total: number | null
+        }[]
+      }
       resolve_bank_account_id: { Args: { preferred: string }; Returns: string }
       search_records: {
         Args: { query: string }
