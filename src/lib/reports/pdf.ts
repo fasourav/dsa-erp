@@ -174,8 +174,30 @@ function columnWidths(table: ReportTable, total: number): number[] {
   return weights.map((weight) => (total * weight) / sum)
 }
 
+// Standard PDF fonts only cover WinAnsi. Map common typographic characters
+// and replace anything else (e.g. Bangla script) so one name can't break the export.
+const winAnsiFallbacks: Record<string, string> = { "\u2212": "-", "\u2010": "-", "\u2011": "-", "\u00a0": " ", "\u09f3": "BDT " }
+const charsetCache = new WeakMap<PDFFont, Set<number>>()
+
+export function pdfSafeText(text: string, font: PDFFont): string {
+  let charset = charsetCache.get(font)
+  if (!charset) {
+    charset = new Set(font.getCharacterSet())
+    charsetCache.set(font, charset)
+  }
+  let out = ""
+  for (const char of text) {
+    const mapped = winAnsiFallbacks[char] ?? char
+    for (const piece of mapped) {
+      const code = piece.codePointAt(0) ?? 0
+      out += code === 10 || code === 13 || code === 9 || charset.has(code) ? piece : "?"
+    }
+  }
+  return out
+}
+
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
-  const source = text.replace(/\s+/g, " ").trim() || "—"
+  const source = pdfSafeText(text, font).replace(/\s+/g, " ").trim() || "—"
   const words = source.split(" ")
   const lines: string[] = []
   let current = ""

@@ -525,7 +525,7 @@ function RowActions({
           }
         >
           <Receipt aria-hidden="true" />
-          Purchase orders
+          Purchase Orders
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {canDelete ? (<DropdownMenuItem
