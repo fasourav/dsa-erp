@@ -12,6 +12,7 @@ import {
 } from "@/lib/client-validation"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import {
   isVendorKind,
   mergeCategorySuggestions,
@@ -342,6 +343,7 @@ export async function deleteVendor(id: string): Promise<DeleteVendorResult> {
     return { error: "That vendor could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePath("/vendors")
   return { error: null }
 }

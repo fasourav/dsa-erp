@@ -14,6 +14,7 @@ import {
   type AttachmentParent,
 } from "@/lib/attachments"
 import { createClient } from "@/lib/supabase/server"
+import { removeQueuedAttachmentFiles } from "@/lib/attachment-files"
 
 export type AttachmentRow = {
   id: string
@@ -155,6 +156,7 @@ export async function deleteAttachment(id: string): Promise<{ error: string | nu
   const { error: deleteError } = await supabase.from("record_attachments").delete().eq("id", id)
   if (deleteError) return { error: "Could not delete this file." }
   await supabase.storage.from(bucket).remove([data.storage_path])
+  await removeQueuedAttachmentFiles(supabase)
   revalidatePath("/", "layout")
   return { error: null }
 }

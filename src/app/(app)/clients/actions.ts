@@ -11,6 +11,7 @@ import {
   isValidEmail,
 } from "@/lib/client-validation"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 
 const clientIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -206,6 +207,7 @@ export async function deleteClient(id: string): Promise<DeleteClientResult> {
     return { error: "That client could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePath("/clients")
   return { error: null }
 }

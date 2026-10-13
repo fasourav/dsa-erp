@@ -10,6 +10,7 @@ import {
   parseProjectValue,
 } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 
 const idPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -224,6 +225,7 @@ export async function deletePurchaseOrder(
     return { error: "That purchase order could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePurchaseOrders()
   return { error: null }
 }

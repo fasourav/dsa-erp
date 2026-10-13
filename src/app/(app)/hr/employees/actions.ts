@@ -8,6 +8,7 @@ import { roundMoney } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { employeeLeaveSchema, firstIssue } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
 
 export type EmployeeInput = {
@@ -99,6 +100,7 @@ export async function deleteEmployee(id: string): Promise<DeleteResult> {
     return { error: "That employee could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePath("/hr/employees")
   return { error: null }
 }

@@ -7,6 +7,7 @@ import { isUuid } from "@/lib/ids"
 import { assetQuantitySchema, firstIssue } from "@/lib/schemas"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
 
 export type AssetInput = {
@@ -72,6 +73,7 @@ export async function deleteAsset(id: string): Promise<DeleteResult> {
   if (!data || data.length === 0)
     return { error: "That asset could not be found." }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePath("/assets")
   return { error: null }
 }
