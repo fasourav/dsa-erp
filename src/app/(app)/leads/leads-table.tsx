@@ -101,10 +101,12 @@ export function LeadsTable({
   leads,
   lookups,
   error,
+  initialQuery = "",
 }: {
   leads: LeadRow[]
   lookups: LeadLookups
   error: string | null
+  initialQuery?: string
 }) {
   const canAdd = useCan("leads", "add")
 
@@ -118,7 +120,7 @@ export function LeadsTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formLead, setFormLead] = useState<LeadRow | null>(null)

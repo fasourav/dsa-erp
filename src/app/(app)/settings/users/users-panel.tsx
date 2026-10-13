@@ -96,7 +96,7 @@ export function UsersPanel({
     const source = tab === "pending" ? users.filter((user) => user.status === "invited") : users
     if (!needle) return source
     return source.filter((user) =>
-      `${user.displayName} ${user.email}`.toLowerCase().includes(needle),
+      `${user.displayName} ${user.designation} ${user.email}`.toLowerCase().includes(needle),
     )
   }, [query, tab, users])
 
@@ -330,6 +330,7 @@ function UserTable({
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
+            <TableHead>Designation</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Last Login</TableHead>
             <TableHead>Actions</TableHead>
@@ -338,7 +339,7 @@ function UserTable({
         <TableBody>
           {users.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={6} className="py-8 text-center whitespace-normal text-muted-foreground">
+              <TableCell colSpan={7} className="py-8 text-center whitespace-normal text-muted-foreground">
                 No Users Found.
               </TableCell>
             </TableRow>
@@ -359,6 +360,7 @@ function UserTable({
                     {labels.get(user.role) ?? user.role}
                   </Badge>
                 </TableCell>
+                <TableCell className="whitespace-normal">{user.designation || "—"}</TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(user.status)} className="rounded-full">
                     {statusLabel(user.status)}

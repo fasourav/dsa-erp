@@ -103,10 +103,12 @@ export function AssetsTable({
   assets,
   categories,
   error,
+  initialQuery = "",
 }: {
   assets: AssetRow[]
   categories: AssetCategoryOption[]
   error: string | null
+  initialQuery?: string
 }) {
   const canAdd = useCan("assets", "add")
   const canEdit = useCan("assets", "edit")
@@ -117,7 +119,7 @@ export function AssetsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formAsset, setFormAsset] = useState<AssetRow | null>(null)

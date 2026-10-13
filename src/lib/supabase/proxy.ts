@@ -1,9 +1,17 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
+import { contentSecurityPolicy } from "@/lib/csp"
 import type { Database } from "@/types/database.types"
 
 import { getSupabaseEnv } from "./env"
+
+function withRequestHeaders(request: NextRequest, csp: string, nonce: string) {
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set("x-nonce", nonce)
+  requestHeaders.set("Content-Security-Policy", csp)
+  return requestHeaders
+}
 
 function redirectWithSession(
   request: NextRequest,
@@ -30,9 +38,18 @@ function redirectWithSession(
 }
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  const csp = contentSecurityPolicy()
+  const requestHeaders = withRequestHeaders(request, csp.value, csp.nonce)
+  const applyCsp = (response: NextResponse) => {
+    response.headers.set("Content-Security-Policy", csp.value)
+    return response
+  }
+
+  let supabaseResponse = applyCsp(
+    NextResponse.next({
+      request: { headers: requestHeaders },
+    }),
+  )
 
   const { url, key } = getSupabaseEnv()
 
@@ -45,9 +62,11 @@ export async function updateSession(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value)
         })
-        supabaseResponse = NextResponse.next({
-          request,
-        })
+        supabaseResponse = applyCsp(
+          NextResponse.next({
+            request: { headers: requestHeaders },
+          }),
+        )
         cookiesToSet.forEach(({ name, value, options }) => {
           supabaseResponse.cookies.set(name, value, options)
         })
@@ -74,11 +93,11 @@ export async function updateSession(request: NextRequest) {
     pathname === "/set-password"
 
   if (!isAuthenticated && !isOpenPath) {
-    return redirectWithSession(request, supabaseResponse, "/login")
+    return applyCsp(redirectWithSession(request, supabaseResponse, "/login"))
   }
 
   if (isAuthenticated && pathname === "/login") {
-    return redirectWithSession(request, supabaseResponse, "/dashboard")
+    return applyCsp(redirectWithSession(request, supabaseResponse, "/dashboard"))
   }
 
   return supabaseResponse

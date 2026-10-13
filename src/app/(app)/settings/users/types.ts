@@ -24,6 +24,7 @@ export type RoleTemplateOption = {
 export type DirectoryUser = {
   id: string
   displayName: string
+  designation: string
   email: string
   role: string
   status: "active" | "invited" | "deactivated"
@@ -34,6 +35,7 @@ export type DirectoryUser = {
 
 export type AccessInput = {
   displayName: string
+  designation: string
   email: string
   role: string
   showFinancials: boolean

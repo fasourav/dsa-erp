@@ -121,10 +121,12 @@ export function EmployeesTable({
   employees,
   departments,
   error,
+  initialQuery = "",
 }: {
   employees: EmployeeRow[]
   departments: DepartmentOption[]
   error: string | null
+  initialQuery?: string
 }) {
   const showFinancials = useAccess().showFinancials
   const canAdd = useCan("employees", "add")
@@ -134,7 +136,7 @@ export function EmployeesTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formEmployee, setFormEmployee] = useState<EmployeeRow | null>(null)

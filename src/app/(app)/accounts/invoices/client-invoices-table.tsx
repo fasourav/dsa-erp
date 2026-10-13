@@ -51,6 +51,7 @@ export function ClientInvoicesTable({
   bankAccounts,
   projectFilter,
   error,
+  initialQuery = "",
 }: {
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
@@ -58,6 +59,7 @@ export function ClientInvoicesTable({
   bankAccounts: BankAccountChoice[]
   projectFilter: InvoiceProjectFilter | null
   error: string | null
+  initialQuery?: string
 }) {
   const canAdd = useCan("client_invoices", "add")
   const canEdit = useCan("client_invoices", "edit")
@@ -69,7 +71,7 @@ export function ClientInvoicesTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
