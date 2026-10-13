@@ -7,6 +7,7 @@ import {
   Box,
   Calculator,
   Contact,
+  FileBarChart,
   FileText,
   Files,
   FolderKanban,
@@ -41,6 +42,7 @@ import { cn } from "@/lib/utils"
 
 const navIcons: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
+  "/reports": FileBarChart,
   "/leads": UserPlus,
   "/clients": Users,
   "/projects": FolderKanban,

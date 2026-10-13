@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -71,6 +72,19 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <ListExport
+        grid={{
+          filename: "activity-log",
+          title: "Activity Log",
+          columns: [
+            { header: "When", kind: "text" },
+            { header: "Who", kind: "text" },
+            { header: "What", kind: "text" },
+            { header: "Module", kind: "text" },
+          ],
+          rows: filtered.map((row) => [row.when, row.who, row.what, row.moduleLabel]),
+        }}
+      />
       <ListSearch
         query={query}
         onQueryChange={setQuery}

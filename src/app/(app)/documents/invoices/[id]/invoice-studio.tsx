@@ -60,7 +60,7 @@ export function InvoiceStudio({
 
   return (
     <DocumentWorkspace
-      title="Client invoice"
+      title="Client Invoice"
       description="Prints the bill only. The letterhead and footer stay on the pad."
       margins={margins}
       preview={preview}

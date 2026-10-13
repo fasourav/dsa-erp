@@ -3117,6 +3117,11 @@ export type Database = {
         }[]
       }
       set_own_display_name: { Args: { next_name: string }; Returns: undefined }
+      financial_report: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      record_backup: { Args: { p_kind: string }; Returns: undefined }
     }
     Enums: {
       bank_flow_direction: "inflow" | "outflow"

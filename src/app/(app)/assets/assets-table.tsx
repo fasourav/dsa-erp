@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
@@ -55,7 +56,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { formatIsoDate, formatMoney, formatTaka } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatMoney, formatTaka } from "@/lib/format"
 import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 import { cn } from "@/lib/utils"
 
@@ -179,10 +180,34 @@ export function AssetsTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Assets</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "assets",
+              title: "Assets",
+              columns: [
+                { header: "Name", kind: "text" },
+                { header: "Category", kind: "text" },
+                { header: "Purchase Date", kind: "text" },
+                { header: "Qty", kind: "integer" },
+                { header: "Total Cost", kind: "money" },
+                { header: "Current Value", kind: "money" },
+              ],
+              rows: filtered.map((asset) => [
+                asset.name,
+                asset.category,
+                asset.purchaseDate ? formatDayMonYear(asset.purchaseDate) : "—",
+                asset.quantity,
+                asset.totalCost,
+                asset.currentValue,
+              ]),
+            }}
+          />
         {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add New Asset
         </Button>) : null}
+        </div>
       </div>
 
       {error ? null : (

@@ -9,6 +9,7 @@ import { useMemo, useState, useTransition } from "react"
 import { deleteOperationalExpense } from "@/app/(app)/accounts/expenses/actions"
 import { ExpenseFormDialog } from "@/app/(app)/accounts/expenses/expense-form-dialog"
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -109,9 +110,33 @@ export function ExpensesTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-medium tracking-tight">
-        Operational Expenses
-      </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">
+          Operational Expenses
+        </h1>
+        <ListExport
+          grid={{
+            filename: "operational-expenses",
+            title: "Operational Expenses",
+            columns: [
+              { header: "Date", kind: "text" },
+              { header: "Category", kind: "text" },
+              { header: "Amount", kind: "money" },
+              { header: "Payment Method", kind: "text" },
+              { header: "Department", kind: "text" },
+              { header: "Vendor", kind: "text" },
+            ],
+            rows: filtered.map((row) => [
+              formatDayMonYear(row.expenseDate),
+              row.category,
+              row.amount,
+              row.paymentMethod,
+              row.departmentName || "—",
+              row.vendorName || "—",
+            ]),
+          }}
+        />
+      </div>
       <ListSearch
         query={query}
         onQueryChange={(value) => {

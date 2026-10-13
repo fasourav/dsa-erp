@@ -23,8 +23,8 @@ export default async function QuotationsPage() {
           </p>
         </div>
         {canAdd ? (
-          <Button type="button" className="w-full sm:w-fit" render={<Link href="/documents/quotations/new" />}>
-            New quotation
+          <Button className="w-full sm:w-fit" nativeButton={false} render={<Link href="/documents/quotations/new" />}>
+            New Quotation
           </Button>
         ) : null}
       </div>
@@ -37,6 +37,8 @@ export default async function QuotationsPage() {
         items={page.items}
         hrefBase="/documents/quotations"
         empty="No quotations yet."
+        exportName="quotations"
+        exportTitle="Quotations"
       />
     </div>
   )

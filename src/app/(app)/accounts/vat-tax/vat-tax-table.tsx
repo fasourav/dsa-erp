@@ -9,6 +9,7 @@ import { useMemo, useState, useTransition } from "react"
 import { deleteVatTaxPayment } from "@/app/(app)/accounts/vat-tax/actions"
 import { VatTaxFormDialog } from "@/app/(app)/accounts/vat-tax/vat-tax-form-dialog"
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -135,6 +136,24 @@ export function VatTaxTable({
             Total: {formatMoney(totalAmount)}
           </p>
         </div>
+        <ListExport
+          grid={{
+            filename: "vat-tax",
+            title: "VAT / Tax Payments",
+            columns: [
+              { header: "Project", kind: "text" },
+              { header: "Paid On", kind: "text" },
+              { header: "Amount", kind: "money" },
+              { header: "Payment Method", kind: "text" },
+            ],
+            rows: filtered.map((payment) => [
+              payment.projectName,
+              formatDayMonYear(payment.paidOn),
+              payment.amount,
+              payment.paymentMethod,
+            ]),
+          }}
+        />
         {canAdd ? (<Button type="button" onClick={openForm}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add Payment

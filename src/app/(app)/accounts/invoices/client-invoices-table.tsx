@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
@@ -32,7 +33,8 @@ import {
 } from "@/lib/client-invoice-summary"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
+import { paymentStatusLabel } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -131,7 +133,8 @@ export function ClientInvoicesTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
         <h1 className="text-2xl font-medium tracking-tight">Client Invoices</h1>
         {projectFilter ? (
           <p className="text-sm text-muted-foreground">
@@ -144,6 +147,29 @@ export function ClientInvoicesTable({
             </Link>
           </p>
         ) : null}
+        </div>
+        <ListExport
+          grid={{
+            filename: "client-invoices",
+            title: "Client Invoices",
+            columns: [
+              { header: "Issue Date", kind: "text" },
+              { header: "Project", kind: "text" },
+              { header: "Client", kind: "text" },
+              { header: "Amount", kind: "money" },
+              { header: "Paid", kind: "money" },
+              { header: "Status", kind: "text" },
+            ],
+            rows: filtered.map((invoice) => [
+              formatDayMonYear(invoice.issuedOn),
+              invoice.projectName,
+              invoice.clientName,
+              invoice.amount,
+              invoice.paid,
+              paymentStatusLabel(invoice.status),
+            ]),
+          }}
+        />
       </div>
       <ListSearch
         query={query}

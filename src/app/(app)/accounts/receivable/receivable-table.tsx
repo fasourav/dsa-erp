@@ -6,7 +6,9 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { CustomizeColumns, DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { StatusBadge } from "@/components/status-badge"
+import { paymentStatusLabel } from "@/lib/payment-status"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -60,7 +62,31 @@ export function ReceivableTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-medium tracking-tight">Accounts Receivable</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">Accounts Receivable</h1>
+        <ListExport
+          grid={{
+            filename: "accounts-receivable",
+            title: "Accounts Receivable",
+            columns: [
+              { header: "Project", kind: "text" },
+              { header: "Client", kind: "text" },
+              { header: "Billed Amount", kind: "money" },
+              { header: "Total Paid", kind: "money" },
+              { header: "Pending Due", kind: "money" },
+              { header: "Status", kind: "text" },
+            ],
+            rows: filtered.map((row) => [
+              row.projectName,
+              row.clientName,
+              row.billedAmount,
+              row.paid,
+              row.due,
+              row.status ? paymentStatusLabel(row.status) : "—",
+            ]),
+          }}
+        />
+      </div>
       <ListSearch
         query={query}
         onQueryChange={(value) => {

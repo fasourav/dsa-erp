@@ -19,6 +19,7 @@ import { ClientFormDialog } from "@/app/(app)/clients/client-form-dialog"
 import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -167,6 +168,36 @@ export function ClientsTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Clients</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "clients",
+              title: "Clients",
+              columns: [
+                { header: "Name", kind: "text" },
+                { header: "Type", kind: "text" },
+                { header: "Ongoing Projects", kind: "integer" },
+                { header: "Completed Projects", kind: "integer" },
+                { header: "Total Projects", kind: "integer" },
+                { header: "Total Project Value", kind: "money" },
+                { header: "Total Paid", kind: "money" },
+                { header: "Total Pending", kind: "money" },
+                { header: "Gross Profit", kind: "money" },
+                { header: "Gross Profit %", kind: "text" },
+              ],
+              rows: filtered.map((client) => [
+                client.displayName,
+                kindLabel(client.kind) || "—",
+                client.ongoingProjects,
+                client.completedProjects,
+                client.totalProjects,
+                client.totalProjectValue,
+                client.totalPaid,
+                client.totalPending,
+                client.grossProfit,
+                client.grossProfitPct == null ? "—" : `${client.grossProfitPct.toFixed(1)}%`,
+              ]),
+            }}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button type="button" variant="outline" />}

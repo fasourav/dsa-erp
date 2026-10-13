@@ -4,7 +4,7 @@ import { requestOrigin } from "@/lib/documents/origin"
 import { loadDocumentCatalog, loadReceiptDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
-export const metadata = { title: "Money receipt" }
+export const metadata = { title: "Money Receipt" }
 
 export default async function ReceiptDocumentPage({
   params,

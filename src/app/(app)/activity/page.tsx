@@ -102,12 +102,14 @@ export default async function ActivityPage() {
     const verb =
       row.action === "insert" ? "Added" : row.action === "delete" ? "Deleted" : "Updated"
     const label = row.record_label?.trim()
+    const what =
+      row.action === "export" ? row.summary : label ? `${verb} ${label}` : row.summary
     return {
       id: row.id,
       when: formatWhen(row.created_at),
       whenIso: dhakaDate(row.created_at),
       who: row.actor_id ? (names.get(row.actor_id) ?? "User") : "System",
-      what: label ? `${verb} ${label}` : row.summary,
+      what,
       action: row.action,
       module: row.module,
       moduleLabel: moduleLabels[row.module] ?? fieldLabel(row.module),

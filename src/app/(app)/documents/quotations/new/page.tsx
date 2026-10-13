@@ -4,7 +4,7 @@ import { requestOrigin } from "@/lib/documents/origin"
 import { loadDocumentCatalog, loadQuotationDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
-export const metadata = { title: "New quotation" }
+export const metadata = { title: "New Quotation" }
 
 export default async function NewQuotationPage() {
   await requireModule("quotations")

@@ -4,6 +4,7 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { Badge } from "@/components/ui/badge"
 import { formatMoney } from "@/lib/format"
 import {
@@ -44,7 +45,27 @@ export function ExpenseTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-medium tracking-tight">Expense</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">Expense</h1>
+        <ListExport
+          grid={{
+            filename: "expense",
+            title: "Expense",
+            columns: [
+              { header: "Project", kind: "text" },
+              { header: "Vendor", kind: "text" },
+              { header: "Expense Amount", kind: "money" },
+              { header: "Banking Channel", kind: "text" },
+            ],
+            rows: filtered.map((row) => [
+              row.projectName,
+              row.vendorName,
+              row.expenseAmount,
+              row.bankingChannel,
+            ]),
+          }}
+        />
+      </div>
       <ListSearch
         query={query}
         onQueryChange={(value) => {

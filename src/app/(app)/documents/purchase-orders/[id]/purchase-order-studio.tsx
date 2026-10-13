@@ -59,7 +59,7 @@ export function PurchaseOrderStudio({
 
   return (
     <DocumentWorkspace
-      title="Purchase order"
+      title="Purchase Order"
       description="Prints the order only. The letterhead and footer stay on the pad."
       margins={margins}
       preview={preview}

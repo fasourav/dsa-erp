@@ -4,7 +4,7 @@ import { requestOrigin } from "@/lib/documents/origin"
 import { loadDocumentCatalog, loadInvoiceDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
-export const metadata = { title: "Client invoice" }
+export const metadata = { title: "Client Invoice" }
 
 export default async function InvoiceDocumentPage({
   params,
