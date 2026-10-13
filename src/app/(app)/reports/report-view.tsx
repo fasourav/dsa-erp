@@ -1,7 +1,5 @@
-import Link from "next/link"
-
 import { ReportFilters } from "@/app/(app)/reports/report-filters"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -40,12 +38,12 @@ export function ReportView({
           <p className="mt-2 text-sm text-muted-foreground">{report.periodLabel}</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="outline" nativeButton={false} render={<Link href={pdfHref} />}>
+          <a href={pdfHref} className={buttonVariants({ variant: "outline" })}>
             PDF
-          </Button>
-          <Button variant="outline" nativeButton={false} render={<Link href={excelHref} />}>
+          </a>
+          <a href={excelHref} className={buttonVariants({ variant: "outline" })}>
             Excel
-          </Button>
+          </a>
         </div>
       </div>
       <ReportFilters launch={launch} today={today} from={from} to={to} />

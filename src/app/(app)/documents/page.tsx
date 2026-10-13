@@ -1,48 +1,16 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
-import { allows, homePath, type ModuleKey } from "@/lib/access"
+import { allows, homePath } from "@/lib/access"
+import { documentKinds } from "@/lib/documents/kinds"
 import { getAccess } from "@/lib/permissions"
 
 export const metadata = { title: "Documents" }
 
-const kinds: Array<{ href: string; module: ModuleKey; title: string; detail: string }> = [
-  {
-    href: "/documents/quotations",
-    module: "quotations",
-    title: "Quotation",
-    detail: "Estimate and financial proposal for a client.",
-  },
-  {
-    href: "/documents/work-orders",
-    module: "work_orders",
-    title: "Work Order",
-    detail: "Vendor work order with items and payment terms.",
-  },
-  {
-    href: "/documents/purchase-orders",
-    module: "purchase_orders",
-    title: "Purchase Order",
-    detail: "Print a purchase order from an existing order.",
-  },
-  {
-    href: "/documents/invoices",
-    module: "client_invoices",
-    title: "Client Invoice",
-    detail: "Print a bill from an existing client invoice.",
-  },
-  {
-    href: "/documents/receipts",
-    module: "client_invoices",
-    title: "Money Receipt",
-    detail: "Acknowledge a payment already recorded.",
-  },
-]
-
 export default async function DocumentsPage() {
   const access = await getAccess()
   if (!access || access.status === "deactivated") redirect("/login")
-  const visible = kinds.filter((kind) => allows(access, kind.module, "view"))
+  const visible = documentKinds.filter((kind) => allows(access, kind.module, "view"))
   if (visible.length === 0) redirect(homePath(access))
 
   return (

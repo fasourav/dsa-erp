@@ -67,6 +67,7 @@ export function InvoiceStudio({
       canSave={canSave}
       pending={pending}
       error={error}
+      files={{ parentType: "client_invoice", parentId: form.id }}
       onSave={() => {
         setError(null)
         startSave(async () => {

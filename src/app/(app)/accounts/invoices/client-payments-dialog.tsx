@@ -32,6 +32,7 @@ import type {
   ClientInvoiceRow,
   ClientPaymentRow,
 } from "@/lib/client-invoice-summary"
+import { RecordAttachments } from "@/components/record-attachments"
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import { moneyCents, parsePositiveAmount, sumAmounts } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
@@ -164,6 +165,7 @@ export function ClientPaymentsDialog({
                       {row.remarks ? (
                         <p className="text-sm text-muted-foreground">{row.remarks}</p>
                       ) : null}
+                      <RecordAttachments parentType="client_payment" parentId={row.id} collapsed />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {canEdit ? (<Button type="button" variant="outline" onClick={() => openForm(row)}>

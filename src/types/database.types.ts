@@ -2125,6 +2125,135 @@ export type Database = {
         }
         Relationships: []
       }
+      record_attachments: {
+        Row: {
+          byte_size: number
+          content_type: string
+          created_at: string
+          created_by: string | null
+          file_name: string
+          id: string
+          parent_id: string
+          parent_type: string
+          storage_path: string
+        }
+        Insert: {
+          byte_size: number
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          file_name: string
+          id?: string
+          parent_id: string
+          parent_type: string
+          storage_path: string
+        }
+        Update: {
+          byte_size?: number
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string
+          id?: string
+          parent_id?: string
+          parent_type?: string
+          storage_path?: string
+        }
+        Relationships: []
+      }
+      bank_match_tolerances: {
+        Row: {
+          days: number
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          days: number
+          label: string
+          sort_order: number
+        }
+        Update: {
+          days?: number
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      bank_statement_lines: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          bank_transaction_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          direction: string
+          id: string
+          line_date: string
+          reference: string
+        }
+        Insert: {
+          amount: number
+          bank_account_id: string
+          bank_transaction_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          direction: string
+          id?: string
+          line_date: string
+          reference?: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          bank_transaction_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          direction?: string
+          id?: string
+          line_date?: string
+          reference?: string
+        }
+        Relationships: []
+      }
+      bank_reconciliations: {
+        Row: {
+          bank_account_id: string
+          book_balance: number
+          difference: number
+          id: string
+          period_end: string
+          period_start: string
+          reconciled_at: string
+          reconciled_by: string | null
+          statement_balance: number
+        }
+        Insert: {
+          bank_account_id: string
+          book_balance?: number
+          difference?: number
+          id?: string
+          period_end: string
+          period_start: string
+          reconciled_at?: string
+          reconciled_by?: string | null
+          statement_balance: number
+        }
+        Update: {
+          bank_account_id?: string
+          book_balance?: number
+          difference?: number
+          id?: string
+          period_end?: string
+          period_start?: string
+          reconciled_at?: string
+          reconciled_by?: string | null
+          statement_balance?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       bank_accounts_readable: {
@@ -3095,6 +3224,11 @@ export type Database = {
     }
     Functions: {
       dashboard_feed: { Args: never; Returns: Json }
+      dashboard_scope: { Args: { p_year: number | null }; Returns: Json }
+      auto_match_bank_statement: {
+        Args: { p_account: string; p_from: string; p_to: string; p_days: number }
+        Returns: number
+      }
       verify_business_document: {
         Args: { p_token: string }
         Returns: {

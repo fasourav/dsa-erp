@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react"
 
 import { AccountMenu } from "@/components/account-menu"
 import { AppSidebar } from "@/components/app-sidebar"
+import { DocumentsMenu } from "@/components/documents-menu"
 import { GlobalSearch } from "@/components/global-search"
 import { ShellHeaderProvider } from "@/components/shell-header"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -33,6 +34,7 @@ export function AppShell({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col print:block print:h-auto print:overflow-visible">
           <header className="flex h-16 shrink-0 items-center gap-2 overflow-x-auto border-b border-border px-4 print:hidden md:overflow-visible md:px-10">
             <div ref={setHeaderSlot} className="flex min-w-0 flex-1 items-center" />
+            <DocumentsMenu />
             <GlobalSearch />
             <div className="md:hidden">
               <AccountMenu account={account} />

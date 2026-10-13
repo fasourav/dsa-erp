@@ -69,6 +69,7 @@ export function ReceiptStudio({
       canSave={canSave}
       pending={pending}
       error={error}
+      files={{ parentType: "client_payment", parentId: form.id }}
       onSave={() => {
         setError(null)
         startSave(async () => {

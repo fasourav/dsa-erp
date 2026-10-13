@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useRouter } from "next/navigation"
+import { type ReactNode } from "react"
 import {
   AlertCircle,
   BadgeCheck,
@@ -96,16 +97,23 @@ function LimitedDashboard() {
 
 function DashboardSections({ model }: { model: DashboardModel }) {
   const showFinancials = useAccess().showFinancials
-  const [year, setYear] = useState(model.defaultYear)
+  const router = useRouter()
   if (!showFinancials) {
     return <LimitedDashboard />
   }
-  const snapshot =
-    model.snapshots.find((item) => item.year === year) ?? model.snapshots[0]
-  const yearItems = model.years.map((item) => ({
-    value: String(item),
-    label: `FY${item}`,
-  }))
+  const snapshot = model.snapshots[0]
+  const yearValue = model.scopeYear == null ? "all" : String(model.scopeYear)
+  const yearItems = [
+    { value: "all", label: "All Time" },
+    ...model.years.map((item) => ({
+      value: String(item),
+      label: `FY${item}`,
+    })),
+  ]
+  const stockDetail =
+    model.scopeYear == null || model.scopeYear === model.years[0]
+      ? "Current"
+      : `As Of ${model.scopeLabel}`
 
   if (!snapshot) {
     return (
@@ -128,9 +136,10 @@ function DashboardSections({ model }: { model: DashboardModel }) {
       <DashboardChrome updatedIso={model.updatedIso} updatedLabel={model.updatedLabel}>
         <Select
           items={yearItems}
-          value={String(snapshot.year)}
+          value={yearValue}
           onValueChange={(value) => {
-            if (value) setYear(Number(value))
+            if (!value || value === yearValue) return
+            router.push(value === "all" ? "/dashboard?year=all" : `/dashboard?year=${value}`)
           }}
         >
           <SelectTrigger aria-label="Fiscal Year">
@@ -179,8 +188,8 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             <KpiCard
               label="Cash Balance"
               value={model.cashBalance}
-              detail="Current"
-              delta={model.cashDelta}
+            detail={stockDetail}
+            delta={model.cashDelta}
               spark={model.cashSpark}
               sparkColor="var(--chart-4)"
             />
@@ -200,12 +209,12 @@ function DashboardSections({ model }: { model: DashboardModel }) {
           <CompactMetric
             label="Accounts Receivable"
             value={model.receivables}
-            detail="Current"
+            detail={stockDetail}
           />
           <CompactMetric
             label="Accounts Payable"
             value={model.payables}
-            detail="Current"
+            detail={stockDetail}
             tone={model.payables > 0 ? "warning" : "default"}
             icon={model.payables > 0 ? AlertCircle : undefined}
           />
@@ -226,9 +235,11 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-medium">Performance Metrics</h2>
               <p className="text-xs text-muted-foreground">
-                {model.performance.sinceYear == null
-                  ? "No Projects Yet"
-                  : `${model.performance.projectCount} Projects Since ${model.performance.sinceYear}`}
+                {model.scopeYear == null
+                  ? model.performance.sinceYear == null
+                    ? "No Projects Yet"
+                    : `${model.performance.projectCount} Projects Since ${model.performance.sinceYear}`
+                  : `${model.performance.projectCount} Projects In ${model.scopeLabel}`}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -396,7 +407,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
           <CardContent className="flex flex-col gap-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-medium">Margin Analysis</h2>
-              <p className="text-xs text-muted-foreground">FY{snapshot.year}</p>
+              <p className="text-xs text-muted-foreground">{model.scopeLabel}</p>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
@@ -766,7 +777,7 @@ function downloadDashboard(
 ) {
   const rows: (string | number)[][] = [
     ["Dashboard", "DSA ERP"],
-    ["Fiscal Year", `FY${snapshot.year}`],
+    ["Fiscal Year", model.scopeLabel],
     ["Last Updated", model.updatedLabel],
     [],
     ["Metric", "Amount"],
@@ -817,7 +828,7 @@ function downloadDashboard(
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
-  link.download = `dsa-erp-dashboard-fy${snapshot.year}.csv`
+  link.download = `dsa-erp-dashboard-${model.scopeYear == null ? "all-time" : `fy${model.scopeYear}`}.csv`
   link.click()
   URL.revokeObjectURL(url)
 }

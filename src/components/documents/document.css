@@ -9,6 +9,21 @@
   line-height: 1.35;
 }
 
+.doc-page {
+  box-sizing: border-box;
+  width: 210mm;
+  background: var(--card);
+  color: var(--card-foreground);
+}
+
+@media screen {
+  .doc-page .document-sheet {
+    width: 100%;
+    max-width: 100%;
+    background: transparent;
+  }
+}
+
 .doc-stack {
   display: flex;
   flex-direction: column;
@@ -240,8 +255,18 @@
 }
 
 @media print {
+  .doc-stage,
+  .doc-stage-slot,
+  .doc-page,
   .doc-pad {
+    width: auto !important;
+    height: auto !important;
+    transform: none !important;
     padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
   [data-sonner-toaster] {

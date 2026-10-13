@@ -58,11 +58,6 @@ export const navItems: NavItem[] = [
   { href: "/projects", label: "Projects", module: "projects" },
   { href: "/vendors", label: "Vendors", module: "vendors" },
   { href: "/purchase-orders", label: "Purchase Orders", module: "purchase_orders" },
-  {
-    href: "/documents",
-    label: "Documents",
-    anyOf: ["quotations", "work_orders", "purchase_orders", "client_invoices"],
-  },
   { href: "/accounts/invoices", label: "Client Invoices", module: "client_invoices" },
   { href: "/accounts/receivable", label: "Accounts Receivable", module: "accounts_receivable" },
   { href: "/income", label: "Income", module: "income" },
@@ -202,7 +197,15 @@ export function hasFullDashboardAccess(access: AccessSnapshot): boolean {
   return dashboardSourceModules.every((module) => allows(access, module, "view"))
 }
 
+const documentModules = ["quotations", "work_orders", "purchase_orders", "client_invoices"] as const satisfies readonly ModuleKey[]
+
+export function canOpenDocuments(access: AccessSnapshot): boolean {
+  return documentModules.some((module) => allows(access, module, "view"))
+}
+
 export function homePath(access: AccessSnapshot): string {
   const match = navItems.find((item) => canSeeNav(access, item))
-  return match?.href ?? "/no-access"
+  if (match) return match.href
+  if (canOpenDocuments(access)) return "/documents"
+  return "/no-access"
 }

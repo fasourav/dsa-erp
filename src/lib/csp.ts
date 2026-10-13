@@ -28,6 +28,7 @@ export function contentSecurityPolicy(): { nonce: string; value: string } {
     .join(" ")
 
   const img = ["'self'", "blob:", "data:", supabase?.http].filter(Boolean).join(" ")
+  const frame = ["'self'", "blob:", supabase?.http].filter(Boolean).join(" ")
 
   const header = [
     "default-src 'self'",
@@ -35,11 +36,11 @@ export function contentSecurityPolicy(): { nonce: string; value: string } {
     "style-src 'self' 'unsafe-inline'",
     `img-src ${img}`,
     "font-src 'self' data:",
-    "object-src blob:",
+    `object-src ${frame}`,
     "media-src 'self' blob:",
     "worker-src 'self' blob:",
-    "frame-src 'self' blob:",
-    "child-src 'self' blob:",
+    `frame-src ${frame}`,
+    `child-src ${frame}`,
     `connect-src ${connect}`,
     "base-uri 'self'",
     "form-action 'self'",

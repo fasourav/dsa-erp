@@ -2,34 +2,45 @@ import { fetchAllPages } from "@/lib/fetch-pages"
 import { normalizeLaunchDate, toNumber } from "@/lib/format"
 import {
   buildDashboard,
+  formatUpdatedAt,
+  presentAnnualCaption,
+  presentTenure,
+  presentWeekCaption,
+  type ChartPoint,
   type DashboardInput,
   type DashboardModel,
+  type WeekPoint,
+  type YearSnapshot,
 } from "@/lib/dashboard-metrics"
 import { createClient } from "@/lib/supabase/server"
 
-export async function getDashboard(now = new Date()): Promise<{
+export async function getDashboard(
+  scopeYear: number | null,
+  now = new Date(),
+): Promise<{
   model: DashboardModel | null
   error: string | null
 }> {
   try {
-    const input = await loadDashboardInput()
-    return { model: buildDashboard(input, now), error: null }
+    const scoped = await loadDashboardScope(scopeYear, now)
+    if (scoped) return { model: scoped, error: null }
+    const input = await loadDashboardRows()
+    return { model: buildDashboard(input, now, scopeYear), error: null }
   } catch (error) {
     return { model: null, error: messageOf(error) }
   }
 }
 
-async function loadDashboardInput(): Promise<DashboardInput> {
+async function loadDashboardScope(
+  scopeYear: number | null,
+  now: Date,
+): Promise<DashboardModel | null> {
   const supabase = await createClient()
-  const feed = await supabase.rpc("dashboard_feed")
-  if (!feed.error && feed.data) {
-    return inputFromFeed(feed.data)
-  }
-  if (feed.error && isMissingFeed(feed.error)) {
-    return loadDashboardRows()
-  }
-  if (feed.error) throw feed.error
-  throw new Error("Could not load the dashboard.")
+  const scope = await supabase.rpc("dashboard_scope", { p_year: scopeYear })
+  if (scope.error && isMissingFeed(scope.error)) return null
+  if (scope.error) throw scope.error
+  if (!scope.data) throw new Error("Could not load the dashboard.")
+  return modelFromScope(scope.data, now)
 }
 
 function isMissingFeed(error: { code?: string; message?: string }): boolean {
@@ -37,87 +48,6 @@ function isMissingFeed(error: { code?: string; message?: string }): boolean {
     error.code === "PGRST202" ||
     /could not find the function/i.test(error.message ?? "")
   )
-}
-
-function inputFromFeed(data: unknown): DashboardInput {
-  const feed = asRecord(data)
-  return {
-    projects: asArray(feed.projects).map((row) => {
-      const project = asRecord(row)
-      return {
-        totalValue: toNumber(project.total_value),
-        status: project.status === "completed" ? "completed" : "active",
-        startedOn: typeof project.started_on === "string" ? project.started_on : "",
-        year: typeof project.year === "number" ? project.year : null,
-      }
-    }),
-    clientCount: toNumber(feed.client_count),
-    leads: asArray(feed.leads).map((row) => {
-      const lead = asRecord(row)
-      return {
-        status: typeof lead.status === "string" ? lead.status : "",
-        estimatedValue: toNumber(lead.estimated_value),
-        isOpen: lead.is_open === true,
-      }
-    }),
-    revenue: datedRows(feed.revenue),
-    vendorPayments: asArray(feed.vendor_payments).map((row) => {
-      const payment = asRecord(row)
-      return {
-        date: typeof payment.date === "string" ? payment.date : "",
-        amount: toNumber(payment.amount),
-        workType: typeof payment.work_type === "string" ? payment.work_type : null,
-        projectLinked: payment.project_linked !== false,
-      }
-    }),
-    operational: asArray(feed.operational).map((row) => {
-      const expense = asRecord(row)
-      return {
-        date: typeof expense.date === "string" ? expense.date : "",
-        amount: toNumber(expense.amount),
-        category: typeof expense.category === "string" ? expense.category : "",
-        projectLinked: expense.project_linked === true,
-      }
-    }),
-    taxes: datedRows(feed.taxes),
-    bank: asArray(feed.bank).flatMap((row) => {
-      const transaction = asRecord(row)
-      const date = typeof transaction.date === "string" ? transaction.date : ""
-      const sourceKind =
-        typeof transaction.source_kind === "string" ? transaction.source_kind : ""
-      const direction = transaction.direction
-      if (!date || !sourceKind || (direction !== "inflow" && direction !== "outflow")) {
-        return []
-      }
-      return [
-        {
-          date,
-          amount: toNumber(transaction.amount),
-          direction,
-          sourceKind,
-        },
-      ]
-    }),
-    openingBalance: toNumber(feed.opening_balance),
-    billed: toNumber(feed.billed),
-    ledgerPaid: toNumber(feed.ledger_paid),
-    receivables: toNumber(feed.receivables),
-    payables: toNumber(feed.payables),
-    backlogCount: toNumber(feed.backlog_count),
-    launchDate: normalizeLaunchDate(
-      typeof feed.launch_date === "string" ? feed.launch_date : null,
-    ),
-  }
-}
-
-function datedRows(value: unknown): { date: string; amount: number }[] {
-  return asArray(value).map((row) => {
-    const entry = asRecord(row)
-    return {
-      date: typeof entry.date === "string" ? entry.date : "",
-      amount: toNumber(entry.amount),
-    }
-  })
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -136,7 +66,8 @@ async function loadDashboardRows(): Promise<DashboardInput> {
 
   const [
     projects,
-    clientCount,
+    clientRows,
+    clientInvoices,
     leads,
     statuses,
     payments,
@@ -156,17 +87,34 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("projects")
-          .select("total_value, status, started_on, year")
+          .select("id, total_value, status, started_on, year")
           .order("id", { ascending: true })
           .range(from, to),
       "Project list is larger than expected.",
     ),
-    countClients(supabase),
+    fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("clients")
+          .select("created_at")
+          .order("id", { ascending: true })
+          .range(from, to),
+      "Client list is larger than expected.",
+    ),
+    fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("client_invoices")
+          .select("id, amount, issued_on, status, project_id, client_id")
+          .order("id", { ascending: true })
+          .range(from, to),
+      "Client invoice list is larger than expected.",
+    ),
     fetchAllPages(
       (from, to) =>
         supabase
           .from("leads")
-          .select("status, estimated_value")
+          .select("status, estimated_value, added_on")
           .order("id", { ascending: true })
           .range(from, to),
       "Lead list is larger than expected.",
@@ -176,7 +124,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("client_payments")
-          .select("amount, paid_on")
+          .select("amount, paid_on, client_invoice_id")
           .order("id", { ascending: true })
           .range(from, to),
       "Income list is larger than expected.",
@@ -203,7 +151,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("vendor_purchase_orders")
-          .select("id, work_type, project_id")
+          .select("id, work_type, project_id, issued_on, total_value")
           .order("id", { ascending: true })
           .range(from, to),
       "Purchase order list is larger than expected.",
@@ -286,6 +234,23 @@ async function loadDashboardRows(): Promise<DashboardInput> {
   const backlogIds = new Set(
     backlogs.flatMap((row) => (row.project_id ? [row.project_id] : [])),
   )
+  const projectYearById = new Map(
+    projects.map((project) => [project.id, project.year ?? yearOf(project.started_on)]),
+  )
+  const paymentsByInvoice = new Map<string, { date: string; amount: number }[]>()
+  for (const payment of payments) {
+    const list = paymentsByInvoice.get(payment.client_invoice_id) ?? []
+    list.push({ date: payment.paid_on, amount: toNumber(payment.amount) })
+    paymentsByInvoice.set(payment.client_invoice_id, list)
+  }
+  const paymentsByOrder = new Map<string, { date: string; amount: number }[]>()
+  for (const payment of vendorPayments) {
+    const orderId = purchaseOrderByInvoice.get(payment.vendor_invoice_id)
+    if (!orderId) continue
+    const list = paymentsByOrder.get(orderId) ?? []
+    list.push({ date: payment.paid_on, amount: toNumber(payment.amount) })
+    paymentsByOrder.set(orderId, list)
+  }
 
   return {
     projects: projects.map((project) => ({
@@ -294,11 +259,29 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       startedOn: project.started_on,
       year: project.year,
     })),
-    clientCount,
+    clientCount: clientRows.length,
+    clients: clientRows.map((client) => ({ createdOn: dhakaDate(client.created_at) })),
+    invoices: clientInvoices.map((invoice) => ({
+      issuedOn: invoice.issued_on,
+      amount: toNumber(invoice.amount),
+      voided: invoice.status === "void",
+      payments: paymentsByInvoice.get(invoice.id) ?? [],
+    })),
+    orders: purchaseOrders.map((order) => ({
+      issuedOn: order.issued_on,
+      totalValue: toNumber(order.total_value),
+      projectLinked: order.project_id != null,
+      payments: paymentsByOrder.get(order.id) ?? [],
+    })),
+    backlogYears: [...backlogIds].flatMap((id) => {
+      const year = projectYearById.get(id)
+      return year == null ? [] : [year]
+    }),
     leads: leads.map((lead) => ({
       status: lead.status,
       estimatedValue: toNumber(lead.estimated_value),
       isOpen: openByStatus.get(lead.status) ?? false,
+      addedOn: lead.added_on,
     })),
     revenue: payments.map((payment) => ({
       date: payment.paid_on,
@@ -356,14 +339,19 @@ async function loadDashboardRows(): Promise<DashboardInput> {
   }
 }
 
-async function countClients(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<number> {
-  const { count, error } = await supabase
-    .from("clients")
-    .select("id", { count: "exact", head: true })
-  if (error) throw error
-  return count ?? 0
+function yearOf(iso: string): number | null {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? Number(iso.slice(0, 4)) : null
+}
+
+function dhakaDate(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
 }
 
 async function loadLeadStatuses(
@@ -372,6 +360,134 @@ async function loadLeadStatuses(
   const { data, error } = await supabase.from("lead_statuses").select("code, is_open")
   if (error) throw error
   return data ?? []
+}
+
+function modelFromScope(data: unknown, now: Date): DashboardModel {
+  const row = asRecord(data)
+  const scopeYear = typeof row.scope_year === "number" ? row.scope_year : null
+  const currentYear = toNumber(row.current_year)
+  const annualFirst = toNumber(row.annual_first)
+  const annualLast = toNumber(row.annual_last)
+  const week = asRecord(row.week)
+  return {
+    updatedLabel: formatUpdatedAt(now),
+    updatedIso: now.toISOString(),
+    scopeYear,
+    scopeLabel: scopeYear == null ? "All Time" : `FY${scopeYear}`,
+    defaultYear: scopeYear ?? currentYear,
+    years: asArray(row.years).map((year) => toNumber(year)),
+    snapshots: [snapshotFrom(row.snapshot, scopeYear ?? currentYear)],
+    cashBalance: toNumber(row.cash_balance),
+    cashDelta: nullableNumber(row.cash_delta),
+    cashSpark: points(row.cash_spark),
+    receivables: toNumber(row.receivables),
+    payables: toNumber(row.payables),
+    forecastedProfit: toNumber(row.forecasted_profit),
+    weeks: asArray(row.weeks).map((item) => {
+      const point = asRecord(item)
+      return {
+        label: text(point.label),
+        revenue: toNumber(point.revenue),
+        projectExpense: toNumber(point.project_expense),
+        adminExpense: toNumber(point.admin_expense),
+        totalExpense: toNumber(point.total_expense),
+        netProfit: toNumber(point.net_profit),
+      } satisfies WeekPoint
+    }),
+    weekCaption: presentWeekCaption(text(week.start), text(week.end), toNumber(week.number)),
+    annual: asArray(row.annual).map((item) => {
+      const point = asRecord(item)
+      return { label: text(point.label), grossProfit: toNumber(point.gross_profit) }
+    }),
+    annualCaption: presentAnnualCaption(
+      annualFirst,
+      annualLast,
+      currentYear,
+      row.annual_monthly === true,
+      scopeYear,
+    ),
+    trend: asArray(row.trend).map((item) => {
+      const point = asRecord(item)
+      return { label: text(point.label), count: toNumber(point.count) }
+    }),
+    trendCaption: `${toNumber(row.trend_total)} Total`,
+    performance: {
+      projectCount: toNumber(asRecord(row.performance).project_count),
+      sinceYear: nullableNumber(asRecord(row.performance).since_year),
+      highValue: toNumber(asRecord(row.performance).high_value),
+      lowValue: toNumber(asRecord(row.performance).low_value),
+      active: toNumber(asRecord(row.performance).active),
+      openLeads: toNumber(asRecord(row.performance).open_leads),
+      clients: toNumber(asRecord(row.performance).clients),
+      leadValue: toNumber(asRecord(row.performance).lead_value),
+      winRate: toNumber(asRecord(row.performance).win_rate),
+      collectionEfficiency: toNumber(asRecord(row.performance).collection_efficiency),
+      backlog: toNumber(asRecord(row.performance).backlog),
+    },
+    tenure: presentTenure({
+      launch: text(asRecord(row.tenure).launch),
+      spanStart: text(asRecord(row.tenure).span_start),
+      spanEnd: text(asRecord(row.tenure).span_end),
+      scoped: scopeYear != null,
+      scopeYear,
+      revenuePerDay: toNumber(asRecord(row.tenure).revenue_per_day),
+      netProfitPerDay: toNumber(asRecord(row.tenure).net_profit_per_day),
+    }),
+  }
+}
+
+function snapshotFrom(value: unknown, fallbackYear: number): YearSnapshot {
+  const row = asRecord(value)
+  return {
+    year: typeof row.year === "number" ? row.year : fallbackYear,
+    revenue: toNumber(row.revenue),
+    revenueDelta: nullableNumber(row.revenue_delta),
+    grossProfit: toNumber(row.gross_profit),
+    grossDelta: nullableNumber(row.gross_delta),
+    netProfit: toNumber(row.net_profit),
+    netDelta: nullableNumber(row.net_delta),
+    totalExpense: toNumber(row.total_expense),
+    expenseDelta: nullableNumber(row.expense_delta),
+    withdrawal: toNumber(row.withdrawal),
+    material: toNumber(row.material),
+    subcontractor: toNumber(row.subcontractor),
+    projectOverhead: toNumber(row.project_overhead),
+    tax: toNumber(row.tax),
+    admin: toNumber(row.admin),
+    operational: toNumber(row.operational),
+    marketing: toNumber(row.marketing),
+    salary: toNumber(row.salary),
+    projectExpense: toNumber(row.project_expense),
+    collectionRate: toNumber(row.collection_rate),
+    expenseRatio: toNumber(row.expense_ratio),
+    grossMargin: toNumber(row.gross_margin),
+    netMargin: toNumber(row.net_margin),
+    withdrawalRatio: toNumber(row.withdrawal_ratio),
+    projectCostRatio: toNumber(row.project_cost_ratio),
+    taxRatio: toNumber(row.tax_ratio),
+    adminRatio: toNumber(row.admin_ratio),
+    revenueSpark: points(row.revenue_spark),
+    grossSpark: points(row.gross_spark),
+    netSpark: points(row.net_spark),
+    expenseSpark: points(row.expense_spark),
+  }
+}
+
+function points(value: unknown): ChartPoint[] {
+  return asArray(value).map((item) => {
+    const point = asRecord(item)
+    return { label: text(point.label), value: toNumber(point.value) }
+  })
+}
+
+function nullableNumber(value: unknown): number | null {
+  if (value == null) return null
+  const number = toNumber(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function text(value: unknown): string {
+  return typeof value === "string" ? value : ""
 }
 
 function messageOf(error: unknown): string {

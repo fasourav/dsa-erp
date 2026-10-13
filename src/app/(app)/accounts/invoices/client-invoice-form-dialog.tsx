@@ -8,6 +8,7 @@ import {
   updateClientInvoice,
   type ClientInvoiceFieldErrors,
 } from "@/app/(app)/accounts/invoices/actions"
+import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -141,6 +142,9 @@ export function ClientInvoiceFormDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
+          {invoiceId ? (
+            <RecordAttachments parentType="client_invoice" parentId={invoiceId} />
+          ) : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="client-invoice-issued">Issue Date</Label>
             <Input

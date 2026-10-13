@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 import { ProjectSummarySection } from "@/app/(app)/projects/[id]/project-summary-section"
+import { RecordAttachments } from "@/components/record-attachments"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,6 +47,7 @@ export function ProjectDetailPanel({
       </div>
 
       <ProjectSummarySection projectId={project.id} overview={overview} />
+      <RecordAttachments parentType="project" parentId={project.id} />
 
       <Card>
         <CardHeader>

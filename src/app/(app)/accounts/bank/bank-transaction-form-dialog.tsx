@@ -10,6 +10,7 @@ import {
   type BankMovementFieldErrors,
   type BankTransferFieldErrors,
 } from "@/app/(app)/accounts/bank/actions"
+import { RecordAttachments } from "@/components/record-attachments"
 import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { Button } from "@/components/ui/button"
 import {
@@ -129,6 +130,9 @@ export function BankMovementDialog({
           <DialogTitle>{transactionId ? `Edit ${title}` : title}</DialogTitle>
         </DialogHeader>
         <DialogBody>
+          {transactionId ? (
+            <RecordAttachments parentType="bank_transaction" parentId={transactionId} />
+          ) : null}
           <RecordPaymentFields
             idPrefix={`bank-${kind}`}
             amount={amount}

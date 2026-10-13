@@ -12,6 +12,7 @@ import { RecordVendorPaymentDialog } from "@/app/(app)/purchase-orders/[id]/reco
 import { VendorInvoiceFormDialog } from "@/app/(app)/purchase-orders/[id]/vendor-invoice-form-dialog"
 import { VendorPaymentsDialog } from "@/app/(app)/purchase-orders/[id]/vendor-payments-dialog"
 import { DataList } from "@/components/data-list"
+import { RecordAttachments } from "@/components/record-attachments"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
@@ -148,6 +149,9 @@ export function VendorInvoicesPanel({
           </Button>) : null}
         </div>
       </div>
+      {purchaseOrder ? (
+        <RecordAttachments parentType="purchase_order" parentId={purchaseOrder.id} />
+      ) : null}
 
       {purchaseOrder ? (
         <Card>

@@ -9,6 +9,7 @@ import {
   type ExpenseFieldErrors,
 } from "@/app/(app)/accounts/expenses/actions"
 import { BankAccountField } from "@/components/bank-account-field"
+import { RecordAttachments } from "@/components/record-attachments"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
@@ -194,6 +195,7 @@ export function ExpenseFormDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
+          {expenseId ? <RecordAttachments parentType="expense" parentId={expenseId} /> : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-date">Date</Label>
