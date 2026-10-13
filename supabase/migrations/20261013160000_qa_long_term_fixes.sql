@@ -270,7 +270,7 @@ select
   bt.direction,
   bt.source_kind,
   bt.transaction_date,
-  case when private.sees_financials() then bt.amount else null end as amount,
+  case when private.sees_financials() then bt.amount else null end::numeric(14, 2) as amount,
   bt.payment_method,
   bt.income_id,
   bt.vendor_payment_id,
