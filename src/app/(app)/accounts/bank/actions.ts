@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isBankSourceKind } from "@/lib/bank"
+import { escapeLikePattern } from "@/lib/client-validation"
 import { dbIssue, friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isUuid } from "@/lib/ids"
@@ -517,7 +518,7 @@ async function saveBankAccount(
     sort_order: input.sortOrder,
   }
 
-  let duplicateName = supabase.from("bank_accounts").select("id").ilike("name", name).limit(1)
+  let duplicateName = supabase.from("bank_accounts").select("id").ilike("name", escapeLikePattern(name)).limit(1)
   if (id) duplicateName = duplicateName.neq("id", id)
   const duplicate = await duplicateName
   if (duplicate.error) {
