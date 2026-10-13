@@ -209,12 +209,13 @@ function balanceIssue(error: DbError): DbIssue | null {
     const [availableText, neededText] = (error.hint ?? "").split(",")
     const available = Number(availableText)
     const needed = Number(neededText)
-    if (Number.isFinite(available) && Number.isFinite(needed)) {
+    if (availableText && neededText && Number.isFinite(available) && Number.isFinite(needed)) {
       return {
         message: insufficientBalanceMessage(name, available, needed),
         field: "bankAccountId",
       }
     }
+    return { message: `Insufficient Balance In ${name}.`, field: "bankAccountId" }
   }
 
   if (/bank balance negative/i.test(error.message ?? "")) {
