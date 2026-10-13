@@ -11,6 +11,7 @@ import {
   attachmentModule,
   isAttachmentParent,
   safeFileLabel,
+  matchesAttachmentSignature,
   type AttachmentParent,
 } from "@/lib/attachments"
 import { createClient } from "@/lib/supabase/server"
@@ -76,6 +77,10 @@ export async function uploadAttachment(
   if (!contentType || !extension) {
     return { error: "Use a PDF, JPG, PNG, WEBP, XLSX, or DOCX file." }
   }
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  if (!matchesAttachmentSignature(contentType, bytes)) {
+    return { error: "This file's contents don't match its type. Use a real PDF, JPG, PNG, WEBP, XLSX, or DOCX file." }
+  }
 
   const denied = await denyAttachment(parentType, parentId, "edit")
   if (denied) return { error: denied }
@@ -98,7 +103,6 @@ export async function uploadAttachment(
   })
   if (insertError) return { error: "Could not save this file." }
 
-  const bytes = new Uint8Array(await file.arrayBuffer())
   const { error: uploadError } = await supabase.storage.from(bucket).upload(storagePath, bytes, {
     contentType,
     upsert: false,
