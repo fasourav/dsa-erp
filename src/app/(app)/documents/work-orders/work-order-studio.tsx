@@ -75,7 +75,7 @@ export function WorkOrderStudio({
 
   return (
     <DocumentWorkspace
-      title="Work order"
+      title="Work Order"
       description="Prints the work order only. The letterhead and footer stay on the pad."
       margins={margins}
       preview={preview}

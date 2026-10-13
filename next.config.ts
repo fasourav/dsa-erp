@@ -10,6 +10,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ["exceljs"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

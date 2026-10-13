@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
@@ -215,6 +216,30 @@ export function PurchaseOrdersTable({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "purchase-orders",
+              title: "Purchase Orders",
+              columns: [
+                { header: "Date", kind: "text" },
+                { header: "Project Name", kind: "text" },
+                { header: "Vendor Name", kind: "text" },
+                { header: "Work Type", kind: "text" },
+                { header: "Purchase Order Value", kind: "money" },
+                { header: "Total Paid", kind: "money" },
+                { header: "Pending Due", kind: "money" },
+              ],
+              rows: filtered.map((order) => [
+                formatPurchaseOrderDate(order.issuedOn),
+                order.projectName,
+                order.vendorName,
+                order.workType,
+                order.totalValue,
+                order.totalPaid,
+                order.totalPending,
+              ]),
+            }}
+          />
           <OperationalPurchaseOrdersDialog
             orders={orders}
             vendors={vendors}

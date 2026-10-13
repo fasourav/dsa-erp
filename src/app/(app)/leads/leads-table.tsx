@@ -20,6 +20,7 @@ import { LeadFormDialog } from "@/app/(app)/leads/lead-form-dialog"
 import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -52,7 +53,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
 import { cn } from "@/lib/utils"
 
@@ -198,6 +199,32 @@ export function LeadsTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Leads</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "leads",
+              title: "Leads",
+              columns: [
+                { header: "Lead Name", kind: "text" },
+                { header: "Lead Add Date", kind: "text" },
+                { header: "Project Name", kind: "text" },
+                { header: "Stage", kind: "text" },
+                { header: "Source", kind: "text" },
+                { header: "Est. Value", kind: "money" },
+                { header: "Probability", kind: "integer" },
+                { header: "Status", kind: "text" },
+              ],
+              rows: filtered.map((lead) => [
+                lead.leadName,
+                formatDayMonYear(lead.addedOn),
+                lead.projectName,
+                lead.currentStage,
+                lead.source,
+                lead.estimatedValue,
+                lead.probability,
+                lead.statusLabel,
+              ]),
+            }}
+          />
           {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add New Lead

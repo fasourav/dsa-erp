@@ -8,6 +8,7 @@ import { useMemo, useState } from "react"
 
 import { RecoveryPlanDialog } from "@/app/(app)/backlog/recovery-plan-dialog"
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -63,7 +64,33 @@ export function BacklogTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-medium tracking-tight">Backlog</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">Backlog</h1>
+        <ListExport
+          grid={{
+            filename: "backlog",
+            title: "Backlog",
+            columns: [
+              { header: "Project", kind: "text" },
+              { header: "Project Value", kind: "money" },
+              { header: "Amount Paid", kind: "money" },
+              { header: "Total Expense", kind: "money" },
+              { header: "Backlog Amount", kind: "money" },
+              { header: "Status", kind: "text" },
+              { header: "Recovery Plan", kind: "text" },
+            ],
+            rows: filtered.map((row) => [
+              row.projectName,
+              row.projectValue,
+              row.amountPaid,
+              row.totalExpense,
+              row.backlogAmount,
+              row.status === "active" ? "Active" : row.status === "completed" ? "Completed" : "—",
+              row.recoveryPlan || "—",
+            ]),
+          }}
+        />
+      </div>
       <ListSearch
         query={query}
         onQueryChange={(value) => {

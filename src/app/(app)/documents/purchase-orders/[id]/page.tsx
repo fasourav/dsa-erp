@@ -4,7 +4,7 @@ import { requestOrigin } from "@/lib/documents/origin"
 import { loadDocumentCatalog, loadPurchaseOrderDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
-export const metadata = { title: "Purchase order" }
+export const metadata = { title: "Purchase Order" }
 
 export default async function PurchaseOrderDocumentPage({
   params,

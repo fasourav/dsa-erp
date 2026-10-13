@@ -22,6 +22,7 @@ import { SlideToDelete } from "@/components/slide-to-delete"
 import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -170,6 +171,40 @@ export function ProjectsTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Projects</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "projects",
+              title: "Projects",
+              columns: [
+                { header: "Project Name", kind: "text" },
+                { header: "Client", kind: "text" },
+                { header: "Location", kind: "text" },
+                { header: "Date", kind: "text" },
+                { header: "Status", kind: "text" },
+                { header: "Phase", kind: "text" },
+                { header: "Project Value", kind: "money" },
+                { header: "Total Paid", kind: "money" },
+                { header: "Total Due", kind: "money" },
+                { header: "Expense", kind: "money" },
+                { header: "Expense Due", kind: "money" },
+                { header: "Gross Profit", kind: "money" },
+              ],
+              rows: filtered.map((project) => [
+                project.name,
+                project.clientName,
+                project.location,
+                formatProjectDate(project.startedOn),
+                statusLabel(project.status),
+                project.phase || "—",
+                project.totalValue,
+                project.totalPaid,
+                project.totalDue,
+                project.expenseTotal,
+                project.expenseDue,
+                project.grossProfit,
+              ]),
+            }}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button type="button" variant="outline" />}

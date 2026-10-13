@@ -129,9 +129,9 @@ export function BankStatementView({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 print:hidden">
         <Button
-          type="button"
           variant="outline"
           className="w-full sm:w-fit"
+          nativeButton={false}
           render={<Link href={accountId ? `/accounts/bank?account=${accountId}` : "/accounts/bank"} />}
         >
           Back To Transactions

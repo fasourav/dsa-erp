@@ -568,7 +568,7 @@ export function SettingsPanel({
       ) : null}
 
       <BankAccountFormDialog
-        key={bankFormSession}
+        key={`bank-${bankFormSession}`}
         open={bankFormOpen}
         onOpenChange={setBankFormOpen}
         account={bankFormAccount}
@@ -594,7 +594,7 @@ export function SettingsPanel({
       />
 
       <CatalogFormDialog
-        key={formSession}
+        key={`catalog-${formSession}`}
         open={formOpen}
         onOpenChange={setFormOpen}
         catalog={formCatalog}

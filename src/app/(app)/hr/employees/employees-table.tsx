@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import {
   ChevronLeft,
@@ -54,7 +55,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { formatIsoDate, formatTaka } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatTaka } from "@/lib/format"
 import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 
 type ColumnId =
@@ -199,10 +200,36 @@ export function EmployeesTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Employees</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "employees",
+              title: "Employees",
+              columns: [
+                { header: "Name", kind: "text" },
+                { header: "Department", kind: "text" },
+                { header: "Designation", kind: "text" },
+                { header: "Monthly Salary", kind: "money" },
+                { header: "Allowance", kind: "money" },
+                { header: "Joining Date", kind: "text" },
+                { header: "Status", kind: "text" },
+              ],
+              rows: filtered.map((employee) => [
+                employee.fullName,
+                employee.department,
+                employee.designation,
+                showFinancials ? employee.monthlySalary : "Hidden",
+                showFinancials ? employee.allowance : "Hidden",
+                employee.joiningDate ? formatDayMonYear(employee.joiningDate) : "—",
+                employee.isActive ? "Active" : "Inactive",
+              ]),
+            }}
+          />
         {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add New Employee
         </Button>) : null}
+        </div>
       </div>
 
       <ListSearch

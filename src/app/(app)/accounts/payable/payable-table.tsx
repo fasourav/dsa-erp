@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -54,7 +55,29 @@ export function PayableTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-medium tracking-tight">Accounts Payable</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">Accounts Payable</h1>
+        <ListExport
+          grid={{
+            filename: "accounts-payable",
+            title: "Accounts Payable",
+            columns: [
+              { header: "Project", kind: "text" },
+              { header: "Vendor", kind: "text" },
+              { header: "Total Payable", kind: "money" },
+              { header: "Total Paid", kind: "money" },
+              { header: "Pending Payable", kind: "money" },
+            ],
+            rows: filtered.map((row) => [
+              row.projectName,
+              row.vendorName,
+              row.totalPayable,
+              row.totalPaid,
+              row.pendingPayable,
+            ]),
+          }}
+        />
+      </div>
       <ListSearch
         query={query}
         onQueryChange={(value) => {

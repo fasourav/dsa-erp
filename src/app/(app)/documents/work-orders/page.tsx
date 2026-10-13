@@ -6,7 +6,7 @@ import { allows } from "@/lib/access"
 import { listWorkOrders } from "@/lib/documents/queries"
 import { getAccess, requireModule } from "@/lib/permissions"
 
-export const metadata = { title: "Work orders" }
+export const metadata = { title: "Work Orders" }
 
 export default async function WorkOrdersPage() {
   await requireModule("work_orders")
@@ -17,14 +17,14 @@ export default async function WorkOrdersPage() {
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-medium tracking-tight">Work orders</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Work Orders</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Orders issued to vendors and service providers.
           </p>
         </div>
         {canAdd ? (
-          <Button type="button" className="w-full sm:w-fit" render={<Link href="/documents/work-orders/new" />}>
-            New work order
+          <Button className="w-full sm:w-fit" nativeButton={false} render={<Link href="/documents/work-orders/new" />}>
+            New Work Order
           </Button>
         ) : null}
       </div>
@@ -37,6 +37,8 @@ export default async function WorkOrdersPage() {
         items={page.items}
         hrefBase="/documents/work-orders"
         empty="No work orders yet."
+        exportName="work-orders"
+        exportTitle="Work Orders"
       />
     </div>
   )

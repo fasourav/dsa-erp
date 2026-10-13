@@ -4,8 +4,9 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
+import { ListExport } from "@/components/list-export"
 import { Badge } from "@/components/ui/badge"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
 import { incomeColumnStore } from "@/lib/income-column-store"
 import {
   incomeColumns,
@@ -44,7 +45,29 @@ export function IncomeTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-medium tracking-tight">Income</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">Income</h1>
+        <ListExport
+          grid={{
+            filename: "income",
+            title: "Income",
+            columns: [
+              { header: "Project", kind: "text" },
+              { header: "Project Type", kind: "text" },
+              { header: "Invoice Amount", kind: "money" },
+              { header: "Banking Channel", kind: "text" },
+              { header: "Paid Date", kind: "text" },
+            ],
+            rows: filtered.map((row) => [
+              row.projectName,
+              row.projectType,
+              row.invoiceAmount,
+              row.bankingChannel,
+              formatDayMonYear(row.paidOn),
+            ]),
+          }}
+        />
+      </div>
       <ListSearch
         query={query}
         onQueryChange={(value) => {

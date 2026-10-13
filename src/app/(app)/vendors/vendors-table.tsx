@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
@@ -171,6 +172,26 @@ export function VendorsTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Vendors</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "vendors",
+              title: "Vendors",
+              columns: [
+                { header: "Vendor Name", kind: "text" },
+                { header: "Contact", kind: "text" },
+                { header: "Total Project Value", kind: "money" },
+                { header: "Total Paid", kind: "money" },
+                { header: "Total Due", kind: "money" },
+              ],
+              rows: filtered.map((vendor) => [
+                vendor.displayName,
+                [vendor.phone, vendor.email].map((value) => value?.trim()).filter(Boolean).join(" · ") || "—",
+                vendor.totalProjectValue,
+                vendor.totalPaid,
+                vendor.totalDue,
+              ]),
+            }}
+          />
           <Button
             variant="outline"
             nativeButton={false}

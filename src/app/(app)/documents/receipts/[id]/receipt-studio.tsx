@@ -62,7 +62,7 @@ export function ReceiptStudio({
 
   return (
     <DocumentWorkspace
-      title="Money receipt"
+      title="Money Receipt"
       description="Prints the receipt only. The letterhead and footer stay on the pad."
       margins={margins}
       preview={preview}

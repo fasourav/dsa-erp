@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { savedToast } from "@/lib/saved"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
@@ -145,9 +146,35 @@ export function UsersPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-sm text-muted-foreground">Admin / Users & Permissions</p>
-        <h1 className="text-2xl font-medium tracking-tight">Users & Permissions</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Admin / Users & Permissions</p>
+          <h1 className="text-2xl font-medium tracking-tight">Users & Permissions</h1>
+        </div>
+        {tab !== "templates" ? (
+          <ListExport
+            grid={{
+              filename: "users",
+              title: "Users",
+              columns: [
+                { header: "Name", kind: "text" },
+                { header: "Email", kind: "text" },
+                { header: "Role", kind: "text" },
+                { header: "Designation", kind: "text" },
+                { header: "Status", kind: "text" },
+                { header: "Last Login", kind: "text" },
+              ],
+              rows: filtered.map((user) => [
+                user.displayName || "—",
+                user.email || "—",
+                templates.find((template) => template.key === user.role)?.label ?? user.role,
+                user.designation || "—",
+                statusLabel(user.status),
+                absoluteLastLogin(user.lastSignInAt),
+              ]),
+            }}
+          />
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useAccess, useCan } from "@/components/access-provider"
 
@@ -38,7 +39,7 @@ import {
   type BankTransactionRow,
 } from "@/lib/bank"
 import { bankTransactionColumnStore } from "@/lib/bank-column-store"
-import { formatIsoDate } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { formatExactBdt } from "@/lib/dashboard-metrics"
 import {
   paginateRows,
@@ -177,9 +178,33 @@ export function BankPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
-        <p className="text-sm text-muted-foreground">Transactions Log</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
+          <p className="text-sm text-muted-foreground">Transactions Log</p>
+        </div>
+        <ListExport
+          grid={{
+            filename: "bank-transactions",
+            title: "Bank Transactions",
+            columns: [
+              { header: "Date", kind: "text" },
+              { header: "Account", kind: "text" },
+              { header: "Direction", kind: "text" },
+              { header: "Source", kind: "text" },
+              { header: "Amount", kind: "money" },
+              { header: "Balance", kind: "money" },
+            ],
+            rows: filtered.map((transaction) => [
+              formatDayMonYear(transaction.transactionDate),
+              transaction.accountName,
+              bankFlowLabel(transaction.direction),
+              bankSourceLabel(transaction.sourceKind),
+              showFinancials ? transaction.amount : "Hidden",
+              showFinancials ? transaction.balance : "Hidden",
+            ]),
+          }}
+        />
       </div>
       {accounts.length === 0 ? (
         <Card>
@@ -191,8 +216,8 @@ export function BankPanel({
               Payments, Payroll, And Transfers Need A Bank Account. Add One In Settings.
             </p>
             <Button
-              type="button"
               className="w-full sm:w-fit"
+              nativeButton={false}
               render={<Link href="/settings" />}
             >
               Open Settings
@@ -269,8 +294,8 @@ export function BankPanel({
           toolbar={
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <Button
-                type="button"
                 variant="outline"
+                nativeButton={false}
                 render={
                   <Link
                     href={

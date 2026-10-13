@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { Eye, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
@@ -20,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatIsoDate, formatTaka } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate, formatTaka } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -100,6 +101,7 @@ export function PayrollTable({
   paymentMethods: string[]
   error: string | null
 }) {
+  const showFinancials = useAccess().showFinancials
   const canAdd = useCan("payroll", "add")
   const canEdit = useCan("payroll", "edit")
   const canDelete = useCan("payroll", "delete")
@@ -159,7 +161,31 @@ export function PayrollTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-medium tracking-tight">Payroll</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-medium tracking-tight">Payroll</h1>
+        <ListExport
+          grid={{
+            filename: "payroll",
+            title: "Payroll",
+            columns: [
+              { header: "Month", kind: "text" },
+              { header: "Employees", kind: "integer" },
+              { header: "Total Paid", kind: "money" },
+              { header: "Paid On", kind: "text" },
+              { header: "Bank Account", kind: "text" },
+              { header: "Status", kind: "text" },
+            ],
+            rows: filtered.map((salary) => [
+              monthLabel(salary.periodYear, salary.periodMonth),
+              salary.lineCount,
+              showFinancials ? salary.totalPaid : "Hidden",
+              salary.paidOn ? formatDayMonYear(salary.paidOn) : "—",
+              accountNames.get(salary.bankAccountId) || "—",
+              "Paid",
+            ]),
+          }}
+        />
+      </div>
       <ListSearch
         query={query}
         onQueryChange={(value) => {

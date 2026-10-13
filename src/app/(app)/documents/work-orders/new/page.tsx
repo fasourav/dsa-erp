@@ -4,7 +4,7 @@ import { requestOrigin } from "@/lib/documents/origin"
 import { loadDocumentCatalog, loadWorkOrderDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
-export const metadata = { title: "New work order" }
+export const metadata = { title: "New Work Order" }
 
 export default async function NewWorkOrderPage() {
   await requireModule("work_orders")

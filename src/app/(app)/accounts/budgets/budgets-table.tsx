@@ -1,5 +1,6 @@
 "use client"
 
+import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
@@ -160,10 +161,32 @@ export function BudgetsTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-medium tracking-tight">Budgets</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <ListExport
+            grid={{
+              filename: "budgets",
+              title: "Budgets",
+              columns: [
+                { header: "Department", kind: "text" },
+                { header: "Period", kind: "text" },
+                { header: "Allocated", kind: "money" },
+                { header: "Actual Spent", kind: "money" },
+                { header: "Variance", kind: "money" },
+              ],
+              rows: filtered.map((budget) => [
+                budget.department,
+                `${monthNames[budget.periodMonth] ?? ""} ${budget.periodYear}`.trim(),
+                budget.allocatedBudget,
+                budget.actualSpent,
+                budget.variance,
+              ]),
+            }}
+          />
         {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
           <Plus aria-hidden="true" data-icon="inline-start" />
           Add New Budget
         </Button>) : null}
+        </div>
       </div>
 
       <ListSearch

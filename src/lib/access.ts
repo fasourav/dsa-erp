@@ -47,10 +47,12 @@ export type NavItem = {
   module?: ModuleKey
   anyOf?: ModuleKey[]
   ownerOnly?: boolean
+  reports?: boolean
 }
 
 export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", module: "dashboard" },
+  { href: "/reports", label: "Reports", reports: true },
   { href: "/leads", label: "Leads", module: "leads" },
   { href: "/clients", label: "Clients", module: "clients" },
   { href: "/projects", label: "Projects", module: "projects" },
@@ -94,10 +96,89 @@ export function allows(
 }
 
 export function canSeeNav(access: AccessSnapshot, item: NavItem): boolean {
+  if (item.reports) return canOpenReports(access)
   if (item.ownerOnly) return access.isOwner
   if (item.anyOf) return item.anyOf.some((module) => allows(access, module, "view"))
   if (!item.module) return false
   return allows(access, item.module, "view")
+}
+
+const reportBooksModules = [
+  "income",
+  "client_invoices",
+  "vendor_payments",
+  "purchase_orders",
+  "expenses",
+  "vat_tax",
+  "banking",
+] as const satisfies readonly ModuleKey[]
+
+function canViewReportBooks(access: AccessSnapshot): boolean {
+  return reportBooksModules.every((module) => allows(access, module, "view"))
+}
+
+export type ReportNavSlug =
+  | "profit-and-loss"
+  | "balance-sheet"
+  | "cash-flow"
+  | "ar-aging"
+  | "ap-aging"
+  | "project-profitability"
+  | "tax"
+
+export function canSeeReport(access: AccessSnapshot, slug: ReportNavSlug): boolean {
+  if (access.status === "deactivated") return false
+  if (!access.isOwner && !access.showFinancials) return false
+  if (access.isOwner) return true
+
+  switch (slug) {
+    case "profit-and-loss":
+      return canViewReportBooks(access)
+    case "cash-flow":
+      return allows(access, "banking", "view")
+    case "balance-sheet":
+      return (
+        canViewReportBooks(access) ||
+        allows(access, "banking", "view") ||
+        allows(access, "accounts_receivable", "view") ||
+        allows(access, "client_invoices", "view") ||
+        allows(access, "accounts_payable", "view") ||
+        allows(access, "purchase_orders", "view") ||
+        allows(access, "assets", "view")
+      )
+    case "ar-aging":
+      return (
+        allows(access, "accounts_receivable", "view") ||
+        allows(access, "client_invoices", "view")
+      )
+    case "ap-aging":
+      return (
+        allows(access, "accounts_payable", "view") ||
+        allows(access, "purchase_orders", "view")
+      )
+    case "project-profitability":
+      return (
+        canViewReportBooks(access) &&
+        allows(access, "projects", "view") &&
+        allows(access, "clients", "view")
+      )
+    case "tax":
+      return allows(access, "vat_tax", "view")
+  }
+}
+
+export function canOpenReports(access: AccessSnapshot): boolean {
+  if (access.status === "deactivated") return false
+  const slugs: ReportNavSlug[] = [
+    "profit-and-loss",
+    "balance-sheet",
+    "cash-flow",
+    "ar-aging",
+    "ap-aging",
+    "project-profitability",
+    "tax",
+  ]
+  return slugs.some((slug) => canSeeReport(access, slug))
 }
 
 const dashboardSourceModules = [
