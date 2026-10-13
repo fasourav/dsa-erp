@@ -90,7 +90,8 @@ export async function updateSession(request: NextRequest) {
     pathname === "/login" ||
     pathname === "/auth/confirm" ||
     pathname === "/auth/accept" ||
-    pathname === "/set-password"
+    pathname === "/set-password" ||
+    pathname.startsWith("/verify/")
 
   if (!isAuthenticated && !isOpenPath) {
     return applyCsp(redirectWithSession(request, supabaseResponse, "/login"))

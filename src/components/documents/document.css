@@ -1,0 +1,260 @@
+.document-sheet {
+  --doc-gap: 8pt;
+  width: 210mm;
+  max-width: none;
+  box-sizing: border-box;
+  background: var(--card);
+  color: var(--card-foreground);
+  font-size: 9pt;
+  line-height: 1.35;
+}
+
+.doc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--doc-gap);
+}
+
+.doc-header,
+.doc-card,
+.doc-total,
+.doc-table,
+.doc-signs {
+  break-inside: avoid;
+}
+
+.doc-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--doc-gap);
+  padding: var(--doc-gap);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in oklch, var(--primary) 16%, var(--card));
+}
+
+.doc-header h1 {
+  margin: 0;
+  font-size: 14pt;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.doc-kicker {
+  margin: 0 0 2pt;
+  font-size: 8pt;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.doc-meta {
+  margin-left: auto;
+  min-width: 42mm;
+  font-size: 8.5pt;
+}
+
+.doc-meta p,
+.doc-qr p {
+  margin: 0;
+}
+
+.doc-qr {
+  display: flex;
+  width: 22mm;
+  flex-direction: column;
+  align-items: center;
+  gap: 2pt;
+  text-align: center;
+  font-size: 7pt;
+  line-height: 1.2;
+}
+
+.doc-qr svg,
+.doc-qr-pending {
+  width: 18mm;
+  height: 18mm;
+}
+
+.doc-qr-pending {
+  border: 1px dashed var(--border);
+  background: var(--card);
+}
+
+.doc-card {
+  padding: var(--doc-gap);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+}
+
+.doc-card h2,
+.doc-block h2 {
+  margin: 0 0 4pt;
+  font-size: 8pt;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.doc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--doc-gap);
+}
+
+.doc-name {
+  margin: 0;
+  font-size: 11pt;
+  font-weight: 650;
+}
+
+.doc-detail,
+.doc-intro,
+.doc-copy {
+  margin: 2pt 0 0;
+  white-space: pre-wrap;
+}
+
+.doc-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4pt 8pt;
+  margin: 0;
+}
+
+.doc-facts div {
+  margin: 0;
+}
+
+.doc-facts dt {
+  margin: 0;
+  font-size: 7.5pt;
+  color: var(--muted-foreground);
+}
+
+.doc-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+}
+
+.doc-table th {
+  padding: 4pt;
+  background: var(--muted);
+  font-weight: 650;
+  text-align: left;
+}
+
+.doc-table td {
+  padding: 4pt;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.doc-table .num,
+.doc-summary .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.doc-section td {
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  font-weight: 650;
+}
+
+.doc-spec {
+  display: block;
+  color: var(--muted-foreground);
+}
+
+.doc-split {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: var(--doc-gap);
+  align-items: stretch;
+}
+
+.doc-total {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3pt;
+  padding: var(--doc-gap);
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.doc-summary {
+  margin: 0;
+}
+
+.doc-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8pt;
+  margin: 0;
+}
+
+.doc-summary dt {
+  margin: 0;
+}
+
+.doc-summary dd {
+  margin: 0;
+}
+
+.doc-summary .strong {
+  font-weight: 700;
+}
+
+.doc-signs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--doc-gap);
+}
+
+.doc-sign {
+  min-height: 28mm;
+  padding-top: 16mm;
+  border-top: 1px solid var(--border);
+}
+
+.doc-sign p {
+  margin: 0;
+}
+
+.doc-sign .role {
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+}
+
+@media print {
+  .doc-pad {
+    padding: 0 !important;
+  }
+
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  .document-sheet,
+  .doc-header,
+  .doc-card,
+  .doc-total,
+  .doc-table th,
+  .doc-section td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

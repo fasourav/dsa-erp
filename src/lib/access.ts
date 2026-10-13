@@ -5,6 +5,8 @@ export const moduleKeys = [
   "projects",
   "backlog",
   "purchase_orders",
+  "quotations",
+  "work_orders",
   "vendors",
   "vendor_payments",
   "accounts_payable",
@@ -43,6 +45,7 @@ export type NavItem = {
   href: string
   label: string
   module?: ModuleKey
+  anyOf?: ModuleKey[]
   ownerOnly?: boolean
 }
 
@@ -53,6 +56,11 @@ export const navItems: NavItem[] = [
   { href: "/projects", label: "Projects", module: "projects" },
   { href: "/vendors", label: "Vendors", module: "vendors" },
   { href: "/purchase-orders", label: "Purchase Orders", module: "purchase_orders" },
+  {
+    href: "/documents",
+    label: "Documents",
+    anyOf: ["quotations", "work_orders", "purchase_orders", "client_invoices"],
+  },
   { href: "/accounts/invoices", label: "Client Invoices", module: "client_invoices" },
   { href: "/accounts/receivable", label: "Accounts Receivable", module: "accounts_receivable" },
   { href: "/income", label: "Income", module: "income" },
@@ -87,6 +95,7 @@ export function allows(
 
 export function canSeeNav(access: AccessSnapshot, item: NavItem): boolean {
   if (item.ownerOnly) return access.isOwner
+  if (item.anyOf) return item.anyOf.some((module) => allows(access, module, "view"))
   if (!item.module) return false
   return allows(access, item.module, "view")
 }

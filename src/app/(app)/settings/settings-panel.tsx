@@ -8,6 +8,7 @@ import {
   setBankAccountActive,
   updateFiscalYearStartMonth,
   updateLaunchDate,
+  updatePrintMargins,
 } from "@/app/(app)/accounts/bank/actions"
 import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
@@ -41,6 +42,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { BankAccountRow } from "@/lib/bank"
+import type { PrintMargins } from "@/lib/documents/drafts"
 import { formatExactBdt } from "@/lib/dashboard-metrics"
 import { formatDayMonYear } from "@/lib/format"
 import { fiscalMonthOptions } from "@/lib/fiscal-year"
@@ -61,12 +63,14 @@ export function SettingsPanel({
   bankAccounts,
   fiscalYearStartMonth,
   launchDate: initialLaunchDate,
+  printMargins,
   error,
 }: {
   catalogs: CatalogList[]
   bankAccounts: BankAccountRow[]
   fiscalYearStartMonth: number
   launchDate: string
+  printMargins: PrintMargins
   error: string | null
 }) {
   const [view, setView] = useState<ActiveView>({ kind: "home" })
@@ -102,6 +106,10 @@ export function SettingsPanel({
   const [launchDate, setLaunchDate] = useState(initialLaunchDate)
   const [launchError, setLaunchError] = useState<string | null>(null)
   const [savingLaunch, startLaunchSave] = useTransition()
+  const [marginTop, setMarginTop] = useState(String(printMargins.topMm))
+  const [marginBottom, setMarginBottom] = useState(String(printMargins.bottomMm))
+  const [marginError, setMarginError] = useState<string | null>(null)
+  const [savingMargins, startMarginSave] = useTransition()
 
   const catalogByKey = useMemo(() => {
     return new Map(catalogs.map((catalog) => [catalog.key, catalog]))
@@ -264,6 +272,67 @@ export function SettingsPanel({
               }}
             >
               {savingLaunch ? "Saving…" : "Save Launch Date"}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {view.kind === "home" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Print margins</CardTitle>
+            <CardDescription>
+              Blank space above and below document content so it fits the pre-printed letterhead pad.
+              Print output has no logo or footer.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:max-w-md">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="print-margin-top">Top margin (mm)</Label>
+                <Input
+                  id="print-margin-top"
+                  type="number"
+                  min={0}
+                  max={80}
+                  step={1}
+                  value={marginTop}
+                  disabled={savingMargins}
+                  onChange={(event) => setMarginTop(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="print-margin-bottom">Bottom margin (mm)</Label>
+                <Input
+                  id="print-margin-bottom"
+                  type="number"
+                  min={0}
+                  max={80}
+                  step={1}
+                  value={marginBottom}
+                  disabled={savingMargins}
+                  onChange={(event) => setMarginBottom(event.target.value)}
+                />
+              </div>
+            </div>
+            {marginError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {marginError}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              className="w-full sm:w-fit"
+              disabled={savingMargins}
+              onClick={() => {
+                setMarginError(null)
+                startMarginSave(async () => {
+                  const result = await updatePrintMargins(Number(marginTop), Number(marginBottom))
+                  if (result.error) setMarginError(result.error)
+                })
+              }}
+            >
+              {savingMargins ? "Saving…" : "Save print margins"}
             </Button>
           </CardContent>
         </Card>

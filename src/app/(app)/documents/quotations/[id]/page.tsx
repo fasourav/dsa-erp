@@ -1,0 +1,44 @@
+import { QuotationStudio } from "@/app/(app)/documents/quotations/quotation-studio"
+import { getPrintMargins } from "@/lib/company-settings"
+import { requestOrigin } from "@/lib/documents/origin"
+import { loadDocumentCatalog, loadQuotationDraft } from "@/lib/documents/queries"
+import { requireModule } from "@/lib/permissions"
+
+export const metadata = { title: "Quotation" }
+
+export default async function QuotationPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  await requireModule("quotations")
+  const { id } = await params
+  const [catalog, loaded, margins, origin] = await Promise.all([
+    loadDocumentCatalog(),
+    loadQuotationDraft(id),
+    getPrintMargins(),
+    requestOrigin(),
+  ])
+
+  if (!loaded.draft) {
+    return <p className="text-sm text-destructive">{loaded.error}</p>
+  }
+
+  return (
+    <>
+      {loaded.error ? (
+        <p role="alert" className="mb-4 text-sm text-destructive">
+          {loaded.error}
+        </p>
+      ) : null}
+      <QuotationStudio
+        draft={loaded.draft}
+        clients={catalog.clients}
+        projects={catalog.projects}
+        employees={catalog.employees}
+        origin={origin}
+        margins={margins}
+      />
+    </>
+  )
+}
