@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { ChevronsRight } from "lucide-react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { ChevronsRight, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -82,9 +82,8 @@ export function SlideToDelete({
   }, [pending])
 
   function travelOf(track: HTMLDivElement) {
-    const width = track.getBoundingClientRect().width
-    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
-    return Math.max(width - 3 * rem, 1)
+    const { width, height } = track.getBoundingClientRect()
+    return Math.max(width - height, 1)
   }
 
   function beginHold() {
@@ -142,22 +141,15 @@ export function SlideToDelete({
   }
 
   return (
-    <div className="flex w-full min-w-0 basis-full flex-col">
-      <style>{`
-        @keyframes slide-delete-shimmer {
-          0% { transform: translateX(-130%); }
-          100% { transform: translateX(280%); }
-        }
-        @media (prefers-reduced-motion: no-preference) {
-          .slide-delete-shimmer {
-            animation: slide-delete-shimmer 2.4s ease-in-out infinite;
-          }
-        }
-      `}</style>
+    <div
+      data-slot="slide-to-delete"
+      style={{ "--p": shown } as CSSProperties}
+      className="col-span-full flex w-full min-w-0 basis-full flex-col"
+    >
       <div className="grid w-full">
         <div
           className={cn(
-            "col-start-1 row-start-1 grid grid-cols-2 gap-2 transition duration-300 ease-out motion-reduce:transition-none",
+            "col-start-1 row-start-1 grid grid-cols-2 gap-2.5 self-center transition duration-300 ease-out motion-reduce:transition-none",
             revealed ? "pointer-events-none scale-95 opacity-0" : "scale-100 opacity-100",
           )}
           inert={revealed || undefined}
@@ -165,8 +157,9 @@ export function SlideToDelete({
         >
           <Button
             type="button"
-            variant="outline"
-            className="h-12 w-full"
+            variant="secondary"
+            size="lg"
+            className="w-full md:h-10.5 md:text-ui"
             disabled={pending}
             onClick={onCancel}
           >
@@ -174,11 +167,13 @@ export function SlideToDelete({
           </Button>
           <Button
             type="button"
-            variant="destructive"
-            className="h-12 w-full"
+            variant="destructive-solid"
+            size="lg"
+            className="w-full md:h-10.5 md:text-ui"
             disabled={pending}
             onClick={() => setArmed(true)}
           >
+            <Trash2 aria-hidden="true" data-icon="inline-start" />
             Delete
           </Button>
         </div>
@@ -202,7 +197,7 @@ export function SlideToDelete({
             aria-disabled={pending || undefined}
             aria-busy={pending || undefined}
             className={cn(
-              "relative h-12 w-full touch-none overflow-hidden rounded-full border border-foreground/15 bg-background/40 shadow-lg ring-1 ring-destructive/25 backdrop-blur-2xl backdrop-saturate-150 select-none before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:z-20 before:h-px before:bg-foreground/30 focus-visible:ring-3 focus-visible:ring-ring",
+              "relative h-14.5 w-full touch-none overflow-hidden rounded-full bg-slide-track shadow-slide-track backdrop-blur-xl backdrop-saturate-200 select-none focus-visible:ring-3 focus-visible:ring-destructive/40 md:h-14",
               pending ? "cursor-default" : "cursor-grab",
               active && !pending && "cursor-grabbing",
             )}
@@ -303,44 +298,34 @@ export function SlideToDelete({
             <span
               aria-hidden="true"
               className={cn(
-                "absolute inset-y-0 left-0 bg-destructive/65",
+                "absolute inset-y-0 left-0 w-[calc(var(--height)+(100%-var(--height))*var(--p))] rounded-full bg-slide-fill [--height:3.625rem] md:[--height:3.5rem]",
                 active
                   ? "transition-none"
                   : "transition-[width] duration-200 ease-out motion-reduce:transition-none",
               )}
-              style={{
-                width: `calc(0.25rem + ${shown} * (100% - 3rem) + 2.5rem)`,
-              }}
             />
-            <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-14">
-              <span className="relative overflow-hidden text-sm font-medium whitespace-nowrap text-destructive">
-                <span aria-live="polite">{label}</span>
-                {pending ? null : (
-                  <span
-                    aria-hidden="true"
-                    className="slide-delete-shimmer pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-foreground/25"
-                  />
-                )}
-              </span>
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 flex items-center justify-center px-14 text-sm font-medium whitespace-nowrap text-destructive-foreground"
-                style={{ clipPath: `inset(0 ${Math.max(0, 100 - shown * 100)}% 0 0)` }}
-              >
+            <span
+              className={cn(
+                "pointer-events-none absolute inset-y-0 right-0 left-[calc(var(--height)+(100%-var(--height))*var(--p))] z-10 flex items-center justify-center overflow-hidden px-2 text-row font-bold whitespace-nowrap text-destructive [--height:3.625rem] md:text-callout md:font-strong md:[--height:3.5rem]",
+                active
+                  ? "transition-none"
+                  : "transition-[left] duration-200 ease-out motion-reduce:transition-none",
+              )}
+            >
+              <span aria-live="polite" className={cn(!pending && "text-shimmer motion-safe:animate-shimmer")}>
                 {label}
               </span>
             </span>
             <span
               aria-hidden="true"
               className={cn(
-                "absolute top-1 z-10 flex size-10 items-center justify-center rounded-full border border-destructive-foreground/30 bg-destructive text-destructive-foreground shadow-md before:pointer-events-none before:absolute before:inset-x-2 before:top-1 before:h-px before:rounded-full before:bg-destructive-foreground/70",
+                "absolute top-1 left-[calc(0.25rem+(100%-var(--height))*var(--p))] z-10 flex size-12.5 items-center justify-center rounded-full bg-slide-thumb text-on-color shadow-slide-thumb [--height:3.625rem] md:size-12 md:[--height:3.5rem]",
                 active
                   ? "transition-none"
                   : "transition-[left] duration-200 ease-out motion-reduce:transition-none",
               )}
-              style={{ left: `calc(0.25rem + ${shown} * (100% - 3rem))` }}
             >
-              <ChevronsRight className="size-4" />
+              <ChevronsRight className="size-5" strokeWidth={2.4} />
             </span>
           </div>
         </div>

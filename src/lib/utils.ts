@@ -41,6 +41,8 @@ export const cn = createCn({
         "login-field-focus",
         "login-button",
         "login-sphere",
+        "slide-track",
+        "slide-thumb",
       ],
       blur: ["glass", "chrome", "float"],
     },

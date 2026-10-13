@@ -86,7 +86,7 @@ export type DataListMobileItem = {
   subtitle?: ReactNode
   /** Right side of the first line, usually a <Money>. */
   value?: ReactNode
-  /** Right side of the second line, usually a <StatusBadge>. */
+  /** Right side of the second line: a <StatusBadge>, or the amount when it reads with the subtitle. */
   meta?: ReactNode
 }
 
@@ -145,7 +145,7 @@ export function DataList<T, Id extends string>({
       ) : null}
       {mobileItem ? (
         <div className="flex flex-col gap-3.5 md:hidden">
-          <div className="overflow-hidden rounded-3xl glass-panel">
+          <div className="overflow-hidden rounded-card glass-panel">
             {error ? (
               <p role="alert" className="px-4 py-8 text-center text-callout text-destructive">
                 {error}
@@ -155,13 +155,17 @@ export function DataList<T, Id extends string>({
                 {emptyMessage}
               </p>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul>
                 {rows.map((row) => {
                   const item = mobileItem(row)
                   return (
                     <li
                       key={rowKey(row)}
-                      className="flex min-h-16 items-center gap-2 py-3.25 pr-2 pl-4"
+                      className={cn(
+                        "relative flex min-h-16 items-center gap-2 py-3.25 pl-4",
+                        hasActions ? "pr-2" : "pr-4",
+                        "not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px not-first:before:origin-top not-first:before:scale-y-50 not-first:before:bg-border",
+                      )}
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <div className="flex items-center justify-between gap-2.5">
@@ -173,11 +177,13 @@ export function DataList<T, Id extends string>({
                           ) : null}
                         </div>
                         {item.subtitle || item.meta ? (
-                          <div className="mt-1.25 flex items-center justify-between gap-2.5">
+                          <div className="mt-0.5 flex items-center justify-between gap-2.5">
                             <span className="min-w-0 flex-1 truncate text-label text-muted-foreground">
                               {item.subtitle}
                             </span>
-                            {item.meta ? <span className="shrink-0">{item.meta}</span> : null}
+                            {item.meta ? (
+                              <span className="shrink-0 text-callout font-strong tabular-nums">{item.meta}</span>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>

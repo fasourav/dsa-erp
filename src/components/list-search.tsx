@@ -1,8 +1,9 @@
 "use client"
 
+import { Search } from "lucide-react"
 import { useId } from "react"
 
-import { Input } from "@/components/ui/input"
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -66,19 +67,26 @@ export function ListSearch({
   const searchId = useId()
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-end">
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <Label htmlFor={searchId}>Search</Label>
-        <Input
+    <div className="flex w-full min-w-0 items-center gap-2 md:gap-2.5">
+      <Label htmlFor={searchId} className="sr-only">
+        Search
+      </Label>
+      <InputGroup className="min-w-0 flex-1 md:max-w-sm">
+        <InputGroupAddon>
+          <Search aria-hidden="true" />
+        </InputGroupAddon>
+        <InputGroupInput
           id={searchId}
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
           value={query}
           placeholder={placeholder}
           onChange={(event) => onQueryChange(event.target.value)}
         />
-      </div>
+      </InputGroup>
       {filterLabel && filter && onFilterChange && options ? (
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:w-56">
-          <Label>{filterLabel}</Label>
+        <div className="flex max-w-[45%] shrink-0 md:max-w-none">
           <Select
             items={options.map((option) => ({ value: option.value, label: option.label }))}
             value={filter}
@@ -86,7 +94,7 @@ export function ListSearch({
               if (value) onFilterChange(value)
             }}
           >
-            <SelectTrigger className="w-full" aria-label={filterLabel}>
+            <SelectTrigger className="w-full min-w-32 md:w-48" aria-label={filterLabel}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

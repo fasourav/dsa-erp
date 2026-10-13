@@ -105,6 +105,7 @@
   --color-login-field-icon: var(--login-field-icon);
   --color-login-button: var(--login-button);
   --color-login-button-ink: var(--login-button-ink);
+  --color-slide-track: var(--slide-track);
 
   --radius-sm: 8px;
   --radius-md: 10px;
@@ -137,6 +138,8 @@
   --shadow-login-field: 0 0 0 1px var(--login-field-edge) inset;
   --shadow-login-field-focus: var(--login-field-focus);
   --shadow-login-button: var(--login-button-shadow);
+  --shadow-slide-track: var(--slide-track-shadow);
+  --shadow-slide-thumb: var(--slide-thumb-shadow);
   --shadow-login-sphere: var(--login-sphere-shadow);
 
   --text-large-title: 2.125rem;
@@ -615,6 +618,14 @@
 
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility bg-slide-fill {
+  background-image: var(--slide-fill);
+}
+
+@utility bg-slide-thumb {
+  background-image: var(--slide-thumb);
 }
 
 @utility text-shimmer {

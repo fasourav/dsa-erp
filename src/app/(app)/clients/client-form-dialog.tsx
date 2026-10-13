@@ -21,7 +21,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
 import type { ClientKind, ClientSummary } from "@/lib/client-summary"
 import {
@@ -30,7 +36,6 @@ import {
   isValidEmail,
 } from "@/lib/client-validation"
 import { createClient } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
 
 const DUPLICATE_CHECK_DELAY_MS = 350
 
@@ -257,34 +262,43 @@ export function ClientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>{clientId ? "Edit Client" : "Add New Client"}</DialogTitle>
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
           {clientId ? <RecordAttachments parentType="client" parentId={clientId} /> : null}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-            <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="client-name">Name</Label>
+          <FieldGroup layout="inset">
+            <Field span="half" data-invalid={(kind !== "company" && Boolean(nameError)) || undefined}>
+              <FieldLabel htmlFor="client-name">Name</FieldLabel>
               <Input
                 id="client-name"
                 value={name}
+                autoComplete="off"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 disabled={pending}
                 aria-invalid={kind !== "company" && Boolean(nameError)}
                 onChange={(event) => setName(event.target.value)}
               />
               {kind !== "company" && nameError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {nameError}
-                </p>
+                <FieldError>{nameError}</FieldError>
               ) : null}
-            </div>
+            </Field>
 
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Type</span>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm">
+            <Field span="half" data-invalid={Boolean(kindRequiredError) || undefined}>
+              <FieldTitle id="client-kind-label">Type</FieldTitle>
+              <div
+                role="group"
+                aria-labelledby="client-kind-label"
+                className="flex min-h-11 items-center gap-6 md:min-h-10.5"
+              >
+                <label className="flex min-h-11 items-center gap-2.5 text-base md:min-h-0 md:text-sm">
                   <Checkbox
                     checked={kind === "person"}
                     disabled={pending}
@@ -295,7 +309,7 @@ export function ClientFormDialog({
                   />
                   Individual
                 </label>
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex min-h-11 items-center gap-2.5 text-base md:min-h-0 md:text-sm">
                   <Checkbox
                     checked={kind === "company"}
                     disabled={pending}
@@ -307,99 +321,85 @@ export function ClientFormDialog({
                   Company
                 </label>
               </div>
-              {kindRequiredError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {kindRequiredError}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              {kindRequiredError ? <FieldError>{kindRequiredError}</FieldError> : null}
+            </Field>
 
-          <div
-            className={cn(
-              "grid transition-all duration-200 ease-out",
-              kind === "company"
-                ? "grid-rows-[1fr] opacity-100"
-                : "grid-rows-[0fr] opacity-0",
-            )}
-          >
-            <div className="min-h-0 overflow-hidden">
-              <div className="flex flex-col gap-2 pt-1">
-                <Label htmlFor="client-company">Company</Label>
+            {kind === "company" ? (
+              <Field
+                className="animate-in duration-200 fade-in-0 slide-in-from-top-1"
+                data-invalid={Boolean(nameError) || undefined}
+              >
+                <FieldLabel htmlFor="client-company">Company</FieldLabel>
                 <Input
                   id="client-company"
                   value={company}
-                  disabled={pending || kind !== "company"}
-                  tabIndex={kind === "company" ? undefined : -1}
-                  aria-invalid={kind === "company" && Boolean(nameError)}
+                  autoComplete="organization"
+                  enterKeyHint="next"
+                  disabled={pending}
+                  aria-invalid={Boolean(nameError)}
                   onChange={(event) => setCompany(event.target.value)}
                 />
-                {kind === "company" && nameError ? (
-                  <p role="alert" className="text-sm text-destructive">
-                    {nameError}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
+                {nameError ? <FieldError>{nameError}</FieldError> : null}
+              </Field>
+            ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="client-email">Email</Label>
+            <Field span="half" data-invalid={Boolean(emailError) || undefined}>
+              <FieldLabel htmlFor="client-email">Email</FieldLabel>
               <Input
                 id="client-email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                enterKeyHint="next"
                 value={email}
                 disabled={pending}
                 aria-invalid={Boolean(emailError)}
                 onChange={(event) => setEmail(event.target.value)}
               />
-              {emailError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {emailError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="client-phone">Phone</Label>
+              {emailError ? <FieldError>{emailError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(phoneDigitError) || undefined}>
+              <FieldLabel htmlFor="client-phone">Phone</FieldLabel>
               <Input
                 id="client-phone"
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                enterKeyHint="next"
                 value={phone}
                 disabled={pending}
                 aria-invalid={Boolean(phoneDigitError)}
                 onChange={(event) => setPhone(event.target.value)}
               />
-              {phoneDigitError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {phoneDigitError}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              {phoneDigitError ? <FieldError>{phoneDigitError}</FieldError> : null}
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-address">Address</Label>
-            <Textarea
-              id="client-address"
-              value={address}
-              disabled={pending}
-              onChange={(event) => setAddress(event.target.value)}
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="client-address">Address</FieldLabel>
+              <Textarea
+                id="client-address"
+                value={address}
+                autoComplete="street-address"
+                disabled={pending}
+                onChange={(event) => setAddress(event.target.value)}
+              />
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-notes">Notes</Label>
-            <Textarea
-              id="client-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="client-notes">Notes</FieldLabel>
+              <Textarea
+                id="client-notes"
+                value={notes}
+                disabled={pending}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}
