@@ -7,10 +7,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns3,
+  Inbox,
 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -151,9 +153,7 @@ export function DataList<T, Id extends string>({
                 {error}
               </p>
             ) : rows.length === 0 ? (
-              <p className="px-4 py-8 text-center text-callout text-muted-foreground">
-                {emptyMessage}
-              </p>
+              <ListEmpty message={emptyMessage} />
             ) : (
               <ul>
                 {rows.map((row) => {
@@ -291,16 +291,7 @@ export function DataList<T, Id extends string>({
                   {error}
                 </TableCell>
               </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  className="px-3 py-10 text-center whitespace-normal text-muted-foreground"
-                >
-                  {emptyMessage}
-                </TableCell>
-              </TableRow>
-            ) : (
+            ) : rows.length === 0 ? null : (
               rows.map((row) => (
                 <TableRow key={rowKey(row)} className="group">
                   {visibleColumns.map((column, index) => {
@@ -341,6 +332,7 @@ export function DataList<T, Id extends string>({
             )}
           </TableBody>
         </Table>
+        {!error && rows.length === 0 ? <ListEmpty message={emptyMessage} /> : null}
         <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
           <p className="text-label text-muted-foreground">{rangeText}</p>
           <Pagination
@@ -400,6 +392,17 @@ export function DataList<T, Id extends string>({
         </div>
       </div>
     </div>
+  )
+}
+
+function ListEmpty({ message }: { message: string }) {
+  return (
+    <Empty>
+      <EmptyMedia variant="icon">
+        <Inbox aria-hidden="true" />
+      </EmptyMedia>
+      <EmptyTitle className="font-label text-muted-foreground">{message}</EmptyTitle>
+    </Empty>
   )
 }
 
