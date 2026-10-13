@@ -102,16 +102,20 @@ async function replacePermissions(
     ]
   })
 
-  const { error: deleteError } = await supabase
-    .from("user_permissions")
-    .delete()
-    .eq("user_id", userId)
+  if (rows.length > 0) {
+    const { error: upsertError } = await supabase
+      .from("user_permissions")
+      .upsert(rows, { onConflict: "user_id,module" })
+    if (upsertError) return friendly(upsertError.message, "Could not save permissions.")
+  }
 
+  const kept = rows.map((row) => row.module)
+  let stale = supabase.from("user_permissions").delete().eq("user_id", userId)
+  if (kept.length > 0) {
+    stale = stale.not("module", "in", `(${kept.join(",")})`)
+  }
+  const { error: deleteError } = await stale
   if (deleteError) return friendly(deleteError.message, "Could not save permissions.")
-  if (rows.length === 0) return null
-
-  const { error: insertError } = await supabase.from("user_permissions").insert(rows)
-  if (insertError) return friendly(insertError.message, "Could not save permissions.")
   return null
 }
 
