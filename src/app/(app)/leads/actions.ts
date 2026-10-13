@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { dhakaToday } from "@/lib/dashboard-metrics"
 import { isUuid } from "@/lib/ids"
 import { firstIssue, leadContactSchema } from "@/lib/schemas"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
@@ -162,7 +163,7 @@ export async function convertLead(leadId: string): Promise<ConvertResult> {
     client_id: clientId,
     project_type: lead.project_type || null,
     total_value: estimated,
-    started_on: new Date().toISOString().slice(0, 10),
+    started_on: dhakaToday(new Date()),
     status: "active" as const,
     lead_id: leadId,
   }
