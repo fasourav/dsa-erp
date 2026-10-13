@@ -94,11 +94,11 @@ export function AcceptInvite() {
   }, [router])
 
   return failed ? (
-    <p role="alert" className="text-sm leading-relaxed text-destructive">
+    <p role="alert" className="rounded-2xl bg-destructive-tint px-3.5 py-2.5 text-sm leading-relaxed text-destructive md:bg-login-button">
       {inviteError}
     </p>
   ) : (
-    <p className="text-sm leading-relaxed text-primary-foreground/80" aria-live="polite">
+    <p className="text-center text-sm leading-relaxed text-muted-foreground md:text-login-ink-muted" aria-live="polite">
       Signing you in from your invite.
     </p>
   )

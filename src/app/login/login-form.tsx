@@ -1,66 +1,104 @@
 "use client"
 
-import { useActionState } from "react"
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react"
+import { useActionState, useState } from "react"
 
 import { signIn, type SignInState } from "@/app/auth/actions"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  authAlertClassName,
+  authGroupClassName as groupClassName,
+  authIconClassName as iconClassName,
+  authInputClassName as inputClassName,
+  authLabelClassName as labelClassName,
+  authSubmitClassName,
+} from "@/app/login/auth-styles"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 
 const initialState: SignInState = {}
 
-const fieldClassName =
-  "h-11 rounded-xl border-border/80 bg-background/80 px-3.5 text-foreground shadow-sm backdrop-blur-md backdrop-saturate-150"
-
 export function LoginForm({ notice }: { notice?: string }) {
   const [state, formAction, pending] = useActionState(signIn, initialState)
+  const [showPassword, setShowPassword] = useState(false)
 
   return (
-    <form action={formAction} className="flex w-full flex-col gap-3 sm:gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="email" className="text-primary-foreground">
-          Email
-        </Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          spellCheck={false}
-          required
-          aria-invalid={state.error ? true : undefined}
-          className={fieldClassName}
-        />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password" className="text-primary-foreground">
-          Password
-        </Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          aria-invalid={state.error ? true : undefined}
-          className={fieldClassName}
-        />
-      </div>
-      {notice ? (
-        <p role="alert" className="text-sm text-destructive">
-          {notice}
+    <form action={formAction} className="flex w-full flex-col">
+      <FieldGroup layout="inset" className="md:gap-3.5">
+        <Field>
+          <FieldLabel htmlFor="email" className={labelClassName}>
+            Email
+          </FieldLabel>
+          <InputGroup className={groupClassName}>
+            <InputGroupAddon className={iconClassName}>
+              <Mail aria-hidden="true" />
+            </InputGroupAddon>
+            <InputGroupInput
+              id="email"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              enterKeyHint="next"
+              required
+              aria-invalid={state.error ? true : undefined}
+              className={inputClassName}
+            />
+          </InputGroup>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="password" className={labelClassName}>
+            Password
+          </FieldLabel>
+          <InputGroup className={groupClassName}>
+            <InputGroupAddon className={iconClassName}>
+              <LockKeyhole aria-hidden="true" />
+            </InputGroupAddon>
+            <InputGroupInput
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              enterKeyHint="go"
+              required
+              aria-invalid={state.error ? true : undefined}
+              className={inputClassName}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-sm"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                className="text-subtle-foreground hover:bg-fill md:text-login-field-icon md:hover:bg-login-field"
+                onClick={() => setShowPassword((current) => !current)}
+              >
+                {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </Field>
+      </FieldGroup>
+      {[notice, state.error].filter(Boolean).map((message) => (
+        <p
+          key={message}
+          role="alert"
+          className={authAlertClassName}
+        >
+          {message}
         </p>
-      ) : null}
-      {state.error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
-      ) : null}
+      ))}
       <Button
         type="submit"
         size="lg"
         disabled={pending}
-        className="h-11 w-full rounded-xl border border-primary-foreground/20 bg-primary/85 shadow-md backdrop-blur-md hover:bg-primary/75"
+        className={authSubmitClassName}
       >
         {pending ? "Signing in…" : "Sign in"}
       </Button>
