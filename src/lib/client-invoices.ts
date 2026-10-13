@@ -5,7 +5,7 @@ import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { dateInputValue } from "@/lib/project-validation"
 import {
-  isClientInvoiceStatus,
+  clientInvoiceStatusFromPayments,
   moneyCents,
   sumAmounts,
 } from "@/lib/payment-status"
@@ -136,7 +136,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
     }
 
     const invoices = invoiceRows.flatMap((row) => {
-      if (!isClientInvoiceStatus(row.status)) {
+      if (row.status === "void") {
         return []
       }
 
@@ -159,7 +159,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
           issuedOn: dateInputValue(row.issued_on),
           dueOn: row.due_on ? dateInputValue(row.due_on) : "",
           amount: toNumber(row.amount),
-          status: row.status,
+          status: clientInvoiceStatusFromPayments(toNumber(row.amount), paid),
           description: row.description ?? "",
           paid,
           balance,

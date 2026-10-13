@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useAccess, useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
@@ -29,6 +30,7 @@ import {
   bankFlowLabel,
   bankSourceLabel,
   bankTransactionColumns,
+  compareLedgerOrder,
   sortBankTransactions,
   type AccountFilter,
   type BankAccountRow,
@@ -77,6 +79,7 @@ export function BankPanel({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [movementOpen, setMovementOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [movementKind, setMovementKind] = useState<"deposit" | "withdrawal">("deposit")
@@ -99,7 +102,8 @@ export function BankPanel({
     () => sortBankTransactions(visibleTransactions, sort),
     [visibleTransactions, sort],
   )
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
   const manualEntries = visibleTransactions.filter(
     (row) => row.sourceKind === "deposit" || row.sourceKind === "withdrawal",
   )
@@ -144,11 +148,12 @@ export function BankPanel({
     if (rows.length === 0) {
       return { id: account.id, name: account.name, balance: account.openingBalance }
     }
-    const latest = [...rows].sort((left, right) => {
-      const byDate = right.transactionDate.localeCompare(left.transactionDate)
-      return byDate === 0 ? right.id.localeCompare(left.id) : byDate
-    })[0]
-    return { id: account.id, name: account.name, balance: latest.balance }
+    const latest = [...rows].sort(compareLedgerOrder).at(-1)
+    return {
+      id: account.id,
+      name: account.name,
+      balance: latest?.balance ?? account.openingBalance,
+    }
   })
 
   if (view === "statement") {
@@ -224,7 +229,15 @@ export function BankPanel({
             </p>
           ) : null}
         </div>
-        <DataList
+        <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search transactions"
+      />
+      <DataList
           columns={bankTransactionColumns}
           rows={error ? [] : pageResult.rows}
           rowKey={(transaction) => transaction.id}

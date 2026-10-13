@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import {
   ChevronLeft,
   ChevronRight,
@@ -133,6 +134,8 @@ export function EmployeesTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formEmployee, setFormEmployee] = useState<EmployeeRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -145,7 +148,19 @@ export function EmployeesTable({
     () => sortEmployees(employees, sort),
     [employees, sort],
   )
-  const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
+  const filterOptions = [
+    { value: "all", label: "All Employees" },
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ]
+  const filtered = useMemo(
+    () =>
+      filterRows(sorted, query, rowText, listFilter, (employee) =>
+        employee.isActive ? "active" : "inactive",
+      ),
+    [listFilter, query, sorted],
+  )
+  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function openForm(emp: EmployeeRow | null) {
@@ -188,6 +203,21 @@ export function EmployeesTable({
         </Button>) : null}
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search employees"
+        filterLabel="Status"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
         <Table className="min-w-max">
           <TableHeader>

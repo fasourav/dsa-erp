@@ -20,6 +20,7 @@ const sharedCatalogs = [
   "vendor_work_categories",
   "lead_sources",
   "lead_stages",
+  "asset_categories",
 ] as const satisfies readonly Exclude<
   CatalogKey,
   "departments" | "lead_statuses"

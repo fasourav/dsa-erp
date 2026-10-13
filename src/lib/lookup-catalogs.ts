@@ -56,6 +56,14 @@ export const catalogDefinitions = [
     hasIsOpen: false,
   },
   {
+    key: "asset_categories",
+    label: "Asset Categories",
+    singular: "asset category",
+    hasActive: false,
+    hasCode: false,
+    hasIsOpen: false,
+  },
+  {
     key: "lead_sources",
     label: "Lead Sources",
     singular: "lead source",

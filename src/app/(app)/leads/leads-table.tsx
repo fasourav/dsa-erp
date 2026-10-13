@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
@@ -117,6 +118,8 @@ export function LeadsTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formLead, setFormLead] = useState<LeadRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -128,7 +131,21 @@ export function LeadsTable({
   const [convertError, setConvertError] = useState<string | null>(null)
 
   const sorted = useMemo(() => sortLeads(leads, sort), [leads, sort])
-  const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
+  const filterOptions = useMemo(() => {
+    const seen = new Map()
+    for (const lead of leads) {
+      if (lead.status) seen.set(lead.status, lead.statusLabel || lead.status)
+    }
+    return [
+      { value: "all", label: "All Statuses" },
+      ...[...seen.entries()].map(([value, label]) => ({ value, label })),
+    ]
+  }, [leads])
+  const filtered = useMemo(
+    () => filterRows(sorted, query, rowText, listFilter, (lead) => lead.status),
+    [listFilter, query, sorted],
+  )
+  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
 
   function openForm(lead: LeadRow | null) {
     setFormLead(lead)
@@ -192,6 +209,21 @@ export function LeadsTable({
         </p>
       ) : null}
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search leads"
+        filterLabel="Status"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <DataList
         columns={dataColumns}
         rows={error ? [] : pageResult.rows}

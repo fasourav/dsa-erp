@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { denyUnless } from "@/lib/permissions"
+import { firstIssue, purchaseOrderValueSchema } from "@/lib/schemas"
 import {
   isIsoDate,
   parseProjectValue,
@@ -83,10 +84,15 @@ async function savePurchaseOrder(
     fieldErrors.issuedOn = "Enter a date."
   }
 
-  if (totalValue === null) {
+  if (totalValue === null || totalValue <= 0) {
     fieldErrors.totalValue = input.totalValue.trim()
-      ? "Enter a purchase order value of 0 or more."
+      ? "Enter an amount greater than 0."
       : "Enter a purchase order value."
+  }
+
+  const valueCheck = purchaseOrderValueSchema.safeParse({ totalValue: input.totalValue })
+  if (!valueCheck.success && !fieldErrors.totalValue) {
+    fieldErrors.totalValue = firstIssue(valueCheck.error, "totalValue")
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -164,7 +170,7 @@ async function savePurchaseOrder(
       return {
         error: null,
         fieldErrors: {
-          totalValue: "Enter a purchase order value of 0 or more.",
+          totalValue: "Enter an amount greater than 0.",
         },
       }
     }

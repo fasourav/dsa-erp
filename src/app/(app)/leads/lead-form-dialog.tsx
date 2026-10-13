@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
 import {
@@ -150,6 +151,7 @@ export function LeadFormDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this lead.")
@@ -235,8 +237,14 @@ export function LeadFormDialog({
                 type="tel"
                 value={phone}
                 disabled={pending}
+                aria-invalid={Boolean(fieldErrors.phone)}
                 onChange={(e) => setPhone(e.target.value)}
               />
+              {fieldErrors.phone ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {fieldErrors.phone}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="lead-email">Email</Label>
@@ -245,8 +253,14 @@ export function LeadFormDialog({
                 type="email"
                 value={email}
                 disabled={pending}
+                aria-invalid={Boolean(fieldErrors.email)}
                 onChange={(e) => setEmail(e.target.value)}
               />
+              {fieldErrors.email ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {fieldErrors.email}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -400,17 +414,6 @@ export function LeadFormDialog({
       </DialogContent>
     </Dialog>
   )
-}
-
-function withSavedOption(
-  items: { value: string; label: string }[],
-  saved: string | undefined,
-) {
-  const value = saved?.trim() ?? ""
-  if (value && !items.some((item) => item.value === value)) {
-    items.push({ value, label: value })
-  }
-  return items
 }
 
 function withSavedName(names: string[], saved: string | undefined) {

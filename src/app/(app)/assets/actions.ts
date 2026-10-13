@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { assetQuantitySchema, firstIssue } from "@/lib/schemas"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { denyUnless } from "@/lib/permissions"
@@ -10,7 +11,7 @@ import { denyUnless } from "@/lib/permissions"
 export type AssetInput = {
   purchaseDate: string
   name: string
-  category: string
+  categoryId: string
   quantity: string
   unitCost: string
   lifespanYears: string
@@ -20,6 +21,7 @@ export type AssetInput = {
 export type AssetFieldErrors = {
   purchaseDate?: string
   name?: string
+  categoryId?: string
   quantity?: string
   unitCost?: string
   lifespanYears?: string
@@ -78,10 +80,11 @@ async function saveAsset(
   input: AssetInput,
 ): Promise<AssetResult> {
   const name = input.name.trim()
-  const category = input.category.trim()
+  const categoryId = input.categoryId.trim()
   const purchaseDate = input.purchaseDate.trim()
   const notes = input.notes.trim()
-  const quantity = parseInt(input.quantity.trim(), 10)
+  const quantityCheck = assetQuantitySchema.safeParse({ quantity: input.quantity })
+  const quantity = quantityCheck.success ? Number(input.quantity.trim()) : Number.NaN
   const unitCost = parseProjectValue(input.unitCost)
   const lifespanYears = parseInt(input.lifespanYears.trim(), 10)
   const fieldErrors: AssetFieldErrors = {}
@@ -89,8 +92,12 @@ async function saveAsset(
   if (!name) fieldErrors.name = "Enter an asset name."
   if (!isIsoDate(purchaseDate))
     fieldErrors.purchaseDate = "Enter a purchase date."
-  if (!Number.isFinite(quantity) || quantity < 1)
-    fieldErrors.quantity = "Enter a quantity of at least 1."
+  if (!quantityCheck.success) {
+    fieldErrors.quantity = firstIssue(quantityCheck.error, "quantity")
+  }
+  if (categoryId && !isUuid(categoryId)) {
+    fieldErrors.categoryId = "Choose a category."
+  }
   if (unitCost === null || unitCost < 0)
     fieldErrors.unitCost = "Enter a unit cost."
   if (!Number.isFinite(lifespanYears) || lifespanYears < 1)
@@ -106,7 +113,7 @@ async function saveAsset(
 
   const values = {
     name,
-    category: category || null,
+    category_id: categoryId || null,
     purchase_date: purchaseDate,
     quantity,
     unit_cost: unitCost ?? 0,

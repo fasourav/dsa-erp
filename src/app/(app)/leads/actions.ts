@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { firstIssue, leadContactSchema } from "@/lib/schemas"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -29,6 +30,8 @@ export type LeadFieldErrors = {
   addedOn?: string
   kind?: string
   status?: string
+  email?: string
+  phone?: string
 }
 
 export type LeadResult = {
@@ -148,11 +151,16 @@ export async function convertLead(leadId: string): Promise<ConvertResult> {
     (typeof lead.project_name === "string" && lead.project_name.trim()) ||
     lead.lead_name
 
+  const estimated = lead.estimated_value ?? 0
+  if (!(estimated > 0)) {
+    return { error: "Enter an estimated value greater than 0 before converting this lead." }
+  }
+
   const projectValues = {
     name: projectName,
     client_id: clientId,
     project_type: lead.project_type || null,
-    total_value: lead.estimated_value ?? 0,
+    total_value: estimated,
     started_on: new Date().toISOString().slice(0, 10),
     status: "active" as const,
     lead_id: leadId,
@@ -206,6 +214,16 @@ async function saveLead(
   if (!leadName) fieldErrors.leadName = "Enter the lead name."
   if (!isIsoDate(addedOn)) fieldErrors.addedOn = "Enter the lead add date."
   if (!validKinds.includes(kind)) fieldErrors.kind = "Choose Person or Company."
+
+  const contact = leadContactSchema.safeParse({ email, phone, addedOn })
+  if (!contact.success) {
+    const addedIssue = firstIssue(contact.error, "addedOn")
+    const emailIssue = firstIssue(contact.error, "email")
+    const phoneIssue = firstIssue(contact.error, "phone")
+    if (addedIssue) fieldErrors.addedOn = addedIssue
+    if (emailIssue) fieldErrors.email = emailIssue
+    if (phoneIssue) fieldErrors.phone = phoneIssue
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { error: null, fieldErrors }

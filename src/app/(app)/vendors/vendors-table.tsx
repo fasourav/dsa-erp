@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
@@ -81,6 +82,8 @@ export function VendorsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formVendor, setFormVendor] = useState<VendorSummary | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -93,9 +96,18 @@ export function VendorsTable({
 
   const columnCount = dataColumns.length + 1
   const sorted = useMemo(() => sortVendors(vendors, sort), [vendors, sort])
+  const filterOptions = [
+    { value: "all", label: "All Types" },
+    { value: "private", label: "Private" },
+    { value: "company", label: "Company" },
+  ]
+  const filtered = useMemo(
+    () => filterRows(sorted, query, rowText, listFilter, (vendor) => vendor.kind ?? ""),
+    [listFilter, query, sorted],
+  )
   const pageResult = useMemo(
-    () => paginateVendors(sorted, page),
-    [sorted, page],
+    () => paginateVendors(filtered, page),
+    [filtered, page],
   )
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
@@ -171,6 +183,21 @@ export function VendorsTable({
         </div>
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search vendors"
+        filterLabel="Type"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
         <Table className="min-w-max">
           <TableHeader>

@@ -53,10 +53,16 @@ import { cn } from "@/lib/utils"
 export function DashboardView({
   model,
   error,
+  limited = false,
 }: {
   model: DashboardModel | null
   error: string | null
+  limited?: boolean
 }) {
+  if (limited) {
+    return <LimitedDashboard />
+  }
+
   if (!model) {
     return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -71,9 +77,29 @@ export function DashboardView({
   return <DashboardSections model={model} />
 }
 
+function LimitedDashboard() {
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <DashboardChrome />
+      <Card>
+        <CardContent className="flex flex-col gap-2">
+          <h2 className="text-base font-medium">Financial Overview</h2>
+          <p className="text-sm text-muted-foreground">
+            Figures stay hidden unless this account can view every financial
+            module and Show Financials is on.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function DashboardSections({ model }: { model: DashboardModel }) {
   const showFinancials = useAccess().showFinancials
   const [year, setYear] = useState(model.defaultYear)
+  if (!showFinancials) {
+    return <LimitedDashboard />
+  }
   const snapshot =
     model.snapshots.find((item) => item.year === year) ?? model.snapshots[0]
   const yearItems = model.years.map((item) => ({

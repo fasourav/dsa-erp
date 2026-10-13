@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
@@ -55,7 +56,7 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { formatIsoDate, formatMoney, formatTaka } from "@/lib/format"
-import type { AssetRow } from "@/lib/assets"
+import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 import { cn } from "@/lib/utils"
 
 type ColId = "name" | "category" | "purchaseDate" | "quantity" | "totalCost" | "currentValue"
@@ -104,7 +105,7 @@ export function AssetsTable({
   error,
 }: {
   assets: AssetRow[]
-  categories: string[]
+  categories: AssetCategoryOption[]
   error: string | null
 }) {
   const canAdd = useCan("assets", "add")
@@ -116,6 +117,8 @@ export function AssetsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formAsset, setFormAsset] = useState<AssetRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -129,7 +132,15 @@ export function AssetsTable({
     const total = assets.reduce((sum, asset) => sum + asset.currentValue, 0)
     return Math.round(total * 100) / 100
   }, [assets])
-  const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
+  const filterOptions = [
+    { value: "all", label: "All Categories" },
+    ...categories.map((category) => ({ value: category.id, label: category.name })),
+  ]
+  const filtered = useMemo(
+    () => filterRows(sorted, query, rowText, listFilter, (asset) => asset.categoryId || "none"),
+    [listFilter, query, sorted],
+  )
+  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function openForm(asset: AssetRow | null) {
@@ -185,6 +196,21 @@ export function AssetsTable({
         </div>
       )}
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search assets"
+        filterLabel="Category"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
         <Table className="min-w-max">
           <TableHeader>

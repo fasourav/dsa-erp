@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
@@ -62,6 +63,7 @@ export function ExpensesTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formExpense, setFormExpense] = useState<OperationalExpenseRow | null>(
     null,
@@ -74,7 +76,8 @@ export function ExpensesTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
   const sorted = useMemo(() => sortExpenses(expenses, sort), [expenses, sort])
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
 
   function openForm(expense: OperationalExpenseRow | null) {
     setFormExpense(expense)
@@ -109,6 +112,14 @@ export function ExpensesTable({
       <h1 className="text-2xl font-medium tracking-tight">
         Operational Expenses
       </h1>
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search expenses"
+      />
       <DataList
         columns={expenseColumns}
         rows={error ? [] : pageResult.rows}

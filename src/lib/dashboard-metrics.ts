@@ -2,7 +2,12 @@
 // Selected-year figures are year-to-date when that year is still in progress.
 // Operational tenure uses company_settings.launch_date.
 
-import { formatDayMonYear, formatGroupedAmount, formatGroupedCount, normalizeLaunchDate } from "@/lib/format"
+import {
+  formatDayMonYear,
+  formatGroupedCount,
+  formatMoney,
+  normalizeLaunchDate,
+} from "@/lib/format"
 
 export const HIGH_VALUE_PROJECT_MIN = 50_000
 
@@ -190,9 +195,7 @@ function signed(value: number): { sign: string; abs: number } {
 }
 
 export function formatExactBdt(value: number): string {
-  const { sign, abs } = signed(value)
-  const hasFraction = Math.round(abs * 100) % 100 !== 0
-  return `${sign}৳${formatGroupedAmount(abs, hasFraction ? 2 : 0)}`
+  return formatMoney(value)
 }
 
 export function formatCompactBdt(value: number): string {
@@ -220,9 +223,15 @@ export function formatCompactParts(value: number): {
   return { text: formatExactBdt(value), unit: "" }
 }
 
+const DELTA_CAP = 999.9
+
 export function formatDelta(value: number): string {
+  if (!Number.isFinite(value)) return "—"
+  const capped = Math.abs(value) >= DELTA_CAP
+  const shown = Math.min(Math.abs(value), DELTA_CAP)
   const sign = value > 0 ? "+" : value < 0 ? "−" : ""
-  return `${sign}${Math.abs(value).toFixed(1)}%`
+  const bound = capped ? (value > 0 ? ">" : "<") : ""
+  return `${bound}${sign}${shown.toFixed(1)}%`
 }
 
 export function formatRatio(value: number): string {
@@ -265,11 +274,29 @@ export function weekTrend(
 export function buildDashboard(input: DashboardInput, now: Date): DashboardModel {
   const today = dhakaToday(now)
   const currentYear = Number(today.slice(0, 4))
-  const revenue = dated(input.revenue)
-  const vendorPayments = dated(input.vendorPayments)
-  const operational = dated(input.operational)
-  const taxes = dated(input.taxes)
-  const bank = dated(input.bank)
+  const rawRevenue = dated(input.revenue)
+  const rawVendorPayments = dated(input.vendorPayments)
+  const rawOperational = dated(input.operational)
+  const rawTaxes = dated(input.taxes)
+  const rawBank = dated(input.bank)
+  const forecastBooks: Books = {
+    revenue: rawRevenue,
+    vendorPayments: rawVendorPayments,
+    operational: rawOperational,
+    taxes: rawTaxes,
+    bank: rawBank,
+    collectionRate: 0,
+  }
+  const forecastNet = netProfitOf(
+    totalBetween(rawRevenue, "0001-01-01", "9999-12-31"),
+    expenseTotals(forecastBooks, "0001-01-01", "9999-12-31"),
+  )
+
+  const revenue = rawRevenue.filter((row) => row.date <= today)
+  const vendorPayments = rawVendorPayments.filter((row) => row.date <= today)
+  const operational = rawOperational.filter((row) => row.date <= today)
+  const taxes = rawTaxes.filter((row) => row.date <= today)
+  const bank = rawBank.filter((row) => row.date <= today)
 
   const years = new Set<number>([currentYear])
   for (const row of [...revenue, ...vendorPayments, ...operational, ...taxes, ...bank]) {
@@ -369,7 +396,7 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     payables: input.payables,
     // Net profit, using the same formula as the KPI, if open invoices are collected
     // and open payables are paid. Uncommitted future costs are not included.
-    forecastedProfit: allNet + input.receivables - input.payables,
+    forecastedProfit: forecastNet + input.receivables - input.payables,
     weeks,
     weekCaption: `${formatRange(latestWeek.start, latestWeek.end)} (W${latestWeek.week}) · Last 12 Weeks`,
     annual,
@@ -781,7 +808,10 @@ function percentOf(part: number, whole: number): number {
 
 function changePercent(current: number, prior: number): number | null {
   if (prior === 0) return null
-  return ((current - prior) / Math.abs(prior)) * 100
+  const raw = ((current - prior) / Math.abs(prior)) * 100
+  if (raw > DELTA_CAP) return DELTA_CAP
+  if (raw < -DELTA_CAP) return -DELTA_CAP
+  return raw
 }
 
 function projectYear(project: {

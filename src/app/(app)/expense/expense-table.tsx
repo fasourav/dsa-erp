@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
@@ -36,12 +37,22 @@ export function ExpenseTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
 
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-medium tracking-tight">Expense</h1>
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search expenses"
+      />
       <DataList
         columns={poExpenseColumns}
         rows={error ? [] : pageResult.rows}

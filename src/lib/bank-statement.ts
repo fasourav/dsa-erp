@@ -1,4 +1,4 @@
-import { bankSourceLabel, type BankTransactionRow } from "@/lib/bank"
+import { bankSourceLabel, compareLedgerOrder, type BankTransactionRow } from "@/lib/bank"
 import { moneyCents } from "@/lib/payment-status"
 
 export type StatementLine = {
@@ -30,10 +30,7 @@ export function buildBankStatement(input: {
   const included = new Set(input.accountIds)
   const rows = input.transactions
     .filter((row) => included.has(row.bankAccountId) && row.transactionDate)
-    .sort((left, right) => {
-      const byDate = left.transactionDate.localeCompare(right.transactionDate)
-      return byDate === 0 ? left.id.localeCompare(right.id) : byDate
-    })
+    .sort(compareLedgerOrder)
 
   let cents = moneyCents(input.openingBalance)
   for (const row of rows) {

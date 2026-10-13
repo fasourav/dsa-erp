@@ -146,7 +146,7 @@ export async function listSalaryEmployees(): Promise<SalaryEmployee[]> {
   const rows = await fetchAllPages(
     (from, to) =>
       supabase
-        .from("employees")
+        .from("employees_readable")
         .select(
           "id, full_name, monthly_salary, allowance, joining_date, leave_date, is_active",
         )
@@ -155,15 +155,20 @@ export async function listSalaryEmployees(): Promise<SalaryEmployee[]> {
     "Employee list is larger than expected.",
   )
 
-  return rows.map((row) => ({
-    id: row.id,
-    fullName: row.full_name?.trim() ?? "",
-    monthlySalary: toNumber(row.monthly_salary),
-    allowance: toNumber(row.allowance),
-    joiningDate: row.joining_date ?? "",
-    leaveDate: row.leave_date ?? "",
-    isActive: row.is_active ?? true,
-  }))
+  return rows.flatMap((row) => {
+    if (!row.id) return []
+    return [
+      {
+        id: row.id,
+        fullName: row.full_name?.trim() ?? "",
+        monthlySalary: toNumber(row.monthly_salary),
+        allowance: toNumber(row.allowance),
+        joiningDate: row.joining_date ?? "",
+        leaveDate: row.leave_date ?? "",
+        isActive: row.is_active ?? true,
+      },
+    ]
+  })
 }
 
 function toSalaryLine(

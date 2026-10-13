@@ -154,7 +154,7 @@ async function saveClient(
       return {
         error: null,
         fieldErrors: {
-          name: "A client with this name and phone already exists.",
+          name: "A client with this name already exists.",
         },
       }
     }

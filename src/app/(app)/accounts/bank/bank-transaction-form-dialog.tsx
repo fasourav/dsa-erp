@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
 import {
@@ -108,6 +109,7 @@ export function BankMovementDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError(`Could not save this ${title.toLowerCase()}.`)
@@ -242,6 +244,7 @@ export function BankTransferDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this transfer.")

@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache"
 
+import { mentions } from "@/lib/db-errors"
 import type { ProjectStatus } from "@/lib/project-summary"
 import { denyUnless } from "@/lib/permissions"
+import { firstIssue, projectValueSchema } from "@/lib/schemas"
 import {
   isIsoDate,
   isProjectStatus,
@@ -96,10 +98,21 @@ async function saveProject(
     fieldErrors.status = "Choose a project status."
   }
 
-  if (totalValue === null) {
+  if (totalValue === null || totalValue <= 0) {
     fieldErrors.totalValue = input.totalValue.trim()
-      ? "Enter a project value of 0 or more."
+      ? "Enter an amount greater than 0."
       : "Enter a project value."
+  }
+
+  const projectCheck = projectValueSchema.safeParse({
+    startedOn,
+    totalValue: input.totalValue,
+  })
+  if (!projectCheck.success) {
+    const startedIssue = firstIssue(projectCheck.error, "startedOn")
+    const valueIssue = firstIssue(projectCheck.error, "totalValue")
+    if (startedIssue && !fieldErrors.startedOn) fieldErrors.startedOn = startedIssue
+    if (valueIssue && !fieldErrors.totalValue) fieldErrors.totalValue = valueIssue
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -192,11 +205,27 @@ async function saveProject(
       }
     }
 
+    if (mentions(error, "projects_started_on_launch")) {
+      return {
+        error: null,
+        fieldErrors: { startedOn: "Use a date on or after 01 Jan 2021." },
+      }
+    }
+
+    if (mentions(error, "cannot be less than invoices")) {
+      return {
+        error: null,
+        fieldErrors: {
+          totalValue: "Project value cannot be less than invoices already issued.",
+        },
+      }
+    }
+
     if (error.code === "23514") {
       return {
         error: null,
         fieldErrors: {
-          totalValue: "Enter a project value of 0 or more.",
+          totalValue: "Enter an amount greater than 0.",
         },
       }
     }

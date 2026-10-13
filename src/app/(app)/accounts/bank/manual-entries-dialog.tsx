@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
@@ -72,8 +73,10 @@ export function ManualEntriesDialog({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const sorted = useMemo(() => sortRows(rows, sort), [rows, sort])
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,7 +85,15 @@ export function ManualEntriesDialog({
           <DialogTitle>Deposits & Withdrawals</DialogTitle>
         </DialogHeader>
         <DialogBody className="overflow-x-auto">
-          <DataList
+          <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search entries"
+      />
+      <DataList
             columns={columns}
             rows={pageResult.rows}
             rowKey={(row) => row.id}

@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
@@ -103,6 +104,8 @@ export function PurchaseOrdersTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formOperational, setFormOperational] = useState(false)
   const [formOrder, setFormOrder] = useState<PurchaseOrderRow | null>(null)
@@ -122,9 +125,24 @@ export function PurchaseOrdersTable({
     () => sortPurchaseOrders(orders, sort),
     [orders, sort],
   )
+  const filterOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "unpaid", label: "Unpaid" },
+    { value: "partial", label: "Partially Paid" },
+    { value: "paid", label: "Paid" },
+  ]
+  const filtered = useMemo(
+    () =>
+      filterRows(sorted, query, rowText, listFilter, (order) => {
+        if (order.totalPaid <= 0) return "unpaid"
+        if (order.totalPending > 0) return "partial"
+        return "paid"
+      }),
+    [listFilter, query, sorted],
+  )
   const pageResult = useMemo(
-    () => paginatePurchaseOrders(sorted, page),
-    [sorted, page],
+    () => paginatePurchaseOrders(filtered, page),
+    [filtered, page],
   )
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
@@ -211,6 +229,21 @@ export function PurchaseOrdersTable({
         </div>
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search purchase orders"
+        filterLabel="Status"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
         <Table className="min-w-max">
           <TableHeader>

@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
 import {
@@ -119,6 +120,7 @@ export function CatalogFormDialog({
           return
         }
 
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this item.")

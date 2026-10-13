@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
 import {
@@ -105,6 +106,7 @@ export function BudgetFormDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this budget.")

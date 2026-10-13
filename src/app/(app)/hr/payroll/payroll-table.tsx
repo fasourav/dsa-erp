@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { Eye, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
@@ -108,6 +109,7 @@ export function PayrollTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formSalary, setFormSalary] = useState<MonthlySalary | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -124,7 +126,8 @@ export function PayrollTable({
     () => sortSalaries(salaries, sort, (id) => accountNames.get(id) ?? ""),
     [accountNames, salaries, sort],
   )
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
   const takenMonths = salaries.map(
     (salary) =>
       `${salary.periodYear}-${String(salary.periodMonth).padStart(2, "0")}`,
@@ -157,6 +160,14 @@ export function PayrollTable({
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-medium tracking-tight">Payroll</h1>
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search payroll"
+      />
       <DataList
         columns={columns}
         rows={error ? [] : pageResult.rows}

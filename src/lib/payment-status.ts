@@ -6,8 +6,9 @@ export const paymentStatuses = Constants.public.Enums.payment_status
 export type PaymentStatus = (typeof paymentStatuses)[number]
 
 export const clientInvoiceStatuses = [
-  "paid",
   "unpaid",
+  "partial",
+  "paid",
 ] as const satisfies readonly PaymentStatus[]
 
 export type ClientInvoiceStatus = (typeof clientInvoiceStatuses)[number]
@@ -23,7 +24,7 @@ export function paymentStatusLabel(status: PaymentStatus): string {
     case "unpaid":
       return "Unpaid"
     case "partial":
-      return "Partial"
+      return "Partially Paid"
     case "paid":
       return "Paid"
     case "void":
@@ -47,6 +48,8 @@ export function clientInvoiceStatusLabel(status: ClientInvoiceStatus): string {
       return "Paid"
     case "unpaid":
       return "Unpaid"
+    case "partial":
+      return "Partially Paid"
   }
 }
 
@@ -54,11 +57,11 @@ export function clientInvoiceStatusFromPayments(
   amount: number,
   paid: number,
 ): ClientInvoiceStatus {
-  if (moneyCents(amount) > 0 && moneyCents(paid) >= moneyCents(amount)) {
-    return "paid"
+  const derived = derivePaymentStatus(amount, paid)
+  if (derived === "void") {
+    return defaultClientInvoiceStatus
   }
-
-  return defaultClientInvoiceStatus
+  return derived
 }
 
 export function moneyCents(value: number): number {

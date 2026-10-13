@@ -55,26 +55,17 @@ export function toNumber(value: unknown): number {
 
 export function formatMoney(value: number): string {
   const safe = Number.isFinite(value) ? value : 0
-  return groupedMoney.format(safe)
+  const sign = safe < 0 ? "-" : ""
+  return `${sign}৳${groupedMoney.format(Math.abs(safe))}`
 }
 
 export function formatTaka(value: number): string {
-  if (value < 0) {
-    return `-৳${formatMoney(Math.abs(value))}`
-  }
-
-  return `৳${formatMoney(value)}`
+  return formatMoney(value)
 }
 
 export function formatCount(value: number): string {
   return String(Math.trunc(value))
 }
-
-const isoDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-})
 
 export function formatDayMonYear(value: string): string {
   const parts = isoParts(value)
@@ -82,7 +73,7 @@ export function formatDayMonYear(value: string): string {
     return value || "—"
   }
 
-  return `${parts.day} ${shortMonths[parts.month - 1]}, ${parts.year}`
+  return formatParts(parts)
 }
 
 export function normalizeLaunchDate(value: string | null | undefined): string {
@@ -118,5 +109,10 @@ export function formatIsoDate(value: string): string {
     return value || "—"
   }
 
-  return isoDateFormatter.format(new Date(parts.year, parts.month - 1, parts.day))
+  return formatParts(parts)
+}
+
+function formatParts(parts: { year: number; month: number; day: number }): string {
+  const day = String(parts.day).padStart(2, "0")
+  return `${day} ${shortMonths[parts.month - 1]} ${parts.year}`
 }

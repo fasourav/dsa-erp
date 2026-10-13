@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useEffect, useState, useTransition } from "react"
 
 import {
@@ -35,7 +36,7 @@ import { cn } from "@/lib/utils"
 const DUPLICATE_CHECK_DELAY_MS = 350
 
 const NAME_DUPLICATE_MESSAGE =
-  "A client with this name and phone already exists."
+  "A client with this name already exists."
 const EMAIL_DUPLICATE_MESSAGE = "A client with this email already exists."
 
 type KeyedCheck = {
@@ -239,6 +240,7 @@ export function ClientFormDialog({
           return
         }
 
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this client.")

@@ -37,7 +37,7 @@ export function writeColumnVisibility(visibility: ColumnVisibility) {
   const raw = JSON.stringify(visibility)
 
   try {
-    sessionStorage.setItem(COLUMN_STORAGE_KEY, raw)
+    localStorage.setItem(COLUMN_STORAGE_KEY, raw)
   } catch {
     // The choice still applies in this tab when storage is blocked.
   }
@@ -49,7 +49,7 @@ export function writeColumnVisibility(visibility: ColumnVisibility) {
 
 function readRaw(): string | null {
   try {
-    return sessionStorage.getItem(COLUMN_STORAGE_KEY)
+    return localStorage.getItem(COLUMN_STORAGE_KEY)
   } catch {
     return null
   }

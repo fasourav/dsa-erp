@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useMemo, useState, useTransition } from "react"
 
 import { useAccess } from "@/components/access-provider"
@@ -225,6 +226,7 @@ export function PaySalariesDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this monthly salary.")

@@ -79,6 +79,7 @@ export type BankTransactionRow = {
   bankAccountId: string
   accountName: string
   transactionDate: string
+  createdAt: string
   direction: BankDirection
   amount: number
   sourceKind: BankSourceKind
@@ -216,11 +217,23 @@ export function sortBankTransactions(
       return primary
     }
 
-    return (
-      right.transactionDate.localeCompare(left.transactionDate) ||
-      left.id.localeCompare(right.id)
-    )
+    if (sort.key === "transactionDate") {
+      return compareLedgerOrder(left, right) * direction
+    }
+
+    return compareLedgerOrder(left, right)
   })
+}
+
+export function compareLedgerOrder(
+  left: { transactionDate: string; createdAt: string; id: string },
+  right: { transactionDate: string; createdAt: string; id: string },
+): number {
+  return (
+    left.transactionDate.localeCompare(right.transactionDate) ||
+    left.createdAt.localeCompare(right.createdAt) ||
+    left.id.localeCompare(right.id)
+  )
 }
 
 function compareTransactions(
@@ -256,14 +269,7 @@ export function withRunningBalances(
   const balanceById = new Map<string, number>()
 
   for (const group of groups.values()) {
-    const ordered = [...group].sort((left, right) => {
-      const byDate = left.transactionDate.localeCompare(right.transactionDate)
-      if (byDate !== 0) {
-        return byDate
-      }
-
-      return left.id.localeCompare(right.id)
-    })
+    const ordered = [...group].sort(compareLedgerOrder)
 
     const accountId = ordered[0]?.bankAccountId ?? ""
     let cents = moneyCents(openingByAccount.get(accountId) ?? 0)

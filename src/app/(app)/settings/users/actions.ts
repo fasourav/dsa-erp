@@ -135,21 +135,31 @@ export async function inviteUser(input: AccessInput): Promise<ActionResult> {
     return { error: "Invites are not configured. Add the service role key on the server." }
   }
 
+  const supabase = await createClient()
+  const { error: inviteRowError } = await supabase.from("user_invites").upsert({
+    email: cleaned.value.email,
+    role: cleaned.value.role,
+    show_financials: cleaned.value.showFinancials,
+    display_name: cleaned.value.displayName,
+  })
+
+  if (inviteRowError) {
+    return { error: "Could not send this invite." }
+  }
+
   const invited = await admin.auth.admin.inviteUserByEmail(cleaned.value.email, {
     data: {
       display_name: cleaned.value.displayName,
-      role: cleaned.value.role,
-      show_financials: cleaned.value.showFinancials,
     },
     redirectTo: inviteRedirect(),
   })
 
   if (invited.error || !invited.data.user) {
+    await supabase.from("user_invites").delete().eq("email", cleaned.value.email)
     return { error: friendly(invited.error?.message, "Could not send this invite.") }
   }
 
   const userId = invited.data.user.id
-  const supabase = await createClient()
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: userId,
     display_name: cleaned.value.displayName,

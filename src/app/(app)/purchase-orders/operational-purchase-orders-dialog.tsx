@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { ClipboardList, FileText, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
@@ -92,6 +93,7 @@ export function OperationalPurchaseOrdersDialog({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formOrder, setFormOrder] = useState<PurchaseOrderRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -106,7 +108,8 @@ export function OperationalPurchaseOrdersDialog({
     () => sortOperationalOrders(operationalOrders, sort),
     [operationalOrders, sort],
   )
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
 
   function openForm(order: PurchaseOrderRow | null) {
     setFormOrder(order)
@@ -155,7 +158,15 @@ export function OperationalPurchaseOrdersDialog({
             <DialogTitle>Operational Purchase Orders</DialogTitle>
           </DialogHeader>
           <DialogBody className="flex min-h-0 flex-col">
-            <DataList
+            <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search purchase orders"
+      />
+      <DataList
               columns={columns}
               rows={pageResult.rows}
               rowKey={(order) => order.id}
