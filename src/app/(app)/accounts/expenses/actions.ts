@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 
+import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
+import { overdraftMessage } from "@/lib/insufficient-balance"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -200,6 +202,25 @@ async function saveExpense(
     return { error: bank.error ?? "Could not save this expense." }
   }
 
+  let release = 0
+  if (id) {
+    const current = await supabase
+      .from("bank_transactions_readable")
+      .select("amount")
+      .eq("operational_expense_id", id)
+      .limit(1)
+    const currentAmount = current.data?.[0]?.amount
+    if (!current.error && currentAmount != null) release = Number(currentAmount)
+  }
+  const overdraft = await overdraftMessage(supabase, {
+    accountId: bank.id,
+    needed: amount,
+    release,
+  })
+  if (overdraft) {
+    return { error: overdraft, fieldErrors: { bankAccountId: overdraft, amount: overdraft } }
+  }
+
   const values = {
     expense_date: expenseDate,
     category,
@@ -220,18 +241,25 @@ async function saveExpense(
     : await supabase.from("operational_expenses").insert(values).select("id")
 
   if (error) {
+    const issue = dbIssue(error)
+    if (issue?.field === "bankAccountId") {
+      return {
+        error: issue.message,
+        fieldErrors: { bankAccountId: issue.message, amount: issue.message },
+      }
+    }
     if (error.code === "23503") {
       return { error: "Choose a valid department or vendor." }
     }
 
-    if (error.code === "23514") {
+    if (error.code === "23514" && issue?.message === "This value is not allowed.") {
       return {
         error: null,
         fieldErrors: { amount: "Enter an amount greater than 0." },
       }
     }
 
-    return { error: "Could not save this expense." }
+    return { error: friendlyDbError(error, "Could not save this expense.") }
   }
 
   if (!data || data.length === 0) {

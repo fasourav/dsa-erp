@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 
 import { isBankSourceKind } from "@/lib/bank"
-import { mentions } from "@/lib/db-errors"
+import { dbIssue, friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
+import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isUuid } from "@/lib/ids"
 import { isSortOrder } from "@/lib/lookup-catalogs"
 import { parsePositiveAmount } from "@/lib/payment-status"
@@ -242,6 +243,14 @@ export async function addBankTransfer(
     return { error: "You must be signed in." }
   }
 
+  const overdraft = await overdraftMessage(supabase, {
+    accountId: fromAccountId,
+    needed: amount,
+  })
+  if (overdraft) {
+    return { error: overdraft, fieldErrors: { amount: overdraft } }
+  }
+
   const { error } = await supabase.from("bank_transfers").insert({
     from_account_id: fromAccountId,
     to_account_id: toAccountId,
@@ -252,19 +261,17 @@ export async function addBankTransfer(
   })
 
   if (error) {
-    if (mentions(error, "negative")) {
-      return {
-        error: null,
-        fieldErrors: { amount: "This would make the bank balance negative." },
-      }
+    const issue = dbIssue(error)
+    if (issue?.field === "bankAccountId") {
+      return { error: issue.message, fieldErrors: { amount: issue.message } }
     }
-    if (error.code === "23514") {
+    if (error.code === "23514" && issue?.message === "This value is not allowed.") {
       return {
         error: null,
         fieldErrors: { amount: "Enter an amount greater than 0." },
       }
     }
-    return { error: "Could not save this transfer." }
+    return { error: friendlyDbError(error, "Could not save this transfer.") }
   }
 
   revalidatePath("/accounts/bank")
@@ -467,6 +474,19 @@ async function saveBankAccount(
     sort_order: input.sortOrder,
   }
 
+  let duplicateName = supabase.from("bank_accounts").select("id").ilike("name", name).limit(1)
+  if (id) duplicateName = duplicateName.neq("id", id)
+  const duplicate = await duplicateName
+  if (duplicate.error) {
+    return { error: "Could not save this bank account." }
+  }
+  if (duplicate.data && duplicate.data.length > 0) {
+    return {
+      error: null,
+      fieldErrors: { name: "A bank account with this name already exists." },
+    }
+  }
+
   const { data, error } = id
     ? await supabase.from("bank_accounts").update(details).eq("id", id).select("id")
     : await supabase
@@ -475,20 +495,17 @@ async function saveBankAccount(
         .select("id")
 
   if (error) {
-    if (mentions(error, "negative")) {
+    const issue = dbIssue(error)
+    if (isUniqueViolation(error) || issue?.field === "name") {
       return {
         error: null,
-        fieldErrors: {
-          openingBalance: "This would make the bank balance negative.",
-        },
+        fieldErrors: { name: "A bank account with this name already exists." },
       }
     }
-    if (error.code === "23514") {
-      return {
-        error:
-          "Account holder name, account number, bank name, routing number, and address are required.",
-      }
+    if (issue?.field === "bankAccountId") {
+      return { error: issue.message, fieldErrors: { openingBalance: issue.message } }
     }
+    if (issue) return { error: issue.message }
     return { error: "Could not save this bank account." }
   }
 
@@ -609,24 +626,50 @@ async function saveBankMovement(
     project_id: null,
   }
 
+  if (kind === "withdrawal") {
+    let release = 0
+    if (id) {
+      const current = await supabase
+        .from("bank_transactions_readable")
+        .select("amount, direction, bank_account_id")
+        .eq("id", id)
+        .limit(1)
+      const currentRow = current.data?.[0]
+      if (
+        currentRow &&
+        currentRow.bank_account_id === bankAccountId &&
+        currentRow.direction === "outflow" &&
+        currentRow.amount != null
+      ) {
+        release = Number(currentRow.amount)
+      }
+    }
+    const overdraft = await overdraftMessage(supabase, {
+      accountId: bankAccountId,
+      needed: amount,
+      release,
+    })
+    if (overdraft) {
+      return { error: overdraft, fieldErrors: { amount: overdraft } }
+    }
+  }
+
   const { data, error } = id
     ? await supabase.from("bank_transactions").update(values).eq("id", id).select("id")
     : await supabase.from("bank_transactions").insert(values).select("id")
 
   if (error) {
-    if (mentions(error, "negative")) {
-      return {
-        error: null,
-        fieldErrors: { amount: "This would make the bank balance negative." },
-      }
+    const issue = dbIssue(error)
+    if (issue?.field === "bankAccountId") {
+      return { error: issue.message, fieldErrors: { amount: issue.message } }
     }
-    if (error.code === "23514") {
+    if (error.code === "23514" && issue?.message === "This value is not allowed.") {
       return {
         error: null,
         fieldErrors: { amount: "Enter an amount greater than 0." },
       }
     }
-    return { error: "Could not save this transaction." }
+    return { error: friendlyDbError(error, "Could not save this transaction.") }
   }
   if (!data || data.length === 0) {
     return { error: "That transaction could not be found." }

@@ -103,12 +103,11 @@ export function BankMovementDialog({
           : await addBankMovement(input)
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
-          return
         }
         if (result.error) {
           setFormError(result.error)
-          return
         }
+        if (result.fieldErrors || result.error) return
         savedToast()
         onOpenChange(false)
       } catch {
@@ -238,12 +237,11 @@ export function BankTransferDialog({
         })
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
-          return
         }
         if (result.error) {
           setFormError(result.error)
-          return
         }
+        if (result.fieldErrors || result.error) return
         savedToast()
         onOpenChange(false)
       } catch {

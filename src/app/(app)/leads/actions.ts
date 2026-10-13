@@ -7,6 +7,7 @@ import { firstIssue, leadContactSchema } from "@/lib/schemas"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 
 export type LeadInput = {
@@ -274,7 +275,7 @@ async function saveLead(
     ? await supabase.from("leads").update(values).eq("id", id).select("id")
     : await supabase.from("leads").insert(values).select("id")
 
-  if (error) return { error: "Could not save this lead." }
+  if (error) return { error: friendlyDbError(error, "Could not save this lead.") }
   if (!data || data.length === 0)
     return { error: "That lead could not be found." }
 

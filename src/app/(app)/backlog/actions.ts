@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 import {
   recoveryPlanError,
@@ -61,7 +62,7 @@ export async function saveRecoveryPlan(
       }
     }
 
-    return { error: "Could not save this recovery plan." }
+    return { error: friendlyDbError(error, "Could not save this recovery plan.") }
   }
 
   if (!data || data.length === 0) {

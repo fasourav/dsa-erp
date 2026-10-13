@@ -1,7 +1,7 @@
 "use client"
 
 import { savedToast } from "@/lib/saved"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 
 import {
   addClient,
@@ -15,7 +15,6 @@ import {
   DialogBody,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -28,7 +27,6 @@ import {
   escapeLikePattern,
   hasMinDigits,
   isValidEmail,
-  normalizePhoneDigits,
 } from "@/lib/client-validation"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -76,10 +74,8 @@ export function ClientFormDialog({
   const trimmedEmail = email.trim()
   const trimmedPhone = phone.trim()
 
-  const nameKey =
-    kind && trimmedActiveName
-      ? `${kind}|${trimmedActiveName.toLowerCase()}|${normalizePhoneDigits(trimmedPhone)}`
-      : ""
+  const nameKey = trimmedActiveName ? trimmedActiveName.toLowerCase() : ""
+  const nameRequest = useRef(0)
   const emailFormatError =
     trimmedEmail && !isValidEmail(trimmedEmail)
       ? "Enter a valid email address."
@@ -111,36 +107,34 @@ export function ClientFormDialog({
       return
     }
 
+    const request = nameRequest.current + 1
+    nameRequest.current = request
+
     const timer = setTimeout(async () => {
       try {
-        const column = kind === "company" ? "company_name" : "person_name"
-        let query = supabase
+        const pattern = escapeLikePattern(trimmedActiveName)
+        let people = supabase
           .from("clients")
-          .select("phone")
-          .eq("kind", kind)
-          .ilike(column, escapeLikePattern(trimmedActiveName))
+          .select("id")
+          .ilike("person_name", pattern)
+          .limit(1)
+        let companies = supabase
+          .from("clients")
+          .select("id")
+          .ilike("company_name", pattern)
+          .limit(1)
 
         if (clientId) {
-          query = query.neq("id", clientId)
+          people = people.neq("id", clientId)
+          companies = companies.neq("id", clientId)
         }
 
-        const { data, error } = await query
+        const [personResult, companyResult] = await Promise.all([people, companies])
+        if (request !== nameRequest.current) return
+        if (personResult.error || companyResult.error) return
 
-        if (error) {
-          return
-        }
-
-        const normalizedPhone = normalizePhoneDigits(trimmedPhone)
-        const duplicate = (data ?? []).some((row) => {
-          const rowPhone = row.phone?.trim() ?? ""
-          if (!normalizedPhone) {
-            return rowPhone === ""
-          }
-          return (
-            rowPhone !== "" &&
-            normalizePhoneDigits(rowPhone) === normalizedPhone
-          )
-        })
+        const duplicate =
+          (personResult.data?.length ?? 0) > 0 || (companyResult.data?.length ?? 0) > 0
 
         setNameCheck({
           key: nameKey,
@@ -152,7 +146,7 @@ export function ClientFormDialog({
     }, DUPLICATE_CHECK_DELAY_MS)
 
     return () => clearTimeout(timer)
-  }, [open, nameKey, kind, trimmedActiveName, trimmedPhone, clientId, supabase])
+  }, [open, nameKey, kind, trimmedActiveName, clientId, supabase])
 
   useEffect(() => {
     if (!open || !emailKey) {
@@ -265,10 +259,6 @@ export function ClientFormDialog({
       <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>{clientId ? "Edit Client" : "Add New Client"}</DialogTitle>
-          <DialogDescription>
-            Individual and Company clients are stored with different name
-            fields.
-          </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">

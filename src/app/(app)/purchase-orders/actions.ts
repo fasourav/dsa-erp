@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 import { firstIssue, purchaseOrderValueSchema } from "@/lib/schemas"
 import {
@@ -166,7 +167,7 @@ async function savePurchaseOrder(
       }
     }
 
-    if (error.code === "23514") {
+    if (error.code === "23514" && dbIssue(error)?.message === "This value is not allowed.") {
       return {
         error: null,
         fieldErrors: {
@@ -175,7 +176,7 @@ async function savePurchaseOrder(
       }
     }
 
-    return { error: "Could not save this purchase order." }
+    return { error: friendlyDbError(error, "Could not save this purchase order.") }
   }
 
   if (!data || data.length === 0) {

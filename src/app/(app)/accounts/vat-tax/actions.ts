@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 
+import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
+import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { createClient } from "@/lib/supabase/server"
@@ -70,6 +72,14 @@ export async function addVatTaxPayment(
     return { error: bank.error ?? "Could not save this payment." }
   }
 
+  const overdraft = await overdraftMessage(supabase, {
+    accountId: bank.id,
+    needed: amount,
+  })
+  if (overdraft) {
+    return { error: overdraft, fieldErrors: { bankAccountId: overdraft, amount: overdraft } }
+  }
+
   const values = {
     project_id: projectId,
     paid_on: paidOn,
@@ -85,8 +95,12 @@ export async function addVatTaxPayment(
     .select("id")
 
   if (error) {
+    const issue = dbIssue(error)
+    if (issue?.field === "bankAccountId") {
+      return { error: issue.message, fieldErrors: { bankAccountId: issue.message, amount: issue.message } }
+    }
     if (error.code === "23503") return { error: "Choose a valid project." }
-    return { error: "Could not save this payment." }
+    return { error: friendlyDbError(error, "Could not save this payment.") }
   }
   if (!data || data.length === 0)
     return { error: "Could not save this payment." }

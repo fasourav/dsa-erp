@@ -6,6 +6,7 @@ import { isUuid } from "@/lib/ids"
 import { parseProjectValue } from "@/lib/project-validation"
 import { budgetYear } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
+import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 
 export type BudgetInput = {
@@ -114,13 +115,19 @@ async function saveBudget(
     : await supabase.from("budgets").insert(values).select("id")
 
   if (error) {
-    if (error.code === "23505") {
+    const issue = dbIssue(error)
+    if (issue?.field === "departmentId" || issue?.field === "periodYear") {
       return {
-        error: "A budget for this department and period already exists.",
+        error: issue.message,
+        fieldErrors: {
+          departmentId: issue.field === "departmentId" ? issue.message : undefined,
+          periodYear: issue.field === "periodYear" ? issue.message : undefined,
+          periodMonth: issue.field === "departmentId" ? issue.message : undefined,
+        },
       }
     }
     if (error.code === "23503") return { error: "Choose a valid department." }
-    return { error: "Could not save this budget." }
+    return { error: friendlyDbError(error, "Could not save this budget.") }
   }
   if (!data || data.length === 0)
     return { error: "That budget could not be found." }

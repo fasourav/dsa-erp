@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { mentions } from "@/lib/db-errors"
+import { friendlyDbError, mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { roundMoney } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
@@ -199,7 +199,7 @@ async function saveEmployee(
       }
     }
 
-    return { error: "Could not save this employee." }
+    return { error: friendlyDbError(error, "Could not save this employee.") }
   }
 
   if (!data || data.length === 0) {

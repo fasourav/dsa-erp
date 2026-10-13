@@ -2782,6 +2782,7 @@ export type Database = {
       }
     }
     Functions: {
+      dashboard_feed: { Args: never; Returns: Json }
       resolve_bank_account_id: { Args: { preferred: string }; Returns: string }
     }
     Enums: {
