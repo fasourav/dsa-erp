@@ -11,6 +11,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["exceljs"],
+  experimental: {
+    serverActions: {
+      // Attachments are uploaded through a Server Action and may be up to 10 MB.
+      bodySizeLimit: "11mb",
+    },
+  },
   outputFileTracingIncludes: {
     "/reports/export": ["./src/lib/reports/fonts/*.ttf"],
   },
