@@ -1,6 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 // Atrium capsule buttons. Phone sizes are the base; md: switches to the
 // desktop metrics from the mockups (38px pill, 13.5px semibold label).
