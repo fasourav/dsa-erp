@@ -27,20 +27,27 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   )
 }
 
+// variant="capsule" is the glass pill picker in page headers (the dashboard year).
 function SelectTrigger({
   className,
   size = "default",
+  variant = "field",
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
   size?: "sm" | "default"
+  variant?: "field" | "capsule"
 }) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
+      data-variant={variant}
       className={cn(
-        "flex w-fit items-center justify-between gap-2 rounded-control border-0 bg-field py-2 pr-3 pl-3.5 text-base whitespace-nowrap text-foreground transition-[box-shadow,background-color] outline-none select-none focus-visible:shadow-field-focus disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-[inset_0_0_0_1px_var(--destructive),0_0_0_4px_var(--destructive-tint)] data-placeholder:text-subtle-foreground data-[size=default]:h-11 data-[size=sm]:h-9.5 md:bg-control md:text-sm md:shadow-field md:focus-visible:shadow-field-focus md:data-[size=default]:h-10.5 md:data-[size=sm]:h-8 in-data-[field-layout=inset]:w-full in-data-[field-layout=inset]:rounded-none in-data-[field-layout=inset]:bg-transparent in-data-[field-layout=inset]:px-0 in-data-[field-layout=inset]:shadow-none in-data-[field-layout=inset]:focus-visible:shadow-none in-data-[field-layout=inset]:data-[size=default]:h-7 md:in-data-[field-layout=inset]:rounded-control md:in-data-[field-layout=inset]:bg-control md:in-data-[field-layout=inset]:pr-3 md:in-data-[field-layout=inset]:pl-3.5 md:in-data-[field-layout=inset]:shadow-field md:in-data-[field-layout=inset]:focus-visible:shadow-field-focus md:in-data-[field-layout=inset]:data-[size=default]:h-10.5 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-fit items-center justify-between gap-2 border-0 whitespace-nowrap text-foreground transition-[box-shadow,background-color] outline-none select-none disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-subtle-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        variant === "capsule"
+          ? "h-9.5 rounded-full pr-3.5 pl-4 text-sm font-strong glass-control hover:bg-surface-strong focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-surface-strong md:text-ui"
+          : "rounded-control bg-field py-2 pr-3 pl-3.5 text-base focus-visible:shadow-field-focus aria-invalid:shadow-[inset_0_0_0_1px_var(--destructive),0_0_0_4px_var(--destructive-tint)] data-[size=default]:h-11 data-[size=sm]:h-9.5 md:bg-control md:text-sm md:shadow-field md:focus-visible:shadow-field-focus md:data-[size=default]:h-10.5 md:data-[size=sm]:h-8 in-data-[field-layout=inset]:w-full in-data-[field-layout=inset]:rounded-none in-data-[field-layout=inset]:bg-transparent in-data-[field-layout=inset]:px-0 in-data-[field-layout=inset]:shadow-none in-data-[field-layout=inset]:focus-visible:shadow-none in-data-[field-layout=inset]:data-[size=default]:h-7 md:in-data-[field-layout=inset]:rounded-control md:in-data-[field-layout=inset]:bg-control md:in-data-[field-layout=inset]:pr-3 md:in-data-[field-layout=inset]:pl-3.5 md:in-data-[field-layout=inset]:shadow-field md:in-data-[field-layout=inset]:focus-visible:shadow-field-focus md:in-data-[field-layout=inset]:data-[size=default]:h-10.5",
         className
       )}
       {...props}

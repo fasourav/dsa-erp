@@ -24,12 +24,16 @@ import {
   AnnualChart,
   ExpenseDonut,
   expenseSliceStyle,
+  LegendDot,
+  Ring,
   Sparkline,
   TrendChart,
   WeeklyChart,
 } from "@/app/(app)/dashboard/dashboard-charts"
 import { useAccess } from "@/components/access-provider"
-import { ShellHeader } from "@/components/shell-header"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -66,7 +70,7 @@ export function DashboardView({
 
   if (!model) {
     return (
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <div className="flex w-full min-w-0 flex-col gap-4">
         <DashboardChrome />
         <p role="alert" className="text-sm text-destructive">
           {error ?? "Could not load the dashboard."}
@@ -84,7 +88,7 @@ function LimitedDashboard() {
       <DashboardChrome />
       <Card>
         <CardContent className="flex flex-col gap-2">
-          <h2 className="text-base font-medium">Financial Overview</h2>
+          <h2 className="text-panel-title font-bold md:font-strong">Financial Overview</h2>
           <p className="text-sm text-muted-foreground">
             Figures stay hidden unless this account can view every financial
             module and Show Financials is on.
@@ -117,9 +121,13 @@ function DashboardSections({ model }: { model: DashboardModel }) {
 
   if (!snapshot) {
     return (
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <div className="flex w-full min-w-0 flex-col gap-4">
         <DashboardChrome updatedIso={model.updatedIso} updatedLabel={model.updatedLabel} />
-        <p className="text-sm text-muted-foreground">No Records Yet</p>
+        <Card>
+          <CardContent>
+            <p className="py-6 text-center text-callout text-muted-foreground md:text-sm">No Records Yet</p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -130,9 +138,15 @@ function DashboardSections({ model }: { model: DashboardModel }) {
   }))
   const previousWeek = model.weeks[model.weeks.length - 2]
   const latestWeek = model.weeks[model.weeks.length - 1]
+  const performanceCaption =
+    model.scopeYear == null
+      ? model.performance.sinceYear == null
+        ? "No Projects Yet"
+        : `${model.performance.projectCount} Projects Since ${model.performance.sinceYear}`
+      : `${model.performance.projectCount} Projects In ${model.scopeLabel}`
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6">
+    <div className="flex w-full min-w-0 flex-col gap-2.5 md:gap-4">
       <DashboardChrome updatedIso={model.updatedIso} updatedLabel={model.updatedLabel}>
         <Select
           items={yearItems}
@@ -142,7 +156,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             router.push(value === "all" ? "/dashboard?year=all" : `/dashboard?year=${value}`)
           }}
         >
-          <SelectTrigger aria-label="Fiscal Year">
+          <SelectTrigger variant="capsule" aria-label="Fiscal Year">
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="end">
@@ -154,14 +168,13 @@ function DashboardSections({ model }: { model: DashboardModel }) {
           </SelectContent>
         </Select>
         <Button type="button" variant="outline" onClick={() => downloadDashboard(model, snapshot, showFinancials)}>
-          <Download aria-hidden="true" />
+          <Download aria-hidden="true" data-icon="inline-start" />
           Export
         </Button>
       </DashboardChrome>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="sr-only">Financial Overview</h2>
-        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Financial Overview" className="flex flex-col gap-2.5 md:gap-4">
+        <div className="grid min-w-0 grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
           <KpiCard
             label="Total Revenue"
             value={snapshot.revenue}
@@ -175,27 +188,27 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             delta={snapshot.expenseDelta}
             lowerIsBetter
             spark={snapshot.expenseSpark}
-            sparkColor="var(--chart-4)"
+            sparkColor="var(--chart-3)"
           />
           <KpiCard
             label="Net Profit"
             value={snapshot.netProfit}
             delta={snapshot.netDelta}
             spark={snapshot.netSpark}
-            sparkColor="var(--chart-1)"
+            sparkColor="var(--chart-2)"
           />
           {showFinancials ? (
             <KpiCard
               label="Cash Balance"
               value={model.cashBalance}
-            detail={stockDetail}
-            delta={model.cashDelta}
+              detail={stockDetail}
+              delta={model.cashDelta}
               spark={model.cashSpark}
-              sparkColor="var(--chart-4)"
+              sparkColor="var(--chart-5)"
             />
           ) : null}
         </div>
-        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-0 md:overflow-hidden md:rounded-card md:glass-panel xl:grid-cols-5">
           <CompactMetric
             label="Gross Profit"
             value={snapshot.grossProfit}
@@ -222,102 +235,106 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             label="Forecasted Profit"
             value={model.forecastedProfit}
             detail="After Open Balances"
-            tone={model.forecastedProfit < 0 ? "negative" : "default"}
+            tone={model.forecastedProfit < 0 ? "negative" : "positive"}
             icon={model.forecastedProfit < 0 ? TrendingDown : TrendingUp}
           />
-          <CompactMetric label="Withdrawal" value={snapshot.withdrawal} />
+          <CompactMetric label="Withdrawal" value={snapshot.withdrawal} wide />
         </div>
       </section>
 
-      <section>
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-medium">Performance Metrics</h2>
-              <p className="text-xs text-muted-foreground">
-                {model.scopeYear == null
-                  ? model.performance.sinceYear == null
-                    ? "No Projects Yet"
-                    : `${model.performance.projectCount} Projects Since ${model.performance.sinceYear}`
-                  : `${model.performance.projectCount} Projects In ${model.scopeLabel}`}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <MetricTile
-                icon={Gem}
-                label="High-Value Projects"
-                value={String(model.performance.highValue)}
-                hint={`${formatExactBdt(HIGH_VALUE_PROJECT_MIN)} Or More`}
-              />
-              <MetricTile
-                icon={Layers}
-                label="Low-Value Projects"
-                value={String(model.performance.lowValue)}
-                hint={`Under ${formatExactBdt(HIGH_VALUE_PROJECT_MIN)}`}
-              />
-              <MetricTile
-                icon={Hammer}
-                label="Active Projects"
-                value={String(model.performance.active)}
-                hint="In Progress"
-              />
-              <MetricTile
-                icon={Target}
-                label="Projects in Leads"
-                value={String(model.performance.openLeads)}
-                hint="Open Pipeline"
-              />
-              <MetricTile
-                icon={Users}
-                label="Clients"
-                value={String(model.performance.clients)}
-                hint="Active Accounts"
-              />
-              <MetricTile
-                icon={Wallet}
-                label="Project Lead Value"
-                value={formatExactBdt(model.performance.leadValue)}
-                hint="In Pipeline"
-              />
-              <MetricTile
-                icon={Trophy}
-                label="Win Rate"
-                value={formatRatio(model.performance.winRate)}
-                bar={model.performance.winRate}
-              />
-              <MetricTile
-                icon={BadgeCheck}
-                label="Collection Efficiency"
-                value={formatRatio(model.performance.collectionEfficiency)}
-                bar={model.performance.collectionEfficiency}
-              />
-              <MetricTile
-                icon={Clock}
-                label="Backlog Projects"
-                value={String(model.performance.backlog)}
-                hint="Expense Exceeds Collection"
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <section
+        aria-labelledby="performance-title"
+        className="flex flex-col md:rounded-card md:px-6 md:py-5.5 md:glass-panel"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2.5 gap-y-0.5 px-1 pt-5.5 pb-2 md:mb-4 md:p-0">
+          <h2 id="performance-title" className="text-section md:text-panel-title md:font-strong">
+            Performance Metrics
+          </h2>
+          <p className="text-label text-muted-foreground md:text-caption">{performanceCaption}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 md:gap-3 lg:grid-cols-3">
+          <MetricTile
+            icon={Gem}
+            color="bg-chart-1"
+            label="High-Value Projects"
+            value={String(model.performance.highValue)}
+            hint={`${formatExactBdt(HIGH_VALUE_PROJECT_MIN)} Or More`}
+          />
+          <MetricTile
+            icon={Layers}
+            color="bg-chart-5"
+            label="Low-Value Projects"
+            value={String(model.performance.lowValue)}
+            hint={`Under ${formatExactBdt(HIGH_VALUE_PROJECT_MIN)}`}
+          />
+          <MetricTile
+            icon={Hammer}
+            color="bg-chart-3"
+            label="Active Projects"
+            value={String(model.performance.active)}
+            hint="In Progress"
+          />
+          <MetricTile
+            icon={Target}
+            color="bg-chart-6"
+            label="Projects in Leads"
+            value={String(model.performance.openLeads)}
+            hint="Open Pipeline"
+          />
+          <MetricTile
+            icon={Users}
+            color="bg-chart-2"
+            label="Clients"
+            value={String(model.performance.clients)}
+            hint="Active Accounts"
+          />
+          <MetricTile
+            icon={Wallet}
+            color="bg-chart-7"
+            label="Project Lead Value"
+            value={<Money value={model.performance.leadValue} />}
+            hint="In Pipeline"
+          />
+          <MetricTile
+            icon={Trophy}
+            color="bg-chart-gold"
+            label="Win Rate"
+            value={formatRatio(model.performance.winRate)}
+            bar={model.performance.winRate}
+          />
+          <MetricTile
+            icon={BadgeCheck}
+            color="bg-chart-9"
+            label="Collection Efficiency"
+            value={formatRatio(model.performance.collectionEfficiency)}
+            bar={model.performance.collectionEfficiency}
+          />
+          <MetricTile
+            icon={Clock}
+            color="bg-chart-4"
+            label="Backlog Projects"
+            value={String(model.performance.backlog)}
+            hint="Expense Exceeds Collection"
+          />
+        </div>
       </section>
 
-      <section className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-5">
-        <Card className="h-full xl:col-span-3">
-          <CardContent className="flex h-full flex-col gap-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h2 className="text-base font-medium">Weekly Financial Overview</h2>
-                <p className="text-sm text-muted-foreground">{model.weekCaption}</p>
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-                <LegendDot className="bg-chart-1" label="Revenue" />
-                <LegendDot className="bg-chart-4" label="Total Expense" />
-                <LegendDot className="bg-chart-2" label="Net Profit" />
-              </div>
+      <section className="grid min-w-0 grid-cols-1 gap-2.5 md:gap-4 xl:grid-cols-[minmax(0,1.62fr)_minmax(0,1fr)]">
+        <Panel
+          title="Weekly Financial Overview"
+          caption={model.weekCaption}
+          aside={
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-muted-foreground md:gap-x-4 md:text-caption md:font-label">
+              <LegendDot color="var(--chart-1)" label="Revenue" />
+              <LegendDot color="var(--chart-3)" label="Total Expense" />
+              <LegendDot color="var(--chart-2)" label="Net Profit" dashed />
             </div>
+          }
+          stackAside
+        >
+          <div className="flex flex-col gap-3 md:gap-3.5">
             {latestWeek ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              <div className="order-2 grid grid-cols-2 gap-2 md:order-1 md:grid-cols-3 xl:grid-cols-5">
                 <WeekStat
                   label="Weekly Revenue"
                   value={latestWeek.revenue}
@@ -351,154 +368,108 @@ function DashboardSections({ model }: { model: DashboardModel }) {
                 />
               </div>
             ) : null}
-            <WeeklyChart
-              data={model.weeks.map((week) => ({
-                label: week.label,
-                revenue: week.revenue,
-                totalExpense: week.totalExpense,
-                netProfit: week.netProfit,
-              }))}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="h-full xl:col-span-2">
-          <CardContent className="flex h-full flex-col gap-4">
-            <h2 className="text-base font-medium">Expense Summary</h2>
-            <div className="relative">
-              <ExpenseDonut slices={slices} />
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-lg font-semibold tabular-nums">
-                  {formatExactBdt(snapshot.totalExpense)}
-                </p>
-                <p className="text-xs text-muted-foreground">Total Expense</p>
-              </div>
+            <div className="order-1 md:order-2">
+              <WeeklyChart
+                data={model.weeks.map((week) => ({
+                  label: week.label,
+                  revenue: week.revenue,
+                  totalExpense: week.totalExpense,
+                  netProfit: week.netProfit,
+                }))}
+              />
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3 border-b border-border pb-2 text-sm">
-                <span className="font-medium">Project Expense</span>
-                <span className="font-semibold tabular-nums">
-                  {formatExactBdt(snapshot.projectExpense)}
+          </div>
+        </Panel>
+
+        <Panel title="Expense Summary">
+          <ExpenseDonut slices={slices}>
+            <Money value={snapshot.totalExpense} className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
+            <span className="text-micro text-muted-foreground md:text-xs">Total Expense</span>
+          </ExpenseDonut>
+          <div className="mt-4 flex flex-col">
+            <div className="mb-1 flex items-center justify-between gap-3 border-b border-border pb-2 text-sm font-bold md:mb-2 md:pb-2.25 md:text-label md:font-strong">
+              <span>Project Expense</span>
+              <Money value={snapshot.projectExpense} />
+            </div>
+            {slices.map((slice) => (
+              <div key={slice.key} className="flex h-7.5 items-center justify-between gap-3 text-ui md:h-6.75 md:text-label">
+                <span className="flex min-w-0 items-center gap-2 text-muted-foreground md:gap-2.25">
+                  <span aria-hidden="true" className={cn("size-2.25 shrink-0 rounded-[3px]", slice.swatch)} />
+                  <span className="truncate">{slice.label}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2 md:gap-3">
+                  <span className="text-xs text-subtle-foreground tabular-nums">
+                    {formatShare(slice.amount, snapshot.totalExpense)}
+                  </span>
+                  <Money value={slice.amount} className="font-strong md:font-semibold" />
                 </span>
               </div>
-              {slices.map((slice) => (
-                <div key={slice.key} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
-                    <span className={cn("size-2 shrink-0 rounded-full", slice.swatch)} />
-                    <span className="truncate">{slice.label}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-3 tabular-nums">
-                    <span className="text-xs text-muted-foreground">
-                      {formatShare(slice.amount, snapshot.totalExpense)}
-                    </span>
-                    <span className="min-w-16 text-right font-medium">
-                      {formatExactBdt(slice.amount)}
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </Panel>
       </section>
 
-      <section>
-        <Card>
-          <CardContent className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-medium">Margin Analysis</h2>
-              <p className="text-xs text-muted-foreground">{model.scopeLabel}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Ring label="Collection Rate" value={snapshot.collectionRate} tone="text-success" />
-              <Ring label="Expense Ratio" value={snapshot.expenseRatio} tone="text-negative" />
-              <Ring
-                label="Gross Profit Margin"
-                value={snapshot.grossMargin}
-                tone={snapshot.grossMargin < 0 ? "text-destructive" : "text-chart-1"}
-              />
-              <Ring
-                label="Net Profit Margin"
-                value={snapshot.netMargin}
-                tone={snapshot.netMargin < 0 ? "text-destructive" : "text-chart-2"}
-              />
-              <Ring label="Withdrawal Ratio" value={snapshot.withdrawalRatio} tone="text-chart-4" />
-              <Ring label="Project Cost Ratio" value={snapshot.projectCostRatio} tone="text-chart-5" />
-              <Ring label="Tax Ratio" value={snapshot.taxRatio} tone="text-chart-3" />
-              <Ring label="Admin Expense Ratio" value={snapshot.adminRatio} tone="text-chart-6" />
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+      <Panel
+        title="Margin Analysis"
+        aside={<Badge variant="outline">{model.scopeLabel}</Badge>}
+      >
+        <div className="grid grid-cols-4 gap-x-1.5 gap-y-3.5 md:gap-2 xl:grid-cols-8">
+          <MarginRing label="Collection Rate" value={snapshot.collectionRate} color="var(--chart-2)" />
+          <MarginRing label="Expense Ratio" value={snapshot.expenseRatio} color="var(--chart-4)" />
+          <MarginRing
+            label="Gross Profit Margin"
+            value={snapshot.grossMargin}
+            color={snapshot.grossMargin < 0 ? "var(--destructive)" : "var(--chart-1)"}
+          />
+          <MarginRing
+            label="Net Profit Margin"
+            value={snapshot.netMargin}
+            color={snapshot.netMargin < 0 ? "var(--destructive)" : "var(--chart-5)"}
+          />
+          <MarginRing label="Withdrawal Ratio" value={snapshot.withdrawalRatio} color="var(--chart-3)" />
+          <MarginRing label="Project Cost Ratio" value={snapshot.projectCostRatio} color="var(--chart-6)" />
+          <MarginRing label="Tax Ratio" value={snapshot.taxRatio} color="var(--chart-8)" />
+          <MarginRing label="Admin Expense Ratio" value={snapshot.adminRatio} color="var(--chart-7)" />
+        </div>
+      </Panel>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <Card className="xl:col-span-5">
-          <CardContent className="flex flex-col gap-3">
-            <div>
-              <h2 className="text-base font-medium">Annual Gross Profit</h2>
-              <p className="text-xs text-muted-foreground">{model.annualCaption}</p>
+      <section className="grid min-w-0 grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)]">
+        <Panel title="Annual Gross Profit" caption={model.annualCaption}>
+          {model.annual.length > 0 ? (
+            <AnnualChart data={model.annual} />
+          ) : (
+            <EmptyChart />
+          )}
+        </Panel>
+        <Panel title="Project Trend" caption={`Projects Per Year · ${model.trendCaption}`}>
+          {model.trend.length > 0 ? <TrendChart data={model.trend} /> : <EmptyChart />}
+        </Panel>
+        <Panel title="Operational Tenure" className="md:col-span-2 xl:col-span-1">
+          <dl className="flex flex-col text-sm md:text-label">
+            <div className="flex items-center justify-between gap-3 border-t border-border py-2.5 md:flex-col md:items-start md:gap-0.5 md:border-0 md:py-0">
+              <dt className="text-muted-foreground md:font-label">Launch Date</dt>
+              <dd className="font-strong md:text-[0.90625rem]">{model.tenure.launchDateLabel}</dd>
             </div>
-            {model.annual.length > 0 ? (
-              <AnnualChart data={model.annual} />
-            ) : (
-              <p className="flex h-52 items-center justify-center text-sm text-muted-foreground">
-                No Records Yet
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="xl:col-span-4">
-          <CardContent className="flex flex-col gap-3">
-            <div>
-              <h2 className="text-base font-medium">Project Trend</h2>
-              <p className="text-xs text-muted-foreground">
-                Projects Per Year · {model.trendCaption}
-              </p>
+            <div className="flex flex-col border-t border-border py-2.5 md:mt-4 md:border-0 md:py-0">
+              <dt className="text-muted-foreground md:font-label">In Operation</dt>
+              <dd className="my-0.5 text-[1.375rem] leading-tight font-bold tracking-[-0.02em] text-primary-text md:text-[1.1875rem] md:tracking-[-0.022em]">
+                {model.tenure.inOperation}
+              </dd>
+              <dd className="text-caption text-muted-foreground md:mt-0.5 md:font-label">{model.tenure.daysLabel}</dd>
             </div>
-            {model.trend.length > 0 ? (
-              <TrendChart data={model.trend} />
-            ) : (
-              <p className="flex h-52 items-center justify-center text-sm text-muted-foreground">
-                No Records Yet
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="xl:col-span-3">
-          <CardContent className="flex h-full flex-col justify-between gap-6">
-            <div className="flex flex-col gap-4">
-              <h2 className="text-base font-medium">Operational Tenure</h2>
-              <div>
-                <p className="text-xs text-muted-foreground">Launch Date</p>
-                <p className="text-sm font-medium">{model.tenure.launchDateLabel}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">In Operation</p>
-                <p className="text-base font-semibold text-chart-1">{model.tenure.inOperation}</p>
-                <p className="text-xs text-muted-foreground">{model.tenure.daysLabel}</p>
-              </div>
+            <div className="flex flex-col md:mt-4.5 md:gap-2.5 md:border-t md:border-border md:pt-3.5">
+              <TenureRow label="Revenue Per Day">
+                <Money value={model.tenure.revenuePerDay} />
+              </TenureRow>
+              <TenureRow label="Net Profit Per Day">
+                <Money
+                  value={model.tenure.netProfitPerDay}
+                  className={model.tenure.netProfitPerDay < 0 ? "text-destructive" : "text-success"}
+                />
+              </TenureRow>
             </div>
-            <div className="flex flex-col gap-3 border-t border-border pt-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">Revenue Per Day</p>
-                <p className="text-sm font-semibold tabular-nums">
-                  {formatExactBdt(model.tenure.revenuePerDay)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">Net Profit Per Day</p>
-                <p
-                  className={cn(
-                    "text-sm font-semibold tabular-nums",
-                    model.tenure.netProfitPerDay < 0 ? "text-destructive" : "text-chart-1",
-                  )}
-                >
-                  {formatExactBdt(model.tenure.netProfitPerDay)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </dl>
+        </Panel>
       </section>
     </div>
   )
@@ -514,19 +485,60 @@ function DashboardChrome({
   children?: ReactNode
 }) {
   return (
-    <ShellHeader>
-      <div className="flex w-full min-w-0 items-center justify-between gap-3">
+    <PageHeader
+      title="Dashboard"
+      className="mb-1.5 md:mb-2"
+      description={
+        updatedLabel ? (
+          <>
+            Last Updated <time dateTime={updatedIso}>{updatedLabel}</time>
+          </>
+        ) : undefined
+      }
+      actions={children}
+    />
+  )
+}
+
+function Panel({
+  title,
+  caption,
+  aside,
+  stackAside = false,
+  className,
+  children,
+}: {
+  title: string
+  caption?: string
+  aside?: ReactNode
+  stackAside?: boolean
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <Card className={cn("min-w-0 gap-0 p-4 md:px-6 md:py-5.5", className)}>
+      <div
+        className={cn(
+          "mb-3 flex justify-between gap-2.5 md:mb-4 md:flex-row md:items-start md:gap-4",
+          stackAside ? "flex-col" : "items-start",
+        )}
+      >
         <div className="min-w-0">
-          <h1 className="truncate text-base font-medium leading-tight">Dashboard</h1>
-          {updatedLabel ? (
-            <p className="truncate text-xs text-muted-foreground">
-              Last Updated <time dateTime={updatedIso}>{updatedLabel}</time>
-            </p>
-          ) : null}
+          <h2 className="text-panel-title font-bold md:font-strong">{title}</h2>
+          {caption ? <p className="mt-0.5 text-caption text-muted-foreground">{caption}</p> : null}
         </div>
-        {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
+        {aside ? <div className="shrink-0">{aside}</div> : null}
       </div>
-    </ShellHeader>
+      {children}
+    </Card>
+  )
+}
+
+function EmptyChart() {
+  return (
+    <p className="flex h-40 items-center justify-center text-sm text-muted-foreground md:h-60">
+      No Records Yet
+    </p>
   )
 }
 
@@ -548,23 +560,20 @@ function KpiCard({
   sparkColor: string
 }) {
   return (
-    <Card className="min-w-0">
-      <CardContent className="flex flex-col gap-1">
-        <div className="flex items-start justify-between gap-3">
-          <p className="min-w-0 text-sm font-medium text-muted-foreground">{label}</p>
-          {delta != null ? <DeltaBadge value={delta} lowerIsBetter={lowerIsBetter} /> : null}
-        </div>
-        <p
-          className={cn(
-            "min-w-0 overflow-x-auto text-2xl font-semibold tabular-nums",
-            value < 0 && "text-destructive",
-          )}
-        >
-          {formatExactBdt(value)}
-        </p>
-        {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
+    <Card className="min-w-0 gap-0 px-4 pt-4 pb-2.5 md:px-5.5 md:pt-5 md:pb-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="min-w-0 truncate text-sm font-semibold text-muted-foreground md:text-ui">{label}</p>
+        {delta != null ? <DeltaBadge value={delta} lowerIsBetter={lowerIsBetter} /> : null}
+      </div>
+      <p className={cn("mt-1.5 min-w-0 truncate text-kpi md:mt-2.5", value < 0 && "text-destructive")}>
+        <Money value={value} size="kpi" />
+      </p>
+      <p className={cn("text-caption text-muted-foreground md:mt-px md:h-4.5", !detail && "hidden md:block")}>
+        {detail}
+      </p>
+      <div className="mt-1.5 md:mt-2">
         <Sparkline data={spark} color={sparkColor} />
-      </CardContent>
+      </div>
     </Card>
   )
 }
@@ -575,73 +584,96 @@ function CompactMetric({
   detail,
   tone = "default",
   icon: Icon,
+  wide = false,
 }: {
   label: string
   value: number
   detail?: string
-  tone?: "default" | "negative" | "warning"
+  tone?: "default" | "negative" | "warning" | "positive"
   icon?: LucideIcon
+  wide?: boolean
 }) {
   return (
-    <Card
+    <div
       className={cn(
-        "min-w-0",
-        tone === "negative" && "bg-destructive/5",
-        tone === "warning" && "bg-warning/10",
+        "min-w-0 rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:rounded-none md:border-l md:border-border md:bg-transparent md:px-5 md:py-4.5 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 md:first:border-l-0",
+        tone === "warning" && "bg-warning-wash md:bg-warning-wash",
+        wide && "col-span-2 flex items-center justify-between gap-3 md:col-span-1 md:block",
       )}
     >
-      <CardContent className="flex flex-col justify-center gap-1">
-        <p
-          className={cn(
-            "flex items-center gap-1 text-xs font-medium",
-            tone === "negative" && "text-destructive",
-            tone === "warning" && "text-warning",
-            tone === "default" && "text-muted-foreground",
-          )}
-        >
-          {Icon ? <Icon aria-hidden="true" className="size-4" /> : null}
-          {label}
+      <p
+        className={cn(
+          "flex items-center gap-1.25 text-caption font-semibold md:gap-1.5",
+          tone === "warning" ? "text-warning" : "text-muted-foreground",
+        )}
+      >
+        {Icon ? (
+          <Icon
+            aria-hidden="true"
+            className={cn(
+              "size-3.5",
+              tone === "positive" && "text-success",
+              tone === "negative" && "text-destructive",
+            )}
+          />
+        ) : null}
+        {label}
+      </p>
+      <p
+        className={cn(
+          "min-w-0 truncate text-[1.03125rem] leading-tight font-bold tracking-[-0.02em] md:mt-1.5 md:text-[1.1875rem] md:tracking-[-0.022em]",
+          !wide && "mt-1.25",
+          tone === "negative" || value < 0 ? "text-destructive" : "text-foreground",
+        )}
+      >
+        <Money value={value} />
+      </p>
+      {detail ? (
+        <p className="mt-0.5 truncate text-micro text-muted-foreground md:text-xs">{detail}</p>
+      ) : wide ? null : (
+        <p aria-hidden="true" className="mt-0.5 hidden text-xs md:block">
+          &nbsp;
         </p>
-        <p
-          className={cn(
-            "min-w-0 overflow-x-auto text-lg font-semibold tabular-nums",
-            tone === "negative" || value < 0 ? "text-destructive" : "text-foreground",
-          )}
-        >
-          {formatExactBdt(value)}
-        </p>
-        {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
 
 function MetricTile({
   icon: Icon,
+  color,
   label,
   value,
   hint,
   bar,
 }: {
   icon: LucideIcon
+  color: string
   label: string
-  value: string
+  value: ReactNode
   hint?: string
   bar?: number
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-3">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-chart-1/15 text-chart-1">
-        <Icon aria-hidden="true" className="size-4" />
-      </div>
+    <div className="flex min-w-0 flex-col rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 last:odd:col-span-2 md:flex-row md:items-start md:gap-3.5 md:rounded-tile md:bg-fill md:p-4 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 lg:last:odd:col-span-1">
+      <span
+        className={cn(
+          "mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl",
+          color,
+        )}
+      >
+        <Icon aria-hidden="true" className="size-4 md:size-4.5" />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-0.5 text-lg font-semibold tabular-nums leading-tight">{value}</p>
-        {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
+        <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">{label}</p>
+        <p className="mt-0.5 truncate text-[1.1875rem] leading-tight font-bold tracking-[-0.02em] tabular-nums md:text-metric">
+          {value}
+        </p>
+        {hint ? <p className="mt-px truncate text-micro text-subtle-foreground md:text-xs">{hint}</p> : null}
         {bar != null ? (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className="mt-2 h-1.25 overflow-hidden rounded-full bg-fill md:mt-2.25 md:h-1.5 md:bg-fill-strong">
             <div
-              className="h-full rounded-full bg-chart-1"
+              className={cn("h-full rounded-full", color)}
               style={{ width: `${Math.min(100, Math.max(0, bar))}%` }}
             />
           </div>
@@ -651,40 +683,24 @@ function MetricTile({
   )
 }
 
-function Ring({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone: string
-}) {
-  const arc = Math.max(0, Math.min(100, value))
+function MarginRing({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="flex flex-col items-center" aria-label={`${label} ${formatRatio(value)}`}>
-      <div className="relative flex size-20 items-center justify-center">
-        <svg className={cn("size-full -rotate-90", tone)} viewBox="0 0 36 36" aria-hidden="true">
-          <path
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            className="stroke-border"
-            strokeWidth="3.2"
-          />
-          {arc > 0 ? (
-            <path
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              className="stroke-current"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-              strokeDasharray={`${arc} 100`}
-            />
-          ) : null}
-        </svg>
-        <span className="absolute text-xs font-semibold tabular-nums">{formatRatio(value)}</span>
-      </div>
-      <p className="mt-2 text-center text-xs text-muted-foreground">{label}</p>
+    <div className="flex min-w-0 flex-col items-center text-center">
+      <Ring value={value} color={color}>
+        {formatRatio(value)}
+      </Ring>
+      <p className="mt-1.5 text-[0.6875rem] leading-tight font-semibold text-muted-foreground md:mt-2.5 md:text-caption md:font-label">
+        {label}
+      </p>
+    </div>
+  )
+}
+
+function TenureRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-border py-2.5 last:pb-0 md:flex-col md:items-start md:gap-px md:border-0 md:py-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-right font-strong tracking-[-0.015em] md:text-left md:text-base md:font-bold">{children}</dd>
     </div>
   )
 }
@@ -703,15 +719,20 @@ function WeekStat({
   emphasize?: boolean
 }) {
   return (
-    <div className="min-w-0">
-      <p className="min-h-8 text-xs leading-snug text-muted-foreground">{label}</p>
+    <div
+      className={cn(
+        "min-w-0 rounded-[14px] bg-fill px-3 py-2.5 md:py-2.75",
+        emphasize && "col-span-2 md:col-span-1",
+      )}
+    >
+      <p className="text-micro leading-snug font-semibold text-muted-foreground md:min-h-8 md:font-label">{label}</p>
       <p
         className={cn(
-          "mt-1 flex items-center gap-1 text-sm font-semibold tabular-nums",
-          emphasize && (value < 0 ? "text-destructive" : "text-success-foreground"),
+          "mt-0.75 flex items-center gap-1 text-sm font-bold tracking-[-0.01em] md:mt-0 md:gap-1.25 md:text-label",
+          emphasize && (value < 0 ? "text-destructive" : "text-success"),
         )}
       >
-        {formatExactBdt(value)}
+        <Money value={value} className="min-w-0 truncate" />
         <TrendMark direction={direction} tone={tone} />
       </p>
     </div>
@@ -726,14 +747,14 @@ function TrendMark({
   tone: "good" | "cost"
 }) {
   if (direction === "flat") {
-    return <Minus aria-hidden="true" className="size-4 text-muted-foreground" />
+    return <Minus aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
   }
   const improved = tone === "good" ? direction === "up" : direction === "down"
   const Icon = direction === "up" ? TrendingUp : TrendingDown
   return (
     <Icon
       aria-hidden="true"
-      className={cn("size-4", improved ? "text-success-foreground" : "text-destructive")}
+      className={cn("size-3.5 shrink-0", improved ? "text-success" : "text-destructive")}
     />
   )
 }
@@ -745,28 +766,18 @@ function DeltaBadge({
   value: number
   lowerIsBetter?: boolean
 }) {
+  const flat = Math.abs(value) < 0.05
   const rising = value > 0
-  const Icon = rising ? TrendingUp : value < 0 ? TrendingDown : Minus
+  const Icon = flat ? Minus : rising ? TrendingUp : TrendingDown
   const favorable = lowerIsBetter ? value < 0 : rising
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-        favorable ? "bg-success/15 text-success-foreground" : "bg-destructive/10 text-destructive",
-      )}
+    <Badge
+      variant={flat ? "secondary" : favorable ? "success" : "destructive"}
+      className="h-6 shrink-0 gap-0.75 px-2.25 text-xs font-bold md:h-6 md:gap-1 md:font-strong"
     >
-      <Icon aria-hidden="true" className="size-4" />
-      {formatDelta(value)}
-    </span>
-  )
-}
-
-function LegendDot({ className, label }: { className: string; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={cn("size-2.5 rounded-full", className)} />
-      {label}
-    </span>
+      <Icon aria-hidden="true" className="size-3.5" />
+      {flat ? formatDelta(0) : formatDelta(value)}
+    </Badge>
   )
 }
 
