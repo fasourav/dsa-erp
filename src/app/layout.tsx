@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist, Geist_Mono, Noto_Sans_Bengali } from "next/font/google"
 import { cookies } from "next/headers"
 
 import { Toaster } from "@/components/ui/sonner"
@@ -16,6 +16,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const notoSansBengali = Noto_Sans_Bengali({
+  variable: "--font-bengali",
+  subsets: ["bengali"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -40,6 +46,7 @@ export default async function RootLayout({
       className={cn(
         geistSans.variable,
         geistMono.variable,
+        notoSansBengali.variable,
         "h-full antialiased",
         theme === "dark" && "dark",
       )}

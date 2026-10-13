@@ -115,8 +115,10 @@ export function BankStatementView({
         money(statement.closing),
       ],
     ]
-    const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+    const csv = rows
+      .map((row) => row.map((cell, index) => csvCell(cell, index === 1 || index === 2)).join(","))
+      .join("\n")
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
@@ -308,6 +310,7 @@ function money(value: number): string {
   return formatMoney(value)
 }
 
-function csvCell(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`
+function csvCell(value: string, textual: boolean): string {
+  const safe = textual && /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+  return `"${safe.replaceAll('"', '""')}"`
 }

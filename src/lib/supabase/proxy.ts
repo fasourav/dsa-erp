@@ -86,12 +86,14 @@ export async function updateSession(request: NextRequest) {
   // Default invites land on /auth/accept with the session in the hash. token_hash
   // links still use /auth/confirm. Both run before a session exists, then
   // /set-password runs after. Keep them open so neither bounce loops.
+  // Cron routes have no session and check CRON_SECRET themselves.
   const isOpenPath =
     pathname === "/login" ||
     pathname === "/auth/confirm" ||
     pathname === "/auth/accept" ||
     pathname === "/set-password" ||
-    pathname.startsWith("/verify/")
+    pathname.startsWith("/verify/") ||
+    pathname.startsWith("/api/cron/")
 
   if (!isAuthenticated && !isOpenPath) {
     return applyCsp(redirectWithSession(request, supabaseResponse, "/login"))

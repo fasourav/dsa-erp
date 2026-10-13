@@ -72,7 +72,7 @@ export function linesToJson(lines: LineInput[]): Json {
 export function storedLines(lines: LineInput[]) {
   return lines
     .filter((line) => line.item.trim())
-    .slice(0, 39)
+    .slice(0, 40)
     .map((line, index) => ({
       sort_order: index,
       section_name: clip(line.section, 120),
@@ -87,7 +87,7 @@ export function storedLines(lines: LineInput[]) {
 export function storedMilestones(milestones: MilestoneInput[]) {
   return milestones
     .filter((milestone) => milestone.label.trim())
-    .slice(0, 11)
+    .slice(0, 12)
     .flatMap((milestone, index) => {
       const percent = Number(milestone.percent)
       if (!Number.isFinite(percent) || percent < 0 || percent > 100) return []

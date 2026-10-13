@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isBankSourceKind } from "@/lib/bank"
+import { escapeLikePattern } from "@/lib/client-validation"
 import { dbIssue, friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isUuid } from "@/lib/ids"
@@ -10,6 +11,7 @@ import { isSortOrder } from "@/lib/lookup-catalogs"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless, denyUnlessOwner } from "@/lib/permissions"
 
 export type BankAccountInput = {
@@ -445,6 +447,7 @@ export async function deleteBankTransaction(id: string): Promise<DeleteResult> {
     return { error: "That transaction could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePath("/accounts/bank")
   revalidatePath("/dashboard")
   return { error: null }
@@ -515,7 +518,7 @@ async function saveBankAccount(
     sort_order: input.sortOrder,
   }
 
-  let duplicateName = supabase.from("bank_accounts").select("id").ilike("name", name).limit(1)
+  let duplicateName = supabase.from("bank_accounts").select("id").ilike("name", escapeLikePattern(name)).limit(1)
   if (id) duplicateName = duplicateName.neq("id", id)
   const duplicate = await duplicateName
   if (duplicate.error) {

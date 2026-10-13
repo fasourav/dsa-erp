@@ -8,7 +8,8 @@ import { roundMoney } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { employeeLeaveSchema, firstIssue } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
-import { denyUnless } from "@/lib/permissions"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
+import { denyUnless, getAccess } from "@/lib/permissions"
 
 export type EmployeeInput = {
   fullName: string
@@ -99,6 +100,7 @@ export async function deleteEmployee(id: string): Promise<DeleteResult> {
     return { error: "That employee could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePath("/hr/employees")
   return { error: null }
 }
@@ -118,18 +120,21 @@ async function saveEmployee(
   const joiningDate = input.joiningDate.trim()
   const leaveDate = input.leaveDate.trim()
   const fieldErrors: EmployeeFieldErrors = {}
+  const access = await getAccess()
+  // People without Show Financials see salaries as blank, so an edit must not write them back.
+  const keepPay = Boolean(id) && !access?.showFinancials
 
   if (!fullName) {
     fieldErrors.fullName = "Enter the employee name."
   }
 
-  if (monthlySalary === null) {
+  if (!keepPay && monthlySalary === null) {
     fieldErrors.monthlySalary = input.monthlySalary.trim()
       ? "Enter a valid monthly salary."
       : "Enter a monthly salary."
   }
 
-  if (allowance === null) {
+  if (!keepPay && allowance === null) {
     fieldErrors.allowance = "Enter a valid allowance."
   }
 
@@ -165,12 +170,10 @@ async function saveEmployee(
     return { error: "You must be signed in." }
   }
 
-  const values = {
+  const details = {
     full_name: fullName,
     department_id: departmentId || null,
     designation: designation || null,
-    monthly_salary: roundMoney(monthlySalary ?? 0),
-    allowance: roundMoney(allowance ?? 0),
     joining_date: joiningDate,
     leave_date: leaveDate || null,
     is_active: input.isActive,
@@ -178,11 +181,16 @@ async function saveEmployee(
     email: email || null,
     notes: notes || null,
   }
+  const values = {
+    ...details,
+    monthly_salary: roundMoney(monthlySalary ?? 0),
+    allowance: roundMoney(allowance ?? 0),
+  }
 
   const { data, error } = id
     ? await supabase
         .from("employees")
-        .update(values)
+        .update(keepPay ? details : values)
         .eq("id", id)
         .select("id")
     : await supabase.from("employees").insert(values).select("id")
