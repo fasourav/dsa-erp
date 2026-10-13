@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 export const dynamic = "force-dynamic"
 
 export const metadata = {
-  title: "Verify document",
+  title: "Verify Document",
   robots: { index: false, follow: false },
 }
 
@@ -19,11 +19,11 @@ export default async function VerifyPage({
   const { token } = await params
   const headerList = await headers()
   if (!allowVerifyRequest(verifyClientKey(headerList))) {
-    return <VerifyMessage title="Too many checks" detail="Try again shortly." />
+    return <VerifyMessage title="Too Many Checks" detail="Try again shortly." />
   }
 
   if (!/^[0-9a-f]{64}$/.test(token)) {
-    return <VerifyMessage title="Not verified" detail="This document could not be verified." />
+    return <VerifyMessage title="Not Verified" detail="This document could not be verified." />
   }
 
   const supabase = await createClient()
@@ -31,11 +31,11 @@ export default async function VerifyPage({
   const row = data?.[0]
 
   if (row?.outcome === "limited") {
-    return <VerifyMessage title="Too many checks" detail="Try again shortly." />
+    return <VerifyMessage title="Too Many Checks" detail="Try again shortly." />
   }
 
   if (error || !row || row.outcome !== "ok" || !row.document_no || !row.issued_on || !row.status) {
-    return <VerifyMessage title="Not verified" detail="This document could not be verified." />
+    return <VerifyMessage title="Not Verified" detail="This document could not be verified." />
   }
 
   return (

@@ -24,8 +24,39 @@ export async function importStatementCsv(formData: FormData): Promise<{ error: s
 
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
+  // Re-importing the same statement (or an overlapping one) must not double the lines.
+  // Compare as a multiset so genuinely repeated lines inside one file still import.
+  const dates = parsed.rows.map((row) => row.lineDate).sort()
+  const existing = await supabase
+    .from("bank_statement_lines")
+    .select("line_date, direction, amount, description, reference")
+    .eq("bank_account_id", accountId)
+    .gte("line_date", dates[0])
+    .lte("line_date", dates[dates.length - 1])
+  if (existing.error) {
+    if (isMissing(existing.error)) return { error: notInstalled, count: 0 }
+    return { error: friendlyDbError(existing.error, "Could not import this statement."), count: 0 }
+  }
+  const lineKey = (date: string, direction: string, amount: number, description: string | null, reference: string | null) =>
+    [date, direction, Number(amount).toFixed(2), (description ?? "").trim(), (reference ?? "").trim()].join("|")
+  const seen = new Map<string, number>()
+  for (const row of existing.data ?? []) {
+    const key = lineKey(row.line_date, row.direction, Number(row.amount), row.description, row.reference)
+    seen.set(key, (seen.get(key) ?? 0) + 1)
+  }
+  const fresh = parsed.rows.filter((row) => {
+    const key = lineKey(row.lineDate, row.direction, row.amount, row.description, row.reference)
+    const left = seen.get(key) ?? 0
+    if (left > 0) {
+      seen.set(key, left - 1)
+      return false
+    }
+    return true
+  })
+  if (fresh.length === 0) return { error: "Every line in this file is already imported.", count: 0 }
+
   const { error } = await supabase.from("bank_statement_lines").insert(
-    parsed.rows.map((row) => ({
+    fresh.map((row) => ({
       bank_account_id: accountId,
       line_date: row.lineDate,
       description: row.description,
@@ -40,7 +71,7 @@ export async function importStatementCsv(formData: FormData): Promise<{ error: s
     return { error: friendlyDbError(error, "Could not import this statement."), count: 0 }
   }
   revalidatePath("/accounts/bank")
-  return { error: null, count: parsed.rows.length }
+  return { error: null, count: fresh.length }
 }
 
 export async function addStatementLine(input: {

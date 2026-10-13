@@ -82,16 +82,18 @@ function indianWords(value: number): string {
 }
 
 export function amountInWords(value: number): string {
-  const cents = Math.round(Math.abs(Number.isFinite(value) ? value : 0) * 100)
+  const safe = Number.isFinite(value) ? value : 0
+  const sign = safe < 0 ? "Minus " : ""
+  const cents = Math.round(Math.abs(safe) * 100)
   const taka = Math.floor(cents / 100)
   const paisa = cents % 100
   const takaWords = taka === 0 ? "" : indianWords(taka)
   const paisaWords = paisa === 0 ? "" : `${underHundred(paisa)} Paisa`
 
   if (!takaWords && !paisaWords) return "Taka Zero Only"
-  if (takaWords && paisaWords) return `Taka ${takaWords} and ${paisaWords} Only`
-  if (paisaWords) return `Taka ${paisaWords} Only`
-  return `Taka ${takaWords} Only`
+  if (takaWords && paisaWords) return `${sign}Taka ${takaWords} And ${paisaWords} Only`
+  if (paisaWords) return `${sign}Taka ${paisaWords} Only`
+  return `${sign}Taka ${takaWords} Only`
 }
 
 export function sumAmounts(values: number[]): number {
