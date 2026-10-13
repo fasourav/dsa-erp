@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
 import { saveRecoveryPlan } from "@/app/(app)/backlog/actions"
@@ -67,6 +68,7 @@ export function RecoveryPlanDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this recovery plan.")

@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
@@ -32,7 +33,6 @@ import {
 import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatIsoDate, formatMoney } from "@/lib/format"
-import { isClientInvoicePaid } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -69,6 +69,8 @@ export function ClientInvoicesTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -83,7 +85,17 @@ export function ClientInvoicesTable({
     () => sortClientInvoices(invoices, sort),
     [invoices, sort],
   )
-  const pageResult = paginateRows(sorted, page)
+  const filterOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "unpaid", label: "Unpaid" },
+    { value: "partial", label: "Partially Paid" },
+    { value: "paid", label: "Paid" },
+  ]
+  const filtered = useMemo(
+    () => filterRows(sorted, query, rowText, listFilter, (invoice) => invoice.status),
+    [listFilter, query, sorted],
+  )
+  const pageResult = paginateRows(filtered, page)
   const paymentsInvoice =
     invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
 
@@ -131,6 +143,21 @@ export function ClientInvoicesTable({
           </p>
         ) : null}
       </div>
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search invoices"
+        filterLabel="Status"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <DataList
         columns={clientInvoiceColumns}
         rows={error ? [] : pageResult.rows}
@@ -280,11 +307,7 @@ function InvoiceCell({
     case "amount":
       return <span className="tabular-nums">{formatMoney(invoice.amount)}</span>
     case "paid":
-      return isClientInvoicePaid(invoice.status) ? (
-        <span className="tabular-nums">{formatMoney(invoice.paid)}</span>
-      ) : (
-        <StatusBadge status="pending" />
-      )
+      return <span className="tabular-nums">{formatMoney(invoice.paid)}</span>
     case "status":
       return <StatusBadge status={invoice.status} />
   }

@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
@@ -44,8 +45,10 @@ export function ReceivableTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const sorted = useMemo(() => sortReceivables(rows, sort), [rows, sort])
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
 
   function changeVisibility(id: ReceivableColumnId, checked: boolean) {
     if (locked.has(id)) {
@@ -58,6 +61,14 @@ export function ReceivableTable({
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-medium tracking-tight">Accounts Receivable</h1>
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search receivables"
+      />
       <DataList
         columns={receivableColumns}
         rows={error ? [] : pageResult.rows}

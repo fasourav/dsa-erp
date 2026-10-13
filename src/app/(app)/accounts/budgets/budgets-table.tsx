@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
@@ -116,6 +117,7 @@ export function BudgetsTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formBudget, setFormBudget] = useState<BudgetRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -125,7 +127,8 @@ export function BudgetsTable({
   const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortBudgets(budgets, sort), [budgets, sort])
-  const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
   const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function openForm(budget: BudgetRow | null) {
@@ -163,6 +166,14 @@ export function BudgetsTable({
         </Button>) : null}
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search budgets"
+      />
       <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
         <Table className="min-w-max">
           <TableHeader>

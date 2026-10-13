@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
 import {
@@ -174,6 +175,7 @@ export function ExpenseFormDialog({
           return
         }
 
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this expense.")

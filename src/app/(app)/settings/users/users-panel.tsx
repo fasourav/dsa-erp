@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { savedToast } from "@/lib/saved"
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { AccessDrawer } from "@/app/(app)/settings/users/access-drawer"
 import {
@@ -124,6 +125,7 @@ export function UsersPanel({
         setFormError(result.error)
         return
       }
+      savedToast()
       setDrawer(null)
     })
   }
@@ -362,7 +364,9 @@ function UserTable({
                     {statusLabel(user.status)}
                   </Badge>
                 </TableCell>
-                <TableCell className="whitespace-normal">{formatLastLogin(user.lastSignInAt)}</TableCell>
+                <TableCell className="whitespace-normal">
+                  <LastLogin value={user.lastSignInAt} />
+                </TableCell>
                 <TableCell className="whitespace-normal">
                   <div className="flex flex-wrap gap-1">
                     {user.status === "invited" ? (
@@ -518,7 +522,29 @@ function initials(name: string, email: string) {
   return letters.toUpperCase() || "—"
 }
 
-function formatLastLogin(value: string | null) {
+function subscribeLastLogin() {
+  return () => {}
+}
+
+function absoluteLastLogin(value: string | null) {
+  if (!value) return "—"
+  const day = value.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return "—"
+  return formatDayMonYear(day)
+}
+
+const relativeLastLogin = new Map<string, string>()
+
+function snapshotLastLogin(value: string | null) {
+  const key = value ?? ""
+  const cached = relativeLastLogin.get(key)
+  if (cached) return cached
+  const next = relativeLabel(value)
+  relativeLastLogin.set(key, next)
+  return next
+}
+
+function relativeLabel(value: string | null) {
   if (!value) return "—"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
@@ -532,6 +558,16 @@ function formatLastLogin(value: string | null) {
   if (date.toDateString() === today.toDateString()) return `Today, ${time}`
   if (date.toDateString() === yesterday.toDateString()) return `Yesterday, ${time}`
   return formatDayMonYear(value.slice(0, 10))
+}
+
+function LastLogin({ value }: { value: string | null }) {
+  const absolute = absoluteLastLogin(value)
+  const label = useSyncExternalStore(
+    subscribeLastLogin,
+    () => snapshotLastLogin(value),
+    () => absolute,
+  )
+  return <span>{label}</span>
 }
 
 function statusLabel(status: DirectoryUser["status"]) {

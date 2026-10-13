@@ -14,9 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
-          category: string | null
+          category_id: string | null
           created_at: string
           id: string
           lifespan_years: number
@@ -29,7 +50,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          category?: string | null
+          category_id?: string | null
           created_at?: string
           id?: string
           lifespan_years: number
@@ -42,7 +63,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          category?: string | null
+          category_id?: string | null
           created_at?: string
           id?: string
           lifespan_years?: number
@@ -54,7 +75,15 @@ export type Database = {
           unit_cost?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bank_accounts: {
         Row: {
@@ -595,7 +624,6 @@ export type Database = {
         Row: {
           allowance: number
           created_at: string
-          department: string | null
           department_id: string | null
           designation: string | null
           email: string | null
@@ -612,7 +640,6 @@ export type Database = {
         Insert: {
           allowance?: number
           created_at?: string
-          department?: string | null
           department_id?: string | null
           designation?: string | null
           email?: string | null
@@ -629,7 +656,6 @@ export type Database = {
         Update: {
           allowance?: number
           created_at?: string
-          department?: string | null
           department_id?: string | null
           designation?: string | null
           email?: string | null
@@ -1772,8 +1798,90 @@ export type Database = {
         }
         Relationships: []
       }
+      user_invites: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          role: string
+          show_financials: boolean
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          role: string
+          show_financials?: boolean
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          role?: string
+          show_financials?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
+      bank_accounts_readable: {
+        Row: {
+          account_holder_name: string | null
+          account_number: string | null
+          address: string | null
+          bank_name: string | null
+          created_at: string | null
+          currency: string | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          opening_balance: number | null
+          routing_number: string | null
+          sort_order: number | null
+        }
+        Relationships: []
+      }
+      bank_transactions_readable: {
+        Row: {
+          amount: number | null
+          bank_account_id: string | null
+          created_at: string | null
+          direction: Database["public"]["Enums"]["bank_flow_direction"] | null
+          id: string | null
+          income_id: string | null
+          notes: string | null
+          operational_expense_id: string | null
+          payment_method: string | null
+          payroll_line_id: string | null
+          project_id: string | null
+          source_kind: Database["public"]["Enums"]["bank_source_kind"] | null
+          transaction_date: string | null
+          transfer_id: string | null
+          vat_tax_payment_id: string | null
+          vendor_payment_id: string | null
+        }
+        Relationships: []
+      }
+      employees_readable: {
+        Row: {
+          allowance: number | null
+          created_at: string | null
+          department: string | null
+          department_id: string | null
+          designation: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          is_active: boolean | null
+          joining_date: string | null
+          leave_date: string | null
+          monthly_salary: number | null
+          notes: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       accounts_payable: {
         Row: {
           created_at: string | null

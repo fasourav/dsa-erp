@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 
+import { mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { roundMoney } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { employeeLeaveSchema, firstIssue } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
 import { denyUnless } from "@/lib/permissions"
 
@@ -139,6 +141,16 @@ async function saveEmployee(
     fieldErrors.leaveDate = "Enter a valid leave date."
   }
 
+  if (!fieldErrors.joiningDate && !fieldErrors.leaveDate) {
+    const leaveCheck = employeeLeaveSchema.safeParse({ joiningDate, leaveDate })
+    if (!leaveCheck.success) {
+      const joiningIssue = firstIssue(leaveCheck.error, "joiningDate")
+      const leaveIssue = firstIssue(leaveCheck.error, "leaveDate")
+      if (joiningIssue) fieldErrors.joiningDate = joiningIssue
+      if (leaveIssue) fieldErrors.leaveDate = leaveIssue
+    }
+  }
+
   if (departmentId && !isUuid(departmentId)) {
     fieldErrors.departmentId = "Choose a department."
   }
@@ -153,19 +165,8 @@ async function saveEmployee(
     return { error: "You must be signed in." }
   }
 
-  let departmentName: string | null = null
-  if (departmentId) {
-    const { data: deptData } = await supabase
-      .from("departments")
-      .select("name")
-      .eq("id", departmentId)
-      .limit(1)
-    departmentName = deptData?.[0]?.name ?? null
-  }
-
   const values = {
     full_name: fullName,
-    department: departmentName,
     department_id: departmentId || null,
     designation: designation || null,
     monthly_salary: roundMoney(monthlySalary ?? 0),
@@ -189,6 +190,13 @@ async function saveEmployee(
   if (error) {
     if (error.code === "23503") {
       return { error: "Choose a valid department." }
+    }
+
+    if (mentions(error, "employees_leave_after_join") || mentions(error, "leave date")) {
+      return {
+        error: null,
+        fieldErrors: { leaveDate: "Leave date cannot be before the joining date." },
+      }
     }
 
     return { error: "Could not save this employee." }

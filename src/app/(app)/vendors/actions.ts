@@ -21,7 +21,7 @@ const vendorIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const NAME_DUPLICATE_MESSAGE =
-  "A vendor with this name and phone already exists."
+  "A vendor with this name already exists."
 
 export type DeleteVendorResult = {
   error: string | null

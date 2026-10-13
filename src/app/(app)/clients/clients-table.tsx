@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
@@ -75,6 +76,8 @@ export function ClientsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formClient, setFormClient] = useState<ClientSummary | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -90,9 +93,18 @@ export function ClientsTable({
   const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortClients(clients, sort), [clients, sort])
+  const filterOptions = [
+    { value: "all", label: "All Types" },
+    { value: "person", label: "Person" },
+    { value: "company", label: "Company" },
+  ]
+  const filtered = useMemo(
+    () => filterRows(sorted, query, rowText, listFilter, (client) => client.kind ?? ""),
+    [listFilter, query, sorted],
+  )
   const pageResult = useMemo(
-    () => paginateClients(sorted, page),
-    [sorted, page],
+    () => paginateClients(filtered, page),
+    [filtered, page],
   )
 
   function toggleSort(key: ColumnId) {
@@ -194,6 +206,21 @@ export function ClientsTable({
         </div>
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search clients"
+        filterLabel="Type"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <DataList
         columns={dataColumns}
         rows={error ? [] : pageResult.rows}

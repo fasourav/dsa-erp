@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition, type ReactNode } from "react"
 
 import {
@@ -150,6 +151,7 @@ export function BankAccountFormDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this bank account.")

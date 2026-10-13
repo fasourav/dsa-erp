@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
@@ -46,12 +47,22 @@ export function PayableTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const sorted = useMemo(() => sortPayables(rows, sort), [rows, sort])
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
 
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-medium tracking-tight">Accounts Payable</h1>
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search payables"
+      />
       <DataList
         columns={payableColumns}
         rows={error ? [] : pageResult.rows}

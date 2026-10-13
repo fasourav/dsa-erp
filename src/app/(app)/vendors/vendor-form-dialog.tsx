@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useEffect, useState, useTransition } from "react"
 
 import {
@@ -41,7 +42,7 @@ import type { VendorKind, VendorSummary } from "@/lib/vendor-summary"
 const DUPLICATE_CHECK_DELAY_MS = 350
 
 const NAME_DUPLICATE_MESSAGE =
-  "A vendor with this name and phone already exists."
+  "A vendor with this name already exists."
 
 type KeyedCheck = {
   key: string
@@ -260,6 +261,7 @@ export function VendorFormDialog({
           return
         }
 
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this vendor.")

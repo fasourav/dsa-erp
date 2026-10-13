@@ -14,7 +14,7 @@ export async function getSettingsBankAccounts(): Promise<{
     const rows = await fetchAllPages(
       (from, to) =>
         supabase
-          .from("bank_accounts")
+          .from("bank_accounts_readable")
           .select(
             "id, name, account_holder_name, account_number, bank_name, routing_number, address, opening_balance, currency, is_active, sort_order",
           )
@@ -26,19 +26,24 @@ export async function getSettingsBankAccounts(): Promise<{
     )
 
     return {
-      accounts: rows.map((row) => ({
-        id: row.id,
-        name: row.name?.trim() ?? "",
-        accountHolderName: row.account_holder_name?.trim() ?? "",
-        accountNumber: row.account_number?.trim() ?? "",
-        bankName: row.bank_name?.trim() ?? "",
-        routingNumber: row.routing_number?.trim() ?? "",
-        address: row.address?.trim() ?? "",
-        openingBalance: toNumber(row.opening_balance),
-        currency: row.currency?.trim() ?? "",
-        isActive: row.is_active,
-        sortOrder: row.sort_order,
-      })),
+      accounts: rows.flatMap((row) => {
+        if (!row.id) return []
+        return [
+          {
+            id: row.id,
+            name: row.name?.trim() ?? "",
+            accountHolderName: row.account_holder_name?.trim() ?? "",
+            accountNumber: row.account_number?.trim() ?? "",
+            bankName: row.bank_name?.trim() ?? "",
+            routingNumber: row.routing_number?.trim() ?? "",
+            address: row.address?.trim() ?? "",
+            openingBalance: toNumber(row.opening_balance),
+            currency: row.currency?.trim() ?? "",
+            isActive: row.is_active ?? true,
+            sortOrder: row.sort_order ?? 0,
+          },
+        ]
+      }),
       error: null,
     }
   } catch {

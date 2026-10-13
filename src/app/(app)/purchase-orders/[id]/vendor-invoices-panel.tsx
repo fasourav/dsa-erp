@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Trash2, Wallet } from "lucide-react"
@@ -64,6 +65,7 @@ export function VendorInvoicesPanel({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<VendorInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -84,7 +86,8 @@ export function VendorInvoicesPanel({
     () => sortVendorInvoices(invoices, sort),
     [invoices, sort],
   )
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
   const paymentsInvoice =
     invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
 
@@ -199,6 +202,14 @@ export function VendorInvoicesPanel({
         </Card>
       ) : null}
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search invoices"
+      />
       <DataList
         columns={vendorInvoiceColumns}
         rows={error ? [] : pageResult.rows}

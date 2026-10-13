@@ -180,7 +180,7 @@ async function saveMonthlySalary(
   }
 
   const { data: employeeRows, error: employeeError } = await supabase
-    .from("employees")
+    .from("employees_readable")
     .select(
       "id, full_name, monthly_salary, allowance, joining_date, leave_date, is_active",
     )
@@ -287,6 +287,10 @@ async function saveMonthlySalary(
 
     const bonusAmount = roundMoney(bonus)
     const deductionAmount = roundMoney(deduction)
+    if (employee.monthly_salary == null || employee.allowance == null) {
+      return { error: "Salary figures are hidden for this account." }
+    }
+
     const salary = roundMoney(toNumber(employee.monthly_salary))
     const allowance = roundMoney(toNumber(employee.allowance))
     if (netPay(salary, allowance, bonusAmount, deductionAmount) < 0) {

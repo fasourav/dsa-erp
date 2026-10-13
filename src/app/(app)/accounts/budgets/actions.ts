@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
 import { parseProjectValue } from "@/lib/project-validation"
+import { budgetYear } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
 import { denyUnless } from "@/lib/permissions"
 
@@ -75,15 +76,18 @@ async function saveBudget(
   input: BudgetInput,
 ): Promise<BudgetResult> {
   const departmentId = input.departmentId.trim()
-  const year = parseInt(input.periodYear, 10)
+  const yearCheck = budgetYear.safeParse(input.periodYear.trim())
+  const year = yearCheck.success ? Number(yearCheck.data) : Number.NaN
   const month = parseInt(input.periodMonth, 10)
   const allocatedBudget = parseProjectValue(input.allocatedBudget)
   const notes = input.notes.trim()
   const fieldErrors: BudgetFieldErrors = {}
 
   if (!isUuid(departmentId)) fieldErrors.departmentId = "Choose a department."
-  if (!Number.isFinite(year) || year < 2000 || year > 2100)
-    fieldErrors.periodYear = "Enter a valid year."
+  if (!yearCheck.success) {
+    fieldErrors.periodYear =
+      yearCheck.error.issues[0]?.message ?? "Enter a year from 2021 onward."
+  }
   if (!Number.isFinite(month) || month < 1 || month > 12)
     fieldErrors.periodMonth = "Enter a valid month."
   if (allocatedBudget === null || allocatedBudget < 0)

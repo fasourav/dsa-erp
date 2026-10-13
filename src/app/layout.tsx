@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { cookies } from "next/headers"
 
+import { Toaster } from "@/components/ui/sonner"
 import { parseTheme, THEME_COOKIE } from "@/lib/theme"
 import { cn } from "@/lib/utils"
 
@@ -43,7 +44,10 @@ export default async function RootLayout({
         theme === "dark" && "dark",
       )}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <Toaster />
+      </body>
     </html>
   )
 }

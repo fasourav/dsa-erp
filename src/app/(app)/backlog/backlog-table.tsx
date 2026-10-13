@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil } from "lucide-react"
@@ -46,11 +47,13 @@ export function BacklogTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formProject, setFormProject] = useState<BacklogRow | null>(null)
   const [formSession, setFormSession] = useState(0)
   const sorted = useMemo(() => sortBacklog(rows, sort), [rows, sort])
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
 
   function openPlan(row: BacklogRow) {
     setFormProject(row)
@@ -61,6 +64,14 @@ export function BacklogTable({
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-medium tracking-tight">Backlog</h1>
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search backlog"
+      />
       <DataList
         columns={backlogColumns}
         rows={error ? [] : pageResult.rows}

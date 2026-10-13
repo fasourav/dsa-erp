@@ -346,6 +346,10 @@ function revalidateCatalogs(catalog: CatalogKey) {
     revalidatePath("/vendors")
     revalidatePath("/purchase-orders")
   }
+
+  if (catalog === "asset_categories") {
+    revalidatePath("/assets")
+  }
 }
 
 function isUniqueViolation(error: { code?: string; message?: string }) {

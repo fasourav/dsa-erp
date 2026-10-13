@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
@@ -82,6 +83,7 @@ export function VatTaxTable({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -90,7 +92,8 @@ export function VatTaxTable({
   const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortVat(payments, sort), [payments, sort])
-  const pageResult = useMemo(() => paginateRows(sorted, page), [sorted, page])
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
 
   function openForm() {
     setFormSession((s) => s + 1)
@@ -138,6 +141,14 @@ export function VatTaxTable({
         </Button>) : null}
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search payments"
+      />
       <DataList
         columns={columns}
         rows={error ? [] : pageResult.rows}

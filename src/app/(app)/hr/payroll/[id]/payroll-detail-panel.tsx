@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -87,6 +88,7 @@ export function PayrollDetailPanel({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -97,7 +99,8 @@ export function PayrollDetailPanel({
     () => sortLines(salary.lines, sort),
     [salary.lines, sort],
   )
-  const pageResult = paginateRows(sorted, page)
+  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
+  const pageResult = paginateRows(filtered, page)
   const bankAccount =
     bankAccounts.find((account) => account.id === salary.bankAccountId)?.name ??
     ""
@@ -173,6 +176,14 @@ export function PayrollDetailPanel({
         </div>
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search lines"
+      />
       <DataList
         columns={columns}
         rows={pageResult.rows}

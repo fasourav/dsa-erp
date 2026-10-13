@@ -5,6 +5,7 @@ import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { dateInputValue } from "@/lib/project-validation"
 import {
+  derivePaymentStatus,
   isPaymentStatus,
   moneyCents,
   sumAmounts,
@@ -162,7 +163,10 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
           id: row.id,
           issuedOn: dateInputValue(row.issued_on),
           amount: toNumber(row.amount),
-          status: row.status,
+          status:
+            row.status === "void"
+              ? "void"
+              : derivePaymentStatus(toNumber(row.amount), paid),
           description: row.description ?? "",
           paid,
           balance,

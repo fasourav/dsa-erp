@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useCan } from "@/components/access-provider"
 
 import { Pencil, Plus, Trash2 } from "lucide-react"
@@ -317,6 +318,7 @@ function PaymentForm({
           return
         }
 
+        savedToast()
         onSaved()
       } catch {
         setFormError("Could not save this payment.")

@@ -35,7 +35,7 @@ export async function getEmployees(): Promise<{
     const rows = await fetchAllPages(
       (from, to) =>
         supabase
-          .from("employees")
+          .from("employees_readable")
           .select(
             "id, full_name, department, department_id, designation, monthly_salary, allowance, email, phone, joining_date, leave_date, is_active, notes",
           )
@@ -44,14 +44,14 @@ export async function getEmployees(): Promise<{
       "Employee list is larger than expected.",
     )
 
-    const employees: EmployeeRow[] = rows.map((row) => {
+    const employees: EmployeeRow[] = rows.flatMap((row) => {
+      if (!row.id) return []
       const departmentId = row.department_id ?? ""
-      const storedName = row.department?.trim() ?? ""
 
-      return {
+      return [{
         id: row.id,
         fullName: row.full_name?.trim() ?? "",
-        department: storedName || names.get(departmentId) || "",
+        department: row.department?.trim() || names.get(departmentId) || "",
         designation: row.designation?.trim() ?? "",
         monthlySalary: toNumber(row.monthly_salary),
         allowance: toNumber(row.allowance),
@@ -62,7 +62,7 @@ export async function getEmployees(): Promise<{
         email: row.email?.trim() ?? "",
         notes: row.notes?.trim() ?? "",
         departmentId,
-      }
+      }]
     })
 
     return { employees, departments: active, error: null }

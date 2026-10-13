@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 
+import { mentions } from "@/lib/db-errors"
+import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { denyUnless } from "@/lib/permissions"
@@ -224,7 +226,7 @@ async function saveClientInvoice(
   const supabase = auth.supabase
   const project = await supabase
     .from("projects")
-    .select("id, client_id")
+    .select("id, client_id, total_value")
     .eq("id", projectId)
     .limit(1)
 
@@ -268,6 +270,31 @@ async function saveClientInvoice(
     }
   }
 
+  const siblings = await supabase
+    .from("client_invoices")
+    .select("id, amount")
+    .eq("project_id", projectRow.id)
+    .neq("status", "void")
+
+  if (siblings.error) {
+    return { error: "Could not save this invoice." }
+  }
+
+  const otherBilled = sumAmounts(
+    (siblings.data ?? [])
+      .filter((row) => row.id !== id)
+      .map((row) => toNumber(row.amount)),
+  )
+
+  if (moneyCents(otherBilled + amount) > moneyCents(toNumber(projectRow.total_value))) {
+    return {
+      error: null,
+      fieldErrors: {
+        amount: "Invoices for this project cannot exceed the project value.",
+      },
+    }
+  }
+
   const status = clientInvoiceStatusFromPayments(amount, paid)
 
   const values = {
@@ -288,6 +315,15 @@ async function saveClientInvoice(
       return {
         error: null,
         fieldErrors: { projectId: "Choose a project." },
+      }
+    }
+
+    if (mentions(error, "cannot exceed the project value")) {
+      return {
+        error: null,
+        fieldErrors: {
+          amount: "Invoices for this project cannot exceed the project value.",
+        },
       }
     }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
@@ -88,6 +89,8 @@ export function ProjectsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
+  const [query, setQuery] = useState("")
+  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formProject, setFormProject] = useState<ProjectRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -100,9 +103,18 @@ export function ProjectsTable({
     () => sortProjects(projects, sort),
     [projects, sort],
   )
+  const filterOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "active", label: "Active" },
+    { value: "completed", label: "Completed" },
+  ]
+  const filtered = useMemo(
+    () => filterRows(sorted, query, rowText, listFilter, (project) => project.status),
+    [listFilter, query, sorted],
+  )
   const pageResult = useMemo(
-    () => paginateProjects(sorted, page),
-    [sorted, page],
+    () => paginateProjects(filtered, page),
+    [filtered, page],
   )
 
   function toggleSort(key: ColumnId) {
@@ -199,6 +211,21 @@ export function ProjectsTable({
         </div>
       </div>
 
+      <ListSearch
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        placeholder="Search projects"
+        filterLabel="Status"
+        filter={listFilter}
+        onFilterChange={(value) => {
+          setListFilter(value)
+          setPage(1)
+        }}
+        options={filterOptions}
+      />
       <DataList
         columns={dataColumns}
         rows={error ? [] : pageResult.rows}

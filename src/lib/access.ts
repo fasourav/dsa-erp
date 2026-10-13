@@ -91,6 +91,27 @@ export function canSeeNav(access: AccessSnapshot, item: NavItem): boolean {
   return allows(access, item.module, "view")
 }
 
+const dashboardSourceModules = [
+  "projects",
+  "leads",
+  "clients",
+  "vendor_payments",
+  "purchase_orders",
+  "expenses",
+  "vat_tax",
+  "banking",
+  "client_invoices",
+  "accounts_receivable",
+  "accounts_payable",
+  "income",
+  "backlog",
+] as const satisfies readonly ModuleKey[]
+
+export function hasFullDashboardAccess(access: AccessSnapshot): boolean {
+  if (!access.showFinancials) return false
+  return dashboardSourceModules.every((module) => allows(access, module, "view"))
+}
+
 export function homePath(access: AccessSnapshot): string {
   const match = navItems.find((item) => canSeeNav(access, item))
   return match?.href ?? "/no-access"

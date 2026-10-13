@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isBankSourceKind } from "@/lib/bank"
+import { mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { isSortOrder } from "@/lib/lookup-catalogs"
 import { parsePositiveAmount } from "@/lib/payment-status"
@@ -251,6 +252,12 @@ export async function addBankTransfer(
   })
 
   if (error) {
+    if (mentions(error, "negative")) {
+      return {
+        error: null,
+        fieldErrors: { amount: "This would make the bank balance negative." },
+      }
+    }
     if (error.code === "23514") {
       return {
         error: null,
@@ -468,6 +475,14 @@ async function saveBankAccount(
         .select("id")
 
   if (error) {
+    if (mentions(error, "negative")) {
+      return {
+        error: null,
+        fieldErrors: {
+          openingBalance: "This would make the bank balance negative.",
+        },
+      }
+    }
     if (error.code === "23514") {
       return {
         error:
@@ -496,9 +511,7 @@ function revalidateBankAccounts() {
   revalidatePath("/purchase-orders/[id]", "page")
 }
 
-const manualKinds = ["deposit", "withdrawal"] as const
-
-function isManualKind(value: string): value is (typeof manualKinds)[number] {
+function isManualKind(value: string): value is "deposit" | "withdrawal" {
   return isBankSourceKind(value) && (value === "deposit" || value === "withdrawal")
 }
 
@@ -601,6 +614,12 @@ async function saveBankMovement(
     : await supabase.from("bank_transactions").insert(values).select("id")
 
   if (error) {
+    if (mentions(error, "negative")) {
+      return {
+        error: null,
+        fieldErrors: { amount: "This would make the bank balance negative." },
+      }
+    }
     if (error.code === "23514") {
       return {
         error: null,

@@ -117,7 +117,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
     fetchAllPages(
       (from, to) =>
         supabase
-          .from("bank_accounts")
+          .from("bank_accounts_readable")
           .select("opening_balance")
           .order("id", { ascending: true })
           .range(from, to),
@@ -126,7 +126,7 @@ async function loadDashboardInput(): Promise<DashboardInput> {
     fetchAllPages(
       (from, to) =>
         supabase
-          .from("bank_transactions")
+          .from("bank_transactions_readable")
           .select("amount, direction, transaction_date, source_kind")
           .order("id", { ascending: true })
           .range(from, to),
@@ -215,7 +215,11 @@ async function loadDashboardInput(): Promise<DashboardInput> {
       amount: toNumber(payment.amount),
     })),
     bank: bank.flatMap((transaction) => {
-      if (transaction.direction !== "inflow" && transaction.direction !== "outflow") {
+      if (
+        !transaction.transaction_date ||
+        !transaction.source_kind ||
+        (transaction.direction !== "inflow" && transaction.direction !== "outflow")
+      ) {
         return []
       }
       return [

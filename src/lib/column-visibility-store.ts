@@ -38,7 +38,7 @@ export function createColumnStore<T>(
       const raw = JSON.stringify(visibility)
 
       try {
-        sessionStorage.setItem(storageKey, raw)
+        localStorage.setItem(storageKey, raw)
       } catch {
         // The choice still applies in this tab when storage is blocked.
       }
@@ -52,7 +52,7 @@ export function createColumnStore<T>(
 
 function readRaw(storageKey: string): string | null {
   try {
-    return sessionStorage.getItem(storageKey)
+    return localStorage.getItem(storageKey)
   } catch {
     return null
   }

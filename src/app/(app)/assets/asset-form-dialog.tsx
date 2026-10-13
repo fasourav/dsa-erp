@@ -1,5 +1,6 @@
 "use client"
 
+import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
 import {
@@ -7,7 +8,6 @@ import {
   updateAsset,
   type AssetFieldErrors,
 } from "@/app/(app)/assets/actions"
-import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -20,8 +20,15 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import type { AssetRow } from "@/lib/assets"
+import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 
 export function AssetFormDialog({
   open,
@@ -32,11 +39,11 @@ export function AssetFormDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   asset: AssetRow | null
-  categories: readonly string[]
+  categories: readonly AssetCategoryOption[]
 }) {
   const assetId = asset?.id ?? null
   const [name, setName] = useState(asset?.name ?? "")
-  const [category, setCategory] = useState(asset?.category ?? "")
+  const [categoryId, setCategoryId] = useState(asset?.categoryId ?? "")
   const [purchaseDate, setPurchaseDate] = useState(asset?.purchaseDate ?? "")
   const [quantity, setQuantity] = useState(
     asset ? String(asset.quantity) : "1",
@@ -75,7 +82,7 @@ export function AssetFormDialog({
 
     const input = {
       name: name.trim(),
-      category: category.trim(),
+      categoryId: categoryId.trim(),
       purchaseDate: purchaseDate.trim(),
       quantity,
       unitCost,
@@ -97,6 +104,7 @@ export function AssetFormDialog({
           setFormError(result.error)
           return
         }
+        savedToast()
         onOpenChange(false)
       } catch {
         setFormError("Could not save this asset.")
@@ -132,14 +140,36 @@ export function AssetFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="asset-category">Category</Label>
-              <NameCombobox
-                id="asset-category"
-                value={category}
-                names={categories}
-                disabled={pending}
-                placeholder="Search Categories"
-                onValueChange={setCategory}
-              />
+              <Select
+                items={[
+                  { value: "none", label: "None" },
+                  ...categories.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                  })),
+                ]}
+                value={categoryId || "none"}
+                onValueChange={(value) => {
+                  setCategoryId(!value || value === "none" ? "" : value)
+                }}
+              >
+                <SelectTrigger id="asset-category" className="w-full" disabled={pending}>
+                  <SelectValue placeholder="Choose a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.categoryId ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {fieldErrors.categoryId}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="asset-date">Purchase Date</Label>

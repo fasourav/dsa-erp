@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { denyUnless } from "@/lib/permissions"
@@ -556,6 +557,26 @@ async function saveVendorPayment(
     return { error: "This payment is void." }
   }
 
+  const order = await supabase
+    .from("vendor_purchase_orders")
+    .select("issued_on")
+    .eq("id", invoiceRow.purchase_order_id)
+    .limit(1)
+
+  if (order.error) {
+    return { error: "Could not save this payment." }
+  }
+
+  const issuedOn = order.data?.[0]?.issued_on
+  if (issuedOn && paidOn < issuedOn) {
+    return {
+      error: null,
+      fieldErrors: {
+        paidOn: "Payment date cannot be before the purchase order date.",
+      },
+    }
+  }
+
   const alreadyPaid = await paidForInvoice(supabase, invoiceId, id)
   if (alreadyPaid === null) {
     return { error: "Could not save this payment." }
@@ -595,6 +616,14 @@ async function saveVendorPayment(
     : await supabase.from("vendor_payments").insert(values).select("id")
 
   if (error) {
+    if (mentions(error, "purchase order date")) {
+      return {
+        error: null,
+        fieldErrors: {
+          paidOn: "Payment date cannot be before the purchase order date.",
+        },
+      }
+    }
     if (error.code === "23514") {
       return {
         error: null,
