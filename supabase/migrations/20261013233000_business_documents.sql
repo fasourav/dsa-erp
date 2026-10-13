@@ -229,8 +229,35 @@ create index quotation_milestones_quotation_idx on public.quotation_milestones (
 create index work_order_lines_work_order_idx on public.work_order_lines (work_order_id);
 create index work_order_milestones_work_order_idx on public.work_order_milestones (work_order_id);
 
-call private.apply_crud('quotations', array['quotations'], 'quotations');
-call private.apply_crud('work_orders', array['work_orders'], 'work_orders');
+-- private.apply_crud was dropped in 20261012140000; policies are written out instead.
+alter table public.quotations enable row level security;
+create policy quotations_select on public.quotations
+  for select to authenticated
+  using (private.can('quotations', 'view'));
+create policy quotations_insert on public.quotations
+  for insert to authenticated
+  with check (private.can('quotations', 'add'));
+create policy quotations_update on public.quotations
+  for update to authenticated
+  using (private.can('quotations', 'edit'))
+  with check (private.can('quotations', 'edit'));
+create policy quotations_delete on public.quotations
+  for delete to authenticated
+  using (private.can('quotations', 'delete'));
+alter table public.work_orders enable row level security;
+create policy work_orders_select on public.work_orders
+  for select to authenticated
+  using (private.can('work_orders', 'view'));
+create policy work_orders_insert on public.work_orders
+  for insert to authenticated
+  with check (private.can('work_orders', 'add'));
+create policy work_orders_update on public.work_orders
+  for update to authenticated
+  using (private.can('work_orders', 'edit'))
+  with check (private.can('work_orders', 'edit'));
+create policy work_orders_delete on public.work_orders
+  for delete to authenticated
+  using (private.can('work_orders', 'delete'));
 
 alter table public.quotation_lines enable row level security;
 alter table public.quotation_milestones enable row level security;
@@ -489,8 +516,9 @@ end;
 $$;
 
 revoke all on function private.verify_business_document(text) from public, anon, authenticated, service_role;
-grant execute on function private.verify_business_document(text) to anon, authenticated;
-grant usage on schema private to anon, authenticated;
+-- anon gets no usage on schema private; it reaches the lookup only through the
+-- security definer wrapper below, so other private helpers stay out of anon's reach.
+grant execute on function private.verify_business_document(text) to authenticated;
 
 create or replace function public.verify_business_document(p_token text)
 returns table (
@@ -501,14 +529,14 @@ returns table (
   status text
 )
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select outcome, document_no, issued_on, total, status
   from private.verify_business_document(p_token);
 $$;
 
-revoke all on function public.verify_business_document(text) from public;
+revoke all on function public.verify_business_document(text) from public, anon, authenticated;
 grant execute on function public.verify_business_document(text) to anon, authenticated;
 
 comment on function public.verify_business_document(text) is
@@ -784,7 +812,7 @@ $$;
 
 
 
-do 
+do $$
 declare
   item text;
 begin
@@ -805,7 +833,7 @@ begin
       item
     );
   end loop;
-end ;
+end $$;
 
 revoke all on function private.audit_label(text, jsonb) from public, anon, authenticated;
 revoke all on function private.log_activity() from public, anon, authenticated;
