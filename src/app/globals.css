@@ -62,7 +62,8 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
+:root,
+.light {
   --background: oklch(0.967 0.003 264.5);
   --foreground: oklch(0.148 0.004 228.8);
   --card: oklch(1 0 0);

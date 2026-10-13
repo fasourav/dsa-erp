@@ -1,7 +1,6 @@
 .document-sheet {
   --doc-gap: 8pt;
-  width: 210mm;
-  max-width: none;
+  width: 100%;
   box-sizing: border-box;
   background: var(--card);
   color: var(--card-foreground);
@@ -9,19 +8,122 @@
   line-height: 1.35;
 }
 
-.doc-page {
-  box-sizing: border-box;
+.doc-paper {
   width: 210mm;
+  height: 297mm;
+  overflow: hidden;
   background: var(--card);
   color: var(--card-foreground);
 }
 
-@media screen {
-  .doc-page .document-sheet {
-    width: 100%;
-    max-width: 100%;
-    background: transparent;
-  }
+.doc-paper .document-sheet {
+  background: transparent;
+}
+
+.doc-paper-body {
+  position: absolute;
+  overflow: hidden;
+}
+
+.doc-paper-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.doc-pad {
+  position: absolute;
+  inset: 0;
+  color: var(--primary-foreground);
+  line-height: 1;
+}
+
+.doc-pad p {
+  margin: 0;
+}
+
+.doc-pad-watermark {
+  position: absolute;
+  top: -2mm;
+  left: -51.8mm;
+  width: 99.3mm;
+  height: 120mm;
+  max-width: none;
+  filter: grayscale(1);
+  opacity: 0.15;
+}
+
+.doc-pad-band {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 210mm;
+  height: 46mm;
+  max-width: none;
+}
+
+.doc-pad-contact {
+  position: absolute;
+  top: 277.6mm;
+  left: 11mm;
+  width: 80mm;
+  font-size: 3.05mm;
+  line-height: 3.6mm;
+  white-space: nowrap;
+}
+
+.doc-pad-company {
+  font-size: 3.9mm;
+  line-height: 4.1mm;
+  font-weight: 400;
+}
+
+.doc-pad-company strong {
+  font-weight: 700;
+}
+
+.doc-pad-web {
+  letter-spacing: 0.52em;
+}
+
+.doc-pad-services {
+  position: absolute;
+  top: 278.4mm;
+  right: 49.2mm;
+  font-size: 2.65mm;
+  line-height: 3.5mm;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.doc-pad-logo {
+  position: absolute;
+  top: 255.3mm;
+  left: 161.7mm;
+  display: flex;
+  width: 36.1mm;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.doc-pad-logo img {
+  width: auto;
+  height: 29.4mm;
+  max-width: none;
+}
+
+.doc-pad-logo-name {
+  margin-top: 1.6mm !important;
+  font-size: 2.95mm;
+  font-weight: 700;
+  line-height: 3mm;
+}
+
+.doc-pad-logo-tag {
+  margin-top: 0.4mm !important;
+  font-size: 1.8mm;
+  line-height: 2mm;
 }
 
 .doc-stack {
@@ -255,20 +357,6 @@
 }
 
 @media print {
-  .doc-stage,
-  .doc-stage-slot,
-  .doc-page,
-  .doc-pad {
-    width: auto !important;
-    height: auto !important;
-    transform: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-
   [data-sonner-toaster] {
     display: none !important;
   }
