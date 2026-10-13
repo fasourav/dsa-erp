@@ -31,9 +31,11 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { useAccess } from "@/components/access-provider"
+import { AccountMenu } from "@/components/account-menu"
 import { BrandLockup, BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import { canSeeNav, navItems } from "@/lib/access"
+import type { AccountIdentity } from "@/lib/account-identity"
 import { cn } from "@/lib/utils"
 
 const navIcons: Record<string, LucideIcon> = {
@@ -63,9 +65,11 @@ const navIcons: Record<string, LucideIcon> = {
 
 export function AppSidebar({
   collapsed,
+  account,
   onToggle,
 }: {
   collapsed: boolean
+  account: AccountIdentity
   onToggle: () => void
 }) {
   const pathname = usePathname()
@@ -123,6 +127,14 @@ export function AppSidebar({
           />
         ))}
       </nav>
+      <div
+        className={cn(
+          "hidden border-t border-sidebar-border p-3 md:block",
+          collapsed && "md:px-2",
+        )}
+      >
+        <AccountMenu account={account} collapsed={collapsed} />
+      </div>
     </aside>
   )
 }

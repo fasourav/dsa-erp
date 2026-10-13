@@ -3,20 +3,51 @@ import { requireOwner } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { formatDayMonYear } from "@/lib/format"
+import type { Json } from "@/types/database.types"
 
 export const metadata = { title: "Activity Log" }
+
+const moduleLabels: Record<string, string> = {
+  dashboard: "Dashboard",
+  leads: "Leads",
+  clients: "Clients",
+  projects: "Projects",
+  backlog: "Backlog",
+  purchase_orders: "Purchase Orders",
+  vendors: "Vendors",
+  vendor_payments: "Vendor Payments",
+  accounts_payable: "Accounts Payable",
+  client_invoices: "Client Invoices",
+  accounts_receivable: "Accounts Receivable",
+  income: "Income",
+  expense: "Expense",
+  expenses: "Operational Expense",
+  banking: "Bank",
+  vat_tax: "VAT/Tax",
+  budgets: "Budgets",
+  assets: "Assets",
+  employees: "Employees",
+  payroll: "Payroll",
+  settings: "Settings",
+  users: "Users & Permissions",
+}
+
+type ActivityRecord = {
+  id: string
+  action: string
+  module: string
+  summary: string
+  created_at: string
+  actor_id: string | null
+  record_label?: string | null
+  old_values?: Json | null
+  new_values?: Json | null
+}
 
 export default async function ActivityPage() {
   await requireOwner()
   const supabase = await createClient()
-  let rows: {
-    id: string
-    action: string
-    module: string
-    summary: string
-    created_at: string
-    actor_id: string | null
-  }[] = []
+  let rows: ActivityRecord[] = []
   let loadError: string | null = null
 
   try {
@@ -24,14 +55,34 @@ export default async function ActivityPage() {
       (from, to) =>
         supabase
           .from("activity_log")
-          .select("id, action, module, summary, created_at, actor_id")
+          .select(
+            "id, action, module, summary, created_at, actor_id, record_label, old_values, new_values",
+          )
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
           .range(from, to),
       "Activity log is larger than expected.",
     )
   } catch (error) {
-    loadError = error instanceof Error ? error.message : "Could not load the activity log."
+    const message = readError(error)
+    if (/record_label|old_values|new_values|schema cache/i.test(message)) {
+      try {
+        rows = await fetchAllPages(
+          (from, to) =>
+            supabase
+              .from("activity_log")
+              .select("id, action, module, summary, created_at, actor_id")
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+              .range(from, to),
+          "Activity log is larger than expected.",
+        )
+      } catch (fallbackError) {
+        loadError = readError(fallbackError) || "Could not load the activity log."
+      }
+    } else {
+      loadError = message || "Could not load the activity log."
+    }
   }
 
   const actorIds = [
@@ -45,14 +96,22 @@ export default async function ActivityPage() {
     (actors ?? []).map((actor) => [actor.id, actor.display_name || actor.email || "User"]),
   )
 
-  const activity: ActivityRow[] = rows.map((row) => ({
-    id: row.id,
-    when: formatWhen(row.created_at),
-    who: row.actor_id ? (names.get(row.actor_id) ?? "User") : "System",
-    what: row.summary,
-    action: row.action,
-    module: row.module,
-  }))
+  const activity: ActivityRow[] = rows.map((row) => {
+    const verb =
+      row.action === "insert" ? "Added" : row.action === "delete" ? "Deleted" : "Updated"
+    const label = row.record_label?.trim()
+    return {
+      id: row.id,
+      when: formatWhen(row.created_at),
+      whenIso: row.created_at.slice(0, 10),
+      who: row.actor_id ? (names.get(row.actor_id) ?? "User") : "System",
+      what: label ? `${verb} ${label}` : row.summary,
+      action: row.action,
+      module: row.module,
+      moduleLabel: moduleLabels[row.module] ?? fieldLabel(row.module),
+      changes: diffLines(row.old_values ?? null, row.new_values ?? null),
+    }
+  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,6 +130,14 @@ export default async function ActivityPage() {
   )
 }
 
+function readError(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+    return error.message
+  }
+  return ""
+}
+
 function formatWhen(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -79,4 +146,42 @@ function formatWhen(value: string) {
     minute: "2-digit",
   }).format(date)
   return `${formatDayMonYear(value.slice(0, 10))}, ${time}`
+}
+
+function fieldLabel(key: string) {
+  return key
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
+function displayValue(value: Json | undefined): string {
+  if (value === undefined || value === null || value === "") return "—"
+  if (typeof value === "string") {
+    return value.length > 80 ? `${value.slice(0, 77)}...` : value
+  }
+  if (typeof value === "number" || typeof value === "boolean") return String(value)
+  const text = JSON.stringify(value)
+  return text.length > 80 ? `${text.slice(0, 77)}...` : text
+}
+
+function asRecord(value: Json | null): Record<string, Json | undefined> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  return value
+}
+
+function diffLines(oldValues: Json | null, newValues: Json | null): string[] {
+  const previous = asRecord(oldValues)
+  const next = asRecord(newValues)
+  const keys = [...new Set([...Object.keys(previous), ...Object.keys(next)])].filter(
+    (key) => key !== "updated_at" && key !== "last_sign_in_at",
+  )
+
+  return keys.flatMap((key) => {
+    const from = displayValue(previous[key])
+    const to = displayValue(next[key])
+    if (from === to) return []
+    return [`${fieldLabel(key)}: ${from} to ${to}`]
+  })
 }

@@ -2,13 +2,14 @@ import { BankPanel } from "@/app/(app)/accounts/bank/bank-panel"
 import { getBankPage } from "@/lib/bank-data"
 import { getFiscalYearStartMonth } from "@/lib/company-settings"
 import { requireModule } from "@/lib/permissions"
+import { firstParam } from "@/lib/search"
 
 export const metadata = { title: "Bank" }
 
 export default async function BankPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string | string[]; view?: string | string[] }>
+  searchParams: Promise<{ account?: string | string[]; view?: string | string[]; q?: string | string[] }>
 }) {
   await requireModule("banking")
   const params = await searchParams
@@ -16,6 +17,7 @@ export default async function BankPage({
     ? params.account[0]
     : params.account
   const viewParam = Array.isArray(params.view) ? params.view[0] : params.view
+  const initialQuery = firstParam(params.q)
   const [page, fiscalYearStartMonth] = await Promise.all([
     getBankPage(accountParam ?? null),
     getFiscalYearStartMonth(),
@@ -23,7 +25,7 @@ export default async function BankPage({
 
   return (
     <BankPanel
-      key={`${page.accountFilter?.id ?? "all"}-${viewParam === "statement" ? "statement" : "ledger"}`}
+      key={`${page.accountFilter?.id ?? "all"}-${viewParam === "statement" ? "statement" : "ledger"}-${initialQuery}`}
       accounts={page.accounts}
       transactions={page.transactions}
       paymentMethods={page.paymentMethods}
@@ -31,6 +33,7 @@ export default async function BankPage({
       error={page.error}
       fiscalYearStartMonth={fiscalYearStartMonth}
       view={viewParam === "statement" ? "statement" : "ledger"}
+      initialQuery={initialQuery}
     />
   )
 }

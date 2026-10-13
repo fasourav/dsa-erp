@@ -38,11 +38,21 @@ export async function getUserDirectory(): Promise<{
 }> {
   const supabase = await createClient()
 
-  const [profiles, permissions, modules, templates, templatePermissions] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, display_name, email, role, status, show_financials, last_sign_in_at, created_at")
-      .order("created_at", { ascending: true }),
+  const profileColumns =
+    "id, display_name, designation, email, role, status, show_financials, last_sign_in_at, created_at" as const
+  const richProfiles = await supabase
+    .from("profiles")
+    .select(profileColumns)
+    .order("created_at", { ascending: true })
+  const profiles =
+    richProfiles.error && /designation/i.test(richProfiles.error.message)
+      ? await supabase
+          .from("profiles")
+          .select("id, display_name, email, role, status, show_financials, last_sign_in_at, created_at")
+          .order("created_at", { ascending: true })
+      : richProfiles
+
+  const [permissions, modules, templates, templatePermissions] = await Promise.all([
     supabase
       .from("user_permissions")
       .select("user_id, module, can_view, can_add, can_edit, can_delete"),
@@ -111,6 +121,8 @@ export async function getUserDirectory(): Promise<{
       {
         id: row.id,
         displayName: row.display_name ?? "",
+        designation:
+          "designation" in row && typeof row.designation === "string" ? row.designation : "",
         email: row.email ?? "",
         role: row.role,
         status: row.status,

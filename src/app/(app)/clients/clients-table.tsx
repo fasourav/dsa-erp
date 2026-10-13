@@ -60,9 +60,11 @@ import { cn } from "@/lib/utils"
 export function ClientsTable({
   clients,
   error,
+  initialQuery = "",
 }: {
   clients: ClientSummary[]
   error: string | null
+  initialQuery?: string
 }) {
   const canAdd = useCan("clients", "add")
 
@@ -76,7 +78,7 @@ export function ClientsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formClient, setFormClient] = useState<ClientSummary | null>(null)

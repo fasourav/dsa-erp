@@ -1193,6 +1193,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          designation: string | null
           display_name: string | null
           email: string | null
           id: string
@@ -1203,6 +1204,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          designation?: string | null
           display_name?: string | null
           email?: string | null
           id: string
@@ -1213,6 +1215,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          designation?: string | null
           display_name?: string | null
           email?: string | null
           id?: string
@@ -2727,7 +2730,10 @@ export type Database = {
           created_at: string
           id: string
           module: string
+          new_values: Json | null
+          old_values: Json | null
           record_id: string | null
+          record_label: string | null
           summary: string
           table_name: string
         }
@@ -2737,7 +2743,10 @@ export type Database = {
           created_at?: string
           id?: string
           module: string
+          new_values?: Json | null
+          old_values?: Json | null
           record_id?: string | null
+          record_label?: string | null
           summary: string
           table_name: string
         }
@@ -2747,7 +2756,10 @@ export type Database = {
           created_at?: string
           id?: string
           module?: string
+          new_values?: Json | null
+          old_values?: Json | null
           record_id?: string | null
+          record_label?: string | null
           summary?: string
           table_name?: string
         }
@@ -2784,6 +2796,17 @@ export type Database = {
     Functions: {
       dashboard_feed: { Args: never; Returns: Json }
       resolve_bank_account_id: { Args: { preferred: string }; Returns: string }
+      search_records: {
+        Args: { query: string }
+        Returns: {
+          module_key: string
+          module_label: string
+          record_id: string
+          label: string
+          detail: string
+        }[]
+      }
+      set_own_display_name: { Args: { next_name: string }; Returns: undefined }
     }
     Enums: {
       bank_flow_direction: "inflow" | "outflow"

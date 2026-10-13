@@ -59,6 +59,7 @@ export function BankPanel({
   error,
   fiscalYearStartMonth,
   view,
+  initialQuery = "",
 }: {
   accounts: BankAccountRow[]
   transactions: BankTransactionRow[]
@@ -67,6 +68,7 @@ export function BankPanel({
   error: string | null
   fiscalYearStartMonth: number
   view: "ledger" | "statement"
+  initialQuery?: string
 }) {
   const showFinancials = useAccess().showFinancials
   const canAdd = useCan("banking", "add")
@@ -79,7 +81,7 @@ export function BankPanel({
     direction: "desc",
   })
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [movementOpen, setMovementOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [movementKind, setMovementKind] = useState<"deposit" | "withdrawal">("deposit")

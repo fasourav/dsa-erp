@@ -70,10 +70,12 @@ export function VendorsTable({
   vendors,
   categories,
   error,
+  initialQuery = "",
 }: {
   vendors: VendorSummary[]
   categories: string[]
   error: string | null
+  initialQuery?: string
 }) {
   const canAdd = useCan("vendors", "add")
 
@@ -82,7 +84,7 @@ export function VendorsTable({
     direction: "asc",
   })
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formVendor, setFormVendor] = useState<VendorSummary | null>(null)

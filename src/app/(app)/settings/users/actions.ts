@@ -12,6 +12,10 @@ export type ActionResult = {
   error: string | null
 }
 
+function missingDesignation(message: string | undefined) {
+  return Boolean(message && /designation/i.test(message))
+}
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function friendly(message: string | undefined, fallback: string): string {
@@ -30,11 +34,13 @@ function friendly(message: string | undefined, fallback: string): string {
 
 function cleanInput(input: AccessInput): { error: string } | { value: AccessInput } {
   const displayName = input.displayName.replace(/\s+/g, " ").trim()
+  const designation = input.designation.replace(/\s+/g, " ").trim()
   const email = input.email.trim().toLowerCase()
   const role = input.role.trim()
 
   if (!displayName) return { error: "Enter a full name." }
   if (displayName.length > 120) return { error: "Use a shorter name." }
+  if (designation.length > 80) return { error: "Use a shorter designation." }
   if (!emailPattern.test(email)) return { error: "Enter a valid email." }
   if (!role) return { error: "Choose a role template." }
   if (!Array.isArray(input.permissions)) return { error: "Choose module access." }
@@ -42,6 +48,7 @@ function cleanInput(input: AccessInput): { error: string } | { value: AccessInpu
   return {
     value: {
       displayName,
+      designation,
       email,
       role,
       showFinancials: Boolean(input.showFinancials),
@@ -160,14 +167,31 @@ export async function inviteUser(input: AccessInput): Promise<ActionResult> {
   }
 
   const userId = invited.data.user.id
-  const { error: profileError } = await supabase.from("profiles").upsert({
+  const profileRow = {
     id: userId,
     display_name: cleaned.value.displayName,
+    designation: cleaned.value.designation || null,
     email: cleaned.value.email,
     role: cleaned.value.role,
-    status: "invited",
+    status: "invited" as const,
     show_financials: cleaned.value.showFinancials,
-  })
+  }
+  let profileError = (
+    await supabase.from("profiles").upsert(profileRow)
+  ).error
+
+  if (missingDesignation(profileError?.message)) {
+    profileError = (
+      await supabase.from("profiles").upsert({
+        id: profileRow.id,
+        display_name: profileRow.display_name,
+        email: profileRow.email,
+        role: profileRow.role,
+        status: profileRow.status,
+        show_financials: profileRow.show_financials,
+      })
+    ).error
+  }
 
   if (profileError) {
     await admin.auth.admin.deleteUser(userId)
@@ -205,13 +229,23 @@ export async function saveUserAccess(
   const supabase = await createClient()
 
   if (userId === access.userId) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ display_name: cleaned.value.displayName })
-      .eq("id", userId)
-      .select("id")
+    const updateSelf = async (includeDesignation: boolean) =>
+      supabase
+        .from("profiles")
+        .update(
+          includeDesignation
+            ? {
+                display_name: cleaned.value.displayName,
+                designation: cleaned.value.designation || null,
+              }
+            : { display_name: cleaned.value.displayName },
+        )
+        .eq("id", userId)
+        .select("id")
 
-    if (error) return { error: friendly(error.message, "Could not update this user.") }
+    let updated = await updateSelf(true)
+    if (missingDesignation(updated.error?.message)) updated = await updateSelf(false)
+    if (updated.error) return { error: friendly(updated.error.message, "Could not update this user.") }
     revalidatePath("/settings/users")
     return { error: null }
   }
@@ -219,18 +253,31 @@ export async function saveUserAccess(
   const roleError = await assertRole(cleaned.value.role)
   if (roleError) return { error: roleError }
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({
-      display_name: cleaned.value.displayName,
-      role: cleaned.value.role,
-      show_financials: cleaned.value.showFinancials,
-    })
-    .eq("id", userId)
-    .select("id")
+  const updateOther = async (includeDesignation: boolean) =>
+    supabase
+      .from("profiles")
+      .update(
+        includeDesignation
+          ? {
+              display_name: cleaned.value.displayName,
+              designation: cleaned.value.designation || null,
+              role: cleaned.value.role,
+              show_financials: cleaned.value.showFinancials,
+            }
+          : {
+              display_name: cleaned.value.displayName,
+              role: cleaned.value.role,
+              show_financials: cleaned.value.showFinancials,
+            },
+      )
+      .eq("id", userId)
+      .select("id")
 
-  if (error) return { error: friendly(error.message, "Could not update this user.") }
-  if (!data || data.length === 0) return { error: "That user could not be found." }
+  let updated = await updateOther(true)
+  if (missingDesignation(updated.error?.message)) updated = await updateOther(false)
+
+  if (updated.error) return { error: friendly(updated.error.message, "Could not update this user.") }
+  if (!updated.data || updated.data.length === 0) return { error: "That user could not be found." }
 
   const permissionError = await replacePermissions(
     userId,

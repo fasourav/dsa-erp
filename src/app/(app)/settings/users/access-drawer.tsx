@@ -52,6 +52,7 @@ export function AccessDrawer({
   onSubmit: (input: AccessInput) => void
 }) {
   const [displayName, setDisplayName] = useState(user?.displayName ?? "")
+  const [designation, setDesignation] = useState(user?.designation ?? "")
   const [email, setEmail] = useState(user?.email ?? "")
   const [role, setRole] = useState(user?.role ?? templates[0]?.key ?? "")
   const [showFinancials, setShowFinancials] = useState(user?.showFinancials ?? false)
@@ -76,6 +77,7 @@ export function AccessDrawer({
   function submit() {
     onSubmit({
       displayName,
+      designation,
       email,
       role,
       showFinancials,
@@ -114,6 +116,17 @@ export function AccessDrawer({
                 autoComplete="email"
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="user-designation">Designation</Label>
+            <Input
+              id="user-designation"
+              value={designation}
+              onChange={(event) => setDesignation(event.target.value)}
+              placeholder="Optional"
+              autoComplete="organization-title"
+            />
           </div>
 
           <div className="flex flex-col gap-2">
