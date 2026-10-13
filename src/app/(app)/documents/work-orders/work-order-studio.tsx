@@ -82,6 +82,7 @@ export function WorkOrderStudio({
       canSave={canSave}
       pending={pending}
       error={error}
+      files={{ parentType: "work_order", parentId: form.id }}
       onSave={() => {
         setError(null)
         startSave(async () => {

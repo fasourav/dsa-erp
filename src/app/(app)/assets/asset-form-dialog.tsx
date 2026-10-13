@@ -8,6 +8,7 @@ import {
   updateAsset,
   type AssetFieldErrors,
 } from "@/app/(app)/assets/actions"
+import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -122,6 +123,7 @@ export function AssetFormDialog({
           <DialogTitle>{assetId ? "Edit Asset" : "Add New Asset"}</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
+          {assetId ? <RecordAttachments parentType="asset" parentId={assetId} /> : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="asset-name">Name</Label>
             <Input

@@ -8,6 +8,7 @@ import {
   updateClient,
   type ClientFormFieldErrors,
 } from "@/app/(app)/clients/actions"
+import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -262,6 +263,7 @@ export function ClientFormDialog({
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
+          {clientId ? <RecordAttachments parentType="client" parentId={clientId} /> : null}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div className="flex flex-1 flex-col gap-2">
               <Label htmlFor="client-name">Name</Label>

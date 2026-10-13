@@ -9,6 +9,7 @@ import {
   type EmployeeFieldErrors,
 } from "@/app/(app)/hr/employees/actions"
 import { useAccess } from "@/components/access-provider"
+import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -154,6 +155,7 @@ export function EmployeeFormDialog({
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
+          {employeeId ? <RecordAttachments parentType="employee" parentId={employeeId} /> : null}
           <div className="flex flex-col gap-2">
             <Label htmlFor="emp-name">Full Name</Label>
             <Input

@@ -9,7 +9,6 @@ import {
   Contact,
   FileBarChart,
   FileText,
-  Files,
   FolderKanban,
   HandCoins,
   Landmark,
@@ -37,6 +36,12 @@ import { AccountMenu } from "@/components/account-menu"
 import { BrandLockup, BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import { canSeeNav, navItems } from "@/lib/access"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { AccountIdentity } from "@/lib/account-identity"
 import { cn } from "@/lib/utils"
 
@@ -48,7 +53,6 @@ const navIcons: Record<string, LucideIcon> = {
   "/projects": FolderKanban,
   "/vendors": Truck,
   "/purchase-orders": Receipt,
-  "/documents": Files,
   "/accounts/invoices": FileText,
   "/accounts/receivable": ArrowDownLeft,
   "/income": HandCoins,
@@ -114,23 +118,25 @@ export function AppSidebar({
           )}
         </Button>
       </div>
-      <nav
-        id="primary-navigation"
-        aria-label="Primary"
-        className={cn(
-          "gap-1 overflow-x-auto px-3 py-3 md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:pb-6",
-          collapsed ? "hidden md:flex" : "flex",
-        )}
-      >
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.href}
-            item={{ ...item, icon: navIcons[item.href] }}
-            pathname={pathname}
-            collapsed={collapsed}
-          />
-        ))}
-      </nav>
+      <TooltipProvider delay={300}>
+        <nav
+          id="primary-navigation"
+          aria-label="Primary"
+          className={cn(
+            "sidebar-scroll gap-1 overflow-x-auto px-3 py-3 md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:pb-6",
+            collapsed ? "hidden md:flex md:items-center md:gap-2 md:px-3" : "flex",
+          )}
+        >
+          {visibleItems.map((item) => (
+            <NavLink
+              key={item.href}
+              item={{ ...item, icon: navIcons[item.href] }}
+              pathname={pathname}
+              collapsed={collapsed}
+            />
+          ))}
+        </nav>
+      </TooltipProvider>
       <div
         className={cn(
           "hidden border-t border-sidebar-border p-3 md:block",
@@ -167,20 +173,39 @@ function NavLink({
   const Icon = item.icon
   if (!Icon) return null
 
+  const className = cn(
+    "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+    !collapsed && "border-l-4 border-transparent",
+    active &&
+      !collapsed &&
+      "border-sidebar-primary-foreground bg-sidebar-primary font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
+    collapsed && "md:size-10 md:justify-center md:border-0 md:px-0",
+    active &&
+      collapsed &&
+      "md:bg-sidebar-primary md:font-medium md:text-sidebar-primary-foreground md:hover:bg-sidebar-primary md:hover:text-sidebar-primary-foreground",
+  )
+  const icon = <Icon aria-hidden="true" className={cn("shrink-0", collapsed ? "size-5" : "size-4")} />
+
+  if (!collapsed) {
+    return (
+      <Link href={item.href} aria-current={active ? "page" : undefined} className={className}>
+        {icon}
+        <span>{item.label}</span>
+      </Link>
+    )
+  }
+
   return (
-    <Link
-      href={item.href}
-      title={collapsed ? item.label : undefined}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex shrink-0 items-center gap-2 rounded-lg border-l-4 border-transparent px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        active &&
-          "border-sidebar-primary-foreground bg-sidebar-primary font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
-        collapsed && "md:justify-center md:px-2",
-      )}
-    >
-      <Icon aria-hidden="true" className="size-4" />
-      <span className={cn(collapsed && "md:sr-only")}>{item.label}</span>
-    </Link>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Link href={item.href} aria-current={active ? "page" : undefined} className={className} />
+        }
+      >
+        {icon}
+        <span className="sr-only">{item.label}</span>
+      </TooltipTrigger>
+      <TooltipContent side="right">{item.label}</TooltipContent>
+    </Tooltip>
   )
 }

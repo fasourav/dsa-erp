@@ -82,6 +82,7 @@ export function QuotationStudio({
       canSave={canSave}
       pending={pending}
       error={error}
+      files={{ parentType: "quotation", parentId: form.id }}
       onSave={() => {
         setError(null)
         startSave(async () => {

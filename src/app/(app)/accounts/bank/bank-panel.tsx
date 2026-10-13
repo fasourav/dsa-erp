@@ -10,6 +10,7 @@ import { useMemo, useState, useTransition } from "react"
 
 import { deleteBankTransaction } from "@/app/(app)/accounts/bank/actions"
 import { ManualEntriesDialog } from "@/app/(app)/accounts/bank/manual-entries-dialog"
+import { BankReconcileView } from "@/app/(app)/accounts/bank/bank-reconcile-view"
 import { BankStatementView } from "@/app/(app)/accounts/bank/bank-statement-view"
 import {
   BankMovementDialog,
@@ -48,6 +49,7 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import type { ReconciliationBundle } from "@/lib/bank-reconcile"
 import { cn } from "@/lib/utils"
 
 const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
@@ -61,6 +63,9 @@ export function BankPanel({
   fiscalYearStartMonth,
   view,
   initialQuery = "",
+  reconciliation = null,
+  periodFrom,
+  periodTo,
 }: {
   accounts: BankAccountRow[]
   transactions: BankTransactionRow[]
@@ -68,8 +73,11 @@ export function BankPanel({
   accountFilter: AccountFilter | null
   error: string | null
   fiscalYearStartMonth: number
-  view: "ledger" | "statement"
+  view: "ledger" | "statement" | "reconcile"
   initialQuery?: string
+  reconciliation?: ReconciliationBundle | null
+  periodFrom: string
+  periodTo: string
 }) {
   const showFinancials = useAccess().showFinancials
   const canAdd = useCan("banking", "add")
@@ -159,12 +167,57 @@ export function BankPanel({
     }
   })
 
+  if (view === "reconcile") {
+    if (!showFinancials || !reconciliation) {
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
+          <p className="text-sm text-muted-foreground">
+            Reconciliation is available when financial figures are visible.
+          </p>
+        </div>
+      )
+    }
+    const account = accountFilter
+      ? accounts.find((row) => row.id === accountFilter.id) ?? null
+      : null
+    return (
+      <BankReconcileView
+        accounts={accounts}
+        account={account}
+        transactions={transactions}
+        reconciliation={reconciliation}
+        periodFrom={periodFrom}
+        periodTo={periodTo}
+      />
+    )
+  }
+
   if (view === "statement") {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
-          <p className="text-sm text-muted-foreground">Statement</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
+            <p className="text-sm text-muted-foreground">Statement</p>
+          </div>
+          {showFinancials ? (
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={
+                <Link
+                  href={
+                    accountFilter
+                      ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
+                      : "/accounts/bank?view=reconcile"
+                  }
+                />
+              }
+            >
+              Reconcile
+            </Button>
+          ) : null}
         </div>
         <BankStatementView
           accounts={accounts}
@@ -308,6 +361,23 @@ export function BankPanel({
               >
                 Statement
               </Button>
+              {showFinancials ? (
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href={
+                        accountFilter
+                          ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
+                          : "/accounts/bank?view=reconcile"
+                      }
+                    />
+                  }
+                >
+                  Reconcile
+                </Button>
+              ) : null}
               {canAdd ? (
                 <Button type="button" variant="outline" onClick={() => setManualOpen(true)}>
                   Deposits & Withdrawals

@@ -1,9 +1,11 @@
 "use client"
 
 import { Printer } from "lucide-react"
-import { useEffect, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
 import { DocumentSheet } from "@/components/documents/document-sheet"
+import { RecordAttachments } from "@/components/record-attachments"
+import type { AttachmentParent } from "@/lib/attachments"
 import { Button } from "@/components/ui/button"
 import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
 import type { PrintDocument } from "@/lib/documents/present"
@@ -19,6 +21,7 @@ export function DocumentWorkspace({
   pending,
   error,
   onSave,
+  files,
   children,
 }: {
   title: string
@@ -29,6 +32,7 @@ export function DocumentWorkspace({
   pending: boolean
   error: string | null
   onSave: () => void
+  files?: { parentType: AttachmentParent; parentId: string | null }
   children: ReactNode
 }) {
   const top = clampPrintMargin(margins.topMm, 32)
@@ -84,9 +88,77 @@ export function DocumentWorkspace({
         </p>
       ) : null}
       <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-4 print:hidden">{children}</div>
-        <div className="doc-pad min-w-0 overflow-x-auto" style={{ paddingTop: `${top}mm`, paddingBottom: `${bottom}mm` }}>
+        <div className="flex min-w-0 flex-col gap-4 print:hidden">
+          {children}
+          {files?.parentId ? (
+            <RecordAttachments parentType={files.parentType} parentId={files.parentId} />
+          ) : null}
+        </div>
+        <PreviewStage top={top} bottom={bottom}>
           <DocumentSheet document={preview} />
+        </PreviewStage>
+      </div>
+    </div>
+  )
+}
+
+function PreviewStage({
+  top,
+  bottom,
+  children,
+}: {
+  top: number
+  bottom: number
+  children: ReactNode
+}) {
+  const frame = useRef<HTMLDivElement>(null)
+  const page = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+  const [height, setHeight] = useState<number | null>(null)
+
+  useLayoutEffect(() => {
+    const frameEl = frame.current
+    const pageEl = page.current
+    if (!frameEl || !pageEl) return
+
+    const update = () => {
+      const styles = getComputedStyle(frameEl)
+      const pad = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight)
+      const available = Math.max(0, frameEl.clientWidth - pad)
+      const natural = pageEl.offsetWidth
+      const next = natural > 0 ? Math.min(1, available / natural) : 1
+      const nextHeight = pageEl.offsetHeight * next
+      setScale((current) => (Math.abs(current - next) < 0.001 ? current : next))
+      setHeight((current) =>
+        current != null && Math.abs(current - nextHeight) < 0.5 ? current : nextHeight,
+      )
+    }
+
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(frameEl)
+    observer.observe(pageEl)
+    return () => observer.disconnect()
+  }, [top, bottom])
+
+  return (
+    <div
+      ref={frame}
+      className="doc-stage min-w-0 overflow-hidden rounded-xl bg-muted p-4 sm:p-8 print:overflow-visible print:bg-transparent print:p-0"
+    >
+      <div className="doc-stage-slot mx-auto" style={{ height: height ?? undefined }}>
+        <div
+          ref={page}
+          className="doc-page doc-pad origin-top shadow-md print:shadow-none"
+          style={{
+            transform: `scale(${scale})`,
+            paddingTop: `${top}mm`,
+            paddingRight: "12mm",
+            paddingBottom: `${bottom}mm`,
+            paddingLeft: "12mm",
+          }}
+        >
+          {children}
         </div>
       </div>
     </div>

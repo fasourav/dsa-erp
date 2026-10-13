@@ -9,6 +9,7 @@ import {
   updateVendor,
   type VendorFormFieldErrors,
 } from "@/app/(app)/vendors/actions"
+import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -309,6 +310,7 @@ export function VendorFormDialog({
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
+          {vendorId ? <RecordAttachments parentType="vendor" parentId={vendorId} /> : null}
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium">Vendor Type</span>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">

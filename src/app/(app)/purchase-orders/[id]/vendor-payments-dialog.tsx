@@ -12,6 +12,7 @@ import {
   updateVendorPayment,
   type VendorPaymentFieldErrors,
 } from "@/app/(app)/purchase-orders/[id]/actions"
+import { RecordAttachments } from "@/components/record-attachments"
 import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Button } from "@/components/ui/button"
@@ -164,6 +165,7 @@ export function VendorPaymentsDialog({
                       {row.notes ? (
                         <p className="text-sm text-muted-foreground">{row.notes}</p>
                       ) : null}
+                      <RecordAttachments parentType="vendor_payment" parentId={row.id} collapsed />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {canEdit ? (<Button

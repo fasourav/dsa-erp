@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { canOpenReports, canSeeReport, homePath } from "@/lib/access"
 import { reportDefinitions } from "@/lib/reports/catalog"
 import { getAccess } from "@/lib/permissions"
@@ -44,12 +44,14 @@ export default async function ReportsPage() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="outline" nativeButton={false} render={<Link href="/reports/backup?format=xlsx" />}>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Download routes must not be prefetched. */}
+            <a href="/reports/backup?format=xlsx" className={buttonVariants({ variant: "outline" })}>
               Excel Backup
-            </Button>
-            <Button variant="outline" nativeButton={false} render={<Link href="/reports/backup?format=json" />}>
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Download routes must not be prefetched. */}
+            <a href="/reports/backup?format=json" className={buttonVariants({ variant: "outline" })}>
               JSON Backup
-            </Button>
+            </a>
           </div>
         </section>
       ) : null}

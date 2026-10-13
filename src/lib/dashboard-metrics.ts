@@ -10,6 +10,7 @@ import {
 } from "@/lib/format"
 
 export const HIGH_VALUE_PROJECT_MIN = 50_000
+export const DASHBOARD_FIRST_YEAR = 2021
 
 const LAKH = 100_000
 const CRORE = 10_000_000
@@ -96,7 +97,21 @@ export type DashboardInput = {
     year: number | null
   }[]
   clientCount: number
-  leads: { status: string; estimatedValue: number; isOpen: boolean }[]
+  leads: { status: string; estimatedValue: number; isOpen: boolean; addedOn: string }[]
+  clients: { createdOn: string }[]
+  invoices: {
+    issuedOn: string
+    amount: number
+    voided: boolean
+    payments: { date: string; amount: number }[]
+  }[]
+  orders: {
+    issuedOn: string
+    totalValue: number
+    projectLinked: boolean
+    payments: { date: string; amount: number }[]
+  }[]
+  backlogYears: number[]
   revenue: { date: string; amount: number }[]
   vendorPayments: {
     date: string
@@ -129,6 +144,8 @@ export type DashboardInput = {
 export type DashboardModel = {
   updatedLabel: string
   updatedIso: string
+  scopeYear: number | null
+  scopeLabel: string
   defaultYear: number
   years: number[]
   snapshots: YearSnapshot[]
@@ -271,14 +288,52 @@ export function weekTrend(
   return current > previous ? "up" : "down"
 }
 
-export function buildDashboard(input: DashboardInput, now: Date): DashboardModel {
+export function dashboardYears(currentYear: number): number[] {
+  const years: number[] = []
+  for (let year = currentYear; year >= DASHBOARD_FIRST_YEAR; year -= 1) {
+    years.push(year)
+  }
+  return years
+}
+
+export function buildDashboard(
+  input: DashboardInput,
+  now: Date,
+  scopeYear: number | null = null,
+): DashboardModel {
   const today = dhakaToday(now)
   const currentYear = Number(today.slice(0, 4))
+  const scoped = scopeYear != null
+  const windowStart = scoped ? `${scopeYear}-01-01` : "0001-01-01"
+  const windowEnd = !scoped || scopeYear === currentYear ? today : `${scopeYear}-12-31`
+  const forecastEnd = scoped ? `${scopeYear}-12-31` : "9999-12-31"
+  const asOfToday = !scoped || scopeYear === currentYear
+
   const rawRevenue = dated(input.revenue)
   const rawVendorPayments = dated(input.vendorPayments)
   const rawOperational = dated(input.operational)
   const rawTaxes = dated(input.taxes)
   const rawBank = dated(input.bank)
+
+  const revenue = rawRevenue.filter((row) => row.date <= today)
+  const vendorPayments = rawVendorPayments.filter((row) => row.date <= today)
+  const operational = rawOperational.filter((row) => row.date <= today)
+  const taxes = rawTaxes.filter((row) => row.date <= today)
+  const bank = rawBank.filter((row) => row.date <= today)
+
+  const books: Books = {
+    revenue,
+    vendorPayments,
+    operational,
+    taxes,
+    bank,
+    collectionRate: ledgerCollectionRate(input, windowStart, windowEnd, !scoped),
+  }
+  const windowBooks = clipBooks(books, windowStart, windowEnd)
+  const snapshot = scoped
+    ? buildYear(scopeYear, today, currentYear, books)
+    : buildSpan(currentYear, windowEnd, books)
+
   const forecastBooks: Books = {
     revenue: rawRevenue,
     vendorPayments: rawVendorPayments,
@@ -288,154 +343,373 @@ export function buildDashboard(input: DashboardInput, now: Date): DashboardModel
     collectionRate: 0,
   }
   const forecastNet = netProfitOf(
-    totalBetween(rawRevenue, "0001-01-01", "9999-12-31"),
-    expenseTotals(forecastBooks, "0001-01-01", "9999-12-31"),
+    totalBetween(rawRevenue, windowStart, forecastEnd),
+    expenseTotals(forecastBooks, windowStart, forecastEnd),
   )
+  const receivables = receivablesAsOf(input, windowEnd, asOfToday)
+  const payables = payablesAsOf(input, windowEnd, asOfToday)
 
-  const revenue = rawRevenue.filter((row) => row.date <= today)
-  const vendorPayments = rawVendorPayments.filter((row) => row.date <= today)
-  const operational = rawOperational.filter((row) => row.date <= today)
-  const taxes = rawTaxes.filter((row) => row.date <= today)
-  const bank = rawBank.filter((row) => row.date <= today)
-
-  const years = new Set<number>([currentYear])
-  for (const row of [...revenue, ...vendorPayments, ...operational, ...taxes, ...bank]) {
-    years.add(Number(row.date.slice(0, 4)))
-  }
-  for (const project of input.projects) {
-    const year = projectYear(project)
-    if (year != null) {
-      years.add(year)
-    }
-  }
-
-  const axisYears = [...years].sort((left, right) => left - right)
-  const collectionRate = percentOf(input.ledgerPaid, input.billed)
-  const snapshots = axisYears.map((year) =>
-    buildYear(year, today, currentYear, {
-      revenue,
-      vendorPayments,
-      operational,
-      taxes,
-      bank,
-      collectionRate,
-    }),
-  )
-
-  const lifetimeBooks: Books = {
-    revenue,
-    vendorPayments,
-    operational,
-    taxes,
-    bank,
-    collectionRate,
-  }
-  const lifetime = expenseTotals(lifetimeBooks, "0001-01-01", "9999-12-31")
-  const allRevenue = totalBetween(revenue, "0001-01-01", "9999-12-31")
-  const allNet = netProfitOf(allRevenue, lifetime)
-  const contractValue = input.projects.reduce(
-    (total, project) => total + project.totalValue,
-    0,
-  )
-
-  const cashBalance = balanceAsOf(bank, today, input.openingBalance)
+  const cashBalance = balanceAsOf(bank, windowEnd, input.openingBalance)
   const cashDelta = changePercent(
     cashBalance,
-    balanceAsOf(bank, previousMonthEnd(today), input.openingBalance),
+    balanceAsOf(bank, previousMonthEnd(windowEnd), input.openingBalance),
   )
 
-  const launch = normalizeLaunchDate(input.launchDate)
-  const span = calendarSpan(launch <= today ? launch : today, today)
-  // Launch day itself is a full day of operation, so a same-day span still divides by 1.
-  const operatingDays = Math.max(span.totalDays, 1)
-
-  const projectYears = input.projects
+  const projects = input.projects.filter(
+    (project) => !scoped || projectYear(project) === scopeYear,
+  )
+  const leads = input.leads.filter(
+    (lead) => !scoped || inSpan(lead.addedOn, windowStart, windowEnd),
+  )
+  const clientCount =
+    input.clients.length > 0
+      ? input.clients.filter(
+          (client) => !scoped || inSpan(client.createdOn, windowStart, windowEnd),
+        ).length
+      : scoped
+        ? 0
+        : input.clientCount
+  const backlogCount = scoped
+    ? input.backlogYears.filter((year) => year === scopeYear).length
+    : input.backlogCount
+  const contractValue = projects.reduce((total, project) => total + project.totalValue, 0)
+  const windowRevenue = totalBetween(revenue, windowStart, windowEnd)
+  const won = leads.filter((lead) => lead.status === "won").length
+  const lost = leads.filter((lead) => lead.status === "lost").length
+  const projectYears = projects
     .map((project) => projectYear(project))
     .filter((year): year is number => year != null)
-  const sinceYear = projectYears.length > 0 ? Math.min(...projectYears) : null
-  const won = input.leads.filter((lead) => lead.status === "won").length
-  const lost = input.leads.filter((lead) => lead.status === "lost").length
 
-  const latestWeek = isoWeek(today)
-  const weeks = lastWeeks(today, 12, {
-    revenue,
-    vendorPayments,
-    operational,
-    taxes,
-    bank,
-  })
+  const latestWeek = isoWeek(windowEnd)
+  const weeks = lastWeeks(windowEnd, 12, windowBooks)
+  const annualYears = chartYears(input, currentYear)
+  const annual = scoped
+    ? monthSpark(scopeYear, scopeYear === currentYear ? today : windowEnd, (start, end) =>
+        grossBetween(revenue, vendorPayments, operational, taxes, start, end),
+      ).map((point) => ({ label: point.label, grossProfit: point.value }))
+    : annualYears.map((year) => ({
+        label: `FY${year}`,
+        grossProfit: grossBetween(
+          revenue,
+          vendorPayments,
+          operational,
+          taxes,
+          `${year}-01-01`,
+          year === currentYear ? today : `${year}-12-31`,
+        ),
+      }))
+  const trend = scoped
+    ? monthSpark(scopeYear, scopeYear === currentYear ? today : windowEnd, (start, end) =>
+        projects.filter((project) => inSpan(project.startedOn, start, end)).length,
+      ).map((point) => ({ label: point.label, count: point.value }))
+    : annualYears.map((year) => ({
+        label: String(year),
+        count: input.projects.filter((project) => projectYear(project) === year).length,
+      }))
 
-  const annual = axisYears.map((year) => ({
-    label: `FY${year}`,
-    grossProfit: grossBetween(
-      revenue,
-      vendorPayments,
-      operational,
-      taxes,
-      `${year}-01-01`,
-      year === currentYear ? today : `${year}-12-31`,
-    ),
-  }))
-  const firstAnnual = axisYears[0] ?? currentYear
-  const lastAnnual = axisYears[axisYears.length - 1] ?? currentYear
-  const annualCaption =
-    firstAnnual === lastAnnual
-      ? `Gross Profit FY${firstAnnual}${lastAnnual === currentYear ? " (FY" + currentYear + " YTD)" : ""}`
-      : `Gross Profit FY${firstAnnual} – FY${lastAnnual}${lastAnnual === currentYear ? " (FY" + currentYear + " YTD)" : ""}`
+  const launch = normalizeLaunchDate(input.launchDate)
+  const tenureStart = scoped
+    ? launch > windowStart
+      ? launch
+      : windowStart
+    : launch <= today
+      ? launch
+      : today
+  const tenureEnd = windowEnd
+  const tenureSpan =
+    tenureStart <= tenureEnd ? calendarSpan(tenureStart, tenureEnd) : emptySpan()
+  // Launch day itself is a full day of operation, so a same-day span still divides by 1.
+  const operatingDays = tenureStart <= tenureEnd ? Math.max(tenureSpan.totalDays, 1) : 0
+  const windowNet = snapshot.netProfit
 
   return {
     updatedLabel: formatUpdatedAt(now),
     updatedIso: now.toISOString(),
-    defaultYear: years.has(currentYear) ? currentYear : axisYears[axisYears.length - 1],
-    years: [...axisYears].sort((left, right) => right - left),
-    snapshots,
+    scopeYear: scoped ? scopeYear : null,
+    scopeLabel: scoped ? `FY${scopeYear}` : "All Time",
+    defaultYear: scoped ? scopeYear : currentYear,
+    years: dashboardYears(currentYear),
+    snapshots: [snapshot],
     cashBalance,
     cashDelta,
-    cashSpark: monthEnds(currentYear, today, bank, input.openingBalance),
-    receivables: input.receivables,
-    payables: input.payables,
+    cashSpark: scoped
+      ? monthEnds(scopeYear, windowEnd, bank, input.openingBalance)
+      : annualYears.map((year) => ({
+          label: String(year),
+          value: balanceAsOf(
+            bank,
+            year === currentYear ? today : `${year}-12-31`,
+            input.openingBalance,
+          ),
+        })),
+    receivables,
+    payables,
     // Net profit, using the same formula as the KPI, if open invoices are collected
-    // and open payables are paid. Uncommitted future costs are not included.
-    forecastedProfit: forecastNet + input.receivables - input.payables,
+    // and open payables are paid. A year includes later dates in that year.
+    // All Time includes every dated row. Uncommitted future costs are not included.
+    forecastedProfit: forecastNet + receivables - payables,
     weeks,
-    weekCaption: `${formatRange(latestWeek.start, latestWeek.end)} (W${latestWeek.week}) · Last 12 Weeks`,
+    weekCaption: presentWeekCaption(latestWeek.start, latestWeek.end, latestWeek.week),
     annual,
-    annualCaption,
-    trend: axisYears.map((year) => ({
-      label: String(year),
-      count: input.projects.filter((project) => projectYear(project) === year).length,
-    })),
-    trendCaption: `${input.projects.length} Total`,
+    annualCaption: presentAnnualCaption(
+      annualYears[0] ?? currentYear,
+      annualYears[annualYears.length - 1] ?? currentYear,
+      currentYear,
+      scoped,
+      scoped ? scopeYear : null,
+    ),
+    trend,
+    trendCaption: `${scoped ? projects.length : input.projects.length} Total`,
     performance: {
-      projectCount: input.projects.length,
-      sinceYear,
-      highValue: input.projects.filter(
-        (project) => project.totalValue >= HIGH_VALUE_PROJECT_MIN,
-      ).length,
-      lowValue: input.projects.filter(
-        (project) => project.totalValue < HIGH_VALUE_PROJECT_MIN,
-      ).length,
-      active: input.projects.filter((project) => project.status === "active").length,
-      openLeads: input.leads.filter((lead) => lead.isOpen).length,
-      clients: input.clientCount,
-      leadValue: input.leads
+      projectCount: projects.length,
+      sinceYear: scoped
+        ? projects.length > 0
+          ? scopeYear
+          : null
+        : projectYears.length > 0
+          ? Math.min(...projectYears)
+          : null,
+      highValue: projects.filter((project) => project.totalValue >= HIGH_VALUE_PROJECT_MIN)
+        .length,
+      lowValue: projects.filter((project) => project.totalValue < HIGH_VALUE_PROJECT_MIN)
+        .length,
+      active: projects.filter((project) => project.status === "active").length,
+      openLeads: leads.filter((lead) => lead.isOpen).length,
+      clients: clientCount,
+      leadValue: leads
         .filter((lead) => lead.isOpen)
         .reduce((total, lead) => total + lead.estimatedValue, 0),
       // Won leads divided by won + lost. Open, on hold, and cancelled leads are not decided.
       winRate: percentOf(won, won + lost),
-      // Cash collected over contracted project value. Collection Rate uses the invoice ledger.
-      collectionEfficiency: percentOf(sum(revenue), contractValue),
+      // Cash collected in the scope over contracted value of projects in the scope.
+      collectionEfficiency: percentOf(windowRevenue, contractValue),
       // project_backlogs: spend already above collections, not a not-started phase.
-      backlog: input.backlogCount,
+      backlog: backlogCount,
     },
     tenure: {
       launchDateLabel: formatDayMonYear(launch),
-      inOperation: formatOperation(span),
-      daysLabel: `${formatGroupedCount(span.totalDays)} Days Since Launch`,
-      revenuePerDay: Math.round(sum(revenue) / operatingDays),
-      netProfitPerDay: Math.round(allNet / operatingDays),
+      inOperation: formatOperation(tenureSpan),
+      daysLabel: scoped
+        ? `${formatGroupedCount(operatingDays)} Days In ${scopeYear}`
+        : `${formatGroupedCount(tenureSpan.totalDays)} Days Since Launch`,
+      revenuePerDay: operatingDays > 0 ? Math.round(windowRevenue / operatingDays) : 0,
+      netProfitPerDay: operatingDays > 0 ? Math.round(windowNet / operatingDays) : 0,
     },
   }
+}
+
+export function presentWeekCaption(start: string, end: string, week: number): string {
+  return `${formatRange(start, end)} (W${week}) · Last 12 Weeks`
+}
+
+export function presentAnnualCaption(
+  first: number,
+  last: number,
+  currentYear: number,
+  monthly: boolean,
+  scopeYear: number | null,
+): string {
+  if (monthly && scopeYear != null) {
+    return `Gross Profit FY${scopeYear}${scopeYear === currentYear ? " (YTD)" : ""}`
+  }
+  const years = first === last ? [first] : [first, last]
+  return annualCaption(years, currentYear)
+}
+
+export function presentTenure(input: {
+  launch: string
+  spanStart: string
+  spanEnd: string
+  scoped: boolean
+  scopeYear: number | null
+  revenuePerDay: number
+  netProfitPerDay: number
+}): DashboardModel["tenure"] {
+  const launch = normalizeLaunchDate(input.launch)
+  const span =
+    input.spanStart <= input.spanEnd
+      ? calendarSpan(input.spanStart, input.spanEnd)
+      : emptySpan()
+  const operatingDays =
+    input.spanStart <= input.spanEnd ? Math.max(span.totalDays, 1) : 0
+  return {
+    launchDateLabel: formatDayMonYear(launch),
+    inOperation: formatOperation(span),
+    daysLabel: input.scoped
+      ? `${formatGroupedCount(operatingDays)} Days In ${input.scopeYear}`
+      : `${formatGroupedCount(span.totalDays)} Days Since Launch`,
+    revenuePerDay: input.revenuePerDay,
+    netProfitPerDay: input.netProfitPerDay,
+  }
+}
+
+export function parseDashboardYear(
+  value: string | undefined,
+  currentYear: number,
+): number | null {
+  if (value === "all") return null
+  if (!value) return currentYear
+  const year = Number(value)
+  if (!Number.isInteger(year) || year < DASHBOARD_FIRST_YEAR || year > currentYear) {
+    return currentYear
+  }
+  return year
+}
+
+function annualCaption(years: number[], currentYear: number): string {
+  const firstAnnual = years[0] ?? currentYear
+  const lastAnnual = years[years.length - 1] ?? currentYear
+  if (firstAnnual === lastAnnual) {
+    return `Gross Profit FY${firstAnnual}${lastAnnual === currentYear ? " (FY" + currentYear + " YTD)" : ""}`
+  }
+  return `Gross Profit FY${firstAnnual} – FY${lastAnnual}${lastAnnual === currentYear ? " (FY" + currentYear + " YTD)" : ""}`
+}
+
+function chartYears(input: DashboardInput, currentYear: number): number[] {
+  let first = DASHBOARD_FIRST_YEAR
+  for (const project of input.projects) {
+    const year = projectYear(project)
+    if (year != null && year < first) first = year
+  }
+  const years: number[] = []
+  for (let year = first; year <= currentYear; year += 1) years.push(year)
+  return years
+}
+
+function clipBooks(books: Books, start: string, end: string): Books {
+  return {
+    revenue: books.revenue.filter((row) => inSpan(row.date, start, end)),
+    vendorPayments: books.vendorPayments.filter((row) => inSpan(row.date, start, end)),
+    operational: books.operational.filter((row) => inSpan(row.date, start, end)),
+    taxes: books.taxes.filter((row) => inSpan(row.date, start, end)),
+    bank: books.bank.filter((row) => inSpan(row.date, start, end)),
+    collectionRate: books.collectionRate,
+  }
+}
+
+function buildSpan(year: number, end: string, books: Books): YearSnapshot {
+  const start = "0001-01-01"
+  const expenses = expenseTotals(books, start, end)
+  const revenue = totalBetween(books.revenue, start, end)
+  const grossProfit = grossProfitOf(revenue, expenses)
+  const netProfit = netProfitOf(revenue, expenses)
+  const projectExpense = projectExpenseOf(expenses)
+  const withdrawal = totalWithdrawals(books.bank, start, end)
+  const currentYear = Number(end.slice(0, 4))
+  return {
+    year,
+    revenue,
+    revenueDelta: null,
+    grossProfit,
+    grossDelta: null,
+    netProfit,
+    netDelta: null,
+    totalExpense: expenses.total,
+    expenseDelta: null,
+    withdrawal,
+    material: expenses.material,
+    subcontractor: expenses.subcontractor,
+    projectOverhead: expenses.projectOverhead,
+    tax: expenses.tax,
+    admin: expenses.admin,
+    operational: expenses.operational,
+    marketing: expenses.marketing,
+    salary: expenses.salary,
+    projectExpense,
+    collectionRate: books.collectionRate,
+    expenseRatio: percentOf(expenses.total, revenue),
+    grossMargin: percentOf(grossProfit, revenue),
+    netMargin: percentOf(netProfit, revenue),
+    withdrawalRatio: percentOf(withdrawal, revenue),
+    projectCostRatio: percentOf(projectExpense, expenses.total),
+    taxRatio: percentOf(expenses.tax, revenue),
+    adminRatio: percentOf(adminExpenseOf(expenses), revenue),
+    revenueSpark: yearSpark(start, end, currentYear, (from, to) =>
+      totalBetween(books.revenue, from, to),
+    ),
+    grossSpark: yearSpark(start, end, currentYear, (from, to) =>
+      grossProfitOf(totalBetween(books.revenue, from, to), expenseTotals(books, from, to)),
+    ),
+    netSpark: yearSpark(start, end, currentYear, (from, to) =>
+      netProfitOf(totalBetween(books.revenue, from, to), expenseTotals(books, from, to)),
+    ),
+    expenseSpark: yearSpark(start, end, currentYear, (from, to) => expenseTotals(books, from, to).total),
+  }
+}
+
+function yearSpark(
+  start: string,
+  end: string,
+  currentYear: number,
+  valueFor: (start: string, end: string) => number,
+): ChartPoint[] {
+  const first = Math.max(DASHBOARD_FIRST_YEAR, Number(start.slice(0, 4)) || DASHBOARD_FIRST_YEAR)
+  const last = Number(end.slice(0, 4))
+  const points: ChartPoint[] = []
+  for (let year = first; year <= last; year += 1) {
+    const yearEnd = year === currentYear ? end : `${year}-12-31`
+    points.push({
+      label: String(year),
+      value: valueFor(`${year}-01-01`, yearEnd),
+    })
+  }
+  return points
+}
+
+function emptySpan() {
+  return { years: 0, months: 0, days: 0, totalDays: 0 }
+}
+
+function ledgerCollectionRate(
+  input: DashboardInput,
+  start: string,
+  end: string,
+  allTime: boolean,
+): number {
+  if (allTime || input.invoices.length === 0) {
+    return percentOf(input.ledgerPaid, input.billed)
+  }
+  let billed = 0
+  let paid = 0
+  for (const invoice of input.invoices) {
+    if (invoice.voided || !inSpan(invoice.issuedOn, start, end)) continue
+    billed += invoice.amount
+  }
+  for (const invoice of input.invoices) {
+    if (invoice.voided) continue
+    for (const payment of invoice.payments) {
+      if (inSpan(payment.date, start, end)) paid += payment.amount
+    }
+  }
+  return percentOf(paid, billed)
+}
+
+function receivablesAsOf(input: DashboardInput, asOf: string, countEveryPayment: boolean): number {
+  if (input.invoices.length === 0) return input.receivables
+  let total = 0
+  for (const invoice of input.invoices) {
+    if (invoice.voided || invoice.issuedOn > asOf) continue
+    const paid = invoice.payments.reduce((sum, payment) => {
+      if (!countEveryPayment && payment.date > asOf) return sum
+      return sum + payment.amount
+    }, 0)
+    total += Math.max(invoice.amount - paid, 0)
+  }
+  return total
+}
+
+function payablesAsOf(input: DashboardInput, asOf: string, countEveryPayment: boolean): number {
+  if (input.orders.length === 0) return input.payables
+  let total = 0
+  for (const order of input.orders) {
+    if (!order.projectLinked || order.issuedOn > asOf) continue
+    const paid = order.payments.reduce((sum, payment) => {
+      if (!countEveryPayment && payment.date > asOf) return sum
+      return sum + payment.amount
+    }, 0)
+    total += Math.max(order.totalValue - paid, 0)
+  }
+  return total
 }
 
 type Books = {
@@ -790,10 +1064,6 @@ function totalBetween(rows: Dated[], start: string, end: string): number {
     }
   }
   return total
-}
-
-function sum(rows: Dated[]): number {
-  return rows.reduce((total, row) => total + row.amount, 0)
 }
 
 function inSpan(date: string, start: string, end: string): boolean {

@@ -66,6 +66,7 @@ export function PurchaseOrderStudio({
       canSave={canSave}
       pending={pending}
       error={error}
+      files={{ parentType: "purchase_order", parentId: form.id }}
       onSave={() => {
         setError(null)
         startSave(async () => {
