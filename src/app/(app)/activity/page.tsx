@@ -103,7 +103,7 @@ export default async function ActivityPage() {
     return {
       id: row.id,
       when: formatWhen(row.created_at),
-      whenIso: row.created_at.slice(0, 10),
+      whenIso: dhakaDate(row.created_at),
       who: row.actor_id ? (names.get(row.actor_id) ?? "User") : "System",
       what: label ? `${verb} ${label}` : row.summary,
       action: row.action,
@@ -144,8 +144,21 @@ function formatWhen(value: string) {
   const time = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "Asia/Dhaka",
   }).format(date)
-  return `${formatDayMonYear(value.slice(0, 10))}, ${time}`
+  return `${formatDayMonYear(dhakaDate(value))}, ${time}`
+}
+
+// The server may run in UTC (Vercel), so pin dates and times to the office time zone.
+function dhakaDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10)
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Dhaka",
+  }).format(date)
 }
 
 function fieldLabel(key: string) {
@@ -175,13 +188,28 @@ function diffLines(oldValues: Json | null, newValues: Json | null): string[] {
   const previous = asRecord(oldValues)
   const next = asRecord(newValues)
   const keys = [...new Set([...Object.keys(previous), ...Object.keys(next)])].filter(
-    (key) => key !== "updated_at" && key !== "last_sign_in_at",
+    (key) => !hiddenField(key),
   )
 
   return keys.flatMap((key) => {
+    // Names only: never show raw record ids, even in free-form columns.
+    if (isUuidValue(previous[key]) || isUuidValue(next[key])) return []
     const from = displayValue(previous[key])
     const to = displayValue(next[key])
     if (from === to) return []
     return [`${fieldLabel(key)}: ${from} to ${to}`]
   })
+}
+
+// Internal columns that mean nothing to a reader (ids, keys and timestamps).
+const HIDDEN_FIELDS = new Set(["id", "created_at", "updated_at", "last_sign_in_at", "created_by", "updated_by"])
+
+function hiddenField(key: string) {
+  return HIDDEN_FIELDS.has(key) || key.endsWith("_id")
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isUuidValue(value: Json | undefined) {
+  return typeof value === "string" && UUID_PATTERN.test(value)
 }
