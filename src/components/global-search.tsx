@@ -103,10 +103,20 @@ export function GlobalSearch() {
 
   return (
     <>
-      <Button type="button" variant="outline" size="lg" aria-label="Search" onClick={openPalette}>
-        <Search aria-hidden="true" className="size-4" />
-        <span className="hidden sm:inline">Search</span>
-        <span className="hidden text-muted-foreground md:inline">{shortcut}</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        aria-label="Search"
+        aria-keyshortcuts="Control+K Meta+K"
+        className="md:h-8 md:w-60 md:justify-start md:gap-2 md:bg-fill md:px-3.5 md:font-normal md:text-muted-foreground md:shadow-none md:backdrop-blur-none md:hover:bg-fill-strong"
+        onClick={openPalette}
+      >
+        <Search aria-hidden="true" className="size-4.5 md:size-4" />
+        <span className="hidden md:inline">Search</span>
+        <kbd className="ml-auto hidden font-sans text-caption text-subtle-foreground md:inline">
+          {shortcut}
+        </kbd>
       </Button>
       <Dialog
         open={open}
@@ -119,7 +129,7 @@ export function GlobalSearch() {
           }
         }}
       >
-        <DialogContent className="overflow-hidden sm:max-w-lg">
+        <DialogContent className="overflow-hidden sm:max-w-lg md:max-w-xl">
           <DialogHeader className="pr-12">
             <DialogTitle>Search</DialogTitle>
             <div className="flex flex-col gap-2">
@@ -128,6 +138,8 @@ export function GlobalSearch() {
                 id={searchId}
                 value={query}
                 autoFocus
+                type="search"
+                enterKeyHint="search"
                 placeholder="Names, notes, or amounts"
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={onInputKeyDown}
@@ -149,7 +161,7 @@ export function GlobalSearch() {
             ) : (
               groups.map(([moduleLabel, hits]) => (
                 <section key={moduleLabel} className="flex flex-col gap-1">
-                  <h2 className="px-2 text-sm font-medium text-muted-foreground">{moduleLabel}</h2>
+                  <h2 className="px-3 text-caption font-semibold text-muted-foreground">{moduleLabel}</h2>
                   {hits.map((hit) => {
                     flatIndex += 1
                     const index = flatIndex
@@ -159,13 +171,13 @@ export function GlobalSearch() {
                         href={hit.href}
                         onClick={() => setOpen(false)}
                         className={cn(
-                          "flex flex-col gap-0.5 rounded-lg px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
-                          index === active && "bg-accent text-accent-foreground",
+                          "flex min-h-11 flex-col justify-center gap-0.5 rounded-xl px-3 py-2 text-callout hover:bg-fill md:min-h-0 md:text-ui",
+                          index === active && "bg-primary-tint text-foreground hover:bg-primary-tint",
                         )}
                       >
                         <span className="font-medium">{hit.label}</span>
                         {hit.detail ? (
-                          <span className="text-muted-foreground">{hit.detail}</span>
+                          <span className="text-caption text-muted-foreground">{hit.detail}</span>
                         ) : null}
                       </Link>
                     )

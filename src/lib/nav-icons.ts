@@ -1,0 +1,60 @@
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Banknote,
+  Box,
+  Calculator,
+  Contact,
+  FileBarChart,
+  FileText,
+  FolderKanban,
+  HandCoins,
+  Landmark,
+  LayoutDashboard,
+  LayoutGrid,
+  ListTodo,
+  PiggyBank,
+  Receipt,
+  ScrollText,
+  Settings,
+  Shield,
+  Truck,
+  UserPlus,
+  Users,
+  Wallet,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react"
+
+// One icon per destination. The sidebar, the phone tab bar, and the All
+// Modules grid all read this map; never render a dot in place of an icon.
+export const navIcons: Record<string, LucideIcon> = {
+  "/dashboard": LayoutDashboard,
+  "/reports": FileBarChart,
+  "/leads": UserPlus,
+  "/clients": Users,
+  "/projects": FolderKanban,
+  "/vendors": Truck,
+  "/purchase-orders": Receipt,
+  "/accounts/invoices": FileText,
+  "/accounts/receivable": ArrowDownLeft,
+  "/income": HandCoins,
+  "/accounts/payable": ArrowUpRight,
+  "/expense": WalletCards,
+  "/accounts/expenses": Wallet,
+  "/backlog": ListTodo,
+  "/accounts/vat-tax": Calculator,
+  "/accounts/bank": Landmark,
+  "/accounts/budgets": PiggyBank,
+  "/assets": Box,
+  "/hr/employees": Contact,
+  "/hr/payroll": Banknote,
+  "/settings/users": Shield,
+  "/activity": ScrollText,
+  "/settings": Settings,
+  "/modules": LayoutGrid,
+}
+
+// The phone tab bar: three destinations plus All Modules.
+export const tabHrefs = ["/dashboard", "/projects", "/leads"] as const
+export const modulesHref = "/modules"

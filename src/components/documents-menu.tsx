@@ -1,6 +1,6 @@
 "use client"
 
-import { Files } from "lucide-react"
+import { ChevronDown, FileText, Files } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -10,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { allows } from "@/lib/access"
@@ -29,18 +30,26 @@ export function DocumentsMenu() {
         render={
           <Button
             type="button"
-            variant={active ? "secondary" : "outline"}
+            variant="outline"
+            size="sm"
             aria-current={active ? "page" : undefined}
+            className="aria-[current=page]:bg-primary-tint aria-[current=page]:text-primary-text"
           />
         }
       >
-        <Files aria-hidden="true" className="size-4" />
+        <Files aria-hidden="true" />
         Documents
+        <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem render={<Link href="/documents" />}>All Documents</DropdownMenuItem>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-60">
+        <DropdownMenuItem render={<Link href="/documents" />}>
+          <Files aria-hidden="true" />
+          All Documents
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         {visible.map((kind) => (
           <DropdownMenuItem key={kind.href} render={<Link href={kind.href} />}>
+            <FileText aria-hidden="true" />
             {kind.title}
           </DropdownMenuItem>
         ))}

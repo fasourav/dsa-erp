@@ -1,35 +1,79 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
-import { LogOut, UserRound } from "lucide-react"
+import { ChevronDown, Ellipsis, Files, LogOut, Moon, Sun, UserRound } from "lucide-react"
 
 import { signOut } from "@/app/auth/actions"
+import { useAccess } from "@/components/access-provider"
+import { applyTheme, currentTheme } from "@/components/theme-toggle"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { canOpenDocuments } from "@/lib/access"
 import {
   accountInitials,
   accountSubtitle,
   type AccountIdentity,
 } from "@/lib/account-identity"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
-export function AccountMenu({
-  account,
-  collapsed = false,
-}: {
-  account: AccountIdentity
-  collapsed?: boolean
-}) {
+function Avatar({ account, className }: { account: AccountIdentity; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={
+        className ??
+        "flex size-6 shrink-0 items-center justify-center rounded-full bg-avatar text-micro font-bold text-on-color"
+      }
+    >
+      {accountInitials(account.name, account.email)}
+    </span>
+  )
+}
+
+function AccountHeader({ account }: { account: AccountIdentity }) {
+  return (
+    <DropdownMenuGroup>
+    <DropdownMenuLabel className="flex items-center gap-3 px-2.5 py-2">
+      <Avatar
+        account={account}
+        className="flex size-9.5 shrink-0 items-center justify-center rounded-full bg-avatar text-label font-bold text-on-color"
+      />
+      <span className="min-w-0">
+        <span className="block truncate text-callout font-semibold text-foreground md:text-ui">
+          {account.name}
+        </span>
+        <span className="block truncate text-caption font-normal text-muted-foreground">
+          {accountSubtitle(account)}
+        </span>
+      </span>
+    </DropdownMenuLabel>
+    </DropdownMenuGroup>
+  )
+}
+
+function useSignOut() {
   const [pending, startTransition] = useTransition()
-  const subtitle = accountSubtitle(account)
-  const initials = accountInitials(account.name, account.email)
+  return {
+    pending,
+    signOut: () =>
+      startTransition(() => {
+        void signOut()
+      }),
+  }
+}
+
+// Desktop top bar profile menu.
+export function AccountMenu({ account }: { account: AccountIdentity }) {
+  const { pending, signOut: handleSignOut } = useSignOut()
+  const firstName = account.name.split(/\s+/)[0] || account.name
 
   return (
     <DropdownMenu>
@@ -37,38 +81,78 @@ export function AccountMenu({
         render={
           <Button
             type="button"
-            variant="ghost"
-            className={cn(
-              "h-auto min-h-9 max-w-full justify-start px-2 py-1",
-              collapsed && "md:size-9 md:justify-center md:px-0",
-            )}
-            aria-label={`${account.name}, ${subtitle}`}
+            variant="outline"
+            size="sm"
+            className="pr-2.5 pl-1.5"
+            aria-label={`${account.name}, ${accountSubtitle(account)}`}
           />
         }
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
-          {initials}
-        </span>
-        <span className={cn("min-w-0 text-left", collapsed && "md:sr-only")}>
-          <span className="block truncate text-sm font-medium">{account.name}</span>
-          <span className="block truncate text-sm text-muted-foreground">{subtitle}</span>
-        </span>
+        <Avatar account={account} />
+        <span className="max-w-32 truncate">{firstName}</span>
+        <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" sideOffset={8} className="w-64">
+        <AccountHeader account={account} />
+        <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/profile" />}>
-          <UserRound aria-hidden="true" className="size-4" />
+          <UserRound aria-hidden="true" />
           My Profile
         </DropdownMenuItem>
+        <DropdownMenuItem disabled={pending} onClick={handleSignOut}>
+          <LogOut aria-hidden="true" />
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+// Phone nav bar "more" menu: everything the desktop top bar holds.
+export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
+  const access = useAccess()
+  const { pending, signOut: handleSignOut } = useSignOut()
+  const [dark, setDark] = useState<boolean | null>(null)
+
+  return (
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) setDark(currentTheme() === "dark")
+      }}
+    >
+      <DropdownMenuTrigger
+        render={<Button type="button" variant="outline" size="icon" aria-label="More" />}
+      >
+        <Ellipsis aria-hidden="true" className="size-5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-72">
+        <AccountHeader account={account} />
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={pending}
-          onClick={() => {
-            startTransition(() => {
-              void signOut()
-            })
-          }}
-        >
-          <LogOut aria-hidden="true" className="size-4" />
+        <DropdownMenuGroup>
+          {canOpenDocuments(access) ? (
+            <DropdownMenuItem render={<Link href="/documents" />}>
+              <Files aria-hidden="true" />
+              Documents
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem render={<Link href="/profile" />}>
+            <UserRound aria-hidden="true" />
+            My Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              const next = currentTheme() === "dark" ? "light" : "dark"
+              applyTheme(next)
+              setDark(next === "dark")
+            }}
+          >
+            {dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+            {dark ? "Light Appearance" : "Dark Appearance"}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" disabled={pending} onClick={handleSignOut}>
+          <LogOut aria-hidden="true" />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
