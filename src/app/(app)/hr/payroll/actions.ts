@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 
+import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
+import { overdraftMessage } from "@/lib/insufficient-balance"
 import { netPay, roundMoney, workedInMonth } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -306,6 +308,31 @@ async function saveMonthlySalary(
     })
   }
 
+  const needed = roundMoney(
+    prepared.reduce(
+      (sum, line) => sum + netPay(line.salary, line.allowance, line.bonus, line.deduction),
+      0,
+    ),
+  )
+  let release = 0
+  if (existingLineIds.size > 0) {
+    const posted = await supabase
+      .from("bank_transactions_readable")
+      .select("amount")
+      .in("payroll_line_id", [...existingLineIds.values()])
+    if (!posted.error && posted.data && posted.data.every((row) => row.amount != null)) {
+      release = posted.data.reduce((sum, row) => sum + Number(row.amount), 0)
+    }
+  }
+  const overdraft = await overdraftMessage(supabase, {
+    accountId: bankAccountId,
+    needed,
+    release,
+  })
+  if (overdraft) {
+    return { error: overdraft, fieldErrors: { bankAccountId: overdraft } }
+  }
+
   const runValues = {
     period_year: year,
     period_month: month,
@@ -324,10 +351,14 @@ async function saveMonthlySalary(
       .select("id")
 
     if (error) {
-      if (error.code === "23505") {
+      const issue = dbIssue(error)
+      if (issue?.field === "month" || error.code === "23505") {
         return { error: null, fieldErrors: { month: alreadyPaid } }
       }
-      return { error: "Could not save this monthly salary." }
+      if (issue?.field === "bankAccountId") {
+        return { error: issue.message, fieldErrors: { bankAccountId: issue.message } }
+      }
+      return { error: friendlyDbError(error, "Could not save this monthly salary.") }
     }
 
     salaryId = data?.[0]?.id ?? null
@@ -342,7 +373,11 @@ async function saveMonthlySalary(
       .select("id")
 
     if (error || !data || data.length === 0) {
-      return { error: "Could not save this monthly salary." }
+      const issue = dbIssue(error)
+      if (issue?.field === "bankAccountId") {
+        return { error: issue.message, fieldErrors: { bankAccountId: issue.message } }
+      }
+      return { error: friendlyDbError(error, "Could not save this monthly salary.") }
     }
   }
 
@@ -365,7 +400,11 @@ async function saveMonthlySalary(
       if (!id) {
         await supabase.from("payroll_runs").delete().eq("id", salaryId)
       }
-      return { error: "Could not save this monthly salary." }
+      const issue = dbIssue(error)
+      if (issue?.field === "bankAccountId") {
+        return { error: issue.message, fieldErrors: { bankAccountId: issue.message } }
+      }
+      return { error: friendlyDbError(error, "Could not save this monthly salary.") }
     }
   }
 
@@ -377,7 +416,7 @@ async function saveMonthlySalary(
   if (removedIds.length > 0) {
     const { error } = await supabase.from("payroll_lines").delete().in("id", removedIds)
     if (error) {
-      return { error: "Could not save this monthly salary." }
+      return { error: friendlyDbError(error, "Could not save this monthly salary.") }
     }
   }
 

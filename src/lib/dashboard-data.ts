@@ -21,6 +21,118 @@ export async function getDashboard(now = new Date()): Promise<{
 
 async function loadDashboardInput(): Promise<DashboardInput> {
   const supabase = await createClient()
+  const feed = await supabase.rpc("dashboard_feed")
+  if (!feed.error && feed.data) {
+    return inputFromFeed(feed.data)
+  }
+  if (feed.error && isMissingFeed(feed.error)) {
+    return loadDashboardRows()
+  }
+  if (feed.error) throw feed.error
+  throw new Error("Could not load the dashboard.")
+}
+
+function isMissingFeed(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === "PGRST202" ||
+    /could not find the function/i.test(error.message ?? "")
+  )
+}
+
+function inputFromFeed(data: unknown): DashboardInput {
+  const feed = asRecord(data)
+  return {
+    projects: asArray(feed.projects).map((row) => {
+      const project = asRecord(row)
+      return {
+        totalValue: toNumber(project.total_value),
+        status: project.status === "completed" ? "completed" : "active",
+        startedOn: typeof project.started_on === "string" ? project.started_on : "",
+        year: typeof project.year === "number" ? project.year : null,
+      }
+    }),
+    clientCount: toNumber(feed.client_count),
+    leads: asArray(feed.leads).map((row) => {
+      const lead = asRecord(row)
+      return {
+        status: typeof lead.status === "string" ? lead.status : "",
+        estimatedValue: toNumber(lead.estimated_value),
+        isOpen: lead.is_open === true,
+      }
+    }),
+    revenue: datedRows(feed.revenue),
+    vendorPayments: asArray(feed.vendor_payments).map((row) => {
+      const payment = asRecord(row)
+      return {
+        date: typeof payment.date === "string" ? payment.date : "",
+        amount: toNumber(payment.amount),
+        workType: typeof payment.work_type === "string" ? payment.work_type : null,
+        projectLinked: payment.project_linked !== false,
+      }
+    }),
+    operational: asArray(feed.operational).map((row) => {
+      const expense = asRecord(row)
+      return {
+        date: typeof expense.date === "string" ? expense.date : "",
+        amount: toNumber(expense.amount),
+        category: typeof expense.category === "string" ? expense.category : "",
+        projectLinked: expense.project_linked === true,
+      }
+    }),
+    taxes: datedRows(feed.taxes),
+    bank: asArray(feed.bank).flatMap((row) => {
+      const transaction = asRecord(row)
+      const date = typeof transaction.date === "string" ? transaction.date : ""
+      const sourceKind =
+        typeof transaction.source_kind === "string" ? transaction.source_kind : ""
+      const direction = transaction.direction
+      if (!date || !sourceKind || (direction !== "inflow" && direction !== "outflow")) {
+        return []
+      }
+      return [
+        {
+          date,
+          amount: toNumber(transaction.amount),
+          direction,
+          sourceKind,
+        },
+      ]
+    }),
+    openingBalance: toNumber(feed.opening_balance),
+    billed: toNumber(feed.billed),
+    ledgerPaid: toNumber(feed.ledger_paid),
+    receivables: toNumber(feed.receivables),
+    payables: toNumber(feed.payables),
+    backlogCount: toNumber(feed.backlog_count),
+    launchDate: normalizeLaunchDate(
+      typeof feed.launch_date === "string" ? feed.launch_date : null,
+    ),
+  }
+}
+
+function datedRows(value: unknown): { date: string; amount: number }[] {
+  return asArray(value).map((row) => {
+    const entry = asRecord(row)
+    return {
+      date: typeof entry.date === "string" ? entry.date : "",
+      amount: toNumber(entry.amount),
+    }
+  })
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+  return {}
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : []
+}
+
+async function loadDashboardRows(): Promise<DashboardInput> {
+  const supabase = await createClient()
 
   const [
     projects,

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { assetQuantitySchema, firstIssue } from "@/lib/schemas"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
@@ -125,7 +126,7 @@ async function saveAsset(
     ? await supabase.from("assets").update(values).eq("id", id).select("id")
     : await supabase.from("assets").insert(values).select("id")
 
-  if (error) return { error: "Could not save this asset." }
+  if (error) return { error: friendlyDbError(error, "Could not save this asset.") }
   if (!data || data.length === 0)
     return { error: "That asset could not be found." }
 

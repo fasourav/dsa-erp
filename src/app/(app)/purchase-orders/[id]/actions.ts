@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 
-import { mentions } from "@/lib/db-errors"
+import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
+import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { denyUnless } from "@/lib/permissions"
@@ -103,6 +104,20 @@ export async function deleteVendorInvoice(id: string): Promise<DeleteResult> {
     return { error: auth.error }
   }
 
+  const payments = await auth.supabase
+    .from("vendor_payments")
+    .select("id")
+    .eq("vendor_invoice_id", id)
+    .limit(1)
+
+  if (payments.error) {
+    return { error: "Could not delete this payment." }
+  }
+
+  if (payments.data && payments.data.length > 0) {
+    return { error: "This invoice has payments and cannot be deleted." }
+  }
+
   const { data, error } = await auth.supabase
     .from("vendor_invoices")
     .delete()
@@ -111,12 +126,10 @@ export async function deleteVendorInvoice(id: string): Promise<DeleteResult> {
 
   if (error) {
     if (error.code === "23503" || /foreign key/i.test(error.message)) {
-      return {
-        error: "Remove recorded payments before deleting this.",
-      }
+      return { error: "This invoice has payments and cannot be deleted." }
     }
 
-    return { error: "Could not delete this payment." }
+    return { error: friendlyDbError(error, "Could not delete this payment.") }
   }
 
   if (!data || data.length === 0) {
@@ -600,6 +613,25 @@ async function saveVendorPayment(
     return { error: bank.error ?? "Could not save this payment." }
   }
 
+  let release = 0
+  if (id) {
+    const current = await supabase
+      .from("bank_transactions_readable")
+      .select("amount")
+      .eq("vendor_payment_id", id)
+      .limit(1)
+    const currentAmount = current.data?.[0]?.amount
+    if (!current.error && currentAmount != null) release = Number(currentAmount)
+  }
+  const overdraft = await overdraftMessage(supabase, {
+    accountId: bank.id,
+    needed: amount,
+    release,
+  })
+  if (overdraft) {
+    return { error: overdraft, fieldErrors: { bankAccountId: overdraft, amount: overdraft } }
+  }
+
   const values = {
     vendor_invoice_id: invoiceId,
     paid_on: paidOn,
@@ -616,6 +648,10 @@ async function saveVendorPayment(
     : await supabase.from("vendor_payments").insert(values).select("id")
 
   if (error) {
+    const issue = dbIssue(error)
+    if (issue?.field === "bankAccountId") {
+      return { error: issue.message, fieldErrors: { bankAccountId: issue.message, amount: issue.message } }
+    }
     if (mentions(error, "purchase order date")) {
       return {
         error: null,
@@ -624,14 +660,14 @@ async function saveVendorPayment(
         },
       }
     }
-    if (error.code === "23514") {
+    if (error.code === "23514" && issue?.message === "This value is not allowed.") {
       return {
         error: null,
         fieldErrors: { amount: "Enter a payment greater than 0." },
       }
     }
 
-    return { error: "Could not save this payment." }
+    return { error: friendlyDbError(error, "Could not save this payment.") }
   }
 
   if (!data || data.length === 0) {

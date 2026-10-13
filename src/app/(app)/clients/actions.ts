@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import type { ClientKind } from "@/lib/client-summary"
+import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 import {
   escapeLikePattern,
@@ -150,7 +151,7 @@ async function saveClient(
     : await supabase.from("clients").insert(values).select("id")
 
   if (error) {
-    if (error.code === "23505") {
+    if (isUniqueViolation(error)) {
       return {
         error: null,
         fieldErrors: {
@@ -159,7 +160,7 @@ async function saveClient(
       }
     }
 
-    return { error: "Could not save this client." }
+    return { error: friendlyDbError(error, "Could not save this client.") }
   }
 
   if (!data || data.length === 0) {

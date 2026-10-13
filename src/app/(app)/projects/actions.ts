@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { mentions } from "@/lib/db-errors"
+import { friendlyDbError, mentions } from "@/lib/db-errors"
 import type { ProjectStatus } from "@/lib/project-summary"
 import { denyUnless } from "@/lib/permissions"
 import { firstIssue, projectValueSchema } from "@/lib/schemas"
@@ -230,7 +230,7 @@ async function saveProject(
       }
     }
 
-    return { error: "Could not save this project." }
+    return { error: friendlyDbError(error, "Could not save this project.") }
   }
 
   if (!data || data.length === 0) {

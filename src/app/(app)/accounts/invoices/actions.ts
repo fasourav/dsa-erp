@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { mentions } from "@/lib/db-errors"
+import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
@@ -327,14 +327,14 @@ async function saveClientInvoice(
       }
     }
 
-    if (error.code === "23514") {
+    if (error.code === "23514" && dbIssue(error)?.message === "This value is not allowed.") {
       return {
         error: null,
         fieldErrors: { amount: "Enter an amount greater than 0." },
       }
     }
 
-    return { error: "Could not save this invoice." }
+    return { error: friendlyDbError(error, "Could not save this invoice.") }
   }
 
   if (!data?.[0]?.id) {
@@ -454,14 +454,18 @@ async function saveClientPayment(
     : await supabase.from("client_payments").insert(values).select("id")
 
   if (error) {
-    if (error.code === "23514") {
+    const issue = dbIssue(error)
+    if (issue?.field === "bankAccountId") {
+      return { error: issue.message, fieldErrors: { amount: issue.message } }
+    }
+    if (error.code === "23514" && issue?.message === "This value is not allowed.") {
       return {
         error: null,
         fieldErrors: { amount: "Enter a payment greater than 0." },
       }
     }
 
-    return { error: "Could not save this payment." }
+    return { error: friendlyDbError(error, "Could not save this payment.") }
   }
 
   const paymentId = data?.[0]?.id

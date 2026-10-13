@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { friendlyDbError } from "@/lib/db-errors"
 import { createClient } from "@/lib/supabase/server"
 import { denyUnlessOwner } from "@/lib/permissions"
 import {
@@ -201,7 +202,7 @@ async function saveCatalogItem(
       }
     }
 
-    return { error: "Could not save this item." }
+    return { error: friendlyDbError(error, "Could not save this item.") }
   }
 
   if (!data || data.length === 0) {

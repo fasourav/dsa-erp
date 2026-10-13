@@ -167,13 +167,12 @@ export function ExpenseFormDialog({
 
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
-          return
         }
 
         if (result.error) {
           setFormError(result.error)
-          return
         }
+        if (result.fieldErrors || result.error) return
 
         savedToast()
         onOpenChange(false)

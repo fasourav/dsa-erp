@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 import {
   escapeLikePattern,
@@ -199,14 +200,14 @@ async function saveVendor(
     : await supabase.from("vendors").insert(values).select("id")
 
   if (error) {
-    if (error.code === "23505") {
+    if (isUniqueViolation(error)) {
       return {
         error: null,
         fieldErrors: { name: NAME_DUPLICATE_MESSAGE },
       }
     }
 
-    return { error: "Could not save this vendor." }
+    return { error: friendlyDbError(error, "Could not save this vendor.") }
   }
 
   if (!data || data.length === 0) {
@@ -262,10 +263,6 @@ function revalidateVendorSurfaces() {
   revalidatePath("/vendors")
   revalidatePath("/settings")
   revalidatePath("/purchase-orders")
-}
-
-function isUniqueViolation(error: { code?: string; message?: string }) {
-  return error.code === "23505" || /duplicate key/i.test(error.message ?? "")
 }
 
 async function findNamePhoneDuplicate(
