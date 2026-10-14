@@ -28,8 +28,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
   escapeLikePattern,
@@ -302,7 +308,11 @@ export function VendorFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>
             {vendorId ? "Edit Vendor" : "Add New Vendor"}
@@ -311,93 +321,97 @@ export function VendorFormDialog({
 
         <DialogBody className="flex flex-col gap-4">
           {vendorId ? <RecordAttachments parentType="vendor" parentId={vendorId} /> : null}
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium">Vendor Type</span>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={kind === "private"}
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(kindRequiredError) || undefined}>
+              <FieldTitle id="vendor-kind-label">Vendor Type</FieldTitle>
+              <div
+                role="group"
+                aria-labelledby="vendor-kind-label"
+                className="flex min-h-11 items-center gap-6 md:min-h-10.5"
+              >
+                <label className="flex min-h-11 items-center gap-2.5 text-base md:min-h-0 md:text-sm">
+                  <Checkbox
+                    checked={kind === "private"}
+                    disabled={pending}
+                    aria-invalid={Boolean(kindRequiredError)}
+                    onCheckedChange={(checked) =>
+                      selectKind("private", checked === true)
+                    }
+                  />
+                  Private
+                </label>
+                <label className="flex min-h-11 items-center gap-2.5 text-base md:min-h-0 md:text-sm">
+                  <Checkbox
+                    checked={kind === "company"}
+                    disabled={pending}
+                    aria-invalid={Boolean(kindRequiredError)}
+                    onCheckedChange={(checked) =>
+                      selectKind("company", checked === true)
+                    }
+                  />
+                  Company
+                </label>
+              </div>
+              {kindRequiredError ? <FieldError>{kindRequiredError}</FieldError> : null}
+            </Field>
+
+            {kind ? (
+              <Field data-invalid={Boolean(nameError) || undefined}>
+                <FieldLabel htmlFor={nameField.id}>{nameField.label}</FieldLabel>
+                <Input
+                  id={nameField.id}
+                  value={nameField.value}
+                  autoComplete={kind === "company" ? "organization" : "name"}
+                  autoCapitalize="words"
+                  enterKeyHint="next"
                   disabled={pending}
-                  aria-invalid={Boolean(kindRequiredError)}
-                  onCheckedChange={(checked) =>
-                    selectKind("private", checked === true)
-                  }
+                  aria-invalid={Boolean(nameError)}
+                  onChange={(event) => nameField.onChange(event.target.value)}
                 />
-                Private
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={kind === "company"}
-                  disabled={pending}
-                  aria-invalid={Boolean(kindRequiredError)}
-                  onCheckedChange={(checked) =>
-                    selectKind("company", checked === true)
-                  }
-                />
-                Company
-              </label>
-            </div>
-            {kindRequiredError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {kindRequiredError}
-              </p>
+                {nameError ? <FieldError>{nameError}</FieldError> : null}
+              </Field>
             ) : null}
-          </div>
 
-          {kind ? (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={nameField.id}>{nameField.label}</Label>
-              <Input
-                id={nameField.id}
-                value={nameField.value}
-                disabled={pending}
-                aria-invalid={Boolean(nameError)}
-                onChange={(event) => nameField.onChange(event.target.value)}
-              />
-              {nameError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {nameError}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+            <Field>
+              <FieldLabel htmlFor="vendor-category">Vendor Category</FieldLabel>
+              <Combobox
+                autoComplete="off"
+                items={categoryOptions}
+                inputValue={category}
+                onInputValueChange={handleCategoryInput}
+                onValueChange={(value) => {
+                  if (typeof value === "string") {
+                    setCategory(value)
+                  }
+                }}
+              >
+                <ComboboxInput
+                  id="vendor-category"
+                  className="w-full"
+                  disabled={pending}
+                />
+                <ComboboxContent className="data-empty:hidden">
+                  <ComboboxList>
+                    {(item: string) => (
+                      <ComboboxItem key={item} value={item}>
+                        {item}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="vendor-category">Vendor Category</Label>
-            <Combobox
-              autoComplete="off"
-              items={categoryOptions}
-              inputValue={category}
-              onInputValueChange={handleCategoryInput}
-              onValueChange={(value) => {
-                if (typeof value === "string") {
-                  setCategory(value)
-                }
-              }}
-            >
-              <ComboboxInput
-                id="vendor-category"
-                className="w-full"
-                disabled={pending}
-              />
-              <ComboboxContent className="data-empty:hidden">
-                <ComboboxList>
-                  {(item: string) => (
-                    <ComboboxItem key={item} value={item}>
-                      {item}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-email">Email</Label>
+            <Field span="half" data-invalid={Boolean(emailError) || undefined}>
+              <FieldLabel htmlFor="vendor-email">Email</FieldLabel>
               <Input
                 id="vendor-email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                enterKeyHint="next"
                 value={email}
                 disabled={pending}
                 aria-invalid={Boolean(emailError)}
@@ -406,17 +420,16 @@ export function VendorFormDialog({
                   setEmail(event.target.value)
                 }}
               />
-              {emailError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {emailError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-phone">Phone</Label>
+              {emailError ? <FieldError>{emailError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(phoneError) || undefined}>
+              <FieldLabel htmlFor="vendor-phone">Phone</FieldLabel>
               <Input
                 id="vendor-phone"
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                enterKeyHint="next"
                 value={phone}
                 disabled={pending}
                 aria-invalid={Boolean(phoneError)}
@@ -425,36 +438,33 @@ export function VendorFormDialog({
                   setPhone(event.target.value)
                 }}
               />
-              {phoneError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {phoneError}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              {phoneError ? <FieldError>{phoneError}</FieldError> : null}
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="vendor-address">Address</Label>
-            <Textarea
-              id="vendor-address"
-              value={address}
-              disabled={pending}
-              onChange={(event) => setAddress(event.target.value)}
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="vendor-address">Address</FieldLabel>
+              <Textarea
+                id="vendor-address"
+                value={address}
+                autoComplete="street-address"
+                disabled={pending}
+                onChange={(event) => setAddress(event.target.value)}
+              />
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="vendor-notes">Notes</Label>
-            <Textarea
-              id="vendor-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="vendor-notes">Notes</FieldLabel>
+              <Textarea
+                id="vendor-notes"
+                value={notes}
+                disabled={pending}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -90,56 +91,62 @@ export function AccessDrawer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent variant="drawer">
-        <DialogHeader className="border-b px-4 py-4 pr-14">
+      <DialogContent variant="drawer" className="overflow-hidden">
+        <DialogHeader className="border-b border-border px-4 pb-3 md:px-6">
           <DialogTitle>{mode === "invite" ? "Invite User" : "Edit Access"}</DialogTitle>
         </DialogHeader>
-        <DialogBody className="flex flex-1 flex-col gap-4 px-4 py-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="user-name">Full Name</Label>
+        <DialogBody className="mx-0 flex flex-1 flex-col gap-4 px-4 py-4 md:px-6">
+          <FieldGroup layout="inset">
+            <Field span="half">
+              <FieldLabel htmlFor="user-name">Full Name</FieldLabel>
               <Input
                 id="user-name"
                 value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
                 autoComplete="name"
+                autoCapitalize="words"
+                enterKeyHint="next"
+                onChange={(event) => setDisplayName(event.target.value)}
               />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="user-email">Email</Label>
+            </Field>
+            <Field span="half">
+              <FieldLabel htmlFor="user-email">Email</FieldLabel>
               <Input
                 id="user-email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                enterKeyHint="next"
                 value={email}
                 disabled={mode === "edit"}
                 onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
               />
-            </div>
-          </div>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="user-designation">Designation</FieldLabel>
+              <Input
+                id="user-designation"
+                value={designation}
+                autoComplete="organization-title"
+                autoCapitalize="words"
+                enterKeyHint="done"
+                placeholder="Optional"
+                onChange={(event) => setDesignation(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldTitle>Role Template</FieldTitle>
+              <RolePills
+                templates={templates}
+                value={role}
+                disabled={self}
+                onChange={applyTemplate}
+              />
+            </Field>
+          </FieldGroup>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="user-designation">Designation</Label>
-            <Input
-              id="user-designation"
-              value={designation}
-              onChange={(event) => setDesignation(event.target.value)}
-              placeholder="Optional"
-              autoComplete="organization-title"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label>Role Template</Label>
-            <RolePills
-              templates={templates}
-              value={role}
-              disabled={self}
-              onChange={applyTemplate}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2">
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
             <Label htmlFor="show-financials">Show Financial Figures</Label>
             <AccessToggle
               checked={showFinancials}
@@ -149,7 +156,7 @@ export function AccessDrawer({
             />
           </div>
 
-          <p className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+          <p className="rounded-card bg-muted px-4 py-3 text-sm text-muted-foreground">
             Settings And Users & Permissions Are Visible To Owners Only.
           </p>
 
@@ -167,7 +174,7 @@ export function AccessDrawer({
             onToggle={toggle}
           />
         </DialogBody>
-        <DialogFooter className="mx-0 mb-0 rounded-none">
+        <DialogFooter className="mx-0 mb-0 rounded-none border-t border-border px-4 py-4 md:mx-0 md:px-6">
           <Button type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

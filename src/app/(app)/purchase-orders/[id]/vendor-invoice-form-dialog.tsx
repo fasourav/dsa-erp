@@ -19,8 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -142,6 +147,7 @@ export function VendorInvoiceFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -153,41 +159,34 @@ export function VendorInvoiceFormDialog({
           {invoiceId ? (
             <RecordAttachments parentType="vendor_invoice" parentId={invoiceId} />
           ) : null}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="vendor-invoice-issued">Issue Date</Label>
-            <Input
-              id="vendor-invoice-issued"
-              type="date"
-              value={issuedOn}
-              disabled={pending}
-              aria-invalid={Boolean(issuedError)}
-              onChange={(event) => setIssuedOn(event.target.value)}
-            />
-            {issuedError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {issuedError}
-              </p>
-            ) : null}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-amount">Amount</Label>
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(issuedError) || undefined}>
+              <FieldLabel htmlFor="vendor-invoice-issued">Issue Date</FieldLabel>
+              <Input
+                id="vendor-invoice-issued"
+                type="date"
+                value={issuedOn}
+                disabled={pending}
+                aria-invalid={Boolean(issuedError)}
+                onChange={(event) => setIssuedOn(event.target.value)}
+              />
+              {issuedError ? <FieldError>{issuedError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(amountError) || undefined}>
+              <FieldLabel htmlFor="vendor-invoice-amount">Amount</FieldLabel>
               <Input
                 id="vendor-invoice-amount"
                 inputMode="decimal"
+                autoComplete="off"
                 value={amount}
                 disabled={pending}
                 aria-invalid={Boolean(amountError)}
                 onChange={(event) => setAmount(event.target.value)}
               />
-              {amountError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {amountError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-invoice-status">Status</Label>
+              {amountError ? <FieldError>{amountError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(statusError) || undefined}>
+              <FieldLabel htmlFor="vendor-invoice-status">Status</FieldLabel>
               <Select
                 items={statusItems}
                 value={status}
@@ -213,24 +212,20 @@ export function VendorInvoiceFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {statusError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {statusError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="vendor-invoice-description">Description</Label>
-            <Textarea
-              id="vendor-invoice-description"
-              value={description}
-              disabled={pending}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </div>
+              {statusError ? <FieldError>{statusError}</FieldError> : null}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="vendor-invoice-description">Description</FieldLabel>
+              <Textarea
+                id="vendor-invoice-description"
+                value={description}
+                disabled={pending}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

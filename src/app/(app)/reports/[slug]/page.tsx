@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 
 import { ReportView } from "@/app/(app)/reports/report-view"
 import { ReportFilters } from "@/app/(app)/reports/report-filters"
+import { PageHeader } from "@/components/page-header"
 import { canOpenReports, canSeeReport, homePath } from "@/lib/access"
 import { isReportSlug, reportBySlug } from "@/lib/reports/catalog"
 import { loadFinancialReport, reportLaunchDate } from "@/lib/reports/load"
@@ -49,7 +50,7 @@ export default async function ReportPage({
   })
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
       {loaded.status === "ok" ? (
         <LoadedReport
           slug={slug}
@@ -63,10 +64,7 @@ export default async function ReportPage({
         />
       ) : (
         <>
-          <div>
-            <p className="text-sm text-muted-foreground">Reports</p>
-            <h1 className="text-2xl font-medium tracking-tight">{definition.title}</h1>
-          </div>
+          <PageHeader eyebrow="Reports" title={definition.title} />
           <ReportFilters launch={launch} today={today} from={period.from} to={period.to} />
           <p role="alert" className="text-sm text-destructive">
             {loaded.status === "missing"
@@ -104,10 +102,7 @@ function LoadedReport({
   if (!built) {
     return (
       <>
-        <div>
-          <p className="text-sm text-muted-foreground">Reports</p>
-          <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
-        </div>
+        <PageHeader eyebrow="Reports" title={title} />
         <ReportFilters launch={launch} today={today} from={from} to={to} />
         <p role="alert" className="text-sm text-destructive">
           You do not have access to this report.

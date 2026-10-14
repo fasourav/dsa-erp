@@ -1,6 +1,9 @@
 import Link from "next/link"
+import { Plus } from "lucide-react"
 
-import { DocumentList } from "@/components/documents/document-list"
+import { documentExportGrid, DocumentList } from "@/components/documents/document-list"
+import { ListExport } from "@/components/list-export"
+import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { allows } from "@/lib/access"
 import { listQuotations } from "@/lib/documents/queries"
@@ -14,20 +17,22 @@ export default async function QuotationsPage() {
   const canAdd = access ? allows(access, "quotations", "add") : false
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">Quotations</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Estimates and financial proposals.
-          </p>
-        </div>
-        {canAdd ? (
-          <Button className="w-full sm:w-fit" nativeButton={false} render={<Link href="/documents/quotations/new" />}>
-            New Quotation
-          </Button>
-        ) : null}
-      </div>
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      <PageHeader
+        title="Quotations"
+        description="Estimates and financial proposals."
+        actions={
+          <>
+            <ListExport grid={documentExportGrid(page.items, "quotations", "Quotations")} />
+            {canAdd ? (
+              <Button nativeButton={false} render={<Link href="/documents/quotations/new" />}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                New Quotation
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {page.error ? (
         <p role="alert" className="text-sm text-destructive">
           {page.error}
@@ -36,9 +41,8 @@ export default async function QuotationsPage() {
       <DocumentList
         items={page.items}
         hrefBase="/documents/quotations"
-        empty="No quotations yet."
-        exportName="quotations"
-        exportTitle="Quotations"
+        empty="No Quotations Yet."
+        pagingLabel="Quotations pagination"
       />
     </div>
   )

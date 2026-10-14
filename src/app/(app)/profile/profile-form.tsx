@@ -9,9 +9,11 @@ import {
 } from "@/app/(app)/profile/actions"
 import { Button } from "@/components/ui/button"
 import { savedToast } from "@/lib/saved"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { accountInitials } from "@/lib/account-identity"
 
 const initialState: ProfileState = {}
 
@@ -49,85 +51,129 @@ export function ProfileForm({
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Name</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={nameAction} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="display-name">Full Name</Label>
-              <Input
-                id="display-name"
-                name="displayName"
-                defaultValue={name}
-                autoComplete="name"
-                required
-              />
+        <CardContent className="flex items-center gap-4">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-avatar text-base font-semibold text-on-color">
+            {accountInitials(name, email)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-ui font-semibold">{name || "—"}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Badge variant={roleBadgeVariant(roleLabel)}>{roleLabel}</Badge>
+              {designation ? (
+                <span className="text-sm text-muted-foreground">{designation}</span>
+              ) : null}
             </div>
-            <div className="flex flex-col gap-1 text-sm">
-              <span className="text-muted-foreground">Email</span>
-              <span>{email || "—"}</span>
-            </div>
-            <div className="flex flex-col gap-1 text-sm">
-              <span className="text-muted-foreground">Role</span>
-              <span>{roleLabel}</span>
-            </div>
-            {designation ? (
-              <div className="flex flex-col gap-1 text-sm">
-                <span className="text-muted-foreground">Designation</span>
-                <span>{designation}</span>
-              </div>
-            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <form action={nameAction}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Name</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup layout="inset">
+              <Field>
+                <FieldLabel htmlFor="display-name">Full Name</FieldLabel>
+                <Input
+                  id="display-name"
+                  name="displayName"
+                  defaultValue={name}
+                  autoComplete="name"
+                  autoCapitalize="words"
+                  enterKeyHint="done"
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="profile-email">Email</FieldLabel>
+                <Input
+                  id="profile-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={email}
+                  readOnly
+                />
+              </Field>
+            </FieldGroup>
             {nameState.error ? (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="mt-3 text-sm text-destructive">
                 {nameState.error}
               </p>
             ) : null}
+          </CardContent>
+          <CardFooter className="justify-end">
             <Button type="submit" disabled={namePending}>
               {namePending ? "Saving…" : "Save Name"}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={passwordAction} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                minLength={10}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
-              <Input
-                id="confirm-password"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={10}
-                required
-              />
-            </div>
+          </CardFooter>
+        </Card>
+      </form>
+
+      <form action={passwordAction}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Password</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup layout="inset">
+              <Field>
+                <FieldLabel htmlFor="new-password">New Password</FieldLabel>
+                <Input
+                  id="new-password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  enterKeyHint="next"
+                  minLength={10}
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
+                <Input
+                  id="confirm-password"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  enterKeyHint="done"
+                  minLength={10}
+                  required
+                />
+              </Field>
+            </FieldGroup>
             {passwordState.error ? (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="mt-3 text-sm text-destructive">
                 {passwordState.error}
               </p>
             ) : null}
+          </CardContent>
+          <CardFooter className="justify-end">
             <Button type="submit" disabled={passwordPending}>
               {passwordPending ? "Saving…" : "Change Password"}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </CardFooter>
+        </Card>
+      </form>
     </div>
   )
+}
+
+function roleBadgeVariant(roleLabel: string) {
+  switch (roleLabel.trim().toLowerCase()) {
+    case "owner":
+      return "violet" as const
+    case "custom":
+      return "warning" as const
+    case "accountant":
+      return "info" as const
+    case "staff":
+      return "neutral" as const
+    default:
+      return "outline" as const
+  }
 }

@@ -22,7 +22,7 @@ import {
   defaultBankAccountId,
   type BankAccountChoice,
 } from "@/lib/bank-account"
-import { formatMoney } from "@/lib/format"
+import { Money } from "@/components/money"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 import type { PurchaseOrderDetail } from "@/lib/vendor-invoice-summary"
@@ -126,18 +126,32 @@ export function RecordVendorPaymentDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Purchase Order Value {formatMoney(purchaseOrder.totalValue)} · Paid{" "}
-            {formatMoney(purchaseOrder.totalPaid)} · Pending{" "}
-            {formatMoney(purchaseOrder.totalPending)}
+          <p className="text-label text-muted-foreground">
+            Purchase Order Value <Money value={purchaseOrder.totalValue} /> · Paid{" "}
+            <Money
+              value={purchaseOrder.totalPaid}
+              className={
+                purchaseOrder.totalPaid > 0 ? "text-success" : "text-muted-foreground"
+              }
+            />{" "}
+            · Pending{" "}
+            <Money
+              value={purchaseOrder.totalPending}
+              className={
+                purchaseOrder.totalPending > 0
+                  ? "text-destructive"
+                  : "text-muted-foreground"
+              }
+            />
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Enter what you paid the vendor. It applies to the amount still due
             on this purchase order.
           </p>
@@ -161,7 +175,7 @@ export function RecordVendorPaymentDialog({
             accountError={accountError}
           />
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

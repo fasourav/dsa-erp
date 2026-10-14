@@ -7,20 +7,13 @@ import { ClipboardList, FileText, MoreHorizontal, Pencil, Plus, Trash2 } from "l
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
 import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
 import { PurchaseOrderFormDialog } from "@/app/(app)/purchase-orders/purchase-order-form-dialog"
 import { DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
 import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -36,7 +29,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -157,16 +149,16 @@ export function OperationalPurchaseOrdersDialog({
           <DialogHeader className="pr-8">
             <DialogTitle>Operational Purchase Orders</DialogTitle>
           </DialogHeader>
-          <DialogBody className="flex min-h-0 flex-col">
+          <DialogBody className="flex min-h-0 flex-col gap-4">
             <ListSearch
-        query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
-        placeholder="Search purchase orders"
-      />
-      <DataList
+              query={query}
+              onQueryChange={(value) => {
+                setQuery(value)
+                setPage(1)
+              }}
+              placeholder="Search purchase orders"
+            />
+            <DataList
               columns={columns}
               rows={pageResult.rows}
               rowKey={(order) => order.id}
@@ -189,6 +181,21 @@ export function OperationalPurchaseOrdersDialog({
               pageCount={pageResult.pageCount}
               onPageChange={setPage}
               pagingLabel="Operational purchase orders pagination"
+              mobileItem={(order) => ({
+                title: order.vendorName || "—",
+                subtitle: [
+                  order.workType,
+                  order.issuedOn ? formatPurchaseOrderDate(order.issuedOn) : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+                value: <Money value={order.totalValue} />,
+                meta: (
+                  <StatusBadge
+                    status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
+                  />
+                ),
+              })}
               toolbar={
                 canAdd ? (
                   <Button type="button" onClick={() => openForm(null)}>
@@ -224,7 +231,7 @@ export function OperationalPurchaseOrdersDialog({
         operational
       />
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(nextOpen) => {
           if (nextOpen || deleting) {
@@ -234,33 +241,13 @@ export function OperationalPurchaseOrdersDialog({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.vendorName)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Purchase Order"
+        itemName={pendingDelete?.vendorName}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </>
   )
 }
@@ -281,14 +268,20 @@ function OperationalCell({
       )
     case "workType":
       return order.workType ? (
-        <span>{order.workType}</span>
+        <Badge variant="outline">{order.workType}</Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "vendorName":
       return (
         <div className="flex min-w-0 flex-col items-start gap-1">
-          <span className={order.vendorName ? "font-medium" : "text-muted-foreground"}>
+          <span
+            className={
+              order.vendorName
+                ? "text-ui font-semibold"
+                : "text-ui font-semibold text-muted-foreground"
+            }
+          >
             {order.vendorName || "—"}
           </span>
           <StatusBadge
@@ -297,9 +290,23 @@ function OperationalCell({
         </div>
       )
     case "totalValue":
+      return <Money value={order.totalValue} />
     case "totalPaid":
+      return (
+        <Money
+          value={order.totalPaid}
+          className={order.totalPaid > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
     case "totalPending":
-      return <span className="tabular-nums">{formatMoney(order[columnId])}</span>
+      return (
+        <Money
+          value={order.totalPending}
+          className={
+            order.totalPending > 0 ? "text-destructive" : "text-muted-foreground"
+          }
+        />
+      )
   }
 }
 

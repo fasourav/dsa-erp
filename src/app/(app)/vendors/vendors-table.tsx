@@ -4,23 +4,18 @@ import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVendor } from "@/app/(app)/vendors/actions"
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
 import { VendorContactDialog } from "@/app/(app)/vendors/vendor-contact-dialog"
 import { VendorFormDialog } from "@/app/(app)/vendors/vendor-form-dialog"
 import { MailtoLink, TelLink } from "@/components/contact-links"
+import { DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,32 +26,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { formatMoney } from "@/lib/format"
-import {
   dataColumns,
   paginateVendors,
-  paginationItems,
   sortVendors,
   vendorRangeLabel,
   type ColumnId,
@@ -64,8 +35,6 @@ import {
   type VendorSummary,
 } from "@/lib/vendor-summary"
 import { cn } from "@/lib/utils"
-
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function VendorsTable({
   vendors,
@@ -97,7 +66,6 @@ export function VendorsTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const columnCount = dataColumns.length + 1
   const sorted = useMemo(() => sortVendors(vendors, sort), [vendors, sort])
   const filterOptions = [
     { value: "all", label: "All Types" },
@@ -112,7 +80,6 @@ export function VendorsTable({
     () => paginateVendors(filtered, page),
     [filtered, page],
   )
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function toggleSort(key: ColumnId) {
     setSort((current) => {
@@ -168,43 +135,48 @@ export function VendorsTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Vendors</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <ListExport
-            grid={{
-              filename: "vendors",
-              title: "Vendors",
-              columns: [
-                { header: "Vendor Name", kind: "text" },
-                { header: "Contact", kind: "text" },
-                { header: "Total Project Value", kind: "money" },
-                { header: "Total Paid", kind: "money" },
-                { header: "Total Due", kind: "money" },
-              ],
-              rows: filtered.map((vendor) => [
-                vendor.displayName,
-                [vendor.phone, vendor.email].map((value) => value?.trim()).filter(Boolean).join(" · ") || "—",
-                vendor.totalProjectValue,
-                vendor.totalPaid,
-                vendor.totalDue,
-              ]),
-            }}
-          />
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/purchase-orders" />}
-          >
-            Purchase Orders
-          </Button>
-          {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add New Vendor
-          </Button>) : null}
-        </div>
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Vendors"
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "vendors",
+                title: "Vendors",
+                columns: [
+                  { header: "Vendor Name", kind: "text" },
+                  { header: "Contact", kind: "text" },
+                  { header: "Total Project Value", kind: "money" },
+                  { header: "Total Paid", kind: "money" },
+                  { header: "Total Due", kind: "money" },
+                ],
+                rows: filtered.map((vendor) => [
+                  vendor.displayName,
+                  [vendor.phone, vendor.email].map((value) => value?.trim()).filter(Boolean).join(" · ") || "—",
+                  vendor.totalProjectValue,
+                  vendor.totalPaid,
+                  vendor.totalDue,
+                ]),
+              }}
+            />
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/purchase-orders" />}
+            >
+              Purchase Orders
+            </Button>
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add New Vendor
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <ListSearch
         query={query}
@@ -221,167 +193,40 @@ export function VendorsTable({
         }}
         options={filterOptions}
       />
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {dataColumns.map((column) => {
-                const active = sort.key === column.id
-                return (
-                  <TableHead
-                    key={column.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(column.align === "right" && "text-right")}
-                  >
-                    <div
-                      className={cn(
-                        "flex",
-                        column.align === "right" && "justify-end",
-                      )}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                          column.align === "right" ? "-mr-2" : "-ml-2",
-                        )}
-                        aria-label={
-                          active
-                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                            : `Sort by ${column.label}`
-                        }
-                        onClick={() => toggleSort(column.id)}
-                      >
-                        {column.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  role="alert"
-                  className="py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  className="py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  No Vendors Yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((vendor) => (
-                <TableRow key={vendor.id} className="group">
-                  {dataColumns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className={cn(
-                        column.align === "right" && "text-right",
-                        (column.id === "displayName" ||
-                          column.id === "contact") &&
-                          "whitespace-normal",
-                      )}
-                    >
-                      <CellValue vendor={vendor} columnId={column.id} onOpenContact={openContact} />
-                    </TableCell>
-                  ))}
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
-                    <RowActions
-                      vendor={vendor}
-                      onEdit={openForm}
-                      onDelete={askDelete}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {vendorRangeLabel(
-              pageResult.rangeStart,
-              pageResult.rangeEnd,
-              pageResult.total,
-            )}
-          </p>
-          <Pagination
-            aria-label="Vendors pagination"
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => setPage(pageResult.currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant={
-                        item === pageResult.currentPage ? "outline" : "ghost"
-                      }
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={
-                        item === pageResult.currentPage ? "page" : undefined
-                      }
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage >= pageResult.pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => setPage(pageResult.currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+      <DataList
+        columns={dataColumns.map((column) => ({ ...column, locked: true }))}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(vendor) => vendor.id}
+        sort={sort}
+        onSort={toggleSort}
+        visibility={{}}
+        error={error}
+        emptyMessage="No Vendors Yet."
+        rangeText={vendorRangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Vendors pagination"
+        mobileItem={(vendor) => ({
+          title: vendor.displayName || "—",
+          subtitle: contactSubtitle(vendor),
+          meta: <Money value={vendor.totalProjectValue} />,
+        })}
+        renderCell={(vendor, columnId) => (
+          <CellValue
+            vendor={vendor}
+            columnId={columnId}
+            onOpenContact={openContact}
+          />
+        )}
+        renderActions={(vendor) => (
+          <RowActions vendor={vendor} onEdit={openForm} onDelete={askDelete} />
+        )}
+      />
 
       <VendorFormDialog
         key={formSession}
@@ -397,7 +242,7 @@ export function VendorsTable({
         onOpenChange={setContactOpen}
       />
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (open || deleting) {
@@ -407,35 +252,21 @@ export function VendorsTable({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Vendor</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.displayName)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Vendor"
+        itemName={pendingDelete?.displayName}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
+}
+
+function contactSubtitle(vendor: VendorSummary) {
+  const phone = vendor.phone?.trim() ?? ""
+  const email = vendor.email?.trim() ?? ""
+  return [phone, email].filter(Boolean).join(" · ")
 }
 
 function CellValue({
@@ -455,7 +286,7 @@ function CellValue({
             type="button"
             variant="link"
             className={cn(
-              "-ml-2.5 font-medium text-foreground",
+              "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
               !vendor.displayName && "text-muted-foreground",
             )}
             aria-label={`Open contact card for ${vendor.displayName || "vendor"}`}
@@ -464,22 +295,27 @@ function CellValue({
             {vendor.displayName || "—"}
           </Button>
           {vendor.vendorField ? (
-            <Badge
-              variant="outline"
-              className={cn(pillClassName, "bg-card")}
-            >
-              {vendor.vendorField}
-            </Badge>
+            <Badge variant="outline">{vendor.vendorField}</Badge>
           ) : null}
         </div>
       )
     case "contact":
       return <ContactValue vendor={vendor} />
     case "totalProjectValue":
+      return <Money value={vendor.totalProjectValue} />
     case "totalPaid":
+      return (
+        <Money
+          value={vendor.totalPaid}
+          className={vendor.totalPaid > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
     case "totalDue":
       return (
-        <span className="tabular-nums">{formatMoney(vendor[columnId])}</span>
+        <Money
+          value={vendor.totalDue}
+          className={vendor.totalDue > 0 ? "text-destructive" : "text-muted-foreground"}
+        />
       )
   }
 }
@@ -533,18 +369,19 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(vendor)}>
-          <Pencil aria-hidden="true" />
-          Edit
-        </DropdownMenuItem>) : null}
+        {canEdit ? (
+          <DropdownMenuItem onClick={() => onEdit(vendor)}>
+            <Pencil aria-hidden="true" />
+            Edit
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuSeparator />
-        {canDelete ? (<DropdownMenuItem
-          variant="destructive"
-          onClick={() => onDelete(vendor)}
-        >
-          <Trash2 aria-hidden="true" />
-          Delete
-        </DropdownMenuItem>) : null}
+        {canDelete ? (
+          <DropdownMenuItem variant="destructive" onClick={() => onDelete(vendor)}>
+            <Trash2 aria-hidden="true" />
+            Delete
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

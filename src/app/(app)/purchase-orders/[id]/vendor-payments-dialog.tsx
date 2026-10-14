@@ -3,7 +3,7 @@
 import { savedToast } from "@/lib/saved"
 import { useCan } from "@/components/access-provider"
 
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import { Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import { useState, useTransition } from "react"
 
 import {
@@ -15,7 +15,10 @@ import {
 import { RecordAttachments } from "@/components/record-attachments"
 import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
   Dialog,
   DialogBody,
@@ -29,7 +32,7 @@ import {
   defaultBankAccountId,
   type BankAccountChoice,
 } from "@/lib/bank-account"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatIsoDate } from "@/lib/format"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 import type {
@@ -117,7 +120,12 @@ export function VendorPaymentsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton>
+        <DialogContent
+          className="overflow-hidden sm:max-w-lg"
+          variant={editing ? "default" : "drawer"}
+          mobileLayout={editing ? "nav" : "stack"}
+          showCloseButton
+        >
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
@@ -135,62 +143,89 @@ export function VendorPaymentsDialog({
             <>
               <DialogBody className="flex flex-col gap-4">
                 {invoice ? (
-                  <p className="text-sm text-muted-foreground">
-                    Amount {formatMoney(invoice.amount)} · Paid{" "}
-                    {formatMoney(invoice.paid)} · Balance{" "}
-                    {formatMoney(invoice.balance)}
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-label text-muted-foreground">
+                      Amount <Money value={invoice.amount} /> · Paid{" "}
+                      <Money
+                        value={invoice.paid}
+                        className={
+                          invoice.paid > 0 ? "text-success" : "text-muted-foreground"
+                        }
+                      />{" "}
+                      · Balance{" "}
+                      <Money
+                        value={invoice.balance}
+                        className={
+                          invoice.balance > 0
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        }
+                      />
+                    </p>
+                    <StatusBadge status={invoice.status} />
+                  </div>
                 ) : null}
                 {invoice && invoice.payments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No Payments Recorded Yet.
-                  </p>
+                  <Empty>
+                    <EmptyMedia variant="icon">
+                      <Wallet aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>No Payments Recorded Yet.</EmptyTitle>
+                  </Empty>
                 ) : null}
-                {invoice?.payments.map((row) => (
-                  <div
-                    key={row.id}
-                    className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium tabular-nums">
-                        {formatMoney(row.amount)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {row.paidOn ? formatIsoDate(row.paidOn) : "—"}
-                        {row.method ? ` · ${row.method}` : ""}
-                        {row.bankAccountName ? ` · ${row.bankAccountName}` : ""}
-                        {row.expenseCategory ? ` · ${row.expenseCategory}` : ""}
-                        {row.reference ? ` · ${row.reference}` : ""}
-                      </p>
-                      {row.notes ? (
-                        <p className="text-sm text-muted-foreground">{row.notes}</p>
-                      ) : null}
-                      <RecordAttachments parentType="vendor_payment" parentId={row.id} collapsed />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {canEdit ? (<Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => openForm(row)}
+                {invoice && invoice.payments.length > 0 ? (
+                  <ul className="flex flex-col">
+                    {invoice.payments.map((row) => (
+                      <li
+                        key={row.id}
+                        className="flex flex-col gap-3 border-t border-border py-3 first:border-t-0 first:pt-0 md:flex-row md:items-center md:justify-between"
                       >
-                        <Pencil aria-hidden="true" data-icon="inline-start" />
-                        Edit
-                      </Button>) : null}
-                      {canDelete ? (<Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setDeleteError(null)
-                          setPendingDelete(row)
-                          setDeleteOpen(true)
-                        }}
-                      >
-                        <Trash2 aria-hidden="true" data-icon="inline-start" />
-                        Delete
-                      </Button>) : null}
-                    </div>
-                  </div>
-                ))}
+                        <div className="min-w-0">
+                          <p className="text-ui font-semibold">
+                            <Money value={row.amount} />
+                          </p>
+                          <p className="text-label text-muted-foreground">
+                            {row.paidOn ? formatIsoDate(row.paidOn) : "—"}
+                            {row.method ? ` · ${row.method}` : ""}
+                            {row.bankAccountName ? ` · ${row.bankAccountName}` : ""}
+                            {row.expenseCategory ? ` · ${row.expenseCategory}` : ""}
+                            {row.reference ? ` · ${row.reference}` : ""}
+                          </p>
+                          {row.notes ? (
+                            <p className="text-label text-muted-foreground">{row.notes}</p>
+                          ) : null}
+                          <RecordAttachments parentType="vendor_payment" parentId={row.id} collapsed />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {canEdit ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => openForm(row)}
+                            >
+                              <Pencil aria-hidden="true" data-icon="inline-start" />
+                              Edit
+                            </Button>
+                          ) : null}
+                          {canDelete ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setDeleteError(null)
+                                setPendingDelete(row)
+                                setDeleteOpen(true)
+                              }}
+                            >
+                              <Trash2 aria-hidden="true" data-icon="inline-start" />
+                              Delete
+                            </Button>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </DialogBody>
               <DialogFooter>
                 <DialogClose render={<Button type="button" variant="outline" />}>
@@ -344,7 +379,7 @@ function PaymentForm({
           accountError={accountError}
         />
         {formError ? (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="px-1 text-sm text-destructive md:px-0">
             {formError}
           </p>
         ) : null}

@@ -9,6 +9,8 @@ import { useMemo, useState } from "react"
 import { RecoveryPlanDialog } from "@/app/(app)/backlog/recovery-plan-dialog"
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +26,6 @@ import {
   type BacklogColumnId,
   type BacklogRow,
 } from "@/lib/backlog"
-import { formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -32,6 +33,7 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { cn } from "@/lib/utils"
 
 export function BacklogTable({
   rows,
@@ -63,34 +65,37 @@ export function BacklogTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Backlog</h1>
-        <ListExport
-          grid={{
-            filename: "backlog",
-            title: "Backlog",
-            columns: [
-              { header: "Project", kind: "text" },
-              { header: "Project Value", kind: "money" },
-              { header: "Amount Paid", kind: "money" },
-              { header: "Total Expense", kind: "money" },
-              { header: "Backlog Amount", kind: "money" },
-              { header: "Status", kind: "text" },
-              { header: "Recovery Plan", kind: "text" },
-            ],
-            rows: filtered.map((row) => [
-              row.projectName,
-              row.projectValue,
-              row.amountPaid,
-              row.totalExpense,
-              row.backlogAmount,
-              row.status === "active" ? "Active" : row.status === "completed" ? "Completed" : "—",
-              row.recoveryPlan || "—",
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Backlog"
+        className="mb-0 md:mb-2"
+        actions={
+          <ListExport
+            grid={{
+              filename: "backlog",
+              title: "Backlog",
+              columns: [
+                { header: "Project", kind: "text" },
+                { header: "Project Value", kind: "money" },
+                { header: "Amount Paid", kind: "money" },
+                { header: "Total Expense", kind: "money" },
+                { header: "Backlog Amount", kind: "money" },
+                { header: "Status", kind: "text" },
+                { header: "Recovery Plan", kind: "text" },
+              ],
+              rows: filtered.map((row) => [
+                row.projectName,
+                row.projectValue,
+                row.amountPaid,
+                row.totalExpense,
+                row.backlogAmount,
+                row.status === "active" ? "Active" : row.status === "completed" ? "Completed" : "—",
+                row.recoveryPlan || "—",
+              ]),
+            }}
+          />
+        }
+      />
       <ListSearch
         query={query}
         onQueryChange={(value) => {
@@ -122,6 +127,12 @@ export function BacklogTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Backlog pagination"
+        mobileItem={(row) => ({
+          title: row.projectName || "—",
+          value: row.status ? <StatusBadge status={row.status} /> : undefined,
+          subtitle: row.recoveryPlan || "—",
+          meta: <Money value={row.backlogAmount} />,
+        })}
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
         renderActions={(row) => (
           <DropdownMenu>
@@ -165,16 +176,21 @@ function Cell({
 }) {
   switch (columnId) {
     case "projectName":
-      return row.projectName ? (
-        <span className="font-medium">{row.projectName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
+      return (
+        <span
+          className={cn(
+            "text-ui font-semibold",
+            !row.projectName && "text-muted-foreground",
+          )}
+        >
+          {row.projectName || "—"}
+        </span>
       )
     case "projectValue":
     case "amountPaid":
     case "totalExpense":
     case "backlogAmount":
-      return <span className="tabular-nums">{formatMoney(row[columnId])}</span>
+      return <Money value={row[columnId]} />
     case "status":
       return row.status ? (
         <StatusBadge status={row.status} />

@@ -1,11 +1,25 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { Banknote, ClipboardList, FileText, Receipt, ScrollText, type LucideIcon } from "lucide-react"
 
+import { PageHeader } from "@/components/page-header"
+import { Card, CardContent } from "@/components/ui/card"
 import { allows, homePath } from "@/lib/access"
 import { documentKinds } from "@/lib/documents/kinds"
 import { getAccess } from "@/lib/permissions"
+import { cn } from "@/lib/utils"
 
 export const metadata = { title: "Documents" }
+
+const chartTiles = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"] as const
+
+const kindIcons: Record<string, LucideIcon> = {
+  "/documents/quotations": FileText,
+  "/documents/work-orders": ClipboardList,
+  "/documents/purchase-orders": Receipt,
+  "/documents/invoices": ScrollText,
+  "/documents/receipts": Banknote,
+}
 
 export default async function DocumentsPage() {
   const access = await getAccess()
@@ -14,24 +28,37 @@ export default async function DocumentsPage() {
   if (visible.length === 0) redirect(homePath(access))
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Documents</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Prepare a printable document. Output is the content only, so it sits on the letterhead pad.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {visible.map((kind) => (
-          <Link
-            key={kind.href}
-            href={kind.href}
-            className="flex min-h-28 flex-col justify-between rounded-xl border border-border bg-card p-5 hover:bg-accent"
-          >
-            <span className="font-medium">{kind.title}</span>
-            <span className="text-sm text-muted-foreground">{kind.detail}</span>
-          </Link>
-        ))}
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      <PageHeader
+        title="Documents"
+        description="Prepare a printable document. Output is the content only, so it sits on the letterhead pad."
+      />
+      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+        {visible.map((kind, index) => {
+          const Icon = kindIcons[kind.href] ?? FileText
+          return (
+            <Link
+              key={kind.href}
+              href={kind.href}
+              className="block rounded-card focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <Card className="h-full gap-3 transition-colors hover:bg-fill">
+                <CardContent className="flex flex-col gap-3">
+                  <span
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-tile text-on-color tile-sheen",
+                      chartTiles[index % chartTiles.length],
+                    )}
+                  >
+                    <Icon aria-hidden="true" className="size-4" />
+                  </span>
+                  <span className="text-panel-title">{kind.title}</span>
+                  <span className="text-label text-muted-foreground">{kind.detail}</span>
+                </CardContent>
+              </Card>
+            </Link>
+          )
+        })}
       </div>
     </div>
   )

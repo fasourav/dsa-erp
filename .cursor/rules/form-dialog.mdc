@@ -15,3 +15,14 @@ This is a hard constraint for every add or edit dialog. Do not relax it for one 
 - Keep `lockDialogScroll` in `dialog.tsx`. Opening a dialog pins `main` and the window. Focusing a field, or the on-screen keyboard resizing the visual viewport, must not jump the list behind the dialog.
 - Do not remove the visual-viewport sizing, the focus reveal inside `DialogBody`, or the scroll pin to "simplify" the dialog.
 - Do not change theme colors in `src/app/globals.css` to fix dialog layout.
+
+## Atrium form sheet
+
+Copy `src/app/(app)/clients/client-form-dialog.tsx` (mockups d26 and m27).
+
+- On phones `DialogContent` is a bottom sheet (grab handle, `rounded-sheet`, slides up). On desktop it is a centered glass dialog. Do not swap in a different modal or drawer for phones.
+- Pass `mobileLayout="nav"` when the footer holds exactly Cancel and Save. Phones then place them beside the title like an iOS sheet. Keep the default `stack` layout for any other footer.
+- Long side panels (the access editor, d23 and m24) use `variant="drawer"`.
+- Put the fields in one `<FieldGroup layout="inset">` inside `DialogBody`: a grouped list on phones, and a two-column grid from `md:` up. `<Field span="half">` shares a desktop row. Mark errors with `data-invalid` on `Field`, `aria-invalid` on the control, and `FieldError`.
+- Every control sets its keyboard and autofill hints (`type`, `inputMode`, `autoComplete`, `autoCapitalize`, `enterKeyHint`). Inputs stay 16px on phones.
+- Deletes are not form dialogs. Use `DeleteConfirmDialog`, which keeps the slide-to-delete confirmation.

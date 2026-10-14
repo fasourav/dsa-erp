@@ -1,14 +1,21 @@
 import * as React from "react"
 import { Input as InputPrimitive } from "@base-ui/react/input"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+// 16px text on phones so iOS Safari never zooms on focus.
+function Input({ className, type, style, ...props }: React.ComponentProps<"input">) {
+  // Chrome writes caret-color:transparent onto type="search" before hydration.
+  // Rendering that same inline style keeps the server and client attributes identical.
+  // The focus rule restores a visible caret without changing the attribute.
+  const search = type === "search"
   return (
     <InputPrimitive
       type={type}
       data-slot="input"
+      style={search ? { caretColor: "transparent", ...style } : style}
       className={cn(
-        "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        "h-11 w-full min-w-0 rounded-control border-0 bg-field px-3.5 py-1 text-base text-foreground transition-[box-shadow,background-color] outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-subtle-foreground focus-visible:shadow-field-focus disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-fill disabled:text-muted-foreground disabled:shadow-none aria-invalid:shadow-[inset_0_0_0_1px_var(--destructive),0_0_0_4px_var(--destructive-tint)] md:h-10.5 md:bg-control md:text-sm md:shadow-field md:focus-visible:shadow-field-focus md:aria-invalid:shadow-[inset_0_0_0_1px_var(--destructive),0_0_0_4px_var(--destructive-tint)] in-data-[field-layout=inset]:h-auto in-data-[field-layout=inset]:min-h-7 in-data-[field-layout=inset]:rounded-none in-data-[field-layout=inset]:bg-transparent in-data-[field-layout=inset]:px-0 in-data-[field-layout=inset]:py-0.5 in-data-[field-layout=inset]:shadow-none in-data-[field-layout=inset]:focus-visible:shadow-none md:in-data-[field-layout=inset]:h-10.5 md:in-data-[field-layout=inset]:rounded-control md:in-data-[field-layout=inset]:bg-control md:in-data-[field-layout=inset]:px-3.5 md:in-data-[field-layout=inset]:py-1 md:in-data-[field-layout=inset]:shadow-field md:in-data-[field-layout=inset]:focus-visible:shadow-field-focus",
+        search && "focus:[caret-color:auto]!",
         className
       )}
       {...props}

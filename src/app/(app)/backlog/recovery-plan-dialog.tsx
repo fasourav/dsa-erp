@@ -14,7 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
 import type { BacklogRow } from "@/lib/backlog"
 import {
@@ -80,6 +86,7 @@ export function RecoveryPlanDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -89,38 +96,31 @@ export function RecoveryPlanDialog({
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {project?.projectName ? (
-            <p className="text-sm text-muted-foreground">{project.projectName}</p>
+            <p className="px-1 text-sm text-muted-foreground md:px-0">{project.projectName}</p>
           ) : null}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="recovery-plan">Recovery Plan</Label>
-            <Textarea
-              id="recovery-plan"
-              value={plan}
-              disabled={pending}
-              aria-invalid={Boolean(fieldError)}
-              onChange={(event) => {
-                setPlan(event.target.value)
-                setFieldError(null)
-              }}
-            />
-            <p
-              className={cn(
-                "text-sm",
-                overLimit || fieldError
-                  ? "text-destructive"
-                  : "text-muted-foreground",
-              )}
-            >
-              {words} / {RECOVERY_PLAN_WORD_LIMIT} Words
-            </p>
-            {fieldError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {fieldError}
-              </p>
-            ) : null}
-          </div>
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(fieldError) || undefined}>
+              <FieldLabel htmlFor="recovery-plan">Recovery Plan</FieldLabel>
+              <Textarea
+                id="recovery-plan"
+                value={plan}
+                disabled={pending}
+                aria-invalid={Boolean(fieldError)}
+                onChange={(event) => {
+                  setPlan(event.target.value)
+                  setFieldError(null)
+                }}
+              />
+              <FieldDescription
+                className={cn(overLimit || fieldError ? "text-destructive" : undefined)}
+              >
+                {words} / {RECOVERY_PLAN_WORD_LIMIT} Words
+              </FieldDescription>
+              {fieldError ? <FieldError>{fieldError}</FieldError> : null}
+            </Field>
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

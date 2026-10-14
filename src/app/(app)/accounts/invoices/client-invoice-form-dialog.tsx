@@ -19,8 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -134,6 +139,7 @@ export function ClientInvoiceFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -145,69 +151,62 @@ export function ClientInvoiceFormDialog({
           {invoiceId ? (
             <RecordAttachments parentType="client_invoice" parentId={invoiceId} />
           ) : null}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-invoice-issued">Issue Date</Label>
-            <Input
-              id="client-invoice-issued"
-              type="date"
-              value={issuedOn}
-              disabled={pending}
-              aria-invalid={Boolean(issuedError)}
-              onChange={(event) => setIssuedOn(event.target.value)}
-            />
-            {issuedError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {issuedError}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-invoice-project">Project</Label>
-            <Select
-              items={projectItems}
-              value={projectId || null}
-              disabled={pending}
-              onValueChange={(value) => setProjectId(value ?? "")}
-            >
-              <SelectTrigger
-                id="client-invoice-project"
-                className="w-full"
-                aria-invalid={Boolean(projectError)}
+          <FieldGroup layout="inset">
+            <Field span="half" data-invalid={Boolean(issuedError) || undefined}>
+              <FieldLabel htmlFor="client-invoice-issued">Issue Date</FieldLabel>
+              <Input
+                id="client-invoice-issued"
+                type="date"
+                enterKeyHint="next"
+                value={issuedOn}
+                disabled={pending}
+                aria-invalid={Boolean(issuedError)}
+                onChange={(event) => setIssuedOn(event.target.value)}
+              />
+              {issuedError ? <FieldError>{issuedError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(projectError) || undefined}>
+              <FieldLabel htmlFor="client-invoice-project">Project</FieldLabel>
+              <Select
+                items={projectItems}
+                value={projectId || null}
+                disabled={pending}
+                onValueChange={(value) => setProjectId(value ?? "")}
               >
-                <SelectValue placeholder="Select A Project" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {projectItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {projectError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {projectError}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="client-invoice-amount">Amount</Label>
-            <Input
-              id="client-invoice-amount"
-              inputMode="decimal"
-              value={amount}
-              disabled={pending}
-              aria-invalid={Boolean(amountError)}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-            {amountError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {amountError}
-              </p>
-            ) : null}
-          </div>
+                <SelectTrigger
+                  id="client-invoice-project"
+                  className="w-full"
+                  aria-invalid={Boolean(projectError)}
+                >
+                  <SelectValue placeholder="Select A Project" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {projectItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {projectError ? <FieldError>{projectError}</FieldError> : null}
+            </Field>
+            <Field data-invalid={Boolean(amountError) || undefined}>
+              <FieldLabel htmlFor="client-invoice-amount">Amount</FieldLabel>
+              <Input
+                id="client-invoice-amount"
+                inputMode="decimal"
+                autoComplete="off"
+                enterKeyHint="done"
+                value={amount}
+                disabled={pending}
+                aria-invalid={Boolean(amountError)}
+                onChange={(event) => setAmount(event.target.value)}
+              />
+              {amountError ? <FieldError>{amountError}</FieldError> : null}
+            </Field>
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

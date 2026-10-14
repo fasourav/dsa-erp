@@ -1,5 +1,7 @@
 "use client"
 
+import { Trash2 } from "lucide-react"
+
 import { SlideToDelete } from "@/components/slide-to-delete"
 import {
   AlertDialog,
@@ -7,6 +9,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
@@ -42,6 +45,9 @@ export function DeleteConfirmDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          <AlertDialogMedia>
+            <Trash2 aria-hidden="true" />
+          </AlertDialogMedia>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
             {deleteConfirmMessage(itemName)}

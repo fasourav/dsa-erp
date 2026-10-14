@@ -1,7 +1,10 @@
 import { headers } from "next/headers"
+import type { ReactNode } from "react"
 
+import { AuthStage } from "@/app/login/auth-stage"
+import { Money } from "@/components/money"
 import { allowVerifyRequest, verifyClientKey } from "@/lib/documents/guard"
-import { formatIsoDate, formatMoney, toNumber } from "@/lib/format"
+import { formatIsoDate, toNumber } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
@@ -39,32 +42,30 @@ export default async function VerifyPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center gap-4 px-4 py-10">
-      <h1 className="text-2xl font-medium tracking-tight">Document check</h1>
-      <dl className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground">
+    <AuthStage title="Document Check" description="This document matches a saved record.">
+      <dl className="flex flex-col">
         <Fact label="Document number" value={row.document_no} />
         <Fact label="Date" value={formatIsoDate(row.issued_on.slice(0, 10))} />
-        <Fact label="Total" value={formatMoney(toNumber(row.total))} />
+        <Fact label="Total" value={<Money value={toNumber(row.total)} />} />
         <Fact label="Status" value={row.status} />
       </dl>
-    </main>
+    </AuthStage>
   )
 }
 
 function VerifyMessage({ title, detail }: { title: string; detail: string }) {
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center gap-3 px-4 py-10">
-      <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
-      <p className="text-sm text-muted-foreground">{detail}</p>
-    </main>
+    <AuthStage title={title} description={detail}>
+      {null}
+    </AuthStage>
   )
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div>
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{value}</dd>
+    <div className="flex items-baseline justify-between gap-4 border-t border-border py-2.5 first:border-t-0">
+      <dt className="text-label text-muted-foreground">{label}</dt>
+      <dd className="text-right text-ui font-semibold">{value}</dd>
     </div>
   )
 }

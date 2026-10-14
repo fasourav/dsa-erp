@@ -1,14 +1,18 @@
 "use client"
 
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Columns3,
+  Inbox,
 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -57,9 +61,9 @@ function insetClass(
   next: ColumnAlign | null,
 ) {
   return cn(
-    "px-4",
-    align === "right" && next && next !== "right" && "pr-8",
-    previous === "right" && align !== "right" && "pl-8",
+    "px-3",
+    align === "right" && next && next !== "right" && "pr-6",
+    previous === "right" && align !== "right" && "pl-6",
   )
 }
 
@@ -79,6 +83,15 @@ function staysOnOneLine(column: {
   )
 }
 
+export type DataListMobileItem = {
+  title: ReactNode
+  subtitle?: ReactNode
+  /** Right side of the first line, usually a <Money>. */
+  value?: ReactNode
+  /** Right side of the second line: a <StatusBadge>, or the amount when it reads with the subtitle. */
+  meta?: ReactNode
+}
+
 export function DataList<T, Id extends string>({
   columns,
   rows,
@@ -95,6 +108,7 @@ export function DataList<T, Id extends string>({
   pagingLabel,
   renderCell,
   renderActions,
+  mobileItem,
   toolbar,
 }: {
   columns: readonly ListColumn<Id>[]
@@ -112,28 +126,114 @@ export function DataList<T, Id extends string>({
   pagingLabel: string
   renderCell: (row: T, columnId: Id) => ReactNode
   renderActions?: (row: T) => ReactNode
+  /**
+   * Phone list-card row. When set, phones get the Atrium grouped list and the
+   * table only renders from md up. Without it phones scroll the table sideways.
+   */
+  mobileItem?: (row: T) => DataListMobileItem
   toolbar?: ReactNode
 }) {
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
   )
   const hasActions = renderActions !== undefined
-  const columnCount = visibleColumns.length + (hasActions ? 1 : 0)
   const pages = paginationItems(currentPage, pageCount)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5 md:gap-3.5">
       {toolbar ? (
-        <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
+        <div className="flex flex-wrap items-center gap-2 px-1 md:gap-2.5 md:px-0">{toolbar}</div>
       ) : null}
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
+      {mobileItem ? (
+        <div className="flex flex-col gap-2.5 md:hidden">
+          <div className="overflow-hidden rounded-card glass-panel">
+            {error ? (
+              <p role="alert" className="px-4 py-8 text-center text-callout text-destructive">
+                {error}
+              </p>
+            ) : rows.length === 0 ? (
+              <ListEmpty message={emptyMessage} />
+            ) : (
+              <ul>
+                {rows.map((row) => {
+                  const item = mobileItem(row)
+                  return (
+                    <li
+                      key={rowKey(row)}
+                      className={cn(
+                        "relative flex min-h-16 items-center gap-3 py-3.25 pl-4",
+                        hasActions ? "pr-2" : "pr-4",
+                        "not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px not-first:before:origin-top not-first:before:scale-y-50 not-first:before:bg-border",
+                      )}
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <div className="flex items-center justify-between gap-2.5">
+                          <span className="min-w-0 truncate text-row font-semibold">{item.title}</span>
+                          {item.value ? (
+                            <span className="shrink-0 text-callout font-strong tabular-nums">
+                              {item.value}
+                            </span>
+                          ) : null}
+                        </div>
+                        {item.subtitle || item.meta ? (
+                          <div className="mt-0.5 flex items-center justify-between gap-2.5">
+                            <span className="min-w-0 flex-1 truncate text-label text-muted-foreground">
+                              {item.subtitle}
+                            </span>
+                            {item.meta ? (
+                              <span className="shrink-0 text-callout font-strong tabular-nums">{item.meta}</span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                      {hasActions ? (
+                        <span className="inline-flex shrink-0 items-center">{renderActions(row)}</span>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-3 px-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={currentPage <= 1}
+              aria-label="Go to previous page"
+              onClick={() => onPageChange(currentPage - 1)}
+            >
+              <ChevronLeft aria-hidden="true" />
+            </Button>
+            <p className="text-label text-muted-foreground">{rangeText}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={currentPage >= pageCount}
+              aria-label="Go to next page"
+              onClick={() => onPageChange(currentPage + 1)}
+            >
+              <ChevronRight aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <div
+        className={cn(
+          "min-w-0 overflow-hidden rounded-card glass-panel",
+          mobileItem && "hidden md:block",
+        )}
+      >
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
+            <TableRow className="hover:bg-transparent">
               {visibleColumns.map((column, index) => {
                 const active = sort.key === column.id
                 const previous = visibleColumns[index - 1]?.align ?? null
                 const next = visibleColumns[index + 1]?.align ?? null
+                const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
                 return (
                   <TableHead
                     key={column.id}
@@ -145,7 +245,7 @@ export function DataList<T, Id extends string>({
                         : "none"
                     }
                     className={cn(
-                      "h-auto py-2 align-middle text-sm font-medium whitespace-nowrap",
+                      "py-2 align-middle",
                       alignClass(column.align),
                       insetClass(column.align, previous, next),
                     )}
@@ -153,7 +253,12 @@ export function DataList<T, Id extends string>({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-auto min-h-8 px-0 font-medium"
+                      size="sm"
+                      className={cn(
+                        "h-auto min-h-8 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:text-caption",
+                        column.align === "right" && "flex-row-reverse",
+                        active && "text-foreground",
+                      )}
                       aria-label={
                         active
                           ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
@@ -162,38 +267,20 @@ export function DataList<T, Id extends string>({
                       onClick={() => onSort(column.id)}
                     >
                       {column.label}
+                      {active ? <SortIcon aria-hidden="true" className="size-3" strokeWidth={2.4} /> : null}
                     </Button>
                   </TableHead>
                 )
               })}
               {hasActions ? (
-                <TableHead className="sticky right-0 z-10 w-px bg-muted px-3 align-middle whitespace-nowrap">
+                <TableHead className="sticky right-0 z-10 w-px bg-muted px-3 align-middle whitespace-nowrap last:pr-4">
                   <span className="sr-only">Actions</span>
                 </TableHead>
               ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  role="alert"
-                  className="px-3 py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  {emptyMessage}
-                </TableCell>
-              </TableRow>
-            ) : (
+            {error || rows.length === 0 ? null : (
               rows.map((row) => (
                 <TableRow key={rowKey(row)} className="group">
                   {visibleColumns.map((column, index) => {
@@ -204,7 +291,7 @@ export function DataList<T, Id extends string>({
                       <TableCell
                         key={column.id}
                         className={cn(
-                          "py-3 align-middle text-sm",
+                          "align-middle",
                           oneLine ? "whitespace-nowrap" : "whitespace-normal",
                           alignClass(column.align),
                           insetClass(column.align, previous, next),
@@ -223,7 +310,7 @@ export function DataList<T, Id extends string>({
                     )
                   })}
                   {hasActions ? (
-                    <TableCell className="sticky right-0 z-10 w-px bg-card p-3 align-middle text-sm whitespace-nowrap group-hover:bg-muted">
+                    <TableCell className="sticky right-0 z-10 w-px bg-card px-3 py-2 align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint last:pr-4">
                       <span className="inline-flex items-center">
                         {renderActions(row)}
                       </span>
@@ -234,17 +321,25 @@ export function DataList<T, Id extends string>({
             )}
           </TableBody>
         </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">{rangeText}</p>
+        {error ? (
+          <p role="alert" className="px-4 py-10 text-center text-callout text-destructive md:text-ui">
+            {error}
+          </p>
+        ) : rows.length === 0 ? (
+          <ListEmpty message={emptyMessage} />
+        ) : null}
+        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
+          <p className="text-label text-muted-foreground">{rangeText}</p>
           <Pagination
             aria-label={pagingLabel}
             className="mx-0 w-auto justify-start sm:justify-end"
           >
-            <PaginationContent className="flex-wrap">
+            <PaginationContent className="flex-wrap gap-1">
               <PaginationItem>
                 <Button
                   type="button"
                   variant="ghost"
+                  size="sm"
                   disabled={currentPage <= 1}
                   aria-label="Go to previous page"
                   onClick={() => onPageChange(currentPage - 1)}
@@ -262,10 +357,11 @@ export function DataList<T, Id extends string>({
                   <PaginationItem key={item}>
                     <Button
                       type="button"
-                      variant={item === currentPage ? "outline" : "ghost"}
+                      variant="ghost"
                       size="icon"
                       aria-label={`Page ${item}`}
                       aria-current={item === currentPage ? "page" : undefined}
+                      className="font-label text-muted-foreground aria-[current=page]:bg-solid aria-[current=page]:text-foreground aria-[current=page]:shadow-segment md:size-8"
                       onClick={() => onPageChange(item)}
                     >
                       {item}
@@ -277,6 +373,7 @@ export function DataList<T, Id extends string>({
                 <Button
                   type="button"
                   variant="ghost"
+                  size="sm"
                   disabled={currentPage >= pageCount}
                   aria-label="Go to next page"
                   onClick={() => onPageChange(currentPage + 1)}
@@ -290,6 +387,17 @@ export function DataList<T, Id extends string>({
         </div>
       </div>
     </div>
+  )
+}
+
+function ListEmpty({ message }: { message: string }) {
+  return (
+    <Empty>
+      <EmptyMedia variant="icon">
+        <Inbox aria-hidden="true" />
+      </EmptyMedia>
+      <EmptyTitle className="font-label text-muted-foreground">{message}</EmptyTitle>
+    </Empty>
   )
 }
 
@@ -309,7 +417,7 @@ export function CustomizeColumns<Id extends string>({
         Customize Columns
         <ChevronDown aria-hidden="true" data-icon="inline-end" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
+      <DropdownMenuContent align="start" sideOffset={8} className="w-64">
         {columns.map((column) => (
           <DropdownMenuCheckboxItem
             key={column.id}

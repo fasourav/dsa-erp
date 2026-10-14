@@ -5,8 +5,8 @@ import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
-import { Badge } from "@/components/ui/badge"
-import { formatMoney } from "@/lib/format"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import {
   paginateRows,
   rangeLabel,
@@ -22,8 +22,6 @@ import {
 } from "@/lib/po-expenses"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { cn } from "@/lib/utils"
-
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function ExpenseTable({
   rows,
@@ -44,28 +42,31 @@ export function ExpenseTable({
   const pageResult = paginateRows(filtered, page)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Expense</h1>
-        <ListExport
-          grid={{
-            filename: "expense",
-            title: "Expense",
-            columns: [
-              { header: "Project", kind: "text" },
-              { header: "Vendor", kind: "text" },
-              { header: "Expense Amount", kind: "money" },
-              { header: "Banking Channel", kind: "text" },
-            ],
-            rows: filtered.map((row) => [
-              row.projectName,
-              row.vendorName,
-              row.expenseAmount,
-              row.bankingChannel,
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Expense"
+        className="mb-0 md:mb-2"
+        actions={
+          <ListExport
+            grid={{
+              filename: "expense",
+              title: "Expense",
+              columns: [
+                { header: "Project", kind: "text" },
+                { header: "Vendor", kind: "text" },
+                { header: "Expense Amount", kind: "money" },
+                { header: "Banking Channel", kind: "text" },
+              ],
+              rows: filtered.map((row) => [
+                row.projectName,
+                row.vendorName,
+                row.expenseAmount,
+                row.bankingChannel,
+              ]),
+            }}
+          />
+        }
+      />
       <ListSearch
         query={query}
         onQueryChange={(value) => {
@@ -97,6 +98,11 @@ export function ExpenseTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Expense pagination"
+        mobileItem={(row) => ({
+          title: row.vendorName || "—",
+          subtitle: [row.projectName, row.bankingChannel].filter(Boolean).join(" · "),
+          meta: <Money value={row.expenseAmount} />,
+        })}
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
       />
     </div>
@@ -112,23 +118,24 @@ function Cell({
 }) {
   switch (columnId) {
     case "projectName":
-      return row.projectName ? (
-        <span className="font-medium">{row.projectName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
+      return (
+        <span
+          className={cn(
+            "text-ui font-semibold",
+            !row.projectName && "text-muted-foreground",
+          )}
+        >
+          {row.projectName || "—"}
+        </span>
       )
     case "vendorName":
       return row.vendorName ? (
-        <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-          {row.vendorName}
-        </Badge>
+        <span>{row.vendorName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "expenseAmount":
-      return (
-        <span className="tabular-nums">{formatMoney(row.expenseAmount)}</span>
-      )
+      return <Money value={row.expenseAmount} />
     case "bankingChannel":
       return row.bankingChannel ? (
         <span>{row.bankingChannel}</span>

@@ -11,6 +11,9 @@ import { VatTaxFormDialog } from "@/app/(app)/accounts/vat-tax/vat-tax-form-dial
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -19,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -28,6 +31,7 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import type { ProjectOption, VatTaxRow } from "@/lib/vat-tax"
+import { cn } from "@/lib/utils"
 
 type ColId = "projectName" | "paidOn" | "amount" | "paymentMethod"
 
@@ -123,42 +127,47 @@ export function VatTaxTable({
     })
   }
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0)
+  const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">
-            VAT / Tax Payments
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Total: {formatMoney(totalAmount)}
-          </p>
-        </div>
-        <ListExport
-          grid={{
-            filename: "vat-tax",
-            title: "VAT / Tax Payments",
-            columns: [
-              { header: "Project", kind: "text" },
-              { header: "Paid On", kind: "text" },
-              { header: "Amount", kind: "money" },
-              { header: "Payment Method", kind: "text" },
-            ],
-            rows: filtered.map((payment) => [
-              payment.projectName,
-              formatDayMonYear(payment.paidOn),
-              payment.amount,
-              payment.paymentMethod,
-            ]),
-          }}
-        />
-        {canAdd ? (<Button type="button" onClick={openForm}>
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Add Payment
-        </Button>) : null}
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="VAT / Tax Payments"
+        description={
+          <>
+            Total: <Money value={totalAmount} />
+          </>
+        }
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "vat-tax",
+                title: "VAT / Tax Payments",
+                columns: [
+                  { header: "Project", kind: "text" },
+                  { header: "Paid On", kind: "text" },
+                  { header: "Amount", kind: "money" },
+                  { header: "Payment Method", kind: "text" },
+                ],
+                rows: filtered.map((payment) => [
+                  payment.projectName,
+                  formatDayMonYear(payment.paidOn),
+                  payment.amount,
+                  payment.paymentMethod,
+                ]),
+              }}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={openForm}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add Payment
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <ListSearch
         query={query}
@@ -191,6 +200,13 @@ export function VatTaxTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="VAT tax pagination"
+        mobileItem={(payment) => ({
+          title: payment.projectName || "—",
+          subtitle: [payment.paymentMethod, payment.paidOn ? formatIsoDate(payment.paidOn) : null]
+            .filter(Boolean)
+            .join(" · "),
+          meta: <Money value={payment.amount} />,
+        })}
         renderCell={(payment, columnId) => (
           <Cell payment={payment} columnId={columnId} />
         )}
@@ -264,7 +280,14 @@ function Cell({
   switch (columnId) {
     case "projectName":
       return (
-        <span className="font-medium">{payment.projectName || "—"}</span>
+        <span
+          className={cn(
+            "text-ui font-semibold",
+            !payment.projectName && "text-muted-foreground",
+          )}
+        >
+          {payment.projectName || "—"}
+        </span>
       )
     case "paidOn":
       return payment.paidOn ? (
@@ -273,10 +296,10 @@ function Cell({
         <span className="text-muted-foreground">—</span>
       )
     case "amount":
-      return <span className="tabular-nums">{formatMoney(payment.amount)}</span>
+      return <Money value={payment.amount} />
     case "paymentMethod":
       return payment.paymentMethod ? (
-        <span>{payment.paymentMethod}</span>
+        <Badge variant="outline">{payment.paymentMethod}</Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

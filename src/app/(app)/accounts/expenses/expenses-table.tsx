@@ -11,6 +11,8 @@ import { ExpenseFormDialog } from "@/app/(app)/accounts/expenses/expense-form-di
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -20,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -36,6 +38,7 @@ import {
   type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { cn } from "@/lib/utils"
 
 export function ExpensesTable({
   expenses,
@@ -109,34 +112,43 @@ export function ExpensesTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">
-          Operational Expenses
-        </h1>
-        <ListExport
-          grid={{
-            filename: "operational-expenses",
-            title: "Operational Expenses",
-            columns: [
-              { header: "Date", kind: "text" },
-              { header: "Category", kind: "text" },
-              { header: "Amount", kind: "money" },
-              { header: "Payment Method", kind: "text" },
-              { header: "Department", kind: "text" },
-              { header: "Vendor", kind: "text" },
-            ],
-            rows: filtered.map((row) => [
-              formatDayMonYear(row.expenseDate),
-              row.category,
-              row.amount,
-              row.paymentMethod,
-              row.departmentName || "—",
-              row.vendorName || "—",
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Operational Expenses"
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "operational-expenses",
+                title: "Operational Expenses",
+                columns: [
+                  { header: "Date", kind: "text" },
+                  { header: "Category", kind: "text" },
+                  { header: "Amount", kind: "money" },
+                  { header: "Payment Method", kind: "text" },
+                  { header: "Department", kind: "text" },
+                  { header: "Vendor", kind: "text" },
+                ],
+                rows: filtered.map((row) => [
+                  formatDayMonYear(row.expenseDate),
+                  row.category,
+                  row.amount,
+                  row.paymentMethod,
+                  row.departmentName || "—",
+                  row.vendorName || "—",
+                ]),
+              }}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add Expense
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       <ListSearch
         query={query}
         onQueryChange={(value) => {
@@ -168,14 +180,16 @@ export function ExpensesTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Operational Expenses pagination"
-        toolbar={
-          canAdd ? (
-            <Button type="button" onClick={() => openForm(null)}>
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Expense
-            </Button>
-          ) : null
-        }
+        mobileItem={(expense) => ({
+          title: expense.category || "—",
+          subtitle: [
+            expense.paymentMethod,
+            expense.expenseDate ? formatIsoDate(expense.expenseDate) : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          meta: <Money value={expense.amount} />,
+        })}
         renderCell={(expense, columnId) => (
           <Cell expense={expense} columnId={columnId} />
         )}
@@ -246,20 +260,6 @@ export function ExpensesTable({
   )
 }
 
-function ArrowTag({ children }: { children: string }) {
-  return (
-    <span
-      className="inline-flex h-7 items-center bg-secondary px-5 text-sm font-medium whitespace-nowrap text-secondary-foreground"
-      style={{
-        clipPath:
-          "polygon(0.65rem 0, calc(100% - 0.65rem) 0, 100% 50%, calc(100% - 0.65rem) 100%, 0.65rem 100%, 0 50%)",
-      }}
-    >
-      {children}
-    </span>
-  )
-}
-
 function Cell({
   expense,
   columnId,
@@ -270,22 +270,23 @@ function Cell({
   switch (columnId) {
     case "expenseDate":
       return expense.expenseDate ? (
-        <span>{formatIsoDate(expense.expenseDate)}</span>
+        <span className="text-muted-foreground">{formatIsoDate(expense.expenseDate)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "category":
       return (
-        <span className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="font-medium">{expense.category || "—"}</span>
-          {expense.departmentName ? (
-            <ArrowTag>{expense.departmentName}</ArrowTag>
-          ) : null}
-          {expense.vendorName ? <ArrowTag>{expense.vendorName}</ArrowTag> : null}
+        <span
+          className={cn(
+            "text-ui font-semibold",
+            !expense.category && "text-muted-foreground",
+          )}
+        >
+          {expense.category || "—"}
         </span>
       )
     case "amount":
-      return <span className="tabular-nums">{formatMoney(expense.amount)}</span>
+      return <Money value={expense.amount} />
     case "paymentMethod":
       return expense.paymentMethod ? (
         <span>{expense.paymentMethod}</span>

@@ -4,21 +4,17 @@ import {
   moneyCents,
   paymentStatusLabel,
 } from "@/lib/payment-status"
-import { cn } from "@/lib/utils"
 
-const pillClassName =
-  "h-7 gap-1.5 rounded-full border-transparent px-2.5 text-sm font-medium"
-
-const toneClassName = {
-  paid: "bg-primary text-primary-foreground",
-  pending: "bg-status-pending text-status-pending-foreground",
-  unpaid: "bg-status-unpaid text-status-unpaid-foreground",
-  active: "bg-primary text-primary-foreground",
-  completed: "bg-status-completed text-status-completed-foreground",
-  neutral: "bg-secondary text-secondary-foreground",
+const toneVariant = {
+  paid: "success",
+  pending: "warning",
+  unpaid: "destructive",
+  active: "info",
+  completed: "success",
+  neutral: "neutral",
 } as const
 
-type StatusTone = keyof typeof toneClassName
+type StatusTone = keyof typeof toneVariant
 
 export function paymentBalanceStatus(
   paid: number,
@@ -39,28 +35,30 @@ export function StatusBadge({ status }: { status: string }) {
   const tone = statusTone(status)
 
   return (
-    <Badge variant="secondary" className={cn(pillClassName, toneClassName[tone])}>
-      {tone === "paid" ? (
-        <span
-          aria-hidden="true"
-          className="size-2 rounded-full bg-primary-foreground"
-        />
-      ) : null}
+    <Badge variant={toneVariant[tone]}>
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {statusText(status)}
     </Badge>
   )
 }
 
 function statusTone(status: string): StatusTone {
-  switch (status.trim().toLowerCase()) {
+  switch (status.trim().toLowerCase().replace(/[_-]+/g, " ")) {
     case "paid":
+    case "won":
+    case "inflow":
       return "paid"
     case "pending":
     case "partial":
+    case "on hold":
+    case "invited":
       return "pending"
     case "unpaid":
+    case "lost":
+    case "outflow":
       return "unpaid"
     case "active":
+    case "open":
       return "active"
     case "completed":
       return "completed"

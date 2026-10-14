@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
+import { authAlertClassName } from "@/app/login/auth-styles"
 import { createClient } from "@/lib/supabase/client"
 
 const inviteError =
@@ -94,11 +95,11 @@ export function AcceptInvite() {
   }, [router])
 
   return failed ? (
-    <p role="alert" className="text-sm leading-relaxed text-destructive">
+    <p role="alert" className={authAlertClassName}>
       {inviteError}
     </p>
   ) : (
-    <p className="text-sm leading-relaxed text-primary-foreground/80" aria-live="polite">
+    <p className="text-center text-sm leading-relaxed text-muted-foreground md:text-login-ink-muted" aria-live="polite">
       Signing you in from your invite.
     </p>
   )

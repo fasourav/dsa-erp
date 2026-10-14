@@ -15,7 +15,7 @@ import {
 import { roleFor, type EmployeeChoice, type PrintMargins } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentInvoice } from "@/lib/documents/present"
-import { formatMoney } from "@/lib/format"
+import { Money } from "@/components/money"
 import type { InvoiceDraft } from "@/lib/documents/queries"
 
 export function InvoiceStudio({
@@ -136,7 +136,7 @@ export function InvoiceStudio({
           <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
             {form.deductions.map((deduction) => (
               <li key={`${deduction.label}-${deduction.paidOn}`}>
-                {deduction.label} · {formatMoney(deduction.amount)}
+                {deduction.label} · <Money value={deduction.amount} />
               </li>
             ))}
           </ul>

@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import { MailtoLink, TelLink } from "@/components/contact-links"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -30,32 +31,34 @@ export function VendorContactDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="overflow-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="break-words">
             {vendor?.displayName ?? ""}
           </DialogTitle>
         </DialogHeader>
-        <dl className="flex flex-col gap-4">
-          <Field label="Address" empty={!address}>
-            {address || NOT_AVAILABLE}
-          </Field>
-          <Field label="Contact Number" empty={!phone}>
-            {phone ? <TelLink phone={phone} /> : NOT_AVAILABLE}
-          </Field>
-          <Field label="Email" empty={!email}>
-            {email ? <MailtoLink email={email} /> : NOT_AVAILABLE}
-          </Field>
-          <Field label="Notes" empty={!notes}>
-            {notes || NOT_AVAILABLE}
-          </Field>
-        </dl>
+        <DialogBody>
+          <dl className="flex flex-col">
+            <ContactField label="Address" empty={!address}>
+              {address || NOT_AVAILABLE}
+            </ContactField>
+            <ContactField label="Contact Number" empty={!phone}>
+              {phone ? <TelLink phone={phone} /> : NOT_AVAILABLE}
+            </ContactField>
+            <ContactField label="Email" empty={!email}>
+              {email ? <MailtoLink email={email} /> : NOT_AVAILABLE}
+            </ContactField>
+            <ContactField label="Notes" empty={!notes}>
+              {notes || NOT_AVAILABLE}
+            </ContactField>
+          </dl>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )
 }
 
-function Field({
+function ContactField({
   label,
   empty,
   children,
@@ -65,12 +68,12 @@ function Field({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
+    <div className="flex flex-col gap-1 border-t border-border py-3 first:border-t-0 first:pt-0">
+      <dt className="text-label text-muted-foreground">{label}</dt>
       <dd
         className={cn(
-          "min-h-5 text-sm font-medium break-words whitespace-pre-wrap",
-          empty && "text-muted-foreground",
+          "min-h-5 text-ui font-semibold break-words whitespace-pre-wrap",
+          empty && "font-book text-muted-foreground",
         )}
       >
         {children}

@@ -1,4 +1,6 @@
-import { DocumentList } from "@/components/documents/document-list"
+import { documentExportGrid, DocumentList } from "@/components/documents/document-list"
+import { ListExport } from "@/components/list-export"
+import { PageHeader } from "@/components/page-header"
 import { listPurchaseOrderDocuments } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
@@ -9,13 +11,16 @@ export default async function PurchaseOrderDocumentsPage() {
   const page = await listPurchaseOrderDocuments()
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Purchase Orders</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Open a purchase order to prepare the printable order.
-        </p>
-      </div>
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      <PageHeader
+        title="Purchase Orders"
+        description="Open a purchase order to prepare the printable order."
+        actions={
+          <ListExport
+            grid={documentExportGrid(page.items, "purchase-order-documents", "Purchase Orders")}
+          />
+        }
+      />
       {page.error ? (
         <p role="alert" className="text-sm text-destructive">
           {page.error}
@@ -24,9 +29,8 @@ export default async function PurchaseOrderDocumentsPage() {
       <DocumentList
         items={page.items}
         hrefBase="/documents/purchase-orders"
-        empty="No purchase orders yet."
-        exportName="purchase-order-documents"
-        exportTitle="Purchase Orders"
+        empty="No Purchase Orders Yet."
+        pagingLabel="Purchase orders pagination"
       />
     </div>
   )

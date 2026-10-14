@@ -21,8 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -146,6 +146,7 @@ export function EmployeeFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -156,25 +157,24 @@ export function EmployeeFormDialog({
 
         <DialogBody className="flex flex-col gap-4">
           {employeeId ? <RecordAttachments parentType="employee" parentId={employeeId} /> : null}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="emp-name">Full Name</Label>
-            <Input
-              id="emp-name"
-              value={fullName}
-              disabled={pending}
-              aria-invalid={Boolean(nameError)}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-            {nameError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {nameError}
-              </p>
-            ) : null}
-          </div>
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(nameError) || undefined}>
+              <FieldLabel htmlFor="emp-name">Full Name</FieldLabel>
+              <Input
+                id="emp-name"
+                value={fullName}
+                autoComplete="name"
+                autoCapitalize="words"
+                enterKeyHint="next"
+                disabled={pending}
+                aria-invalid={Boolean(nameError)}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+              {nameError ? <FieldError>{nameError}</FieldError> : null}
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-dept">Department</Label>
+            <Field span="half" data-invalid={Boolean(fieldErrors.departmentId) || undefined}>
+              <FieldLabel htmlFor="emp-dept">Department</FieldLabel>
               <Select
                 items={deptItems}
                 value={departmentId || null}
@@ -193,79 +193,72 @@ export function EmployeeFormDialog({
                 </SelectContent>
               </Select>
               {fieldErrors.departmentId ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.departmentId}
-                </p>
+                <FieldError>{fieldErrors.departmentId}</FieldError>
               ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-designation">Designation</Label>
+            </Field>
+            <Field span="half">
+              <FieldLabel htmlFor="emp-designation">Designation</FieldLabel>
               <Input
                 id="emp-designation"
                 value={designation}
+                autoComplete="organization-title"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 disabled={pending}
                 onChange={(e) => setDesignation(e.target.value)}
               />
-            </div>
-          </div>
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-salary">Monthly Salary</Label>
+            <Field span="half" data-invalid={Boolean(salaryError) || undefined}>
+              <FieldLabel htmlFor="emp-salary">Monthly Salary</FieldLabel>
               {hidePay ? (
-                <p id="emp-salary" className="flex h-8 items-center text-sm text-muted-foreground">
+                <p id="emp-salary" className="flex min-h-11 items-center text-base text-muted-foreground md:min-h-10.5 md:text-sm">
                   Hidden
                 </p>
               ) : (
-              <Input
-                id="emp-salary"
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={monthlySalary}
-                disabled={pending}
-                aria-invalid={Boolean(salaryError)}
-                onChange={(e) => setMonthlySalary(e.target.value)}
-              />
+                <Input
+                  id="emp-salary"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  enterKeyHint="next"
+                  value={monthlySalary}
+                  disabled={pending}
+                  aria-invalid={Boolean(salaryError)}
+                  onChange={(e) => setMonthlySalary(e.target.value)}
+                />
               )}
-              {salaryError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {salaryError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-allowance">Allowance</Label>
+              {salaryError ? <FieldError>{salaryError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.allowance) || undefined}>
+              <FieldLabel htmlFor="emp-allowance">Allowance</FieldLabel>
               {hidePay ? (
-                <p id="emp-allowance" className="flex h-8 items-center text-sm text-muted-foreground">
+                <p id="emp-allowance" className="flex min-h-11 items-center text-base text-muted-foreground md:min-h-10.5 md:text-sm">
                   Hidden
                 </p>
               ) : (
-              <Input
-                id="emp-allowance"
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={allowance}
-                disabled={pending}
-                placeholder="0"
-                aria-invalid={Boolean(fieldErrors.allowance)}
-                onChange={(e) => setAllowance(e.target.value)}
-              />
+                <Input
+                  id="emp-allowance"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  enterKeyHint="next"
+                  value={allowance}
+                  disabled={pending}
+                  placeholder="0"
+                  aria-invalid={Boolean(fieldErrors.allowance)}
+                  onChange={(e) => setAllowance(e.target.value)}
+                />
               )}
               {fieldErrors.allowance ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.allowance}
-                </p>
+                <FieldError>{fieldErrors.allowance}</FieldError>
               ) : null}
-            </div>
-          </div>
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-joining">Joining Date</Label>
+            <Field span="half" data-invalid={Boolean(joiningError) || undefined}>
+              <FieldLabel htmlFor="emp-joining">Joining Date</FieldLabel>
               <Input
                 id="emp-joining"
                 type="date"
@@ -274,14 +267,10 @@ export function EmployeeFormDialog({
                 aria-invalid={Boolean(joiningError)}
                 onChange={(e) => setJoiningDate(e.target.value)}
               />
-              {joiningError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {joiningError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-leave">Leave Date</Label>
+              {joiningError ? <FieldError>{joiningError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.leaveDate) || undefined}>
+              <FieldLabel htmlFor="emp-leave">Leave Date</FieldLabel>
               <Input
                 id="emp-leave"
                 type="date"
@@ -291,57 +280,65 @@ export function EmployeeFormDialog({
                 onChange={(e) => setLeaveDate(e.target.value)}
               />
               {fieldErrors.leaveDate ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.leaveDate}
-                </p>
+                <FieldError>{fieldErrors.leaveDate}</FieldError>
               ) : null}
-            </div>
-          </div>
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-email">Email</Label>
+            <Field span="half">
+              <FieldLabel htmlFor="emp-email">Email</FieldLabel>
               <Input
                 id="emp-email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                enterKeyHint="next"
                 value={email}
                 disabled={pending}
                 onChange={(e) => setEmail(e.target.value)}
               />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="emp-phone">Phone</Label>
+            </Field>
+            <Field span="half">
+              <FieldLabel htmlFor="emp-phone">Phone</FieldLabel>
               <Input
                 id="emp-phone"
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                enterKeyHint="next"
                 value={phone}
                 disabled={pending}
                 onChange={(e) => setPhone(e.target.value)}
               />
-            </div>
-          </div>
+            </Field>
 
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={isActive}
-              disabled={pending}
-              onCheckedChange={(checked) => setIsActive(Boolean(checked))}
-            />
-            Active Employee
-          </label>
+            <Field>
+              <FieldTitle id="emp-active-label">Status</FieldTitle>
+              <label className="flex min-h-11 items-center gap-2.5 text-base md:min-h-0 md:text-sm">
+                <Checkbox
+                  checked={isActive}
+                  disabled={pending}
+                  onCheckedChange={(checked) => setIsActive(Boolean(checked))}
+                />
+                Active Employee
+              </label>
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="emp-notes">Notes</Label>
-            <Textarea
-              id="emp-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="emp-notes">Notes</FieldLabel>
+              <Textarea
+                id="emp-notes"
+                value={notes}
+                enterKeyHint="done"
+                disabled={pending}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </Field>
+          </FieldGroup>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

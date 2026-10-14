@@ -20,8 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   catalogSingularTitle,
   nextSortOrder,
@@ -135,6 +135,7 @@ export function CatalogFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -144,59 +145,60 @@ export function CatalogFormDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="catalog-name">Name</Label>
-            <Input
-              id="catalog-name"
-              value={name}
-              autoFocus
-              disabled={pending}
-              aria-invalid={Boolean(nameError)}
-              onChange={(event) => {
-                setName(event.target.value)
-                setNameError(null)
-              }}
-            />
-            {nameError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {nameError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="catalog-sort-order">Sort Order</Label>
-            <Input
-              id="catalog-sort-order"
-              inputMode="numeric"
-              value={sortOrder}
-              disabled={pending}
-              aria-invalid={Boolean(sortOrderError)}
-              onChange={(event) => {
-                setSortOrder(event.target.value)
-                setSortOrderError(null)
-              }}
-            />
-            {sortOrderError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {sortOrderError}
-              </p>
-            ) : null}
-          </div>
-
-          {catalog.hasActive ? (
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={isActive}
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(nameError) || undefined}>
+              <FieldLabel htmlFor="catalog-name">Name</FieldLabel>
+              <Input
+                id="catalog-name"
+                value={name}
+                autoFocus
+                autoComplete="off"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 disabled={pending}
-                onCheckedChange={(checked) => setIsActive(checked)}
+                aria-invalid={Boolean(nameError)}
+                onChange={(event) => {
+                  setName(event.target.value)
+                  setNameError(null)
+                }}
               />
-              Active
-            </label>
-          ) : null}
+              {nameError ? <FieldError>{nameError}</FieldError> : null}
+            </Field>
+
+            <Field data-invalid={Boolean(sortOrderError) || undefined}>
+              <FieldLabel htmlFor="catalog-sort-order">Sort Order</FieldLabel>
+              <Input
+                id="catalog-sort-order"
+                inputMode="numeric"
+                enterKeyHint={catalog.hasActive ? "next" : "done"}
+                value={sortOrder}
+                disabled={pending}
+                aria-invalid={Boolean(sortOrderError)}
+                onChange={(event) => {
+                  setSortOrder(event.target.value)
+                  setSortOrderError(null)
+                }}
+              />
+              {sortOrderError ? <FieldError>{sortOrderError}</FieldError> : null}
+            </Field>
+
+            {catalog.hasActive ? (
+              <Field>
+                <FieldTitle id="catalog-active-label">Status</FieldTitle>
+                <label className="flex min-h-11 items-center gap-2.5 text-base md:min-h-0 md:text-sm">
+                  <Checkbox
+                    checked={isActive}
+                    disabled={pending}
+                    onCheckedChange={(checked) => setIsActive(checked === true)}
+                  />
+                  Active
+                </label>
+              </Field>
+            ) : null}
+          </FieldGroup>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

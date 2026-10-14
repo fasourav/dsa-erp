@@ -1,7 +1,9 @@
 "use client"
 
+import type { ReactNode } from "react"
+
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
@@ -11,10 +13,14 @@ import { useAccess, useCan } from "@/components/access-provider"
 import { PaySalariesDialog } from "@/app/(app)/hr/payroll/pay-salaries-dialog"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatIsoDate, formatTaka } from "@/lib/format"
+import { formatDayMonYear } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -83,6 +89,7 @@ export function PayrollDetailPanel({
   const canDelete = useCan("payroll", "delete")
 
   const router = useRouter()
+  const [section, setSection] = useState("lines")
   const [sort, setSort] = useState<SortState<ColumnId>>({
     key: "employee",
     direction: "asc",
@@ -105,6 +112,14 @@ export function PayrollDetailPanel({
     bankAccounts.find((account) => account.id === salary.bankAccountId)?.name ??
     ""
   const label = monthLabel(salary.periodYear, salary.periodMonth)
+  const bonus = useMemo(
+    () => salary.lines.reduce((sum, line) => sum + line.bonus, 0),
+    [salary.lines],
+  )
+  const deduction = useMemo(
+    () => salary.lines.reduce((sum, line) => sum + line.deduction, 0),
+    [salary.lines],
+  )
 
   function confirmDelete() {
     startDelete(async () => {
@@ -122,93 +137,132 @@ export function PayrollDetailPanel({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            nativeButton={false}
-            render={<Link href="/hr/payroll" aria-label="Back to Payroll" />}
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-          </Button>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-medium tracking-tight">{label}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <StatusBadge status="paid" />
-              <span className="text-sm text-muted-foreground">
-                {salary.lineCount} Employees · Total{" "}
-                {showFinancials ? formatTaka(salary.totalPaid) : "Hidden"}
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Paid On {salary.paidOn ? formatIsoDate(salary.paidOn) : "—"}
-              {bankAccount ? ` · ${bankAccount}` : ""}
-              {salary.paymentMethod ? ` · ${salary.paymentMethod}` : ""}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {canEdit ? (<Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setFormSession((current) => current + 1)
-              setFormOpen(true)
-            }}
-          >
-            <Pencil aria-hidden="true" data-icon="inline-start" />
-            Edit
-          </Button>) : null}
-          {canDelete ? (<Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setDeleteError(null)
-              setDeleteOpen(true)
-            }}
-          >
-            <Trash2 aria-hidden="true" data-icon="inline-start" />
-            Delete
-          </Button>) : null}
-        </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        eyebrow={
+          <Link href="/hr/payroll" className="hover:text-foreground">
+            Payroll
+          </Link>
+        }
+        title={
+          <span className="inline-flex flex-wrap items-center gap-2.5">
+            {label}
+            <StatusBadge status="paid" />
+          </span>
+        }
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            {canEdit ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setFormSession((current) => current + 1)
+                  setFormOpen(true)
+                }}
+              >
+                <Pencil aria-hidden="true" data-icon="inline-start" />
+                Edit
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteError(null)
+                  setDeleteOpen(true)
+                }}
+              >
+                <Trash2 aria-hidden="true" data-icon="inline-start" />
+                Delete
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+        <Kpi
+          label="Employees"
+          value={<span className="tabular-nums">{salary.lineCount}</span>}
+        />
+        <Kpi
+          label="Total Paid"
+          value={showFinancials ? <Money value={salary.totalPaid} size="kpi" /> : "Hidden"}
+        />
+        <Kpi
+          label="Bonus"
+          value={showFinancials ? <Money value={bonus} size="kpi" /> : "Hidden"}
+        />
+        <Kpi
+          label="Deductions"
+          value={showFinancials ? <Money value={deduction} size="kpi" /> : "Hidden"}
+        />
       </div>
 
-      <ListSearch
-        query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
+      <Tabs
+        value={section}
+        onValueChange={(value) => {
+          if (value) setSection(value)
         }}
-        placeholder="Search lines"
-      />
-      <DataList
-        columns={columns}
-        rows={pageResult.rows}
-        rowKey={(line) => line.id}
-        sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
-        visibility={{}}
-        error={null}
-        emptyMessage="No Employees On This Salary."
-        rangeText={rangeLabel(
-          pageResult.rangeStart,
-          pageResult.rangeEnd,
-          pageResult.total,
-          "employee",
-          "employees",
-        )}
-        currentPage={pageResult.currentPage}
-        pageCount={pageResult.pageCount}
-        onPageChange={setPage}
-        pagingLabel="Salary slips pagination"
-        renderCell={(line, columnId) => <Cell line={line} columnId={columnId} />}
-      />
+      >
+        <TabsList>
+          <TabsTrigger value="lines">Salary Lines</TabsTrigger>
+          <TabsTrigger value="payment">Payment</TabsTrigger>
+        </TabsList>
+        <TabsContent value="lines" className="flex flex-col gap-3.5">
+          <ListSearch
+            query={query}
+            onQueryChange={(value) => {
+              setQuery(value)
+              setPage(1)
+            }}
+            placeholder="Search lines"
+          />
+          <DataList
+            columns={columns}
+            rows={pageResult.rows}
+            rowKey={(line) => line.id}
+            sort={sort}
+            onSort={(key) => {
+              setSort((current) => toggleSort(current, key))
+              setPage(1)
+            }}
+            visibility={{}}
+            error={null}
+            emptyMessage="No Employees On This Salary."
+            rangeText={rangeLabel(
+              pageResult.rangeStart,
+              pageResult.rangeEnd,
+              pageResult.total,
+              "employee",
+              "employees",
+            )}
+            currentPage={pageResult.currentPage}
+            pageCount={pageResult.pageCount}
+            onPageChange={setPage}
+            pagingLabel="Salary slips pagination"
+            mobileItem={(line) => ({
+              title: line.employeeName || "—",
+              subtitle: "Net Pay",
+              value: showFinancials ? <Money value={line.netPay} /> : "Hidden",
+            })}
+            renderCell={(line, columnId) => <Cell line={line} columnId={columnId} />}
+          />
+        </TabsContent>
+        <TabsContent value="payment">
+          <Card>
+            <dl>
+              <DetailRow label="Paid On" value={salary.paidOn ? formatDayMonYear(salary.paidOn) : "—"} />
+              <DetailRow label="Bank Account" value={bankAccount || "—"} />
+              <DetailRow label="Payment Method" value={salary.paymentMethod || "—"} />
+              <DetailRow label="Employees" value={String(salary.lineCount)} />
+            </dl>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <PaySalariesDialog
         key={formSession}
@@ -238,21 +292,47 @@ export function PayrollDetailPanel({
   )
 }
 
+function Kpi({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-1">
+        <p className="text-label text-muted-foreground">{label}</p>
+        <p className="text-metric">{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 first:border-t-0 md:px-6">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-right font-medium">{value}</dd>
+    </div>
+  )
+}
+
 function Cell({ line, columnId }: { line: SalaryLine; columnId: ColumnId }) {
   const showFinancials = useAccess().showFinancials
-  const money = (value: number) => (showFinancials ? formatTaka(value) : "Hidden")
+  const amount = (value: number) =>
+    showFinancials ? <Money value={value} /> : <span className="text-muted-foreground">Hidden</span>
+
   switch (columnId) {
     case "employee":
-      return <span className="font-medium">{line.employeeName || "—"}</span>
+      return <span className="text-ui font-semibold">{line.employeeName || "—"}</span>
     case "salary":
-      return <span>{money(line.salary)}</span>
+      return amount(line.salary)
     case "allowance":
-      return <span>{money(line.allowance)}</span>
+      return amount(line.allowance)
     case "bonus":
-      return <span>{money(line.bonus)}</span>
+      return amount(line.bonus)
     case "deduction":
-      return <span>{money(line.deduction)}</span>
+      return amount(line.deduction)
     case "netPay":
-      return <span className="font-medium">{money(line.netPay)}</span>
+      return showFinancials ? (
+        <Money value={line.netPay} className="font-semibold" />
+      ) : (
+        <span className="text-muted-foreground">Hidden</span>
+      )
   }
 }

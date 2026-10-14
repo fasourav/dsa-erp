@@ -1,6 +1,9 @@
 import Link from "next/link"
+import { Plus } from "lucide-react"
 
-import { DocumentList } from "@/components/documents/document-list"
+import { documentExportGrid, DocumentList } from "@/components/documents/document-list"
+import { ListExport } from "@/components/list-export"
+import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { allows } from "@/lib/access"
 import { listWorkOrders } from "@/lib/documents/queries"
@@ -14,20 +17,22 @@ export default async function WorkOrdersPage() {
   const canAdd = access ? allows(access, "work_orders", "add") : false
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">Work Orders</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Orders issued to vendors and service providers.
-          </p>
-        </div>
-        {canAdd ? (
-          <Button className="w-full sm:w-fit" nativeButton={false} render={<Link href="/documents/work-orders/new" />}>
-            New Work Order
-          </Button>
-        ) : null}
-      </div>
+    <div className="flex w-full min-w-0 flex-col gap-3.5">
+      <PageHeader
+        title="Work Orders"
+        description="Orders issued to vendors and service providers."
+        actions={
+          <>
+            <ListExport grid={documentExportGrid(page.items, "work-orders", "Work Orders")} />
+            {canAdd ? (
+              <Button nativeButton={false} render={<Link href="/documents/work-orders/new" />}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                New Work Order
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {page.error ? (
         <p role="alert" className="text-sm text-destructive">
           {page.error}
@@ -36,9 +41,8 @@ export default async function WorkOrdersPage() {
       <DocumentList
         items={page.items}
         hrefBase="/documents/work-orders"
-        empty="No work orders yet."
-        exportName="work-orders"
-        exportTitle="Work Orders"
+        empty="No Work Orders Yet."
+        pagingLabel="Work orders pagination"
       />
     </div>
   )

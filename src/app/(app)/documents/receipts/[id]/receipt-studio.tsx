@@ -15,7 +15,7 @@ import { DocumentWorkspace } from "@/components/documents/document-workspace"
 import { roleFor, type EmployeeChoice, type PrintMargins } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentReceipt } from "@/lib/documents/present"
-import { formatMoney } from "@/lib/format"
+import { Money } from "@/components/money"
 import type { ReceiptDraft } from "@/lib/documents/queries"
 
 export function ReceiptStudio({
@@ -88,7 +88,7 @@ export function ReceiptStudio({
       }}
     >
       <ReadOnlyField label="Customer Name" value={form.customerName} />
-      <ReadOnlyField label="Amount" value={formatMoney(form.amount)} />
+      <ReadOnlyField label="Amount" value={<Money value={form.amount} />} />
       <ReadOnlyField label="Bank Name" value={form.bankName} />
       <TextField
         id="received-from"

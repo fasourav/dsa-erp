@@ -2,6 +2,7 @@
 
 import { ListExport } from "@/components/list-export"
 import { savedToast } from "@/lib/saved"
+import { MoreHorizontal } from "lucide-react"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { AccessDrawer } from "@/app/(app)/settings/users/access-drawer"
@@ -27,6 +28,10 @@ import {
   type PermissionMatrix,
   type RoleTemplateOption,
 } from "@/app/(app)/settings/users/types"
+import { DataList } from "@/components/data-list"
+import { ListSearch } from "@/components/list-search"
+import { PageHeader } from "@/components/page-header"
+import { StatusBadge } from "@/components/status-badge"
 import { SlideToDelete } from "@/components/slide-to-delete"
 import {
   AlertDialog,
@@ -38,19 +43,24 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDayMonYear } from "@/lib/format"
-import { cn } from "@/lib/utils"
+import {
+  paginateRows,
+  rangeLabel,
+  toggleSort,
+  type ListColumn,
+  type SortState,
+} from "@/lib/list-paging"
 
 const tabs = [
   { id: "users", label: "Users" },
@@ -59,6 +69,23 @@ const tabs = [
 ] as const
 
 type TabId = (typeof tabs)[number]["id"]
+
+type UserColumn =
+  | "displayName"
+  | "email"
+  | "role"
+  | "designation"
+  | "status"
+  | "lastLogin"
+
+const userColumns: readonly ListColumn<UserColumn>[] = [
+  { id: "displayName", label: "Name", align: "left", locked: true },
+  { id: "email", label: "Email", align: "left", locked: true },
+  { id: "role", label: "Role", align: "left", locked: true },
+  { id: "designation", label: "Designation", align: "left", locked: true },
+  { id: "status", label: "Status", align: "left", locked: true },
+  { id: "lastLogin", label: "Last Login", align: "left", locked: true },
+]
 
 export function UsersPanel({
   currentUserId,
@@ -92,14 +119,17 @@ export function UsersPanel({
     deactivated: users.filter((user) => user.status === "deactivated").length,
   }
 
-  const filtered = useMemo(() => {
+  const searched = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    const source = tab === "pending" ? users.filter((user) => user.status === "invited") : users
-    if (!needle) return source
-    return source.filter((user) =>
+    if (!needle) return users
+    return users.filter((user) =>
       `${user.displayName} ${user.designation} ${user.email}`.toLowerCase().includes(needle),
     )
-  }, [query, tab, users])
+  }, [query, users])
+  const pendingUsers = useMemo(
+    () => searched.filter((user) => user.status === "invited"),
+    [searched],
+  )
 
   function openInvite() {
     setEditing(null)
@@ -144,74 +174,54 @@ export function UsersPanel({
     })
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Admin / Users & Permissions</p>
-          <h1 className="text-2xl font-medium tracking-tight">Users & Permissions</h1>
-        </div>
-        {tab !== "templates" ? (
-          <ListExport
-            grid={{
-              filename: "users",
-              title: "Users",
-              columns: [
-                { header: "Name", kind: "text" },
-                { header: "Email", kind: "text" },
-                { header: "Role", kind: "text" },
-                { header: "Designation", kind: "text" },
-                { header: "Status", kind: "text" },
-                { header: "Last Login", kind: "text" },
-              ],
-              rows: filtered.map((user) => [
-                user.displayName || "—",
-                user.email || "—",
-                templates.find((template) => template.key === user.role)?.label ?? user.role,
-                user.designation || "—",
-                statusLabel(user.status),
-                absoluteLastLogin(user.lastSignInAt),
-              ]),
-            }}
-          />
-        ) : null}
-      </div>
+  const exportRows = tab === "pending" ? pendingUsers : searched
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  return (
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        eyebrow="Admin"
+        title="Users & Permissions"
+        className="mb-0 md:mb-2"
+        actions={
+          tab === "templates" ? null : (
+            <>
+              <ListExport
+                grid={{
+                  filename: "users",
+                  title: "Users",
+                  columns: [
+                    { header: "Name", kind: "text" },
+                    { header: "Email", kind: "text" },
+                    { header: "Role", kind: "text" },
+                    { header: "Designation", kind: "text" },
+                    { header: "Status", kind: "text" },
+                    { header: "Last Login", kind: "text" },
+                  ],
+                  rows: exportRows.map((user) => [
+                    user.displayName || "—",
+                    user.email || "—",
+                    templates.find((template) => template.key === user.role)?.label ?? user.role,
+                    user.designation || "—",
+                    statusLabel(user.status),
+                    absoluteLastLogin(user.lastSignInAt),
+                  ]),
+                }}
+              />
+              {tab === "users" ? (
+                <Button type="button" onClick={openInvite}>
+                  Invite User
+                </Button>
+              ) : null}
+            </>
+          )
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
         <Stat label="Total Users" value={counts.total} />
         <Stat label="Active" value={counts.active} />
         <Stat label="Pending Invites" value={counts.pending} />
         <Stat label="Deactivated" value={counts.deactivated} />
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Users & Permissions">
-          {tabs.map((item) => (
-            <Button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              variant={tab === item.id ? "default" : "outline"}
-              onClick={() => setTab(item.id)}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
-        {tab === "users" ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search Users"
-              aria-label="Search Users"
-            />
-            <Button type="button" onClick={openInvite}>
-              Invite User
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       {error ? (
@@ -225,42 +235,85 @@ export function UsersPanel({
         </p>
       ) : null}
 
-      {tab === "templates" ? (
-        <TemplateEditor modules={modules} templates={templates} users={users} />
-      ) : (
-        <UserTable
-          users={filtered}
-          templates={templates}
-          currentUserId={currentUserId}
-          pending={pending}
-          onEdit={openEdit}
-          onResend={(user) => runUserAction(() => resendInvite(user.id))}
-          onCancel={(user) => setConfirm({ kind: "cancel", user })}
-          onDeactivate={(user) => setConfirm({ kind: "deactivate", user })}
-          onReactivate={(user) => runUserAction(() => setUserActive(user.id, true))}
-        />
-      )}
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          if (value === "users" || value === "templates" || value === "pending") {
+            setTab(value)
+          }
+        }}
+      >
+        <TabsList>
+          {tabs.map((item) => (
+            <TabsTrigger key={item.id} value={item.id}>
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {tab === "users" ? (
-        <Card>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium">Role Templates</span>
-              {templates.map((template) => {
-                const count = users.filter((user) => user.role === template.key).length
-                return (
-                  <Badge key={template.id} variant="outline" className="rounded-full">
-                    {template.label} · {count} {count === 1 ? "User" : "Users"}
-                  </Badge>
-                )
-              })}
-            </div>
-            <Button type="button" variant="outline" onClick={() => setTab("templates")}>
-              Edit Templates
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
+        <TabsContent value="users" className="flex flex-col gap-3.5">
+          <ListSearch
+            query={query}
+            onQueryChange={setQuery}
+            placeholder="Search users"
+          />
+          <UserList
+            key={query}
+            users={error ? [] : searched}
+            templates={templates}
+            currentUserId={currentUserId}
+            error={error}
+            pending={pending}
+            onEdit={openEdit}
+            onResend={(user) => runUserAction(() => resendInvite(user.id))}
+            onCancel={(user) => setConfirm({ kind: "cancel", user })}
+            onDeactivate={(user) => setConfirm({ kind: "deactivate", user })}
+            onReactivate={(user) => runUserAction(() => setUserActive(user.id, true))}
+          />
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Templates</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {templates.map((template) => {
+                  const count = users.filter((user) => user.role === template.key).length
+                  return (
+                    <Badge key={template.id} variant={roleBadgeVariant(template.key)}>
+                      {template.label} · {count} {count === 1 ? "User" : "Users"}
+                    </Badge>
+                  )
+                })}
+              </div>
+            </CardContent>
+            <CardFooter className="justify-end">
+              <Button type="button" variant="outline" onClick={() => setTab("templates")}>
+                Edit Templates
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending">
+          <UserList
+            key={query}
+            users={error ? [] : pendingUsers}
+            templates={templates}
+            currentUserId={currentUserId}
+            error={error}
+            pending={pending}
+            onEdit={openEdit}
+            onResend={(user) => runUserAction(() => resendInvite(user.id))}
+            onCancel={(user) => setConfirm({ kind: "cancel", user })}
+            onDeactivate={(user) => setConfirm({ kind: "deactivate", user })}
+            onReactivate={(user) => runUserAction(() => setUserActive(user.id, true))}
+          />
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <TemplateEditor modules={modules} templates={templates} users={users} />
+        </TabsContent>
+      </Tabs>
 
       {drawer ? (
         <AccessDrawer
@@ -319,17 +372,18 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-medium tabular-nums">{value}</p>
+        <p className="text-label text-muted-foreground">{label}</p>
+        <p className="text-metric tabular-nums">{value}</p>
       </CardContent>
     </Card>
   )
 }
 
-function UserTable({
+function UserList({
   users,
   templates,
   currentUserId,
+  error,
   pending,
   onEdit,
   onResend,
@@ -340,6 +394,7 @@ function UserTable({
   users: DirectoryUser[]
   templates: RoleTemplateOption[]
   currentUserId: string
+  error: string | null
   pending: boolean
   onEdit: (user: DirectoryUser) => void
   onResend: (user: DirectoryUser) => void
@@ -348,107 +403,197 @@ function UserTable({
   onReactivate: (user: DirectoryUser) => void
 }) {
   const labels = new Map(templates.map((template) => [template.key, template.label]))
+  const [sort, setSort] = useState<SortState<UserColumn>>({
+    key: "displayName",
+    direction: "asc",
+  })
+  const [page, setPage] = useState(1)
+  const sorted = useMemo(() => sortUsers(users, sort), [sort, users])
+  const pageResult = paginateRows(sorted, page)
 
   return (
-    <div className="min-w-0 overflow-x-auto rounded-xl border border-border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted hover:bg-muted">
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Designation</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Last Login</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.length === 0 ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={7} className="py-8 text-center whitespace-normal text-muted-foreground">
-                No Users Found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="whitespace-normal">
-                  <span className="flex items-center gap-2">
-                    <span className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                      {initials(user.displayName, user.email)}
-                    </span>
-                    <span className="font-medium">{user.displayName || "—"}</span>
-                  </span>
-                </TableCell>
-                <TableCell className="whitespace-normal">{user.email || "—"}</TableCell>
-                <TableCell>
-                  <Badge variant={roleVariant(user.role)} className={cn("rounded-full", roleClass(user.role))}>
-                    {labels.get(user.role) ?? user.role}
-                  </Badge>
-                </TableCell>
-                <TableCell className="whitespace-normal">{user.designation || "—"}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(user.status)} className="rounded-full">
-                    {statusLabel(user.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="whitespace-normal">
-                  <LastLogin value={user.lastSignInAt} />
-                </TableCell>
-                <TableCell className="whitespace-normal">
-                  <div className="flex flex-wrap gap-1">
-                    {user.status === "invited" ? (
-                      <>
-                        <Button type="button" variant="link" disabled={pending} onClick={() => onResend(user)}>
-                          Resend Invite
-                        </Button>
-                          <Button
-                            type="button"
-                            variant="link"
-                            className="text-destructive"
-                            disabled={pending}
-                            onClick={() => onCancel(user)}
-                          >
-                          Cancel Invite
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button type="button" variant="link" disabled={pending} onClick={() => onEdit(user)}>
-                          Edit Access
-                        </Button>
-                        {user.id !== currentUserId ? (
-                          <Button type="button" variant="link" disabled={pending} onClick={() => onEdit(user)}>
-                            Change Role
-                          </Button>
-                        ) : null}
-                        {user.id !== currentUserId && user.status === "active" ? (
-                          <Button
-                            type="button"
-                            variant="link"
-                            className="text-destructive"
-                            disabled={pending}
-                            onClick={() => onDeactivate(user)}
-                          >
-                            Deactivate
-                          </Button>
-                        ) : null}
-                        {user.status === "deactivated" ? (
-                          <Button type="button" variant="link" disabled={pending} onClick={() => onReactivate(user)}>
-                            Reactivate
-                          </Button>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <DataList
+      columns={userColumns}
+      rows={pageResult.rows}
+      rowKey={(user) => user.id}
+      sort={sort}
+      onSort={(key) => {
+        setSort((current) => toggleSort(current, key))
+        setPage(1)
+      }}
+      visibility={{}}
+      error={error}
+      emptyMessage="No Users Found."
+      rangeText={rangeLabel(
+        pageResult.rangeStart,
+        pageResult.rangeEnd,
+        error ? 0 : pageResult.total,
+        "user",
+        "users",
+      )}
+      currentPage={pageResult.currentPage}
+      pageCount={pageResult.pageCount}
+      onPageChange={setPage}
+      pagingLabel="Users pagination"
+      mobileItem={(user) => ({
+        title: user.displayName || "—",
+        subtitle: user.email || "—",
+        value: (
+          <Badge variant={roleBadgeVariant(user.role)}>
+            {labels.get(user.role) ?? user.role}
+          </Badge>
+        ),
+        meta: <StatusBadge status={user.status} />,
+      })}
+      renderCell={(user, columnId) => {
+        switch (columnId) {
+          case "displayName":
+            return <span className="text-ui font-semibold">{user.displayName || "—"}</span>
+          case "email":
+            return user.email ? (
+              <span>{user.email}</span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          case "role":
+            return (
+              <Badge variant={roleBadgeVariant(user.role)}>
+                {labels.get(user.role) ?? user.role}
+              </Badge>
+            )
+          case "designation":
+            return user.designation ? (
+              <Badge variant="outline">{user.designation}</Badge>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          case "status":
+            return <StatusBadge status={user.status} />
+          case "lastLogin":
+            return <LastLogin value={user.lastSignInAt} />
+        }
+      }}
+      renderActions={(user) => (
+        <UserActions
+          user={user}
+          currentUserId={currentUserId}
+          pending={pending}
+          onEdit={onEdit}
+          onResend={onResend}
+          onCancel={onCancel}
+          onDeactivate={onDeactivate}
+          onReactivate={onReactivate}
+        />
+      )}
+    />
+  )
+}
+
+function sortUsers(rows: DirectoryUser[], sort: SortState<UserColumn>) {
+  const sorted = [...rows]
+  sorted.sort((left, right) => {
+    let cmp = 0
+    switch (sort.key) {
+      case "displayName":
+        cmp = left.displayName.localeCompare(right.displayName, "en", { sensitivity: "base" })
+        break
+      case "email":
+        cmp = left.email.localeCompare(right.email, "en", { sensitivity: "base" })
+        break
+      case "role":
+        cmp = left.role.localeCompare(right.role, "en", { sensitivity: "base" })
+        break
+      case "designation":
+        cmp = left.designation.localeCompare(right.designation, "en", { sensitivity: "base" })
+        break
+      case "status":
+        cmp = left.status.localeCompare(right.status)
+        break
+      case "lastLogin":
+        cmp = (left.lastSignInAt ?? "").localeCompare(right.lastSignInAt ?? "")
+        break
+    }
+    return sort.direction === "asc" ? cmp : -cmp
+  })
+  return sorted
+}
+
+function UserActions({
+  user,
+  currentUserId,
+  pending,
+  onEdit,
+  onResend,
+  onCancel,
+  onDeactivate,
+  onReactivate,
+}: {
+  user: DirectoryUser
+  currentUserId: string
+  pending: boolean
+  onEdit: (user: DirectoryUser) => void
+  onResend: (user: DirectoryUser) => void
+  onCancel: (user: DirectoryUser) => void
+  onDeactivate: (user: DirectoryUser) => void
+  onReactivate: (user: DirectoryUser) => void
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Actions for ${user.displayName || user.email || "user"}`}
+            disabled={pending}
+          />
+        }
+      >
+        <MoreHorizontal aria-hidden="true" className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        {user.status === "invited" ? (
+          <>
+            <DropdownMenuItem disabled={pending} onClick={() => onResend(user)}>
+              Resend Invite
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" disabled={pending} onClick={() => onCancel(user)}>
+              Cancel Invite
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <>
+            <DropdownMenuItem disabled={pending} onClick={() => onEdit(user)}>
+              Edit Access
+            </DropdownMenuItem>
+            {user.id !== currentUserId ? (
+              <DropdownMenuItem disabled={pending} onClick={() => onEdit(user)}>
+                Change Role
+              </DropdownMenuItem>
+            ) : null}
+            {user.id !== currentUserId && user.status === "active" ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={pending}
+                  onClick={() => onDeactivate(user)}
+                >
+                  Deactivate
+                </DropdownMenuItem>
+              </>
+            ) : null}
+            {user.status === "deactivated" ? (
+              <DropdownMenuItem disabled={pending} onClick={() => onReactivate(user)}>
+                Reactivate
+              </DropdownMenuItem>
+            ) : null}
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -507,48 +652,46 @@ function TemplateEditor({
   const count = users.filter((user) => user.role === selected.key).length
 
   return (
-    <div className="flex flex-col gap-4">
-      <RolePills templates={templates} value={selected.key} onChange={choose} />
-      <p className="text-sm text-muted-foreground">
-        {selected.label} · {count} {count === 1 ? "User" : "Users"}
-      </p>
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2">
-        <Label htmlFor="template-financials">Show Financial Figures</Label>
-        <AccessToggle
-          checked={showFinancials}
-          label="Show Financial Figures"
-          onChange={setShowFinancials}
-        />
-      </div>
-      <p className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
-        Settings And Users & Permissions Are Visible To Owners Only.
-      </p>
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
+    <Card>
+      <CardHeader>
+        <CardTitle>{selected.label}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <RolePills templates={templates} value={selected.key} onChange={choose} />
+        <p className="text-sm text-muted-foreground">
+          {selected.label} · {count} {count === 1 ? "User" : "Users"}
         </p>
-      ) : null}
-      <PermissionMatrixEditor
-        modules={modules}
-        matrix={matrix}
-        disabled={selected.key === "owner"}
-        lockOwnersOnly={selected.key !== "owner"}
-        onToggle={toggle}
-      />
-      <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+          <Label htmlFor="template-financials">Show Financial Figures</Label>
+          <AccessToggle
+            checked={showFinancials}
+            label="Show Financial Figures"
+            onChange={setShowFinancials}
+          />
+        </div>
+        <p className="rounded-card bg-muted px-4 py-3 text-sm text-muted-foreground">
+          Settings And Users & Permissions Are Visible To Owners Only.
+        </p>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <PermissionMatrixEditor
+          modules={modules}
+          matrix={matrix}
+          disabled={selected.key === "owner"}
+          lockOwnersOnly={selected.key !== "owner"}
+          onToggle={toggle}
+        />
+      </CardContent>
+      <CardFooter className="justify-end">
         <Button type="button" disabled={pending} onClick={save}>
           Save Template
         </Button>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   )
-}
-
-function initials(name: string, email: string) {
-  const source = name.trim() || email.trim()
-  const parts = source.split(/[\s@._-]+/).filter(Boolean)
-  const letters = parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)
-  return letters.toUpperCase() || "—"
 }
 
 function subscribeLastLogin() {
@@ -605,19 +748,10 @@ function statusLabel(status: DirectoryUser["status"]) {
   return "Deactivated"
 }
 
-function statusVariant(status: DirectoryUser["status"]) {
-  if (status === "deactivated") return "destructive" as const
-  if (status === "invited") return "pending" as const
-  return "default" as const
-}
-
-function roleVariant(role: string) {
-  if (role === "staff") return "outline" as const
-  if (role === "accountant" || role === "custom") return "secondary" as const
-  return "default" as const
-}
-
-function roleClass(role: string) {
-  if (role === "custom") return "bg-accent text-accent-foreground"
-  return undefined
+function roleBadgeVariant(role: string) {
+  if (role === "owner") return "violet" as const
+  if (role === "custom") return "warning" as const
+  if (role === "accountant") return "info" as const
+  if (role === "staff") return "neutral" as const
+  return "outline" as const
 }

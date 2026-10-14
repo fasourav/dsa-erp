@@ -1,15 +1,19 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Printer } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Share2 } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
 import { DocumentSheet } from "@/components/documents/document-sheet"
 import { RecordAttachments } from "@/components/record-attachments"
 import type { AttachmentParent } from "@/lib/attachments"
+import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
 import type { PrintDocument } from "@/lib/documents/present"
+import { cn } from "@/lib/utils"
 
 import "./document.css"
 
@@ -44,6 +48,14 @@ export function DocumentWorkspace({
 }) {
   const top = clampPrintMargin(margins.topMm, 32)
   const bottom = clampPrintMargin(margins.bottomMm, 28)
+  const [pane, setPane] = useState<"edit" | "preview">("edit")
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!copied) return
+    const timer = window.setTimeout(() => setCopied(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [copied])
 
   useEffect(() => {
     const style = document.createElement("style")
@@ -70,38 +82,75 @@ export function DocumentWorkspace({
     }
   }, [top, bottom])
 
+  async function shareDocument() {
+    const url = window.location.href
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, url })
+      } catch {
+        // The share sheet was dismissed, or this browser cannot share.
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+    } catch {
+      // Leave the button labeled Share when the clipboard is unavailable.
+    }
+  }
+
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl">
-      <div className="grid min-w-0 grid-cols-1 gap-6 print:hidden lg:grid-cols-2 lg:items-start">
-        <div className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              {canSave ? (
-                <Button type="button" disabled={pending} onClick={onSave}>
-                  {pending ? "Saving…" : "Save"}
-                </Button>
-              ) : null}
-              <Button type="button" variant="outline" onClick={() => window.print()}>
-                <Printer aria-hidden="true" className="size-4" />
-                Print / Save PDF
+    <div className="flex w-full min-w-0 flex-col gap-3.5 print:block">
+      <PageHeader
+        className="print:hidden!"
+        title={title}
+        description={description}
+        actions={
+          <>
+            <Button type="button" variant="outline" onClick={() => void shareDocument()}>
+              <Share2 aria-hidden="true" data-icon="inline-start" />
+              {copied ? "Link Copied" : "Share"}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => window.print()}>
+              <Download aria-hidden="true" data-icon="inline-start" />
+              Download PDF
+            </Button>
+            {canSave ? (
+              <Button type="button" disabled={pending} onClick={onSave}>
+                {pending ? "Saving…" : "Save"}
               </Button>
-            </div>
-          </div>
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-          {children}
-          {files?.parentId ? (
-            <RecordAttachments parentType={files.parentType} parentId={files.parentId} />
-          ) : null}
+            ) : null}
+          </>
+        }
+      />
+      {error ? (
+        <p role="alert" className="text-sm text-destructive print:hidden!">
+          {error}
+        </p>
+      ) : null}
+      <Tabs
+        value={pane}
+        onValueChange={(value) => setPane(value === "preview" ? "preview" : "edit")}
+        className="print:hidden! md:hidden"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="edit">Edit</TabsTrigger>
+          <TabsTrigger value="preview">Preview</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 print:hidden md:grid-cols-2 md:gap-6">
+        <Card className={cn("min-w-0", pane === "preview" && "hidden md:flex")}>
+          <CardContent className="flex flex-col gap-4">
+            {children}
+            {files?.parentId ? (
+              <RecordAttachments parentType={files.parentType} parentId={files.parentId} />
+            ) : null}
+          </CardContent>
+        </Card>
+        <div className={cn("min-w-0", pane === "edit" && "hidden md:block")}>
+          <PreviewStage top={top} bottom={bottom} preview={preview} />
         </div>
-        <PreviewStage top={top} bottom={bottom} document={preview} />
       </div>
       <div className="hidden print:block">
         <DocumentSheet document={preview} />
@@ -113,11 +162,11 @@ export function DocumentWorkspace({
 function PreviewStage({
   top,
   bottom,
-  document,
+  preview,
 }: {
   top: number
   bottom: number
-  document: PrintDocument
+  preview: PrintDocument
 }) {
   const frame = useRef<HTMLDivElement>(null)
   const pager = useRef<HTMLDivElement>(null)
@@ -179,23 +228,20 @@ function PreviewStage({
     const observer = new ResizeObserver(update)
     observer.observe(root)
     return () => observer.disconnect()
-  }, [bodyHeight, document])
+  }, [bodyHeight, preview])
 
   const width = scale == null ? undefined : paper.width * scale
   const height = scale == null ? undefined : paper.height * scale
 
   return (
-    <aside
-      aria-label="Live preview"
-      className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-0"
-    >
-      <div ref={frame} className="flex min-w-0 justify-center rounded-xl bg-muted p-4 sm:p-6">
+    <aside aria-label="Live preview" className="flex min-w-0 flex-col gap-3 md:sticky md:top-0">
+      <div ref={frame} className="flex min-w-0 justify-center overflow-hidden rounded-card bg-fill p-4 md:p-8">
         <div
-          className="relative shrink-0 overflow-hidden rounded-sm shadow-lg"
+          className="relative shrink-0 overflow-hidden rounded-sm shadow-md"
           style={{ width, height, aspectRatio: scale == null ? "210 / 297" : undefined }}
         >
           <div
-            className="doc-paper light absolute left-0 top-0 origin-top-left"
+            className="doc-paper light absolute top-0 left-0 origin-top-left"
             style={{
               transform: `scale(${scale ?? 0})`,
               visibility: scale == null ? "hidden" : undefined,
@@ -212,7 +258,7 @@ function PreviewStage({
               }}
             >
               <div style={{ transform: `translateY(${-slice.start}px)` }}>
-                <DocumentSheet document={document} />
+                <DocumentSheet document={preview} />
               </div>
             </div>
             <div
@@ -222,7 +268,7 @@ function PreviewStage({
               className="doc-paper-measure"
               style={{ top: `${top}mm`, left: `${sideMm}mm`, right: `${sideMm}mm` }}
             >
-              <DocumentSheet document={document} />
+              <DocumentSheet document={preview} />
             </div>
           </div>
         </div>
@@ -239,7 +285,7 @@ function PreviewStage({
           >
             <ChevronLeft aria-hidden="true" className="size-4" />
           </Button>
-          <p aria-live="polite" className="text-sm tabular-nums text-muted-foreground">
+          <p aria-live="polite" className="text-sm text-muted-foreground tabular-nums">
             Page {current + 1} of {slices.length}
           </p>
           <Button

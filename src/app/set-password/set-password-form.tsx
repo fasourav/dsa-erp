@@ -1,64 +1,79 @@
 "use client"
 
+import { LockKeyhole } from "lucide-react"
 import { useActionState } from "react"
 
+import {
+  authAlertClassName,
+  authGroupClassName,
+  authIconClassName,
+  authInputClassName,
+  authLabelClassName,
+  authSubmitClassName,
+} from "@/app/login/auth-styles"
 import { setPassword, type SetPasswordState } from "@/app/set-password/actions"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 
 const initialState: SetPasswordState = {}
-
-const fieldClassName =
-  "h-11 rounded-xl border-border/80 bg-background/80 px-3.5 text-foreground shadow-sm backdrop-blur-md backdrop-saturate-150"
 
 export function SetPasswordForm() {
   const [state, formAction, pending] = useActionState(setPassword, initialState)
   const invalid = state.error ? true : undefined
 
   return (
-    <form action={formAction} className="flex w-full flex-col gap-3 sm:gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password" className="text-primary-foreground">
-          Password
-        </Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={10}
-          required
-          aria-invalid={invalid}
-          className={fieldClassName}
-        />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="confirm-password" className="text-primary-foreground">
-          Confirm Password
-        </Label>
-        <Input
-          id="confirm-password"
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          minLength={10}
-          required
-          aria-invalid={invalid}
-          className={fieldClassName}
-        />
-      </div>
+    <form action={formAction} className="flex w-full flex-col">
+      <FieldGroup layout="inset" className="md:gap-3.5">
+        <Field>
+          <FieldLabel htmlFor="password" className={authLabelClassName}>
+            Password
+          </FieldLabel>
+          <InputGroup className={authGroupClassName}>
+            <InputGroupAddon className={authIconClassName}>
+              <LockKeyhole aria-hidden="true" />
+            </InputGroupAddon>
+            <InputGroupInput
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              enterKeyHint="next"
+              minLength={10}
+              required
+              aria-invalid={invalid}
+              className={authInputClassName}
+            />
+          </InputGroup>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="confirm-password" className={authLabelClassName}>
+            Confirm Password
+          </FieldLabel>
+          <InputGroup className={authGroupClassName}>
+            <InputGroupAddon className={authIconClassName}>
+              <LockKeyhole aria-hidden="true" />
+            </InputGroupAddon>
+            <InputGroupInput
+              id="confirm-password"
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              enterKeyHint="go"
+              minLength={10}
+              required
+              aria-invalid={invalid}
+              className={authInputClassName}
+            />
+          </InputGroup>
+        </Field>
+      </FieldGroup>
       {state.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className={authAlertClassName}>
           {state.error}
         </p>
       ) : null}
-      <Button
-        type="submit"
-        size="lg"
-        disabled={pending}
-        className="h-11 w-full rounded-xl border border-primary-foreground/20 bg-primary/85 shadow-md backdrop-blur-md hover:bg-primary/75"
-      >
+      <Button type="submit" size="lg" disabled={pending} className={authSubmitClassName}>
         {pending ? "Saving…" : "Set Password"}
       </Button>
     </form>

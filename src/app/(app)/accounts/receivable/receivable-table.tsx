@@ -7,6 +7,8 @@ import { useMemo, useState } from "react"
 
 import { CustomizeColumns, DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { paymentStatusLabel } from "@/lib/payment-status"
 import { Button } from "@/components/ui/button"
@@ -23,7 +25,7 @@ import {
   type ReceivableColumnId,
   type ReceivableRow,
 } from "@/lib/accounts-receivable"
-import { formatMoney } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import {
   paginateRows,
   rangeLabel,
@@ -61,32 +63,42 @@ export function ReceivableTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Accounts Receivable</h1>
-        <ListExport
-          grid={{
-            filename: "accounts-receivable",
-            title: "Accounts Receivable",
-            columns: [
-              { header: "Project", kind: "text" },
-              { header: "Client", kind: "text" },
-              { header: "Billed Amount", kind: "money" },
-              { header: "Total Paid", kind: "money" },
-              { header: "Pending Due", kind: "money" },
-              { header: "Status", kind: "text" },
-            ],
-            rows: filtered.map((row) => [
-              row.projectName,
-              row.clientName,
-              row.billedAmount,
-              row.paid,
-              row.due,
-              row.status ? paymentStatusLabel(row.status) : "—",
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Accounts Receivable"
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "accounts-receivable",
+                title: "Accounts Receivable",
+                columns: [
+                  { header: "Project", kind: "text" },
+                  { header: "Client", kind: "text" },
+                  { header: "Billed Amount", kind: "money" },
+                  { header: "Total Paid", kind: "money" },
+                  { header: "Pending Due", kind: "money" },
+                  { header: "Status", kind: "text" },
+                ],
+                rows: filtered.map((row) => [
+                  row.projectName,
+                  row.clientName,
+                  row.billedAmount,
+                  row.paid,
+                  row.due,
+                  row.status ? paymentStatusLabel(row.status) : "—",
+                ]),
+              }}
+            />
+            <CustomizeColumns
+              columns={receivableColumns}
+              visibility={visibility}
+              onVisibilityChange={changeVisibility}
+            />
+          </>
+        }
+      />
       <ListSearch
         query={query}
         onQueryChange={(value) => {
@@ -118,13 +130,17 @@ export function ReceivableTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Accounts Receivable pagination"
-        toolbar={
-          <CustomizeColumns
-            columns={receivableColumns}
-            visibility={visibility}
-            onVisibilityChange={changeVisibility}
-          />
-        }
+        mobileItem={(row) => ({
+          title: row.projectName || "—",
+          value: row.status ? <StatusBadge status={row.status} /> : undefined,
+          subtitle: row.clientName || "—",
+          meta: (
+            <Money
+              value={row.due}
+              className={row.due > 0 ? "text-destructive" : "text-muted-foreground"}
+            />
+          ),
+        })}
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
         renderActions={(row) => (
           <DropdownMenu>
@@ -173,17 +189,39 @@ function Cell({
   columnId: ReceivableColumnId
 }) {
   switch (columnId) {
-    case "clientName":
     case "projectName":
-      return row[columnId] ? (
-        <span className="font-medium">{row[columnId]}</span>
+      return (
+        <span
+          className={cn(
+            "text-ui font-semibold",
+            !row.projectName && "text-muted-foreground",
+          )}
+        >
+          {row.projectName || "—"}
+        </span>
+      )
+    case "clientName":
+      return row.clientName ? (
+        <span>{row.clientName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "billedAmount":
+      return <Money value={row.billedAmount} />
     case "paid":
+      return (
+        <Money
+          value={row.paid}
+          className={row.paid > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
     case "due":
-      return <span className="tabular-nums">{formatMoney(row[columnId])}</span>
+      return (
+        <Money
+          value={row.due}
+          className={row.due > 0 ? "text-destructive" : "text-muted-foreground"}
+        />
+      )
     case "status":
       return row.status ? (
         <StatusBadge status={row.status} />

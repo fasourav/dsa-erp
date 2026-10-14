@@ -79,7 +79,7 @@ export async function getProjects(): Promise<{
 
       return {
         id: row.id,
-        name: row.name.trim(),
+        name: row.name?.trim() ?? "",
         clientId: row.client_id,
         clientName: client
           ? clientDisplayName(client.person_name, client.company_name)
@@ -139,7 +139,7 @@ function catalogOptions(
   const options: CatalogOption[] = []
 
   for (const row of rows) {
-    const name = row.name.trim()
+    const name = row.name?.trim() ?? ""
     if (!name || seen.has(name)) {
       continue
     }

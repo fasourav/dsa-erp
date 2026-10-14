@@ -1,83 +1,29 @@
 "use client"
 
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Banknote,
-  Box,
-  Calculator,
-  Contact,
-  FileBarChart,
-  FileText,
-  FolderKanban,
-  HandCoins,
-  Landmark,
-  LayoutDashboard,
-  ListTodo,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PiggyBank,
-  Receipt,
-  ScrollText,
-  Settings,
-  Shield,
-  Truck,
-  UserPlus,
-  Users,
-  Wallet,
-  WalletCards,
-  type LucideIcon,
-} from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { useAccess } from "@/components/access-provider"
-import { AccountMenu } from "@/components/account-menu"
 import { BrandLockup, BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
-import { canSeeNav, navItems } from "@/lib/access"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { AccountIdentity } from "@/lib/account-identity"
+import { canSeeNav, navItems } from "@/lib/access"
+import { navIcons } from "@/lib/nav-icons"
 import { cn } from "@/lib/utils"
 
-const navIcons: Record<string, LucideIcon> = {
-  "/dashboard": LayoutDashboard,
-  "/reports": FileBarChart,
-  "/leads": UserPlus,
-  "/clients": Users,
-  "/projects": FolderKanban,
-  "/vendors": Truck,
-  "/purchase-orders": Receipt,
-  "/accounts/invoices": FileText,
-  "/accounts/receivable": ArrowDownLeft,
-  "/income": HandCoins,
-  "/accounts/payable": ArrowUpRight,
-  "/expense": WalletCards,
-  "/accounts/expenses": Wallet,
-  "/backlog": ListTodo,
-  "/accounts/vat-tax": Calculator,
-  "/accounts/bank": Landmark,
-  "/accounts/budgets": PiggyBank,
-  "/assets": Box,
-  "/hr/employees": Contact,
-  "/hr/payroll": Banknote,
-  "/settings/users": Shield,
-  "/activity": ScrollText,
-  "/settings": Settings,
-}
-
+// Floating glass sidebar (desktop only). Between md and lg it is always the
+// 72px icon rail; from lg up it is 252px unless the user collapses it.
 export function AppSidebar({
   collapsed,
-  account,
   onToggle,
 }: {
   collapsed: boolean
-  account: AccountIdentity
   onToggle: () => void
 }) {
   const pathname = usePathname()
@@ -86,35 +32,40 @@ export function AppSidebar({
 
   return (
     <aside
+      data-collapsed={collapsed}
       className={cn(
-        "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground print:hidden md:min-h-0 md:border-r md:border-b-0",
-        collapsed ? "md:w-16" : "md:w-60",
+        "group/sidebar relative z-30 m-3.5 hidden w-18 shrink-0 flex-col items-center rounded-sidebar px-2.5 pt-3.5 pb-3 text-sidebar-foreground glass-chrome print:hidden md:flex",
+        !collapsed && "lg:w-63 lg:items-stretch",
       )}
     >
       <div
         className={cn(
-          "flex h-16 shrink-0 items-center gap-2 border-b border-border px-3",
-          collapsed && "md:justify-center md:gap-0 md:px-0",
+          "flex shrink-0 flex-col items-center gap-3 pt-1.5 pb-4",
+          !collapsed && "lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:pr-2 lg:pl-2.5",
         )}
       >
-        <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
-          <BrandLockup priority />
-        </div>
-        <BrandMark className={cn("hidden size-8", collapsed && "md:inline-flex md:size-7")} />
+        <Link
+          href="/dashboard"
+          aria-label="Dashboard"
+          className="rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <BrandMark priority className={cn("h-7.5", !collapsed && "lg:hidden")} />
+          <BrandLockup priority className={cn("hidden", !collapsed && "lg:inline-flex")} />
+        </Link>
         <Button
           type="button"
-          variant="ghost"
-          size="icon"
-          className="shrink-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          variant="secondary"
+          size="icon-sm"
+          className="hidden lg:inline-flex"
           aria-expanded={!collapsed}
           aria-controls="primary-navigation"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           onClick={onToggle}
         >
           {collapsed ? (
-            <PanelLeftOpen aria-hidden="true" className="size-4" />
+            <PanelLeftOpen aria-hidden="true" />
           ) : (
-            <PanelLeftClose aria-hidden="true" className="size-4" />
+            <PanelLeftClose aria-hidden="true" />
           )}
         </Button>
       </div>
@@ -122,34 +73,25 @@ export function AppSidebar({
         <nav
           id="primary-navigation"
           aria-label="Primary"
-          className={cn(
-            "sidebar-scroll gap-1 overflow-x-auto px-3 py-3 md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:pb-6",
-            collapsed ? "hidden md:flex md:items-center md:gap-2 md:px-3" : "flex",
-          )}
+          className="sidebar-scroll -mx-1 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-1 pb-2"
         >
           {visibleItems.map((item) => (
             <NavLink
               key={item.href}
-              item={{ ...item, icon: navIcons[item.href] }}
-              pathname={pathname}
+              href={item.href}
+              label={item.label}
+              icon={navIcons[item.href]}
+              active={isNavActive(pathname, item.href)}
               collapsed={collapsed}
             />
           ))}
         </nav>
       </TooltipProvider>
-      <div
-        className={cn(
-          "hidden border-t border-sidebar-border p-3 md:block",
-          collapsed && "md:px-2",
-        )}
-      >
-        <AccountMenu account={account} collapsed={collapsed} />
-      </div>
     </aside>
   )
 }
 
-function isNavActive(pathname: string, href: string) {
+export function isNavActive(pathname: string, href: string) {
   const matches = pathname === href || pathname.startsWith(`${href}/`)
   if (!matches) return false
   return !navItems.some(
@@ -161,51 +103,44 @@ function isNavActive(pathname: string, href: string) {
 }
 
 function NavLink({
-  item,
-  pathname,
+  href,
+  label,
+  icon: Icon,
+  active,
   collapsed,
 }: {
-  item: { href: string; label: string; icon: LucideIcon | undefined }
-  pathname: string
+  href: string
+  label: string
+  icon: LucideIcon | undefined
+  active: boolean
   collapsed: boolean
 }) {
-  const active = isNavActive(pathname, item.href)
-  const Icon = item.icon
   if (!Icon) return null
 
   const className = cn(
-    "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-    !collapsed && "border-l-4 border-transparent",
+    "flex h-8.25 w-11 shrink-0 items-center justify-center gap-2.75 rounded-lg text-ui font-book tracking-[-0.005em] whitespace-nowrap text-sidebar-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50",
+    !collapsed && "lg:w-auto lg:justify-start lg:px-3",
     active &&
-      !collapsed &&
-      "border-sidebar-primary-foreground bg-sidebar-primary font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
-    collapsed && "md:size-10 md:justify-center md:border-0 md:px-0",
-    active &&
-      collapsed &&
-      "md:bg-sidebar-primary md:font-medium md:text-sidebar-primary-foreground md:hover:bg-sidebar-primary md:hover:text-sidebar-primary-foreground",
+      "bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-nav-active hover:bg-sidebar-primary",
   )
-  const icon = <Icon aria-hidden="true" className={cn("shrink-0", collapsed ? "size-5" : "size-4")} />
-
-  if (!collapsed) {
-    return (
-      <Link href={item.href} aria-current={active ? "page" : undefined} className={className}>
-        {icon}
-        <span>{item.label}</span>
-      </Link>
-    )
-  }
 
   return (
     <Tooltip>
       <TooltipTrigger
-        render={
-          <Link href={item.href} aria-current={active ? "page" : undefined} className={className} />
-        }
+        render={<Link href={href} aria-current={active ? "page" : undefined} className={className} />}
       >
-        {icon}
-        <span className="sr-only">{item.label}</span>
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            "size-4.25 shrink-0",
+            active ? "text-sidebar-primary-foreground" : "text-muted-foreground",
+          )}
+        />
+        <span className={cn("sr-only", !collapsed && "lg:not-sr-only")}>{label}</span>
       </TooltipTrigger>
-      <TooltipContent side="right">{item.label}</TooltipContent>
+      <TooltipContent side="right" className={cn(!collapsed && "lg:hidden")}>
+        {label}
+      </TooltipContent>
     </Tooltip>
   )
 }

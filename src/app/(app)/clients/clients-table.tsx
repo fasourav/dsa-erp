@@ -16,8 +16,7 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { deleteClient } from "@/app/(app)/clients/actions"
 import { ClientContactDialog } from "@/app/(app)/clients/client-contact-dialog"
 import { ClientFormDialog } from "@/app/(app)/clients/client-form-dialog"
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Badge } from "@/components/ui/badge"
@@ -30,14 +29,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import {
   getColumnServerSnapshot,
   getColumnSnapshot,
@@ -55,7 +46,9 @@ import {
   type ColumnId,
   type SortState,
 } from "@/lib/client-summary"
-import { formatCount, formatMoney } from "@/lib/format"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
+import { formatCount } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 export function ClientsTable({
@@ -164,10 +157,12 @@ export function ClientsTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Clients</h1>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Clients"
+        className="mb-0 md:mb-2"
+        actions={
+        <>
           <ListExport
             grid={{
               filename: "clients",
@@ -236,8 +231,9 @@ export function ClientsTable({
             Add New Client
           </Button>
           ) : null}
-        </div>
-      </div>
+        </>
+        }
+      />
 
       <ListSearch
         query={query}
@@ -272,6 +268,16 @@ export function ClientsTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Clients pagination"
+        mobileItem={(client) => ({
+          title: client.displayName || "—",
+          subtitle: [
+            kindLabel(client.kind),
+            `${formatCount(client.totalProjects)} ${client.totalProjects === 1 ? "Project" : "Projects"}`,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          meta: <Money value={client.totalProjectValue} />,
+        })}
         renderCell={(client, columnId) => (
           <CellValue
             client={client}
@@ -301,7 +307,7 @@ export function ClientsTable({
         onOpenChange={setContactOpen}
       />
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (open || deleting) {
@@ -311,33 +317,13 @@ export function ClientsTable({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Client</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.displayName)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Client"
+        itemName={pendingDelete?.displayName}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }
@@ -358,7 +344,7 @@ function CellValue({
           type="button"
           variant="link"
           className={cn(
-            "h-auto min-h-8 px-0 font-medium text-foreground",
+            "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
             !client.displayName && "text-muted-foreground",
           )}
           aria-label={`Open contact card for ${client.displayName || "client"}`}
@@ -372,40 +358,35 @@ function CellValue({
         return <span className="text-muted-foreground">—</span>
       }
 
-      return (
-        <Badge
-          variant={client.kind === "company" ? "secondary" : "outline"}
-          className="rounded-full"
-        >
-          {kindLabel(client.kind)}
-        </Badge>
-      )
+      return <Badge variant="outline">{kindLabel(client.kind)}</Badge>
     case "ongoingProjects":
     case "completedProjects":
     case "totalProjects":
       return <span className="tabular-nums">{formatCount(client[columnId])}</span>
     case "totalProjectValue":
-    case "totalPaid":
-    case "totalPending":
     case "grossProfit":
-      return <span className="tabular-nums">{formatMoney(client[columnId])}</span>
+      return <Money value={client[columnId]} />
+    case "totalPaid":
+      return (
+        <Money
+          value={client.totalPaid}
+          className={client.totalPaid > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
+    case "totalPending":
+      return (
+        <Money
+          value={client.totalPending}
+          className={client.totalPending > 0 ? "text-destructive" : "text-muted-foreground"}
+        />
+      )
     case "grossProfitPct": {
       const pct = client.grossProfitPct
       if (pct == null) {
         return <span className="text-muted-foreground">—</span>
       }
-      const positive = pct >= 0
       return (
-        <Badge
-          variant="outline"
-          className={
-            positive
-              ? "rounded-full border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
-              : "rounded-full border-destructive/40 text-destructive"
-          }
-        >
-          {`${pct.toFixed(1)}%`}
-        </Badge>
+        <Badge variant={pct >= 0 ? "success" : "destructive"}>{`${pct.toFixed(1)}%`}</Badge>
       )
     }
   }

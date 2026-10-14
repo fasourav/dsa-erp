@@ -1,4 +1,5 @@
 import { InvoiceStudio } from "@/app/(app)/documents/invoices/[id]/invoice-studio"
+import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
 import { loadDocumentCatalog, loadInvoiceDraft } from "@/lib/documents/queries"
@@ -21,7 +22,14 @@ export default async function InvoiceDocumentPage({
   ])
 
   if (!loaded.draft) {
-    return <p className="text-sm text-destructive">{loaded.error}</p>
+    return (
+      <div className="flex flex-col gap-3">
+        <PageHeader title="Client Invoice" />
+        <p role="alert" className="text-sm text-destructive">
+          {loaded.error}
+        </p>
+      </div>
+    )
   }
 
   return (

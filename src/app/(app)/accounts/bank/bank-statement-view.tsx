@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 
+import { Money } from "@/components/money"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/select"
 import { buildBankStatement } from "@/lib/bank-statement"
 import type { BankAccountRow, BankTransactionRow } from "@/lib/bank"
-import { formatExactBdt } from "@/lib/dashboard-metrics"
 import {
   currentFiscalYear,
   currentTaxYear,
@@ -243,8 +243,7 @@ export function BankStatementView({
       ) : (
         <div className="flex flex-col gap-4">
           <p className="text-sm">
-            Opening Balance{" "}
-            <span className="font-medium tabular-nums">{formatExactBdt(statement.opening)}</span>
+            Opening Balance <Money value={statement.opening} />
           </p>
           <div className="min-w-0 overflow-x-auto">
             <table className="w-full min-w-[40rem] border-collapse text-sm">
@@ -271,14 +270,22 @@ export function BankStatementView({
                       <td className="px-2 py-2 whitespace-nowrap">{formatIsoDate(line.date)}</td>
                       <td className="px-2 py-2">{line.description}</td>
                       <td className="px-2 py-2">{line.project || "—"}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">
-                        {line.moneyIn ? formatExactBdt(line.moneyIn) : "—"}
+                      <td className="px-2 py-2 text-right">
+                        {line.moneyIn ? (
+                          <Money value={line.moneyIn} className="text-success" />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
-                      <td className="px-2 py-2 text-right tabular-nums">
-                        {line.moneyOut ? formatExactBdt(line.moneyOut) : "—"}
+                      <td className="px-2 py-2 text-right">
+                        {line.moneyOut ? (
+                          <Money value={line.moneyOut} className="text-destructive" />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
-                      <td className="px-2 py-2 text-right tabular-nums">
-                        {formatExactBdt(line.runningBalance)}
+                      <td className="px-2 py-2 text-right">
+                        <Money value={line.runningBalance} />
                       </td>
                     </tr>
                   ))
@@ -288,16 +295,13 @@ export function BankStatementView({
           </div>
           <div className="grid gap-2 text-sm sm:grid-cols-3">
             <p>
-              Total In{" "}
-              <span className="font-medium tabular-nums">{formatExactBdt(statement.totalIn)}</span>
+              Total In <Money value={statement.totalIn} className="text-success" />
             </p>
             <p>
-              Total Out{" "}
-              <span className="font-medium tabular-nums">{formatExactBdt(statement.totalOut)}</span>
+              Total Out <Money value={statement.totalOut} className="text-destructive" />
             </p>
             <p>
-              Closing Balance{" "}
-              <span className="font-medium tabular-nums">{formatExactBdt(statement.closing)}</span>
+              Closing Balance <Money value={statement.closing} />
             </p>
           </div>
         </div>

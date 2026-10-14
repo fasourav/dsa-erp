@@ -10,6 +10,7 @@ import {
   updateMonthlySalary,
   type PaySalaryFieldErrors,
 } from "@/app/(app)/hr/payroll/actions"
+import { Money } from "@/components/money"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -21,8 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -40,7 +41,6 @@ import {
 } from "@/components/ui/table"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { defaultBankAccountId } from "@/lib/bank-account"
-import { formatTaka } from "@/lib/format"
 import type { MonthlySalary, SalaryEmployee } from "@/lib/payroll"
 import {
   currentMonthKey,
@@ -86,7 +86,6 @@ export function PaySalariesDialog({
   paymentMethods: readonly string[]
 }) {
   const showFinancials = useAccess().showFinancials
-  const money = (value: number) => (showFinancials ? formatTaka(value) : "Hidden")
   const salaryId = salary?.id ?? null
   const [month, setMonth] = useState(
     salary
@@ -236,7 +235,8 @@ export function PaySalariesDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="overflow-hidden sm:max-w-4xl"
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -245,26 +245,24 @@ export function PaySalariesDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="pay-month">Month</Label>
-            <Input
-              id="pay-month"
-              type="month"
-              value={month}
-              disabled={pending || Boolean(salaryId)}
-              aria-invalid={Boolean(monthError)}
-              onChange={(event) => {
-                setMonth(event.target.value)
-                setAdjustments({})
-                setFieldErrors((current) => ({ ...current, month: undefined }))
-              }}
-            />
-            {monthError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {monthError}
-              </p>
-            ) : null}
-          </div>
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(monthError) || undefined}>
+              <FieldLabel htmlFor="pay-month">Month</FieldLabel>
+              <Input
+                id="pay-month"
+                type="month"
+                value={month}
+                disabled={pending || Boolean(salaryId)}
+                aria-invalid={Boolean(monthError)}
+                onChange={(event) => {
+                  setMonth(event.target.value)
+                  setAdjustments({})
+                  setFieldErrors((current) => ({ ...current, month: undefined }))
+                }}
+              />
+              {monthError ? <FieldError>{monthError}</FieldError> : null}
+            </Field>
+          </FieldGroup>
 
           <div className="min-w-0 overflow-x-auto">
             <Table className="min-w-max">
@@ -307,12 +305,12 @@ export function PaySalariesDialog({
                             }
                           />
                         </TableCell>
-                        <TableCell className="font-medium">{row.name}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {money(row.salary)}
+                        <TableCell className="text-ui font-semibold">{row.name}</TableCell>
+                        <TableCell className="text-right">
+                          <PayAmount show={showFinancials} value={row.salary} />
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {money(row.allowance)}
+                        <TableCell className="text-right">
+                          <PayAmount show={showFinancials} value={row.allowance} />
                         </TableCell>
                         <TableCell className="text-right">
                           {showFinancials ? (
@@ -321,6 +319,7 @@ export function PaySalariesDialog({
                             min="0"
                             step="0.01"
                             inputMode="decimal"
+                            enterKeyHint="next"
                             className="ml-auto w-28 text-right"
                             aria-label={`Bonus for ${row.name}`}
                             value={row.bonus}
@@ -340,6 +339,7 @@ export function PaySalariesDialog({
                             min="0"
                             step="0.01"
                             inputMode="decimal"
+                            enterKeyHint="next"
                             className="ml-auto w-28 text-right"
                             aria-label={`Deduction for ${row.name}`}
                             value={row.deduction}
@@ -354,11 +354,11 @@ export function PaySalariesDialog({
                         </TableCell>
                         <TableCell
                           className={cn(
-                            "text-right font-medium tabular-nums",
+                            "text-right font-medium",
                             net !== null && net < 0 && "text-destructive",
                           )}
                         >
-                          {net === null ? "—" : money(net)}
+                          {net === null ? "—" : <PayAmount show={showFinancials} value={net} />}
                         </TableCell>
                       </TableRow>
                     )
@@ -368,9 +368,9 @@ export function PaySalariesDialog({
             </Table>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="pay-date">Payment Date</Label>
+          <FieldGroup layout="inset">
+            <Field span="half" data-invalid={Boolean(fieldErrors.paidOn) || undefined}>
+              <FieldLabel htmlFor="pay-date">Payment Date</FieldLabel>
               <Input
                 id="pay-date"
                 type="date"
@@ -379,14 +379,10 @@ export function PaySalariesDialog({
                 aria-invalid={Boolean(fieldErrors.paidOn)}
                 onChange={(event) => setPaidOn(event.target.value)}
               />
-              {fieldErrors.paidOn ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.paidOn}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="pay-account">Bank Account</Label>
+              {fieldErrors.paidOn ? <FieldError>{fieldErrors.paidOn}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.bankAccountId) || undefined}>
+              <FieldLabel htmlFor="pay-account">Bank Account</FieldLabel>
               {bankAccounts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Add a bank account in Settings before paying salaries.
@@ -418,13 +414,11 @@ export function PaySalariesDialog({
                 </Select>
               )}
               {fieldErrors.bankAccountId ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.bankAccountId}
-                </p>
+                <FieldError>{fieldErrors.bankAccountId}</FieldError>
               ) : null}
-            </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label htmlFor="pay-method">Payment Method</Label>
+            </Field>
+            <Field data-invalid={Boolean(fieldErrors.paymentMethod) || undefined}>
+              <FieldLabel htmlFor="pay-method">Payment Method</FieldLabel>
               {methodNames.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Add a payment method in Settings before paying salaries.
@@ -453,55 +447,61 @@ export function PaySalariesDialog({
                 </Select>
               )}
               {fieldErrors.paymentMethod ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.paymentMethod}
-                </p>
+                <FieldError>{fieldErrors.paymentMethod}</FieldError>
               ) : null}
-            </div>
-          </div>
+            </Field>
+          </FieldGroup>
+
+          <p className="flex items-baseline gap-2 px-1 text-callout font-semibold md:px-0" aria-live="polite">
+            <span>Total</span>
+            <PayAmount show={showFinancials} value={total} />
+          </p>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}
         </DialogBody>
-        <DialogFooter className="flex-col sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-medium" aria-live="polite">
-            Total {money(total)}
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <DialogClose
-              render={
-                <Button type="button" variant="outline" disabled={pending} />
-              }
-            >
-              Cancel
-            </DialogClose>
-            <Button
-              type="button"
-              disabled={
-                pending ||
-                monthTaken ||
-                rows.length === 0 ||
-                bankAccounts.length === 0 ||
-                methodNames.length === 0
-              }
-              onClick={handleSubmit}
-            >
-              {pending
-                ? salaryId
-                  ? "Saving…"
-                  : "Paying…"
-                : salaryId
-                  ? "Save Changes"
-                  : "Pay"}
-            </Button>
-          </div>
+        <DialogFooter>
+          <DialogClose
+            render={
+              <Button type="button" variant="outline" disabled={pending} />
+            }
+          >
+            Cancel
+          </DialogClose>
+          <Button
+            type="button"
+            disabled={
+              pending ||
+              monthTaken ||
+              rows.length === 0 ||
+              bankAccounts.length === 0 ||
+              methodNames.length === 0
+            }
+            onClick={handleSubmit}
+          >
+            {pending
+              ? salaryId
+                ? "Saving…"
+                : "Paying…"
+              : salaryId
+                ? "Save Changes"
+                : "Pay"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
+}
+
+function PayAmount({ show, value }: { show: boolean; value: number }) {
+  if (!show) {
+    return <span className="text-muted-foreground">Hidden</span>
+  }
+
+  return <Money value={value} />
 }
 
 function rowNet(row: DraftRow): number | null {

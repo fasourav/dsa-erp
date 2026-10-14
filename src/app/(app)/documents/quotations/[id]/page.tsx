@@ -1,4 +1,5 @@
 import { QuotationStudio } from "@/app/(app)/documents/quotations/quotation-studio"
+import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
 import { loadDocumentCatalog, loadQuotationDraft } from "@/lib/documents/queries"
@@ -21,7 +22,14 @@ export default async function QuotationPage({
   ])
 
   if (!loaded.draft) {
-    return <p className="text-sm text-destructive">{loaded.error}</p>
+    return (
+      <div className="flex flex-col gap-3">
+        <PageHeader title="Quotation" />
+        <p role="alert" className="text-sm text-destructive">
+          {loaded.error}
+        </p>
+      </div>
+    )
   }
 
   return (
