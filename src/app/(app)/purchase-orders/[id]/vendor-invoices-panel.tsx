@@ -358,6 +358,7 @@ export function VendorInvoicesPanel({
         open={paymentsOpen}
         onOpenChange={setPaymentsOpen}
         invoice={paymentsInvoice}
+        partyName={purchaseOrder?.vendorName}
         paymentMethods={paymentMethods}
         expenseCategories={expenseCategories}
         bankAccounts={bankAccounts}

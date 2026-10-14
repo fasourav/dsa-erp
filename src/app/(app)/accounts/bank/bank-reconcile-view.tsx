@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -165,7 +166,7 @@ export function BankReconcileView({
     })
   }
 
-  const title = account ? `Reconcile ${account.name || "Account"}` : "Reconcile"
+  const title = account ? reconcileTitle(account.name || "Account") : "Reconcile"
 
   if (!showFinancials) {
     return (
@@ -286,30 +287,51 @@ export function BankReconcileView({
         </Card>
       </div>
 
-      <FieldGroup layout="inset">
-        <Field span="half">
-          <FieldLabel htmlFor="reconcile-from">From</FieldLabel>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Label htmlFor="reconcile-from">From</Label>
           <Input
             id="reconcile-from"
             type="date"
             value={from}
             onChange={(event) => setFrom(event.target.value)}
           />
-        </Field>
-        <Field span="half">
-          <FieldLabel htmlFor="reconcile-to">To</FieldLabel>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Label htmlFor="reconcile-to">To</Label>
           <Input
             id="reconcile-to"
             type="date"
             value={to}
             onChange={(event) => setTo(event.target.value)}
           />
-        </Field>
-      </FieldGroup>
-      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+        </div>
         <Button type="button" variant="outline" onClick={applyPeriod}>
           Apply Period
         </Button>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        {canEdit ? (
+          <Button
+            type="button"
+            disabled={pending || locked || !statementKnown}
+            onClick={() =>
+              run(
+                () =>
+                  markPeriodReconciled({
+                    accountId: account.id,
+                    from: periodFrom,
+                    to: periodTo,
+                    statementBalance: exact ? String(exact.statementBalance) : statementBalance,
+                  }),
+                "Period marked reconciled.",
+              )
+            }
+          >
+            Mark Reconciled
+          </Button>
+        ) : null}
         {toleranceItems.length > 0 && days != null ? (
           <Select
             items={toleranceItems}
@@ -318,7 +340,7 @@ export function BankReconcileView({
               if (value) setDays(Number(value))
             }}
           >
-            <SelectTrigger aria-label="Match Tolerance" className="w-full md:w-auto">
+            <SelectTrigger aria-label="Match Tolerance" className="w-full sm:w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -332,9 +354,6 @@ export function BankReconcileView({
         ) : (
           <p className="text-sm text-muted-foreground">No match tolerance is configured.</p>
         )}
-      </div>
-
-      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
         {canEdit ? (
           <Button
             type="button"
@@ -390,26 +409,6 @@ export function BankReconcileView({
             </Button>
           </>
         ) : null}
-        {canEdit ? (
-          <Button
-            type="button"
-            disabled={pending || locked || !statementKnown}
-            onClick={() =>
-              run(
-                () =>
-                  markPeriodReconciled({
-                    accountId: account.id,
-                    from: periodFrom,
-                    to: periodTo,
-                    statementBalance: exact ? String(exact.statementBalance) : statementBalance,
-                  }),
-                "Period marked reconciled.",
-              )
-            }
-          >
-            Mark Reconciled
-          </Button>
-        ) : null}
       </div>
 
       <Tabs defaultValue="unmatched">
@@ -456,18 +455,8 @@ export function BankReconcileView({
             ) : (
               <ul className="flex flex-col">
                 {bookRows.map((row) => (
-                  <li
-                    key={row.id}
-                    className="flex flex-col gap-2 border-b border-border py-3 md:flex-row md:items-start md:gap-6"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-label text-muted-foreground">Statement</p>
-                      <p className="text-muted-foreground">—</p>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-label text-muted-foreground">Ledger</p>
-                      <LedgerAmount row={row} />
-                    </div>
+                  <li key={row.id} className="border-b border-border py-4 last:border-b-0">
+                    <LedgerAmount row={row} />
                   </li>
                 ))}
               </ul>
@@ -577,10 +566,10 @@ function ReconcileDrawer({
       }}
     >
       <DialogContent variant="drawer" className="overflow-hidden" showCloseButton={!pending}>
-        <DialogHeader className="border-b px-4 py-4 pr-14">
+        <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <DialogBody className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
+        <DialogBody className="flex flex-col gap-4">
           {children}
         </DialogBody>
       </DialogContent>
@@ -614,7 +603,7 @@ function StatementCard({
   const items = choices.map((row) => ({ value: row.id, label: bookLabel(row) }))
 
   return (
-    <li className="flex flex-col gap-3 border-b border-border py-3 md:flex-row md:items-start md:gap-6">
+    <li className="flex flex-col gap-3 border-b border-border py-4 last:border-b-0 md:flex-row md:items-start md:gap-6">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="text-label text-muted-foreground">Statement</p>
         <p className="text-ui font-semibold">
@@ -674,15 +663,20 @@ function StatementCard({
 
 function LedgerAmount({ row }: { row: BankTransactionRow }) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-ui font-semibold">{bankSourceLabel(row.sourceKind)}</p>
-      <p className="text-sm text-muted-foreground">
-        {formatIsoDate(row.transactionDate)}
-        {row.notes.trim() ? ` · ${row.notes.trim()}` : ""}
-      </p>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-ui font-semibold">{bankSourceLabel(row.sourceKind)}</p>
+        <p className="text-sm text-muted-foreground">
+          {formatIsoDate(row.transactionDate)}
+          {row.notes.trim() ? ` · ${row.notes.trim()}` : ""}
+        </p>
+      </div>
       <Money
         value={signedFlow(row.direction, row.amount)}
-        className={row.direction === "outflow" ? "text-destructive" : "text-success"}
+        className={cn(
+          "shrink-0",
+          row.direction === "outflow" ? "text-destructive" : "text-success",
+        )}
       />
     </div>
   )
@@ -838,6 +832,11 @@ function AddLineDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function reconcileTitle(name: string) {
+  const titled = name.replace(/(^|[\s/–—-])(\p{Ll})/gu, (match) => match.toUpperCase())
+  return `Reconcile ${titled}`
 }
 
 function bookLabel(row: BankTransactionRow): string {

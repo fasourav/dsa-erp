@@ -92,10 +92,10 @@ export function AccessDrawer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent variant="drawer" className="overflow-hidden">
-        <DialogHeader className="border-b border-border px-4 pb-3 md:px-6">
+        <DialogHeader>
           <DialogTitle>{mode === "invite" ? "Invite User" : "Edit Access"}</DialogTitle>
         </DialogHeader>
-        <DialogBody className="mx-0 flex flex-1 flex-col gap-4 px-4 py-4 md:px-6">
+        <DialogBody className="flex flex-col gap-4">
           <FieldGroup layout="inset">
             <Field span="half">
               <FieldLabel htmlFor="user-name">Full Name</FieldLabel>
@@ -174,7 +174,7 @@ export function AccessDrawer({
             onToggle={toggle}
           />
         </DialogBody>
-        <DialogFooter className="mx-0 mb-0 rounded-none border-t border-border px-4 py-4 md:mx-0 md:px-6">
+        <DialogFooter>
           <Button type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

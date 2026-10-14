@@ -24,6 +24,7 @@ import {
   DialogBody,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -44,6 +45,7 @@ export function VendorPaymentsDialog({
   open,
   onOpenChange,
   invoice,
+  partyName,
   paymentMethods,
   expenseCategories,
   bankAccounts,
@@ -51,6 +53,7 @@ export function VendorPaymentsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   invoice: VendorInvoiceRow | null
+  partyName?: string
   paymentMethods: readonly string[]
   expenseCategories: readonly string[]
   bankAccounts: readonly BankAccountChoice[]
@@ -116,18 +119,33 @@ export function VendorPaymentsDialog({
       ? "Edit Vendor Payment"
       : "Record Payment"
     : "Vendor Payments"
+  const subtitle = invoice
+    ? [partyName, invoice.description || (invoice.issuedOn ? formatIsoDate(invoice.issuedOn) : "")]
+        .filter(Boolean)
+        .join(" · ")
+    : ""
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="overflow-hidden sm:max-w-lg"
+          className={editing ? "overflow-hidden sm:max-w-lg" : "overflow-hidden"}
           variant={editing ? "default" : "drawer"}
           mobileLayout={editing ? "nav" : "stack"}
           showCloseButton
         >
           <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <DialogTitle>{title}</DialogTitle>
+              {!editing && subtitle ? (
+                <DialogDescription>{subtitle}</DialogDescription>
+              ) : null}
+            </div>
+            {!editing && invoice ? (
+              <span className="shrink-0 self-center">
+                <StatusBadge status={invoice.status} />
+              </span>
+            ) : null}
           </DialogHeader>
           {editing && invoice ? (
             <PaymentForm
@@ -143,27 +161,38 @@ export function VendorPaymentsDialog({
             <>
               <DialogBody className="flex flex-col gap-4">
                 {invoice ? (
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-label text-muted-foreground">
-                      Amount <Money value={invoice.amount} /> · Paid{" "}
-                      <Money
-                        value={invoice.paid}
-                        className={
-                          invoice.paid > 0 ? "text-success" : "text-muted-foreground"
-                        }
-                      />{" "}
-                      · Balance{" "}
-                      <Money
-                        value={invoice.balance}
-                        className={
-                          invoice.balance > 0
-                            ? "text-destructive"
-                            : "text-muted-foreground"
-                        }
-                      />
-                    </p>
-                    <StatusBadge status={invoice.status} />
-                  </div>
+                  <dl className="overflow-hidden rounded-group border border-border">
+                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <dt className="text-label text-muted-foreground">Amount</dt>
+                      <dd>
+                        <Money value={invoice.amount} />
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+                      <dt className="text-label text-muted-foreground">Paid</dt>
+                      <dd>
+                        <Money
+                          value={invoice.paid}
+                          className={
+                            invoice.paid > 0 ? "text-success" : "text-muted-foreground"
+                          }
+                        />
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+                      <dt className="text-label text-muted-foreground">Balance</dt>
+                      <dd>
+                        <Money
+                          value={invoice.balance}
+                          className={
+                            invoice.balance > 0
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          }
+                        />
+                      </dd>
+                    </div>
+                  </dl>
                 ) : null}
                 {invoice && invoice.payments.length === 0 ? (
                   <Empty>

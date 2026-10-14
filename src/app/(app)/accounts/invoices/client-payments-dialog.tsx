@@ -3,7 +3,7 @@
 import { savedToast } from "@/lib/saved"
 import { useCan } from "@/components/access-provider"
 
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import { Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import { useState, useTransition } from "react"
 
 import {
@@ -22,10 +22,12 @@ import {
   DialogBody,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
   defaultBankAccountId,
   type BankAccountChoice,
@@ -110,15 +112,28 @@ export function ClientPaymentsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent variant="drawer" showCloseButton>
+        <DialogContent variant="drawer" className="overflow-hidden" showCloseButton>
           <DialogHeader>
-            <DialogTitle>
-              {editing
-                ? payment
-                  ? "Edit Client Payment"
-                  : "Record Payment"
-                : "Client Payments"}
-            </DialogTitle>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <DialogTitle>
+                {editing
+                  ? payment
+                    ? "Edit Client Payment"
+                    : "Record Payment"
+                  : "Client Payments"}
+              </DialogTitle>
+              {!editing && invoice ? (
+                <DialogDescription>
+                  {[invoice.clientName, invoice.projectName].filter(Boolean).join(" · ") ||
+                    "Client"}
+                </DialogDescription>
+              ) : null}
+            </div>
+            {!editing && invoice ? (
+              <span className="shrink-0 self-center">
+                <StatusBadge status={invoice.status} />
+              </span>
+            ) : null}
           </DialogHeader>
           {editing && invoice ? (
             <PaymentForm
@@ -135,17 +150,6 @@ export function ClientPaymentsDialog({
               <DialogBody className="flex flex-col gap-4">
                 {invoice ? (
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-ui font-semibold">
-                          {invoice.projectName || "Project"}
-                        </p>
-                        <p className="truncate text-label text-muted-foreground">
-                          {invoice.clientName || "Client"}
-                        </p>
-                      </div>
-                      <StatusBadge status={invoice.status} />
-                    </div>
                     <dl className="overflow-hidden rounded-group border border-border">
                       <div className="flex items-center justify-between gap-3 px-4 py-3">
                         <dt className="text-label text-muted-foreground">Amount</dt>
@@ -181,9 +185,12 @@ export function ClientPaymentsDialog({
                   </div>
                 ) : null}
                 {invoice && invoice.payments.length === 0 ? (
-                  <p className="text-label text-muted-foreground">
-                    No Payments Recorded Yet.
-                  </p>
+                  <Empty>
+                    <EmptyMedia variant="icon">
+                      <Wallet aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>No Payments Recorded Yet.</EmptyTitle>
+                  </Empty>
                 ) : null}
                 {invoice?.payments.map((row) => (
                   <div

@@ -88,10 +88,10 @@ export function ManualEntriesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent variant="drawer" className="overflow-hidden" showCloseButton>
-        <DialogHeader className="border-b px-4 py-4 pr-14">
+        <DialogHeader>
           <DialogTitle>Deposits & Withdrawals</DialogTitle>
         </DialogHeader>
-        <DialogBody className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
+        <DialogBody className="flex flex-col gap-4">
           <ListSearch
             query={query}
             onQueryChange={(value) => {
@@ -167,7 +167,7 @@ export function ManualEntriesDialog({
             )}
           />
         </DialogBody>
-        <DialogFooter className="mx-0 mb-0 rounded-none px-4">
+        <DialogFooter>
           <DialogClose render={<Button type="button" variant="outline" />}>
             Close
           </DialogClose>

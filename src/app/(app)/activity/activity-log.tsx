@@ -286,11 +286,13 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
       />
       <Dialog open={diff !== null} onOpenChange={(open) => !open && setDiff(null)}>
         <DialogContent variant="drawer" className="overflow-hidden">
-          <DialogHeader className="border-b border-border px-4 pb-3 md:px-6">
-            <DialogTitle>Changes</DialogTitle>
-            {diff ? <DialogDescription>{diff.what}</DialogDescription> : null}
+          <DialogHeader>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <DialogTitle>Changes</DialogTitle>
+              {diff ? <DialogDescription>{diff.what}</DialogDescription> : null}
+            </div>
           </DialogHeader>
-          <DialogBody className="mx-0 px-4 py-4 md:px-6">
+          <DialogBody>
             {diff ? (
               <dl className="overflow-hidden rounded-card border border-border">
                 {diff.changes.map((change, index) => (
