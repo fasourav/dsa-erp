@@ -307,7 +307,6 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             color="bg-chart-9"
             label="Collection Efficiency"
             value={formatRatio(model.performance.collectionEfficiency)}
-            hint="Cash Collected / Contract Value"
             bar={model.performance.collectionEfficiency}
           />
           <MetricTile
