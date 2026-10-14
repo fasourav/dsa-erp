@@ -137,7 +137,6 @@ export function DataList<T, Id extends string>({
     columnVisible(column, visibility),
   )
   const hasActions = renderActions !== undefined
-  const columnCount = visibleColumns.length + (hasActions ? 1 : 0)
   const pages = paginationItems(currentPage, pageCount)
 
   return (
@@ -281,17 +280,7 @@ export function DataList<T, Id extends string>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  role="alert"
-                  className="px-3 py-10 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? null : (
+            {error || rows.length === 0 ? null : (
               rows.map((row) => (
                 <TableRow key={rowKey(row)} className="group">
                   {visibleColumns.map((column, index) => {
@@ -332,7 +321,13 @@ export function DataList<T, Id extends string>({
             )}
           </TableBody>
         </Table>
-        {!error && rows.length === 0 ? <ListEmpty message={emptyMessage} /> : null}
+        {error ? (
+          <p role="alert" className="px-4 py-10 text-center text-callout text-destructive md:text-ui">
+            {error}
+          </p>
+        ) : rows.length === 0 ? (
+          <ListEmpty message={emptyMessage} />
+        ) : null}
         <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
           <p className="text-label text-muted-foreground">{rangeText}</p>
           <Pagination
