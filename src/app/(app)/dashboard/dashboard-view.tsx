@@ -307,6 +307,7 @@ function DashboardSections({ model }: { model: DashboardModel }) {
             color="bg-chart-9"
             label="Collection Efficiency"
             value={formatRatio(model.performance.collectionEfficiency)}
+            hint="Cash Collected / Contract Value"
             bar={model.performance.collectionEfficiency}
           />
           <MetricTile
@@ -666,7 +667,7 @@ function MetricTile({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">{label}</p>
-        <p className="mt-0.5 truncate text-[1.1875rem] leading-tight font-bold tracking-[-0.02em] tabular-nums md:text-metric">
+        <p className="mt-0.5 truncate text-metric tabular-nums">
           {value}
         </p>
         {hint ? <p className="mt-px truncate text-micro text-subtle-foreground md:text-xs">{hint}</p> : null}
@@ -689,7 +690,7 @@ function MarginRing({ label, value, color }: { label: string; value: number; col
       <Ring value={value} color={color}>
         {formatRatio(value)}
       </Ring>
-      <p className="mt-1.5 text-[0.6875rem] leading-tight font-semibold text-muted-foreground md:mt-2.5 md:text-caption md:font-label">
+      <p className="mt-1.5 text-micro font-semibold text-muted-foreground md:mt-2.5 md:text-caption md:font-label">
         {label}
       </p>
     </div>

@@ -41,7 +41,7 @@ export function BrandLockup({
   className?: string
 }) {
   return (
-    <span className={cn("inline-flex min-w-0 items-center", className)}>
+    <span className={cn("inline-flex h-12.5 min-w-0 shrink-0 items-center", className)}>
       <Image
         src="/brand/lockup-olive.png"
         alt="DynamicSpace Architects & Engineers"
@@ -49,7 +49,7 @@ export function BrandLockup({
         height={lockup.height}
         priority={priority}
         loading="eager"
-        className="h-12 w-auto max-w-full dark:hidden"
+        className="h-full w-auto max-w-full dark:hidden"
       />
       <Image
         src="/brand/lockup-white.png"
@@ -58,7 +58,7 @@ export function BrandLockup({
         height={lockup.height}
         priority={priority}
         loading="eager"
-        className="hidden h-12 w-auto max-w-full dark:block"
+        className="hidden h-full w-auto max-w-full dark:block"
       />
     </span>
   )

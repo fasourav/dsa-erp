@@ -36,7 +36,6 @@ import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { paymentStatusLabel } from "@/lib/payment-status"
-import { cn } from "@/lib/utils"
 import {
   paginateRows,
   rangeLabel,
@@ -224,7 +223,7 @@ export function ClientInvoicesTable({
         onPageChange={setPage}
         pagingLabel="Client Invoices pagination"
         mobileItem={(invoice) => ({
-          title: invoice.projectName || "—",
+          title: projectTitle(invoice.projectName),
           value: <StatusBadge status={invoice.status} />,
           subtitle: [
             invoice.clientName,
@@ -245,7 +244,7 @@ export function ClientInvoicesTable({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label={`Actions for ${invoice.projectName || "client invoice"}`}
+                  aria-label={`Actions for ${projectTitle(invoice.projectName)}`}
                 />
               }
             >
@@ -317,6 +316,11 @@ export function ClientInvoicesTable({
   )
 }
 
+function projectTitle(name: string) {
+  const trimmed = name.trim()
+  return trimmed || "Untitled Project"
+}
+
 function InvoiceCell({
   invoice,
   columnId,
@@ -333,14 +337,7 @@ function InvoiceCell({
       )
     case "projectName":
       return (
-        <span
-          className={cn(
-            "text-ui font-semibold",
-            !invoice.projectName && "text-muted-foreground",
-          )}
-        >
-          {invoice.projectName || "—"}
-        </span>
+        <span className="text-ui font-semibold">{projectTitle(invoice.projectName)}</span>
       )
     case "clientName":
       return invoice.clientName ? (

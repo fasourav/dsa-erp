@@ -277,8 +277,8 @@ export function SettingsPanel({
           <CardHeader>
             <CardTitle>Print Margins</CardTitle>
             <CardDescription>
-              Blank space above and below document content so it fits the pre-printed letterhead pad.
-              Print output has no logo or footer.
+              Blank Space Above And Below Document Content So It Fits The Pre-Printed Letterhead Pad.
+              Print Output Has No Logo Or Footer.
             </CardDescription>
           </CardHeader>
           <div className="border-t border-border">
@@ -291,7 +291,7 @@ export function SettingsPanel({
                 min={0}
                 max={80}
                 step={1}
-                className="w-24 text-right"
+                className="w-40 text-right tabular-nums md:w-48"
                 value={marginTop}
                 disabled={savingMargins}
                 onChange={(event) => setMarginTop(event.target.value)}
@@ -306,7 +306,7 @@ export function SettingsPanel({
                 min={0}
                 max={80}
                 step={1}
-                className="w-24 text-right"
+                className="w-40 text-right tabular-nums md:w-48"
                 value={marginBottom}
                 disabled={savingMargins}
                 onChange={(event) => setMarginBottom(event.target.value)}
@@ -337,43 +337,47 @@ export function SettingsPanel({
       ) : null}
 
       {view.kind === "home" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Lookup Lists</CardTitle>
-            <CardDescription>Add, Edit, Or Remove Entries</CardDescription>
-          </CardHeader>
-          <div className="border-t border-border">
-            {catalogs.map((catalog) => (
-              <button
-                key={catalog.key}
-                type="button"
-                onClick={() => setView({ kind: "catalog", key: catalog.key })}
-                className="flex min-h-11 w-full items-center gap-3 border-t border-border px-4 py-3 text-left first:border-t-0 md:px-6"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-fill text-muted-foreground">
-                  <ListTree className="size-4" aria-hidden="true" />
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:gap-3.5">
+          {catalogs.map((catalog) => (
+            <button
+              key={catalog.key}
+              type="button"
+              onClick={() => setView({ kind: "catalog", key: catalog.key })}
+              className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left md:px-5 md:py-4.5"
+            >
+              <span className="flex items-start justify-between gap-3">
+                <span className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-fill text-muted-foreground">
+                  <ListTree className="size-4.5" aria-hidden="true" />
                 </span>
-                <span className="min-w-0 flex-1 font-medium">{catalog.label}</span>
                 <Badge variant="outline" className="tabular-nums">
                   {itemCountLabel(catalog.items.length)}
                 </Badge>
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setView({ kind: "bank" })}
-              className="flex min-h-11 w-full items-center gap-3 border-t border-border px-4 py-3 text-left first:border-t-0 md:px-6"
-            >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-fill text-muted-foreground">
-                <Landmark className="size-4" aria-hidden="true" />
               </span>
-              <span className="min-w-0 flex-1 font-medium">Bank Accounts</span>
+              <span className="mt-auto pt-4.5 text-row font-strong">{catalog.label}</span>
+              <span className="mt-0.5 text-caption text-muted-foreground">
+                Add, Edit, Or Remove Entries
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setView({ kind: "bank" })}
+            className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left md:px-5 md:py-4.5"
+          >
+            <span className="flex items-start justify-between gap-3">
+              <span className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-fill text-muted-foreground">
+                <Landmark className="size-4.5" aria-hidden="true" />
+              </span>
               <Badge variant="outline" className="tabular-nums">
                 {itemCountLabel(bankAccounts.length)}
               </Badge>
-            </button>
-          </div>
-        </Card>
+            </span>
+            <span className="mt-auto pt-4.5 text-row font-strong">Bank Accounts</span>
+            <span className="mt-0.5 text-caption text-muted-foreground">
+              Add, Edit, Or Remove Entries
+            </span>
+          </button>
+        </div>
       ) : null}
 
       {view.kind === "catalog" && activeCatalog ? (

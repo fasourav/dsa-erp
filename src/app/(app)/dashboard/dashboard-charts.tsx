@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useSyncExternalStore, type ReactNode } from "react"
+import { useId, useState, useSyncExternalStore, type ReactNode } from "react"
 import {
   Area,
   AreaChart,
@@ -148,64 +148,130 @@ function Fade({ id, color, from }: { id: string; color: string; from: number }) 
   )
 }
 
-// KPI sparkline: soft area, 2.2px stroke, a ring on the latest point.
+// KPI sparkline: area filled to the card bottom, 2.2px stroke, a ring on the latest point.
+// Drawn as SVG so the fill reaches the plot floor (mockup d02/m02). A Recharts
+// domain of dataMin–dataMax collapsed flat series into a hairline at the edge.
 export function Sparkline({ data, color }: { data: ChartPoint[]; color: string }) {
-  const ready = useChartReady()
-  const reduced = useReducedMotion()
-  const gradient = useId()
-  const last = data.length - 1
-  if (!ready) return <div className="h-11.5 md:h-16" />
+  const gradient = useId().replace(/:/g, "")
+  const [hover, setHover] = useState<number | null>(null)
+  const geometry = sparkGeometry(data)
+  if (!geometry) return <div className="h-11.5 md:h-16" />
+
+  const active = hover != null ? data[hover] : null
 
   return (
-    <div className="h-11.5 min-w-0 md:h-16" aria-hidden="true">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 5, right: 5, left: 2, bottom: 0 }}>
-          <defs>
-            <Fade id={gradient} color={color} from={0.32} />
-          </defs>
-          <XAxis dataKey="label" hide />
-          <YAxis hide domain={["dataMin", "dataMax"]} />
-          <Tooltip
-            cursor={false}
-            content={(props) => (
-              <ChartTooltip
-                active={props.active}
-                label={pointLabel(props.payload)}
-                payload={tooltipEntries(props.payload).map((entry) => ({ ...entry, name: undefined }))}
-                formatValue={formatExactBdt}
-              />
-            )}
-          />
-          <Area
-            type="monotone"
-            dataKey="value"
-            stroke={color}
-            fill={`url(#${gradient})`}
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            baseValue="dataMin"
-            dot={(props: { cx?: number; cy?: number; index?: number }) =>
-              props.index === last && props.cx != null && props.cy != null ? (
-                <circle
-                  key="cap"
-                  cx={props.cx}
-                  cy={props.cy}
-                  r={3.5}
-                  fill="var(--solid)"
-                  stroke={color}
-                  strokeWidth={2.2}
-                />
-              ) : (
-                <g key={props.index} />
-              )
+    <div className="relative h-11.5 min-w-0 md:h-16">
+      <svg
+        viewBox="0 0 262 64"
+        preserveAspectRatio="none"
+        className="block h-full w-full overflow-visible"
+        aria-hidden="true"
+        onMouseLeave={() => setHover(null)}
+        onMouseMove={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect()
+          if (rect.width <= 0) return
+          const x = ((event.clientX - rect.left) / rect.width) * 262
+          let nearest = 0
+          let best = Number.POSITIVE_INFINITY
+          geometry.xs.forEach((point, index) => {
+            const distance = Math.abs(point - x)
+            if (distance < best) {
+              best = distance
+              nearest = index
             }
-            activeDot={{ r: 3.5, fill: "var(--solid)", stroke: color, strokeWidth: 2.2 }}
-            isAnimationActive={!reduced}
+          })
+          setHover(nearest)
+        }}
+      >
+        <defs>
+          <Fade id={gradient} color={color} from={0.32} />
+        </defs>
+        <path d={geometry.area} fill={`url(#${gradient})`} />
+        <path
+          d={geometry.line}
+          fill="none"
+          stroke={color}
+          strokeWidth={2.2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        <circle
+          cx={geometry.cx}
+          cy={geometry.cy}
+          r={3.5}
+          fill="var(--solid)"
+          stroke={color}
+          strokeWidth={2.2}
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      {active && hover != null ? (
+        <div
+          className="pointer-events-none absolute bottom-full z-10 -translate-x-1/2 pb-1"
+          style={{ left: `${(geometry.xs[hover] / 262) * 100}%` }}
+        >
+          <ChartTooltip
+            active
+            label={active.label}
+            payload={[{ value: active.value, color }]}
+            formatValue={formatExactBdt}
           />
-        </AreaChart>
-      </ResponsiveContainer>
+        </div>
+      ) : null}
     </div>
   )
+}
+
+function sparkGeometry(data: ChartPoint[]) {
+  if (data.length === 0) return null
+  const height = 64
+  const left = 2
+  const right = 256
+  const top = 5
+  const baseline = 59
+  const values = data.map((point) => point.value)
+  let min = Math.min(...values)
+  let max = Math.max(...values)
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null
+  if (max - min < 1e-6) {
+    const pad = Math.max(Math.abs(max), 1)
+    min -= pad
+    max += pad * 0.35
+  }
+  const count = values.length
+  const xs = values.map((_, index) =>
+    count === 1 ? (left + right) / 2 : left + ((right - left) * index) / (count - 1),
+  )
+  const ys = values.map((value) => {
+    const t = (value - min) / (max - min)
+    return baseline - t * (baseline - top)
+  })
+  const line = smoothLine(xs, ys)
+  const area = `${line} L${xs[count - 1].toFixed(1)},${height} L${xs[0].toFixed(1)},${height} Z`
+  return { line, area, xs, cx: xs[count - 1], cy: ys[count - 1] }
+}
+
+function smoothLine(xs: number[], ys: number[]) {
+  const move = `M${xs[0].toFixed(1)},${ys[0].toFixed(1)}`
+  if (xs.length === 1) return move
+  let path = move
+  for (let index = 0; index < xs.length - 1; index += 1) {
+    const previousX = xs[Math.max(index - 1, 0)]
+    const previousY = ys[Math.max(index - 1, 0)]
+    const startX = xs[index]
+    const startY = ys[index]
+    const endX = xs[index + 1]
+    const endY = ys[index + 1]
+    const nextX = xs[Math.min(index + 2, xs.length - 1)]
+    const nextY = ys[Math.min(index + 2, ys.length - 1)]
+    const control1X = startX + (endX - previousX) / 6
+    const control1Y = startY + (endY - previousY) / 6
+    const control2X = endX - (nextX - startX) / 6
+    const control2Y = endY - (nextY - startY) / 6
+    path += ` C${control1X.toFixed(1)},${control1Y.toFixed(1)} ${control2X.toFixed(1)},${control2Y.toFixed(1)} ${endX.toFixed(1)},${endY.toFixed(1)}`
+  }
+  return path
 }
 
 export function WeeklyChart({ data }: { data: WeekChartRow[] }) {

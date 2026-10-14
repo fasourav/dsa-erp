@@ -140,12 +140,12 @@ export function DataList<T, Id extends string>({
   const pages = paginationItems(currentPage, pageCount)
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-2.5 md:gap-3.5">
       {toolbar ? (
         <div className="flex flex-wrap items-center gap-2 px-1 md:gap-2.5 md:px-0">{toolbar}</div>
       ) : null}
       {mobileItem ? (
-        <div className="flex flex-col gap-3.5 md:hidden">
+        <div className="flex flex-col gap-2.5 md:hidden">
           <div className="overflow-hidden rounded-card glass-panel">
             {error ? (
               <p role="alert" className="px-4 py-8 text-center text-callout text-destructive">
@@ -161,7 +161,7 @@ export function DataList<T, Id extends string>({
                     <li
                       key={rowKey(row)}
                       className={cn(
-                        "relative flex min-h-16 items-center gap-2 py-3.25 pl-4",
+                        "relative flex min-h-16 items-center gap-3 py-3.25 pl-4",
                         hasActions ? "pr-2" : "pr-4",
                         "not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px not-first:before:origin-top not-first:before:scale-y-50 not-first:before:bg-border",
                       )}

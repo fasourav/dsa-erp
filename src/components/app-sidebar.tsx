@@ -41,7 +41,7 @@ export function AppSidebar({
       <div
         className={cn(
           "flex shrink-0 flex-col items-center gap-3 pt-1.5 pb-4",
-          !collapsed && "lg:flex-row lg:justify-between lg:gap-2 lg:pr-2 lg:pl-2.5",
+          !collapsed && "lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:pr-2 lg:pl-2.5",
         )}
       >
         <Link
