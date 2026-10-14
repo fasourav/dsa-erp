@@ -320,6 +320,7 @@ export function PurchaseOrderFormDialog({
             <Field>
               <FieldLabel htmlFor="po-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="po-notes"
                 value={notes}
                 disabled={pending}

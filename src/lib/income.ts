@@ -10,6 +10,7 @@ export type IncomeRow = {
   projectName: string
   projectType: string
   invoiceAmount: number
+  collectedAmount: number
   bankingChannel: string
   paidOn: string
 }
@@ -18,6 +19,7 @@ export type IncomeColumnId =
   | "projectName"
   | "projectType"
   | "invoiceAmount"
+  | "collectedAmount"
   | "bankingChannel"
   | "paidOn"
 
@@ -29,6 +31,7 @@ export const incomeColumns: readonly ListColumn<IncomeColumnId>[] = [
   { id: "projectName", label: "Project", align: "left", locked: true },
   { id: "projectType", label: "Project Type", align: "left", locked: false },
   { id: "invoiceAmount", label: "Invoice Amount", align: "right", locked: false },
+  { id: "collectedAmount", label: "Collected", align: "right", locked: false },
   { id: "bankingChannel", label: "Banking Channel", align: "left", locked: false },
   { id: "paidOn", label: "Paid Date", align: "left", locked: false },
 ]
@@ -36,6 +39,7 @@ export const incomeColumns: readonly ListColumn<IncomeColumnId>[] = [
 const defaultVisibility: IncomeColumnVisibility = {
   projectType: true,
   invoiceAmount: true,
+  collectedAmount: true,
   bankingChannel: true,
   paidOn: true,
 }
@@ -46,7 +50,7 @@ export function defaultIncomeColumns(): IncomeColumnVisibility {
 
 export function sanitizeIncomeColumns(value: unknown): IncomeColumnVisibility {
   return sanitizeColumnVisibility(
-    ["projectType", "invoiceAmount", "bankingChannel", "paidOn"],
+    ["projectType", "invoiceAmount", "collectedAmount", "bankingChannel", "paidOn"],
     defaultIncomeColumns(),
     value,
   )
@@ -137,5 +141,7 @@ function compareRows(
       return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
     case "invoiceAmount":
       return left.invoiceAmount - right.invoiceAmount
+    case "collectedAmount":
+      return left.collectedAmount - right.collectedAmount
   }
 }

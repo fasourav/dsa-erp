@@ -185,7 +185,7 @@ export function buildReport(
         landscape: false,
         tables: [statementTable(title, report.profitAndLoss.lines)],
         notes: [
-          "Gross Profit is project revenue minus project expense and tax. Net Profit subtracts admin expense (operational, marketing, salaries, and office admin). This matches the dashboard.",
+          "Accrual basis: revenue is counted on the client invoice date and vendor costs on the vendor bill date. Gross Profit is project revenue minus project expense and tax. Net Profit subtracts admin expense (operational, marketing, salaries, office admin, and depreciation). The dashboard shows cash received and paid, so its figures can differ.",
         ],
       }
     case "cash-flow":
@@ -209,7 +209,7 @@ export function buildReport(
         notes: [
           report.balanceSheet.partial
             ? "Some lines are hidden because this login cannot view every source. Difference is omitted so a partial sheet does not look unbalanced."
-            : "Cash, receivables, assets, and payables do not all flow through cash-basis net profit. Difference is assets minus liabilities minus equity, and is shown only when every component is visible.",
+            : "Accrual basis: receivables come from client invoices and payables from vendor bills. Equity is opening capital, assets added, owner deposits and withdrawals, and retained earnings. Difference is assets minus liabilities minus equity and should be zero.",
         ],
       }
     case "ar-aging":
@@ -220,7 +220,7 @@ export function buildReport(
         landscape: true,
         tables: agingTables(title, report.arAging, "Invoices"),
         notes: [
-          "Open client invoices as of the end date. Days run from the due date, or the issue date when no due date is set. The 0-30 bucket includes amounts that are not yet due.",
+          "Open client invoices as of the end date. Days run up to today or the end date, whichever is earlier, counting from the due date, or the issue date when no due date is set. The 0-30 bucket includes amounts that are not yet due.",
         ],
       }
     case "ap-aging":
@@ -231,7 +231,7 @@ export function buildReport(
         landscape: true,
         tables: agingTables(title, report.apAging, "Orders"),
         notes: [
-          "Open purchase orders as of the end date, including operational orders. Days use the earliest vendor-invoice due date, or the order date when none is set. The 0-30 bucket includes amounts that are not yet due.",
+          "Open purchase orders as of the end date, including operational orders. Days run up to today or the end date, whichever is earlier, and use the earliest vendor-invoice due date, or the order date when none is set. The 0-30 bucket includes amounts that are not yet due.",
         ],
       }
     case "project-profitability":
@@ -242,7 +242,7 @@ export function buildReport(
         landscape: true,
         tables: [projectTable(report.projectProfitability)],
         notes: [
-          "Gross profit is project revenue minus project expense and tax. Vendor payments with no purchase order are listed as Not Linked To A Project.",
+          "Accrual basis: revenue on the client invoice date and vendor cost on the vendor bill date. Gross profit is project revenue minus project expense and tax.",
         ],
       }
     case "tax":

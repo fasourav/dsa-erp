@@ -220,6 +220,7 @@ export function BudgetFormDialog({
             <Field>
               <FieldLabel htmlFor="bgt-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="bgt-notes"
                 value={notes}
                 disabled={pending}

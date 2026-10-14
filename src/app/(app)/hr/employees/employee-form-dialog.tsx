@@ -167,6 +167,7 @@ export function EmployeeFormDialog({
               <FieldLabel htmlFor="emp-name">Full Name</FieldLabel>
               <Input
                 id="emp-name"
+                maxLength={120}
                 value={fullName}
                 autoComplete="name"
                 autoCapitalize="words"
@@ -331,6 +332,7 @@ export function EmployeeFormDialog({
             <Field>
               <FieldLabel htmlFor="emp-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="emp-notes"
                 value={notes}
                 enterKeyHint="done"

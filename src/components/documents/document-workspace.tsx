@@ -29,6 +29,7 @@ export function DocumentWorkspace({
   margins,
   preview,
   canSave,
+  canShare = true,
   pending,
   error,
   onSave,
@@ -40,6 +41,8 @@ export function DocumentWorkspace({
   margins: PrintMargins
   preview: PrintDocument
   canSave: boolean
+  /** Hide Share for read-only viewers of documents that require edit rights to share. */
+  canShare?: boolean
   pending: boolean
   error: string | null
   onSave: () => void
@@ -108,10 +111,12 @@ export function DocumentWorkspace({
         description={description}
         actions={
           <>
-            <Button type="button" variant="outline" onClick={() => void shareDocument()}>
-              <Share2 aria-hidden="true" data-icon="inline-start" />
-              {copied ? "Link Copied" : "Share"}
-            </Button>
+            {canShare ? (
+              <Button type="button" variant="outline" onClick={() => void shareDocument()}>
+                <Share2 aria-hidden="true" data-icon="inline-start" />
+                {copied ? "Link Copied" : "Share"}
+              </Button>
+            ) : null}
             <Button type="button" variant="outline" onClick={() => window.print()}>
               <Download aria-hidden="true" data-icon="inline-start" />
               Download PDF

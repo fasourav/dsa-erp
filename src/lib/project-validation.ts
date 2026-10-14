@@ -21,6 +21,9 @@ export function isIsoDate(value: string): boolean {
   )
 }
 
+/** Matches the DB `numeric(12,2)`-style cap (৳99,99,99,999.99). */
+export const MAX_AMOUNT = 999_999_999.99
+
 export function parseProjectValue(value: string): number | null {
   const trimmed = value.trim().replace(/,/g, "")
   if (!trimmed) {
@@ -28,7 +31,7 @@ export function parseProjectValue(value: string): number | null {
   }
 
   const parsed = Number(trimmed)
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_AMOUNT) {
     return null
   }
 
@@ -45,4 +48,18 @@ export function todayIsoDate(): string {
 export function dateInputValue(value: string): string {
   const date = value.slice(0, 10)
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : ""
+}
+
+/** Today's date (YYYY-MM-DD) in the business time zone, Asia/Dhaka. */
+export function businessTodayIsoDate(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date())
+}
+
+export function isFutureIsoDate(value: string): boolean {
+  return value > businessTodayIsoDate()
 }

@@ -351,6 +351,7 @@ export function VendorFormDialog({
                 <FieldLabel htmlFor={nameField.id}>{nameField.label}</FieldLabel>
                 <Input
                   id={nameField.id}
+                  maxLength={120}
                   value={nameField.value}
                   autoComplete={kind === "company" ? "organization" : "name"}
                   autoCapitalize="words"
@@ -442,6 +443,7 @@ export function VendorFormDialog({
             <Field>
               <FieldLabel htmlFor="vendor-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="vendor-notes"
                 value={notes}
                 disabled={pending}

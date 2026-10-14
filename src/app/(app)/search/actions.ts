@@ -1,5 +1,6 @@
 "use server"
 
+import { formatMoney } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 import { searchHref, type SearchHit } from "@/lib/search"
 
@@ -26,7 +27,9 @@ export async function searchRecords(
       moduleLabel: row.module_label,
       recordId: row.record_id,
       label: row.label,
-      detail: row.detail,
+      detail: /^-?\d+(\.\d+)?$/.test(row.detail ?? "")
+        ? formatMoney(Number(row.detail))
+        : row.detail,
       href: searchHref(row.module_key, row.record_id, row.label),
     })),
     error: null,

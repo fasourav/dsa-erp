@@ -80,6 +80,7 @@ export function WorkOrderStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
+      canShare={canSave}
       pending={pending}
       error={error}
       files={{ parentType: "work_order", parentId: form.id }}

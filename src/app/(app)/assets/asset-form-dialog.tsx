@@ -138,6 +138,7 @@ export function AssetFormDialog({
               <FieldLabel htmlFor="asset-name">Name</FieldLabel>
               <Input
                 id="asset-name"
+                maxLength={120}
                 value={name}
                 autoComplete="off"
                 autoCapitalize="words"
@@ -242,6 +243,7 @@ export function AssetFormDialog({
             <Field>
               <FieldLabel htmlFor="asset-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="asset-notes"
                 value={notes}
                 disabled={pending}

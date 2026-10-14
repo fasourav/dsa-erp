@@ -181,6 +181,7 @@ export function LeadFormDialog({
               <FieldLabel htmlFor="lead-name">Lead Name</FieldLabel>
               <Input
                 id="lead-name"
+                maxLength={120}
                 value={leadName}
                 autoComplete="name"
                 autoCapitalize="words"
@@ -379,6 +380,7 @@ export function LeadFormDialog({
             <Field>
               <FieldLabel htmlFor="lead-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="lead-notes"
                 value={notes}
                 disabled={pending}

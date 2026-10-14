@@ -1,5 +1,4 @@
-import { formatCompactBdt } from "@/lib/dashboard-metrics"
-import { formatGroupedCount } from "@/lib/format"
+import { formatGroupedCount, formatMoney } from "@/lib/format"
 import { reportCompanyName } from "@/lib/reports/catalog"
 import type { BuiltReport, ExportKind, ReportRow } from "@/lib/reports/types"
 
@@ -30,14 +29,14 @@ export function safeFilename(value: string): string {
 export function displayCell(value: string | number | null, kind: ExportKind): string {
   if (value == null || value === "") return "—"
   if (typeof value === "number") {
-    if (kind === "money") return formatCompactBdt(value)
+    if (kind === "money") return formatMoney(value)
     if (kind === "integer") return formatGroupedCount(value)
   }
   return String(value)
 }
 
 export function pdfAmount(value: number): string {
-  return formatCompactBdt(value).replaceAll("৳", "BDT ")
+  return formatMoney(value).replace("৳", "BDT ")
 }
 
 export function guardSheetText(value: string): string {

@@ -34,6 +34,8 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 
+const ACTIVITY_PAGE_SIZE = 50
+
 export type ActivityChange = {
   label: string
   before: string
@@ -129,7 +131,7 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
       return sort.direction === "asc" ? cmp : -cmp
     })
 
-  const pageResult = paginateRows(filtered, page)
+  const pageResult = paginateRows(filtered, page, ACTIVITY_PAGE_SIZE)
   const emptyMessage = rows.length === 0 ? "No Activity Yet." : "No Matching Activity."
 
   return (

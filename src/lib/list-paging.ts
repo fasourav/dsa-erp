@@ -28,19 +28,23 @@ export function toggleSort<Id extends string>(
   }
 }
 
-export function paginateRows<T>(rows: readonly T[], page: number) {
+export function paginateRows<T>(
+  rows: readonly T[],
+  page: number,
+  pageSize: number = LIST_PAGE_SIZE,
+) {
   const total = rows.length
-  const pageCount = Math.max(1, Math.ceil(total / LIST_PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), pageCount)
-  const startIndex = (currentPage - 1) * LIST_PAGE_SIZE
+  const startIndex = (currentPage - 1) * pageSize
 
   return {
-    rows: rows.slice(startIndex, startIndex + LIST_PAGE_SIZE),
+    rows: rows.slice(startIndex, startIndex + pageSize),
     total,
     pageCount,
     currentPage,
     rangeStart: total === 0 ? 0 : startIndex + 1,
-    rangeEnd: Math.min(startIndex + LIST_PAGE_SIZE, total),
+    rangeEnd: Math.min(startIndex + pageSize, total),
   }
 }
 

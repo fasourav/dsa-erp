@@ -1,7 +1,7 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { useCan } from "@/components/access-provider"
+import { useAccess, useCan } from "@/components/access-provider"
 
 import {
   ChevronDown,
@@ -61,6 +61,7 @@ export function ClientsTable({
   initialQuery?: string
 }) {
   const canAdd = useCan("clients", "add")
+  const showFinancials = useAccess().showFinancials
 
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
@@ -186,10 +187,14 @@ export function ClientsTable({
                 client.completedProjects,
                 client.totalProjects,
                 client.totalProjectValue,
-                client.totalPaid,
-                client.totalPending,
-                client.grossProfit,
-                client.grossProfitPct == null ? "—" : `${client.grossProfitPct.toFixed(1)}%`,
+                showFinancials ? client.totalPaid : "Hidden",
+                showFinancials ? client.totalPending : "Hidden",
+                showFinancials ? client.grossProfit : "Hidden",
+                !showFinancials
+                  ? "Hidden"
+                  : client.grossProfitPct == null
+                    ? "—"
+                    : `${client.grossProfitPct.toFixed(1)}%`,
               ]),
             }}
           />
@@ -337,6 +342,17 @@ function CellValue({
   columnId: ColumnId
   onOpenContact: (client: ClientSummary) => void
 }) {
+  const showFinancials = useAccess().showFinancials
+  if (
+    !showFinancials &&
+    (columnId === "totalPaid" ||
+      columnId === "totalPending" ||
+      columnId === "grossProfit" ||
+      columnId === "grossProfitPct")
+  ) {
+    return <span className="text-muted-foreground">Hidden</span>
+  }
+
   switch (columnId) {
     case "displayName":
       return (

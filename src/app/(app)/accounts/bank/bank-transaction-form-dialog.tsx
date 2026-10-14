@@ -530,6 +530,7 @@ function PaymentFieldRows({
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-notes`}>Notes</FieldLabel>
         <Textarea
+          maxLength={1000}
           id={`${idPrefix}-notes`}
           value={notes}
           disabled={disabled}

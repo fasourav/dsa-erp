@@ -181,6 +181,7 @@ export function BankAccountFormDialog({
               <FieldLabel htmlFor="bank-account-name">Account Nickname</FieldLabel>
               <Input
                 id="bank-account-name"
+                maxLength={120}
                 value={name}
                 autoComplete="off"
                 autoCapitalize="words"

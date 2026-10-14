@@ -226,8 +226,9 @@ export function ClientInvoicesTable({
           title: projectTitle(invoice.projectName),
           value: <StatusBadge status={invoice.status} />,
           subtitle: [
-            invoice.clientName,
+            // Date first so a long client name truncates instead of the date.
             invoice.issuedOn ? formatIsoDate(invoice.issuedOn) : "",
+            invoice.clientName,
           ]
             .filter(Boolean)
             .join(" · "),

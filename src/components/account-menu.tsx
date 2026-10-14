@@ -2,11 +2,18 @@
 
 import { useState, useTransition } from "react"
 import Link from "next/link"
-import { ChevronDown, Ellipsis, Files, LogOut, Moon, Sun, UserRound } from "lucide-react"
+import { ChevronDown, Ellipsis, Files, LogOut, UserRound } from "lucide-react"
 
 import { signOut } from "@/app/auth/actions"
 import { useAccess } from "@/components/access-provider"
-import { applyTheme, currentTheme } from "@/components/theme-toggle"
+import {
+  applyTheme,
+  currentThemePreference,
+  nextThemePreference,
+  ThemeIcon,
+  themeLabel,
+} from "@/components/theme-toggle"
+import type { ThemePreference } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -112,12 +119,12 @@ export function AccountMenu({ account }: { account: AccountIdentity }) {
 export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
   const access = useAccess()
   const { pending, signOut: handleSignOut } = useSignOut()
-  const [dark, setDark] = useState<boolean | null>(null)
+  const [theme, setTheme] = useState<ThemePreference | null>(null)
 
   return (
     <DropdownMenu
       onOpenChange={(open) => {
-        if (open) setDark(currentTheme() === "dark")
+        if (open) setTheme(currentThemePreference())
       }}
     >
       <DropdownMenuTrigger
@@ -141,13 +148,13 @@ export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
-              const next = currentTheme() === "dark" ? "light" : "dark"
+              const next = nextThemePreference(currentThemePreference())
               applyTheme(next)
-              setDark(next === "dark")
+              setTheme(next)
             }}
           >
-            {dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-            {dark ? "Light Appearance" : "Dark Appearance"}
+            <ThemeIcon preference={theme ?? "light"} />
+            {`Appearance: ${themeLabel(theme ?? "light")}`}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

@@ -386,14 +386,25 @@ export function BankPanel({
                 </Button>
               ) : null}
               {canAdd ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={accounts.length < 2}
-                  onClick={() => setTransferOpen(true)}
+                <span
+                  className="inline-flex"
+                  title={accounts.length < 2 ? "Add a second bank account to transfer." : undefined}
                 >
-                  Transfer
-                </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={accounts.length < 2}
+                    aria-describedby={accounts.length < 2 ? "bank-transfer-hint" : undefined}
+                    onClick={() => setTransferOpen(true)}
+                  >
+                    Transfer
+                  </Button>
+                  {accounts.length < 2 ? (
+                    <span id="bank-transfer-hint" className="sr-only">
+                      Add a second bank account to transfer.
+                    </span>
+                  ) : null}
+                </span>
               ) : null}
               {canAdd ? (
                 <Button

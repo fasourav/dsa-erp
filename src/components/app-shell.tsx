@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button"
 import { navItems } from "@/lib/access"
 import type { AccountIdentity } from "@/lib/account-identity"
 import { modulesHref } from "@/lib/nav-icons"
-import type { Theme } from "@/lib/theme"
+import type { ThemePreference } from "@/lib/theme"
 
 function backHref(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean)
@@ -33,7 +33,7 @@ export function AppShell({
   account,
 }: {
   children: ReactNode
-  theme: Theme
+  theme: ThemePreference
   account: AccountIdentity
 }) {
   const pathname = usePathname()

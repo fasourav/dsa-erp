@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell"
 import { getAccountIdentity } from "@/lib/account"
 import { getAccess } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
-import { parseTheme, THEME_COOKIE } from "@/lib/theme"
+import { parseThemePreference, THEME_COOKIE } from "@/lib/theme"
 
 export default async function AuthenticatedLayout({
   children,
@@ -27,7 +27,7 @@ export default async function AuthenticatedLayout({
   if (!account) redirect("/login")
 
   const cookieStore = await cookies()
-  const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value)
+  const theme = parseThemePreference(cookieStore.get(THEME_COOKIE)?.value)
 
   return (
     <AccessProvider access={access}>

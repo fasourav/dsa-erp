@@ -276,6 +276,7 @@ export function ClientFormDialog({
               <FieldLabel htmlFor="client-name">Name</FieldLabel>
               <Input
                 id="client-name"
+                maxLength={120}
                 value={name}
                 autoComplete="off"
                 autoCapitalize="words"
@@ -330,6 +331,7 @@ export function ClientFormDialog({
                 <FieldLabel htmlFor="client-company">Company</FieldLabel>
                 <Input
                   id="client-company"
+                  maxLength={120}
                   value={company}
                   autoComplete="organization"
                   enterKeyHint="next"
@@ -384,6 +386,7 @@ export function ClientFormDialog({
             <Field>
               <FieldLabel htmlFor="client-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="client-notes"
                 value={notes}
                 disabled={pending}

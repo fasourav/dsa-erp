@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
+import { formatMoney, toNumber } from "@/lib/format"
 import { denyUnless } from "@/lib/permissions"
 import { firstIssue, purchaseOrderValueSchema } from "@/lib/schemas"
 import {
@@ -133,6 +134,28 @@ async function savePurchaseOrder(
     }
   }
 
+  if (id) {
+    const floor = await purchaseOrderFloor(supabase, id)
+    if (floor === null) {
+      return { error: "Could not save this purchase order." }
+    }
+    const value = totalValue ?? 0
+    if (Math.round(value * 100) < Math.round(floor.paid * 100)) {
+      return {
+        error: null,
+        fieldErrors: { totalValue: `Amount can't be less than ${formatMoney(floor.paid)} already paid.` },
+      }
+    }
+    if (Math.round(value * 100) < Math.round(floor.billed * 100)) {
+      return {
+        error: null,
+        fieldErrors: {
+          totalValue: `Amount can't be less than ${formatMoney(floor.billed)} already invoiced.`,
+        },
+      }
+    }
+  }
+
   const values = {
     project_id: operational ? null : projectId,
     vendor_id: vendorId,
@@ -175,6 +198,10 @@ async function savePurchaseOrder(
           totalValue: "Enter an amount greater than 0.",
         },
       }
+    }
+
+    if (error.code === "23514" && /^Amount can't be less than/.test(error.message ?? "")) {
+      return { error: null, fieldErrors: { totalValue: error.message } }
     }
 
     return { error: friendlyDbError(error, "Could not save this purchase order.") }
@@ -235,4 +262,25 @@ function revalidatePurchaseOrders() {
   revalidatePath("/accounts/payable")
   revalidatePath("/vendors")
   revalidatePath("/projects")
+}
+
+async function purchaseOrderFloor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orderId: string,
+): Promise<{ billed: number; paid: number } | null> {
+  const { data, error } = await supabase
+    .from("vendor_invoices")
+    .select("amount, status, vendor_payments(amount)")
+    .eq("purchase_order_id", orderId)
+
+  if (error) return null
+
+  let billed = 0
+  let paid = 0
+  for (const row of data ?? []) {
+    if (row.status !== "void") billed += toNumber(row.amount)
+    const payments = (row.vendor_payments ?? []) as { amount: unknown }[]
+    for (const payment of payments) paid += toNumber(payment.amount)
+  }
+  return { billed, paid }
 }
