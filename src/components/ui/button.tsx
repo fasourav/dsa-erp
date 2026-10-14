@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "bg-destructive-tint text-destructive hover:bg-destructive/20 focus-visible:ring-destructive/30",
         "destructive-solid":
           "bg-destructive-solid text-on-color shadow-destructive hover:bg-destructive-solid/90 focus-visible:ring-destructive/30",
-        link: "h-auto px-0 text-primary-text underline-offset-4 hover:underline",
+        link: "h-auto px-0 text-primary-text underline-offset-4 hover:underline md:px-0",
       },
       size: {
         default:
@@ -35,7 +35,7 @@ const buttonVariants = cva(
       },
     },
     compoundVariants: [
-      { variant: "link", size: ["default", "sm", "xs", "lg"], className: "h-auto px-0" },
+      { variant: "link", size: ["default", "sm", "xs", "lg"], className: "h-auto px-0 md:px-0" },
     ],
     defaultVariants: {
       variant: "default",

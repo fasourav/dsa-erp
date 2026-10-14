@@ -367,7 +367,7 @@ function CellValue({
       return <StatusBadge status={project.status} />
     case "phase":
       return project.phase ? (
-        <Badge variant="outline">{project.phase}</Badge>
+        <Badge variant="neutral">{project.phase}</Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

@@ -255,7 +255,7 @@ export function DataList<T, Id extends string>({
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        "h-auto min-h-8 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:text-caption",
+                        "h-auto min-h-8 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
                         column.align === "right" && "flex-row-reverse",
                         active && "text-foreground",
                       )}
@@ -300,8 +300,8 @@ export function DataList<T, Id extends string>({
                       >
                         <span
                           className={cn(
-                            "max-w-full items-center",
-                            oneLine ? "inline-flex" : "flex w-full min-w-0",
+                            "max-w-full items-start [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0",
+                            oneLine ? "inline-flex items-center" : "flex w-full min-w-0",
                           )}
                         >
                           {renderCell(row, column.id)}

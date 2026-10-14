@@ -35,14 +35,11 @@ import {
   FieldLabel,
   FieldTitle,
 } from "@/components/ui/field"
+import { PhoneInput } from "@/components/phone-input"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  escapeLikePattern,
-  hasMinDigits,
-  isValidEmail,
-  normalizePhoneDigits,
-} from "@/lib/client-validation"
+import { escapeLikePattern, isValidEmail } from "@/lib/client-validation"
+import { phoneErrorForStored, phoneMatchKey } from "@/lib/phone"
 import { createClient } from "@/lib/supabase/client"
 import type { VendorKind, VendorSummary } from "@/lib/vendor-summary"
 
@@ -98,16 +95,13 @@ export function VendorFormDialog({
 
   const nameKey =
     kind && trimmedActiveName
-      ? `${kind}|${trimmedActiveName.toLowerCase()}|${normalizePhoneDigits(trimmedPhone)}`
+      ? `${kind}|${trimmedActiveName.toLowerCase()}|${phoneMatchKey(trimmedPhone)}`
       : ""
   const emailFormatError =
     trimmedEmail && !isValidEmail(trimmedEmail)
       ? "Enter a valid email address."
       : null
-  const phoneDigitError =
-    trimmedPhone && !hasMinDigits(trimmedPhone, 11)
-      ? "Enter a phone number with at least 11 digits."
-      : null
+  const phoneDigitError = phoneErrorForStored(trimmedPhone)
 
   const kindRequiredError =
     (attempted && !kind ? "Choose Private or Company." : null) ??
@@ -174,16 +168,13 @@ export function VendorFormDialog({
           return
         }
 
-        const normalizedPhone = normalizePhoneDigits(trimmedPhone)
+        const normalizedPhone = phoneMatchKey(trimmedPhone)
         const duplicate = (data ?? []).some((row) => {
           const rowPhone = row.phone?.trim() ?? ""
           if (!normalizedPhone) {
             return rowPhone === ""
           }
-          return (
-            rowPhone !== "" &&
-            normalizePhoneDigits(rowPhone) === normalizedPhone
-          )
+          return rowPhone !== "" && phoneMatchKey(rowPhone) === normalizedPhone
         })
 
         setNameCheck({
@@ -424,18 +415,14 @@ export function VendorFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(phoneError) || undefined}>
               <FieldLabel htmlFor="vendor-phone">Phone</FieldLabel>
-              <Input
+              <PhoneInput
                 id="vendor-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                enterKeyHint="next"
-                value={phone}
+                defaultValue={vendor?.phone ?? ""}
                 disabled={pending}
-                aria-invalid={Boolean(phoneError)}
-                onChange={(event) => {
+                invalid={Boolean(phoneError)}
+                onChange={(next) => {
                   setServerPhoneError(null)
-                  setPhone(event.target.value)
+                  setPhone(next)
                 }}
               />
               {phoneError ? <FieldError>{phoneError}</FieldError> : null}
@@ -486,3 +473,4 @@ export function VendorFormDialog({
     </Dialog>
   )
 }
+

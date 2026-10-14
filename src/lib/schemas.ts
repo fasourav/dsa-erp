@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { DEFAULT_LAUNCH_DATE } from "@/lib/format"
+import { phoneErrorForStored } from "@/lib/phone"
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -14,13 +15,11 @@ export const optionalEmail = z
     "Enter a valid email address.",
   )
 
-export const optionalPhone = z
-  .string()
-  .trim()
-  .refine((value) => {
-    if (value === "") return true
-    return (value.match(/\d/g) ?? []).length >= 11
-  }, "Enter a phone number with at least 11 digits.")
+export const optionalPhone = z.string().trim().superRefine((value, ctx) => {
+  const message = phoneErrorForStored(value)
+  if (!message) return
+  ctx.addIssue({ code: "custom", message })
+})
 
 export const launchDate = z
   .string()

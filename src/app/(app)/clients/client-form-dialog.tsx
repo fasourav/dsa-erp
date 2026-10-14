@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { PhoneInput } from "@/components/phone-input"
 import { Input } from "@/components/ui/input"
 import {
   Field,
@@ -32,9 +33,9 @@ import { Textarea } from "@/components/ui/textarea"
 import type { ClientKind, ClientSummary } from "@/lib/client-summary"
 import {
   escapeLikePattern,
-  hasMinDigits,
   isValidEmail,
 } from "@/lib/client-validation"
+import { phoneErrorForStored } from "@/lib/phone"
 import { createClient } from "@/lib/supabase/client"
 
 const DUPLICATE_CHECK_DELAY_MS = 350
@@ -88,10 +89,7 @@ export function ClientFormDialog({
       : null
   const emailKey =
     trimmedEmail && !emailFormatError ? trimmedEmail.toLowerCase() : ""
-  const phoneDigitError =
-    trimmedPhone && !hasMinDigits(trimmedPhone, 11)
-      ? "Enter a phone number with at least 11 digits."
-      : null
+  const phoneDigitError = phoneErrorForStored(trimmedPhone)
 
   const kindRequiredError =
     attempted && !kind ? "Choose Individual or Company." : null
@@ -362,16 +360,12 @@ export function ClientFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(phoneDigitError) || undefined}>
               <FieldLabel htmlFor="client-phone">Phone</FieldLabel>
-              <Input
+              <PhoneInput
                 id="client-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                enterKeyHint="next"
-                value={phone}
+                defaultValue={client?.phone ?? ""}
                 disabled={pending}
-                aria-invalid={Boolean(phoneDigitError)}
-                onChange={(event) => setPhone(event.target.value)}
+                invalid={Boolean(phoneDigitError)}
+                onChange={setPhone}
               />
               {phoneDigitError ? <FieldError>{phoneDigitError}</FieldError> : null}
             </Field>

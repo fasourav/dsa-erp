@@ -5,11 +5,8 @@ import { revalidatePath } from "next/cache"
 import type { ClientKind } from "@/lib/client-summary"
 import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
-import {
-  escapeLikePattern,
-  hasMinDigits,
-  isValidEmail,
-} from "@/lib/client-validation"
+import { escapeLikePattern, isValidEmail } from "@/lib/client-validation"
+import { phoneErrorForStored, toE164FromStored } from "@/lib/phone"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 
@@ -73,7 +70,7 @@ async function saveClient(
 
   const name = input.name.trim()
   const email = input.email.trim()
-  const phone = input.phone.trim()
+  const phone = toE164FromStored(input.phone)
   const address = input.address.trim()
   const notes = input.notes.trim()
 
@@ -96,12 +93,11 @@ async function saveClient(
     }
   }
 
-  if (phone && !hasMinDigits(phone, 11)) {
+  const phoneError = phoneErrorForStored(input.phone)
+  if (phoneError) {
     return {
       error: null,
-      fieldErrors: {
-        phone: "Enter a phone number with at least 11 digits.",
-      },
+      fieldErrors: { phone: phoneError },
     }
   }
 

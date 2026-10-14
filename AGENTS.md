@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Atrium design system
 
-All UI follows the client-approved Atrium design. Before touching UI, read `docs/atrium-style-guide.md` and the binding rules in `.cursor/rules/ui.mdc` and `.cursor/rules/form-dialog.mdc`. The mockups (desktop `dNN`, mobile `mNN`, dark and light) are in `docs/atrium/mockups/`.
+All UI follows the client-approved Atrium design. Before touching UI, read `docs/atrium-style-guide.md` and the binding rules in `.cursor/rules/ui.mdc` and `.cursor/rules/form-dialog.mdc`. The mockups (desktop `dNN`, mobile `mNN`, dark and light) are in `docs/atrium/mockups/`. Follow `.cursor/rules/efficiency.mdc` for reuse, scope, and the verification budget.
 
 - **Atrium tokens only.** Colors, type, radii, shadows, and glass come from `src/app/globals.css` through Tailwind utilities. Never hardcode a color, add `dark:` overrides, or change token values for one screen. The old teal theme is gone; do not bring back teal or palette classes.
 - **Shared components only.** Build with `PageHeader`, `Card`, `Money`, `StatusBadge`, `DataList` (with `mobileItem`), `FieldGroup layout="inset"`, `Dialog`, `DeleteConfirmDialog`, `Tabs`, `Empty`, `Skeleton`, and the `src/components/ui` primitives. No custom one-off styles, inline visual styles, or lookalike primitives.

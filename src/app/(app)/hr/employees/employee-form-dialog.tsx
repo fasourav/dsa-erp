@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { PhoneInput } from "@/components/phone-input"
 import { Field, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
+import { phoneErrorForStored } from "@/lib/phone"
 
 export function EmployeeFormDialog({
   open,
@@ -80,6 +82,7 @@ export function EmployeeFormDialog({
     attempted && !joiningDate.trim()
       ? "Enter a joining date."
       : fieldErrors.joiningDate
+  const phoneError = phoneErrorForStored(phone) ?? fieldErrors.phone
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) return
@@ -91,7 +94,9 @@ export function EmployeeFormDialog({
     setFormError(null)
     setFieldErrors({})
 
-    if (!fullName.trim() || !joiningDate.trim() || !monthlySalary.trim()) return
+    if (!fullName.trim() || !joiningDate.trim() || !monthlySalary.trim() || phoneErrorForStored(phone)) {
+      return
+    }
 
     const input = {
       fullName: fullName.trim(),
@@ -299,18 +304,16 @@ export function EmployeeFormDialog({
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Field>
-            <Field span="half">
+            <Field span="half" data-invalid={Boolean(phoneError) || undefined}>
               <FieldLabel htmlFor="emp-phone">Phone</FieldLabel>
-              <Input
+              <PhoneInput
                 id="emp-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                enterKeyHint="next"
-                value={phone}
+                defaultValue={employee?.phone ?? ""}
                 disabled={pending}
-                onChange={(e) => setPhone(e.target.value)}
+                invalid={Boolean(phoneError)}
+                onChange={setPhone}
               />
+              {phoneError ? <FieldError>{phoneError}</FieldError> : null}
             </Field>
 
             <Field>

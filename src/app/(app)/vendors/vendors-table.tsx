@@ -17,6 +17,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
+import { formatPhoneDisplay } from "@/lib/phone"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -154,7 +155,7 @@ export function VendorsTable({
                 ],
                 rows: filtered.map((vendor) => [
                   vendor.displayName,
-                  [vendor.phone, vendor.email].map((value) => value?.trim()).filter(Boolean).join(" · ") || "—",
+                  [formatPhoneDisplay(vendor.phone ?? ""), vendor.email].map((value) => value?.trim()).filter(Boolean).join(" · ") || "—",
                   vendor.totalProjectValue,
                   vendor.totalPaid,
                   vendor.totalDue,
@@ -264,7 +265,7 @@ export function VendorsTable({
 }
 
 function contactSubtitle(vendor: VendorSummary) {
-  const phone = vendor.phone?.trim() ?? ""
+  const phone = formatPhoneDisplay(vendor.phone ?? "")
   const email = vendor.email?.trim() ?? ""
   return [phone, email].filter(Boolean).join(" · ")
 }
@@ -321,7 +322,7 @@ function CellValue({
 }
 
 function ContactValue({ vendor }: { vendor: VendorSummary }) {
-  const phone = vendor.phone?.trim() ?? ""
+  const phone = formatPhoneDisplay(vendor.phone ?? "")
   const email = vendor.email?.trim() ?? ""
 
   if (!phone && !email) {

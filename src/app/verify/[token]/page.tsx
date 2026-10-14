@@ -46,7 +46,7 @@ export default async function VerifyPage({
       <dl className="flex flex-col">
         <Fact label="Document number" value={row.document_no} />
         <Fact label="Date" value={formatIsoDate(row.issued_on.slice(0, 10))} />
-        <Fact label="Total" value={<Money value={toNumber(row.total)} />} />
+        <Fact label="Total" value={<Money className="text-login-ink" value={toNumber(row.total)} />} />
         <Fact label="Status" value={row.status} />
       </dl>
     </AuthStage>
@@ -63,9 +63,9 @@ function VerifyMessage({ title, detail }: { title: string; detail: string }) {
 
 function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-t border-border py-2.5 first:border-t-0">
-      <dt className="text-label text-muted-foreground">{label}</dt>
-      <dd className="text-right text-ui font-semibold">{value}</dd>
+    <div className="flex items-baseline justify-between gap-4 border-t border-login-field py-2.5 first:border-t-0">
+      <dt className="text-label text-login-ink-muted">{label}</dt>
+      <dd className="text-right text-ui font-semibold text-login-ink">{value}</dd>
     </div>
   )
 }

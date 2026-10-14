@@ -6,6 +6,7 @@ import { friendlyDbError, mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { roundMoney } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { phoneErrorForStored, toE164FromStored } from "@/lib/phone"
 import { employeeLeaveSchema, firstIssue } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
@@ -113,7 +114,7 @@ async function saveEmployee(
   const designation = input.designation.trim()
   const monthlySalary = parseProjectValue(input.monthlySalary)
   const allowance = parseProjectValue(input.allowance.trim() || "0")
-  const phone = input.phone.trim()
+  const phone = toE164FromStored(input.phone)
   const email = input.email.trim()
   const notes = input.notes.trim()
   const departmentId = input.departmentId.trim()
@@ -159,6 +160,9 @@ async function saveEmployee(
   if (departmentId && !isUuid(departmentId)) {
     fieldErrors.departmentId = "Choose a department."
   }
+
+  const phoneError = phoneErrorForStored(input.phone)
+  if (phoneError) fieldErrors.phone = phoneError
 
   if (Object.keys(fieldErrors).length > 0) {
     return { error: null, fieldErrors }

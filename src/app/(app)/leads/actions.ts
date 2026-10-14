@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { dhakaToday } from "@/lib/dashboard-metrics"
 import { isUuid } from "@/lib/ids"
+import { toE164FromStored } from "@/lib/phone"
 import { firstIssue, leadContactSchema } from "@/lib/schemas"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
@@ -201,7 +202,7 @@ async function saveLead(
   const leadName = input.leadName.trim()
   const addedOn = input.addedOn.trim()
   const kind = input.kind.trim()
-  const phone = input.phone.trim()
+  const phone = toE164FromStored(input.phone)
   const email = input.email.trim()
   const projectName = input.projectName.trim()
   const projectType = input.projectType.trim()
