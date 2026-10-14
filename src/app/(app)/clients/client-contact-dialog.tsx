@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { formatPhoneDisplay } from "@/lib/phone"
 import type { ClientSummary } from "@/lib/client-summary"
 import { cn } from "@/lib/utils"
 
@@ -24,7 +25,7 @@ export function ClientContactDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const address = client?.address?.trim() ?? ""
-  const phone = client?.phone?.trim() ?? ""
+  const phone = formatPhoneDisplay(client?.phone ?? "")
   const email = client?.email?.trim() ?? ""
   const notes = client?.notes?.trim() ?? ""
 

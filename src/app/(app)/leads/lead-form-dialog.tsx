@@ -9,6 +9,7 @@ import {
   type LeadFieldErrors,
 } from "@/app/(app)/leads/actions"
 import { NameCombobox } from "@/components/name-combobox"
+import { PhoneInput } from "@/components/phone-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -231,16 +232,12 @@ export function LeadFormDialog({
 
             <Field span="half" data-invalid={Boolean(fieldErrors.phone) || undefined}>
               <FieldLabel htmlFor="lead-phone">Contact Number</FieldLabel>
-              <Input
+              <PhoneInput
                 id="lead-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                enterKeyHint="next"
-                value={phone}
+                defaultValue={lead?.phone ?? ""}
                 disabled={pending}
-                aria-invalid={Boolean(fieldErrors.phone)}
-                onChange={(e) => setPhone(e.target.value)}
+                invalid={Boolean(fieldErrors.phone)}
+                onChange={setPhone}
               />
               {fieldErrors.phone ? <FieldError>{fieldErrors.phone}</FieldError> : null}
             </Field>

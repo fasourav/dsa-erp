@@ -15,11 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Combobox,
   ComboboxContent,
-  ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-  ComboboxTrigger,
 } from "@/components/ui/combobox"
 import {
   Dialog,
@@ -37,24 +35,11 @@ import {
   FieldLabel,
   FieldTitle,
 } from "@/components/ui/field"
+import { PhoneInput } from "@/components/phone-input"
 import { Input } from "@/components/ui/input"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
 import { Textarea } from "@/components/ui/textarea"
 import { escapeLikePattern, isValidEmail } from "@/lib/client-validation"
-import {
-  CALLING_CODES,
-  callingCodeByValue,
-  callingCodeMatches,
-  parseStoredPhone,
-  phoneFieldError,
-  phoneMatchKey,
-  toE164,
-  type CallingCode,
-} from "@/lib/phone"
+import { phoneErrorForStored, phoneMatchKey } from "@/lib/phone"
 import { createClient } from "@/lib/supabase/client"
 import type { VendorKind, VendorSummary } from "@/lib/vendor-summary"
 
@@ -91,12 +76,7 @@ export function VendorFormDialog({
     ...categories,
   ])
   const [email, setEmail] = useState(vendor?.email ?? "")
-  const [callingCode, setCallingCode] = useState(
-    () => parseStoredPhone(vendor?.phone ?? "").callingCode,
-  )
-  const [nationalPhone, setNationalPhone] = useState(
-    () => parseStoredPhone(vendor?.phone ?? "").national,
-  )
+  const [phone, setPhone] = useState(vendor?.phone ?? "")
   const [address, setAddress] = useState(vendor?.address ?? "")
   const [notes, setNotes] = useState(vendor?.notes ?? "")
 
@@ -111,18 +91,17 @@ export function VendorFormDialog({
   const activeName = kind === "company" ? companyName : personName
   const trimmedActiveName = activeName.trim()
   const trimmedEmail = email.trim()
-  const trimmedPhone = nationalPhone.trim()
-  const composedPhone = toE164(callingCode, trimmedPhone)
+  const trimmedPhone = phone.trim()
 
   const nameKey =
     kind && trimmedActiveName
-      ? `${kind}|${trimmedActiveName.toLowerCase()}|${phoneMatchKey(composedPhone)}`
+      ? `${kind}|${trimmedActiveName.toLowerCase()}|${phoneMatchKey(trimmedPhone)}`
       : ""
   const emailFormatError =
     trimmedEmail && !isValidEmail(trimmedEmail)
       ? "Enter a valid email address."
       : null
-  const phoneDigitError = phoneFieldError(callingCode, trimmedPhone)
+  const phoneDigitError = phoneErrorForStored(trimmedPhone)
 
   const kindRequiredError =
     (attempted && !kind ? "Choose Private or Company." : null) ??
@@ -189,7 +168,7 @@ export function VendorFormDialog({
           return
         }
 
-        const normalizedPhone = phoneMatchKey(composedPhone)
+        const normalizedPhone = phoneMatchKey(trimmedPhone)
         const duplicate = (data ?? []).some((row) => {
           const rowPhone = row.phone?.trim() ?? ""
           if (!normalizedPhone) {
@@ -208,7 +187,7 @@ export function VendorFormDialog({
     }, DUPLICATE_CHECK_DELAY_MS)
 
     return () => clearTimeout(timer)
-  }, [open, nameKey, kind, trimmedActiveName, composedPhone, vendorId, supabase])
+  }, [open, nameKey, kind, trimmedActiveName, trimmedPhone, vendorId, supabase])
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
@@ -259,7 +238,7 @@ export function VendorFormDialog({
       name: trimmedActiveName,
       vendorField: category.trim(),
       email: trimmedEmail,
-      phone: composedPhone,
+      phone: trimmedPhone,
       address: address.trim(),
         notes: notes.trim(),
     }
@@ -436,33 +415,16 @@ export function VendorFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(phoneError) || undefined}>
               <FieldLabel htmlFor="vendor-phone">Phone</FieldLabel>
-              <InputGroup>
-                <InputGroupAddon>
-                  <CallingCodePicker
-                    value={callingCode}
-                    disabled={pending}
-                    onChange={(next) => {
-                      setServerPhoneError(null)
-                      setCallingCode(next)
-                    }}
-                  />
-                </InputGroupAddon>
-                <InputGroupInput
-                  id="vendor-phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel-national"
-                  enterKeyHint="next"
-                  value={nationalPhone}
-                  disabled={pending}
-                  aria-invalid={Boolean(phoneError)}
-                  placeholder="1712-345678"
-                  onChange={(event) => {
-                    setServerPhoneError(null)
-                    setNationalPhone(event.target.value)
-                  }}
-                />
-              </InputGroup>
+              <PhoneInput
+                id="vendor-phone"
+                defaultValue={vendor?.phone ?? ""}
+                disabled={pending}
+                invalid={Boolean(phoneError)}
+                onChange={(next) => {
+                  setServerPhoneError(null)
+                  setPhone(next)
+                }}
+              />
               {phoneError ? <FieldError>{phoneError}</FieldError> : null}
             </Field>
 
@@ -512,51 +474,3 @@ export function VendorFormDialog({
   )
 }
 
-function CallingCodePicker({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: string
-  disabled: boolean
-  onChange: (code: string) => void
-}) {
-  const selected = callingCodeByValue(value)
-
-  return (
-    <Combobox
-      items={CALLING_CODES}
-      value={selected}
-      disabled={disabled}
-      filter={callingCodeMatches}
-      isItemEqualToValue={(item, current) => item.value === current.value}
-      onValueChange={(next) => {
-        if (next) onChange(next.value)
-      }}
-    >
-      <ComboboxTrigger
-        disabled={disabled}
-        aria-label="Country code"
-        render={<Button type="button" variant="ghost" className="gap-1 font-semibold" />}
-      >
-        {selected.label}
-      </ComboboxTrigger>
-      <ComboboxContent className="min-w-64">
-        <ComboboxInput
-          aria-label="Search country codes"
-          placeholder="Search"
-          showTrigger={false}
-          disabled={disabled}
-        />
-        <ComboboxEmpty>No matches</ComboboxEmpty>
-        <ComboboxList>
-          {(item: CallingCode) => (
-            <ComboboxItem key={item.value} value={item}>
-              {item.country} {item.label}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
-  )
-}

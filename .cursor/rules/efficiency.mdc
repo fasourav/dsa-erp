@@ -1,0 +1,18 @@
+---
+description: Keep changes small, reuse shared Atrium pieces, and verify only what the task touches.
+alwaysApply: true
+---
+
+# Efficiency
+
+Cross-links only. Scope, dialogs, and visual rules stay in `token-scope.mdc`, `form-dialog.mdc`, `ui.mdc`, and `docs/atrium-style-guide.md`.
+
+- Reuse first: use existing Atrium shared components (`PageHeader`, `DataList`, `Money`, `StatusBadge`, inset `Dialog`/`Sheet`, `DeleteConfirmDialog`, form fields, `PhoneInput`) and tokens from `docs/atrium-style-guide.md`. Never create a new component, variant, or style when an existing one fits. Extend a shared component only if needed, and note that exception in the PR.
+- Fix at the root in shared components, not per page.
+- Scope: change only files needed for the task. No drive-by refactors, renames, formatting sweeps, or dependency upgrades.
+- Read narrowly: grep for the relevant files before opening them. Do not read whole directories, lockfiles, generated files, `node_modules`, `.next`, or large mockup assets unless required.
+- Verification budget: run `tsc` and eslint on touched files, and `next build` once at the end. Screenshot only pages or components the change touches: one phone (390) and one desktop (1440) shot, light theme. Add dark or tablet only for theme or layout-wide changes. A full-app screenshot matrix only when explicitly asked.
+- Do not re-run passing checks. No repeated rebuild loops. Stop after 2 failed attempts at the same fix and report.
+- No database changes unless asked. Migrations are files only, never applied.
+- Never print or commit secrets. `.env.local` stays git-ignored.
+- Keep PR bodies short: what changed, why, checks run, shots.
