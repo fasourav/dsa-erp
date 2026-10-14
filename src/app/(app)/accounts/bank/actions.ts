@@ -468,7 +468,7 @@ async function saveBankAccount(
   const fieldErrors: BankAccountFieldErrors = {}
 
   if (!name) {
-    fieldErrors.name = "Enter an account name."
+    fieldErrors.name = "Enter an account nickname."
   }
   if (!accountHolderName) {
     fieldErrors.accountHolderName = "Enter the account holder name."

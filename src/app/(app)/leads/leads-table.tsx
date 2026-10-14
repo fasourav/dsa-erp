@@ -334,7 +334,7 @@ function CellValue({
   switch (columnId) {
     case "leadName":
       return (
-        <div className="flex w-full min-w-0 flex-col gap-1">
+        <div className="flex w-full min-w-0 flex-col items-start gap-1.5">
           <span className={cn("text-ui font-semibold", !lead.leadName && "text-muted-foreground")}>
             {lead.leadName || "—"}
           </span>

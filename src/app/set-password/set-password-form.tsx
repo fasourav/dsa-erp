@@ -23,8 +23,8 @@ export function SetPasswordForm() {
   const invalid = state.error ? true : undefined
 
   return (
-    <form action={formAction} className="flex w-full flex-col">
-      <FieldGroup layout="inset" className="md:gap-3.5">
+    <form action={formAction} className="flex w-full flex-col gap-3">
+      <FieldGroup className="gap-3">
         <Field>
           <FieldLabel htmlFor="password" className={authLabelClassName}>
             Password

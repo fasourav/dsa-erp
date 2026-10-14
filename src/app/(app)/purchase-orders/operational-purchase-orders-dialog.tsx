@@ -262,7 +262,7 @@ function OperationalCell({
   switch (columnId) {
     case "issuedOn":
       return order.issuedOn ? (
-        <span>{formatPurchaseOrderDate(order.issuedOn)}</span>
+        <span className="text-muted-foreground">{formatPurchaseOrderDate(order.issuedOn)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

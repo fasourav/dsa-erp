@@ -124,7 +124,7 @@ function InputGroupInput({
     <Input
       data-slot="input-group-control"
       className={cn(
-        "h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:shadow-none disabled:bg-transparent aria-invalid:shadow-none md:h-full md:bg-transparent md:shadow-none md:focus-visible:shadow-none md:aria-invalid:shadow-none",
+        "h-full flex-1 rounded-none border-0 bg-transparent px-1.5 shadow-none focus-visible:shadow-none disabled:bg-transparent aria-invalid:shadow-none in-data-[field-layout=inset]:h-full in-data-[field-layout=inset]:min-h-0 in-data-[field-layout=inset]:rounded-none in-data-[field-layout=inset]:bg-transparent in-data-[field-layout=inset]:px-1.5 in-data-[field-layout=inset]:py-1 in-data-[field-layout=inset]:shadow-none in-data-[field-layout=inset]:focus-visible:shadow-none md:h-full md:rounded-none md:bg-transparent md:px-1.5 md:shadow-none md:focus-visible:shadow-none md:aria-invalid:shadow-none md:in-data-[field-layout=inset]:h-full md:in-data-[field-layout=inset]:min-h-0 md:in-data-[field-layout=inset]:rounded-none md:in-data-[field-layout=inset]:bg-transparent md:in-data-[field-layout=inset]:px-1.5 md:in-data-[field-layout=inset]:py-1 md:in-data-[field-layout=inset]:shadow-none md:in-data-[field-layout=inset]:focus-visible:shadow-none",
         className
       )}
       {...props}

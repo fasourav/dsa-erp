@@ -6,10 +6,9 @@ import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 import {
   escapeLikePattern,
-  hasMinDigits,
   isValidEmail,
-  normalizePhoneDigits,
 } from "@/lib/client-validation"
+import { phoneErrorForStored, phoneMatchKey, toE164FromStored } from "@/lib/phone"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
@@ -125,7 +124,7 @@ async function saveVendor(
   const name = input.name.trim()
   const vendorField = input.vendorField.trim()
   const email = input.email.trim()
-  const phone = input.phone.trim()
+  const phone = toE164FromStored(input.phone)
   const address = input.address.trim()
   const notes = input.notes.trim()
 
@@ -148,11 +147,12 @@ async function saveVendor(
     }
   }
 
-  if (phone && !hasMinDigits(phone, 11)) {
+  const phoneError = phoneErrorForStored(input.phone)
+  if (phoneError) {
     return {
       error: null,
       fieldErrors: {
-        phone: "Enter a phone number with at least 11 digits.",
+        phone: phoneError,
       },
     }
   }
@@ -290,7 +290,7 @@ async function findNamePhoneDuplicate(
     return "error"
   }
 
-  const normalizedPhone = normalizePhoneDigits(phone)
+  const normalizedPhone = phoneMatchKey(phone)
   const duplicate = (data ?? []).some((row) =>
     phonesMatch(normalizedPhone, row.phone),
   )
@@ -305,7 +305,7 @@ function phonesMatch(normalizedPhone: string, stored: string | null): boolean {
     return rowPhone === ""
   }
 
-  return rowPhone !== "" && normalizePhoneDigits(rowPhone) === normalizedPhone
+  return rowPhone !== "" && phoneMatchKey(rowPhone) === normalizedPhone
 }
 
 export async function deleteVendor(id: string): Promise<DeleteVendorResult> {

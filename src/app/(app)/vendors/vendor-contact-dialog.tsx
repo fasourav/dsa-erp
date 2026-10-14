@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { formatPhoneDisplay } from "@/lib/phone"
 import type { VendorSummary } from "@/lib/vendor-summary"
 import { cn } from "@/lib/utils"
 
@@ -25,7 +26,7 @@ export function VendorContactDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const address = vendor?.address?.trim() ?? ""
-  const phone = vendor?.phone?.trim() ?? ""
+  const phone = formatPhoneDisplay(vendor?.phone ?? "")
   const email = vendor?.email?.trim() ?? ""
   const notes = vendor?.notes?.trim() ?? ""
 

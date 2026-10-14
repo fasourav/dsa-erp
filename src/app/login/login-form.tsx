@@ -28,8 +28,8 @@ export function LoginForm({ notice }: { notice?: string }) {
   const [showPassword, setShowPassword] = useState(false)
 
   return (
-    <form action={formAction} className="flex w-full flex-col">
-      <FieldGroup layout="inset" className="md:gap-3.5">
+    <form action={formAction} className="flex w-full flex-col gap-3">
+      <FieldGroup className="gap-3">
         <Field>
           <FieldLabel htmlFor="email" className={labelClassName}>
             Email
@@ -76,7 +76,7 @@ export function LoginForm({ notice }: { notice?: string }) {
                 size="icon-sm"
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 aria-pressed={showPassword}
-                className="text-subtle-foreground hover:bg-fill md:text-login-field-icon md:hover:bg-login-field"
+                className="text-login-field-icon hover:bg-login-field hover:text-login-ink"
                 onClick={() => setShowPassword((current) => !current)}
               >
                 {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
@@ -86,20 +86,11 @@ export function LoginForm({ notice }: { notice?: string }) {
         </Field>
       </FieldGroup>
       {[notice, state.error].filter(Boolean).map((message) => (
-        <p
-          key={message}
-          role="alert"
-          className={authAlertClassName}
-        >
+        <p key={message} role="alert" className={authAlertClassName}>
           {message}
         </p>
       ))}
-      <Button
-        type="submit"
-        size="lg"
-        disabled={pending}
-        className={authSubmitClassName}
-      >
+      <Button type="submit" size="lg" disabled={pending} className={authSubmitClassName}>
         {pending ? "Signing in…" : "Sign in"}
       </Button>
     </form>

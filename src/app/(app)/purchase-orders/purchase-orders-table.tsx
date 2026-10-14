@@ -336,7 +336,7 @@ function CellValue({
   switch (columnId) {
     case "issuedOn":
       return order.issuedOn ? (
-        <span>{formatPurchaseOrderDate(order.issuedOn)}</span>
+        <span className="text-muted-foreground">{formatPurchaseOrderDate(order.issuedOn)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -351,23 +351,18 @@ function CellValue({
       )
     case "vendorName":
       return (
-        <div className="flex min-w-0 flex-col items-start gap-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                "text-ui font-semibold",
-                !order.vendorName && "text-muted-foreground",
-              )}
-            >
-              {order.vendorName || "—"}
-            </span>
-            {order.workType ? (
-              <Badge variant="outline">{order.workType}</Badge>
-            ) : null}
-          </div>
-          <StatusBadge
-            status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
-          />
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "text-ui font-semibold",
+              !order.vendorName && "text-muted-foreground",
+            )}
+          >
+            {order.vendorName || "—"}
+          </span>
+          {order.workType ? (
+            <Badge variant="outline">{order.workType}</Badge>
+          ) : null}
         </div>
       )
     case "totalValue":

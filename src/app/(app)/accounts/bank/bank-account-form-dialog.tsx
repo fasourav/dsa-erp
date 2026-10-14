@@ -70,7 +70,8 @@ export function BankAccountFormDialog({
   const [pending, startSubmit] = useTransition()
 
   const nameError =
-    serverErrors.name ?? (attempted && !name.trim() ? "Enter an account name." : null)
+    serverErrors.name ??
+    (attempted && !name.trim() ? "Enter an account nickname." : null)
   const holderError =
     serverErrors.accountHolderName ??
     (attempted && !accountHolderName.trim() ? "Enter the account holder name." : null)
@@ -177,7 +178,7 @@ export function BankAccountFormDialog({
         <DialogBody className="flex flex-col gap-4">
           <FieldGroup layout="inset">
             <Field span="half" data-invalid={Boolean(nameError) || undefined}>
-              <FieldLabel htmlFor="bank-account-name">Account Name</FieldLabel>
+              <FieldLabel htmlFor="bank-account-name">Account Nickname</FieldLabel>
               <Input
                 id="bank-account-name"
                 value={name}
@@ -188,6 +189,9 @@ export function BankAccountFormDialog({
                 aria-invalid={Boolean(nameError)}
                 onChange={(event) => setName(event.target.value)}
               />
+              <FieldDescription>
+                How this account appears in the app, e.g. Operating Account
+              </FieldDescription>
               {nameError ? <FieldError>{nameError}</FieldError> : null}
             </Field>
             <Field span="half" data-invalid={Boolean(holderError) || undefined}>
@@ -202,6 +206,7 @@ export function BankAccountFormDialog({
                 aria-invalid={Boolean(holderError)}
                 onChange={(event) => setAccountHolderName(event.target.value)}
               />
+              <FieldDescription>Name registered with the bank</FieldDescription>
               {holderError ? <FieldError>{holderError}</FieldError> : null}
             </Field>
             <Field span="half" data-invalid={Boolean(numberError) || undefined}>
@@ -229,6 +234,7 @@ export function BankAccountFormDialog({
                 aria-invalid={Boolean(bankError)}
                 onChange={(event) => setBankName(event.target.value)}
               />
+              <FieldDescription>e.g. BRAC Bank</FieldDescription>
               {bankError ? <FieldError>{bankError}</FieldError> : null}
             </Field>
             <Field data-invalid={Boolean(routingError) || undefined}>
