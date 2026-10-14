@@ -73,7 +73,7 @@ export function AppSidebar({
         <nav
           id="primary-navigation"
           aria-label="Primary"
-          className="sidebar-scroll -mx-1 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-1 pb-2"
+          className="no-scrollbar -mx-1 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-1 pb-2"
         >
           {visibleItems.map((item) => (
             <NavLink
