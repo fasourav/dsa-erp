@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server"
 
 type BackupTable = {
   name: string
+  // Read from this relation instead when the base table has column-level revokes.
+  source?: string
   sheet: string
   order: string[]
 }
@@ -40,14 +42,14 @@ const tables: BackupTable[] = [
   { name: "office_expense_categories", sheet: "office_expense_categories", order: ["id"] },
   { name: "vat_tax_payments", sheet: "vat_tax_payments", order: ["id"] },
   { name: "payment_methods", sheet: "payment_methods", order: ["id"] },
-  { name: "bank_accounts", sheet: "bank_accounts", order: ["id"] },
-  { name: "bank_transactions", sheet: "bank_transactions", order: ["id"] },
+  { name: "bank_accounts", source: "bank_accounts_readable", sheet: "bank_accounts", order: ["id"] },
+  { name: "bank_transactions", source: "bank_transactions_readable", sheet: "bank_transactions", order: ["id"] },
   { name: "bank_transfers", sheet: "bank_transfers", order: ["id"] },
   { name: "budgets", sheet: "budgets", order: ["id"] },
   { name: "departments", sheet: "departments", order: ["id"] },
   { name: "assets", sheet: "assets", order: ["id"] },
   { name: "asset_categories", sheet: "asset_categories", order: ["id"] },
-  { name: "employees", sheet: "employees", order: ["id"] },
+  { name: "employees", source: "employees_readable", sheet: "employees", order: ["id"] },
   { name: "payroll_runs", sheet: "payroll_runs", order: ["id"] },
   { name: "payroll_lines", sheet: "payroll_lines", order: ["id"] },
   { name: "quotations", sheet: "quotations", order: ["id"] },
@@ -85,7 +87,7 @@ export async function buildBackup(kind: "excel" | "json"): Promise<BackupResult>
   for (const table of tables) {
     try {
       const rows = await fetchAllPages((from, to) => {
-        let query = loose.from(table.name).select("*")
+        let query = loose.from(table.source ?? table.name).select("*")
         for (const column of table.order) {
           query = query.order(column, { ascending: true })
         }

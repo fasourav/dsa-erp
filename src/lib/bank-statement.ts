@@ -42,8 +42,8 @@ export function buildBankStatement(input: {
 
   const opening = cents / 100
   const lines: StatementLine[] = []
-  let totalIn = 0
-  let totalOut = 0
+  let totalInCents = 0
+  let totalOutCents = 0
 
   for (const row of rows) {
     if (row.transactionDate < input.from || row.transactionDate > input.to) {
@@ -53,8 +53,8 @@ export function buildBankStatement(input: {
     const moneyIn = row.direction === "inflow" ? row.amount : 0
     const moneyOut = row.direction === "outflow" ? row.amount : 0
     cents += signedCents(row)
-    totalIn += moneyIn
-    totalOut += moneyOut
+    totalInCents += moneyCents(moneyIn)
+    totalOutCents += moneyCents(moneyOut)
     lines.push({
       id: row.id,
       date: row.transactionDate,
@@ -69,8 +69,8 @@ export function buildBankStatement(input: {
   return {
     opening,
     lines,
-    totalIn,
-    totalOut,
+    totalIn: totalInCents / 100,
+    totalOut: totalOutCents / 100,
     closing: cents / 100,
   }
 }

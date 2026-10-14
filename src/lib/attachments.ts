@@ -76,3 +76,26 @@ export function safeFileLabel(name: string): string {
   const trimmed = name.replace(/[/\\]/g, " ").replace(/\s+/g, " ").trim()
   return trimmed.slice(0, 180) || "File"
 }
+
+// The browser-supplied type and the file name can both be faked, so check the
+// leading bytes match the declared format before the file is stored.
+export function matchesAttachmentSignature(type: string, bytes: Uint8Array): boolean {
+  const starts = (...sig: number[]) => sig.every((value, index) => bytes[index] === value)
+  const ascii = (offset: number, text: string) =>
+    [...text].every((char, index) => bytes[offset + index] === char.charCodeAt(0))
+  switch (type) {
+    case "application/pdf":
+      return ascii(0, "%PDF-")
+    case "image/png":
+      return starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)
+    case "image/jpeg":
+      return starts(0xff, 0xd8, 0xff)
+    case "image/webp":
+      return ascii(0, "RIFF") && ascii(8, "WEBP")
+    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return starts(0x50, 0x4b, 0x03, 0x04)
+    default:
+      return false
+  }
+}

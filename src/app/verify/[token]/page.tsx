@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server"
 export const dynamic = "force-dynamic"
 
 export const metadata = {
-  title: "Verify document",
+  title: "Verify Document",
   robots: { index: false, follow: false },
 }
 

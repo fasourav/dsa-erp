@@ -8,6 +8,7 @@ import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
 
 export type VatTaxInput = {
@@ -131,6 +132,7 @@ export async function deleteVatTaxPayment(id: string): Promise<DeleteResult> {
     return { error: "That payment could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidateVatTax()
   return { error: null }
 }

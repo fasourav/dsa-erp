@@ -4,6 +4,8 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
+import { StatusBadge } from "@/components/status-badge"
+import { statusLabel } from "@/lib/documents/drafts"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -17,6 +19,7 @@ const columns = [
   { id: "title", label: "Title", align: "left", locked: true },
   { id: "detail", label: "Detail", align: "left", locked: true },
   { id: "documentNo", label: "Document No.", align: "left", locked: true },
+  { id: "status", label: "Status", align: "left", locked: true },
 ] as const satisfies readonly ListColumn<string>[]
 
 type ColumnId = (typeof columns)[number]["id"]
@@ -26,6 +29,7 @@ type DocumentListItem = {
   title: string
   detail: string
   documentNo: string
+  status?: string
 }
 
 function documentNumber(value: string) {
@@ -34,6 +38,7 @@ function documentNumber(value: string) {
 
 function columnText(item: DocumentListItem, id: ColumnId) {
   if (id === "documentNo") return documentNumber(item.documentNo)
+  if (id === "status") return item.status ? statusLabel(item.status) : ""
   return item[id]
 }
 
@@ -61,10 +66,12 @@ export function DocumentListView({
     return copy
   }, [items, sort])
   const pageResult = paginateRows(sorted, page)
+  const hasStatus = items.some((item) => item.status)
+  const visibleColumns = hasStatus ? columns : columns.filter((column) => column.id !== "status")
 
   return (
     <DataList
-      columns={columns}
+      columns={visibleColumns}
       rows={pageResult.rows}
       rowKey={(item) => item.id}
       sort={sort}
@@ -82,12 +89,16 @@ export function DocumentListView({
       pagingLabel={pagingLabel}
       mobileItem={(item) => ({
         title: <DocumentLink href={`${hrefBase}/${item.id}`}>{item.title}</DocumentLink>,
+        value: item.status ? <StatusBadge status={item.status} /> : undefined,
         subtitle: item.detail,
         meta: documentNumber(item.documentNo),
       })}
       renderCell={(item, columnId) => {
         if (columnId === "title") {
           return <DocumentLink href={`${hrefBase}/${item.id}`}>{item.title}</DocumentLink>
+        }
+        if (columnId === "status") {
+          return item.status ? <StatusBadge status={item.status} /> : null
         }
         return columnText(item, columnId)
       }}

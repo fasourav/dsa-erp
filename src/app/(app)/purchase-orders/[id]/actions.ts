@@ -18,6 +18,7 @@ import {
 } from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -136,6 +137,7 @@ export async function deleteVendorInvoice(id: string): Promise<DeleteResult> {
     return { error: "That payment could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidateVendorMoney(data[0]?.purchase_order_id ?? null)
   return { error: null }
 }
@@ -348,6 +350,7 @@ export async function deleteVendorPayment(id: string): Promise<DeleteResult> {
     return { error: "Could not delete this payment." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   const synced = await syncVendorInvoiceStatus(
     auth.supabase,
     payment.vendor_invoice_id,

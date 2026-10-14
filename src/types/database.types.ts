@@ -3256,6 +3256,12 @@ export type Database = {
         Returns: Json
       }
       record_backup: { Args: { p_kind: string }; Returns: undefined }
+      claim_attachment_file_purges: {
+        Args: { p_limit?: number }
+        Returns: { path: string }[]
+      }
+      settle_attachment_file_purges: { Args: { p_paths: string[] }; Returns: number }
+      sweep_orphan_attachments: { Args: never; Returns: number }
     }
     Enums: {
       bank_flow_direction: "inflow" | "outflow"

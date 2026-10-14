@@ -11,9 +11,11 @@ import {
   attachmentModule,
   isAttachmentParent,
   safeFileLabel,
+  matchesAttachmentSignature,
   type AttachmentParent,
 } from "@/lib/attachments"
 import { createClient } from "@/lib/supabase/server"
+import { removeQueuedAttachmentFiles } from "@/lib/attachment-files"
 
 export type AttachmentRow = {
   id: string
@@ -76,6 +78,10 @@ export async function uploadAttachment(
   if (!contentType || !extension) {
     return { error: "Use a PDF, JPG, PNG, WEBP, XLSX, or DOCX file." }
   }
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  if (!matchesAttachmentSignature(contentType, bytes)) {
+    return { error: "This file's contents don't match its type. Use a real PDF, JPG, PNG, WEBP, XLSX, or DOCX file." }
+  }
 
   const denied = await denyAttachment(parentType, parentId, "edit")
   if (denied) return { error: denied }
@@ -98,7 +104,6 @@ export async function uploadAttachment(
   })
   if (insertError) return { error: "Could not save this file." }
 
-  const bytes = new Uint8Array(await file.arrayBuffer())
   const { error: uploadError } = await supabase.storage.from(bucket).upload(storagePath, bytes, {
     contentType,
     upsert: false,
@@ -155,6 +160,7 @@ export async function deleteAttachment(id: string): Promise<{ error: string | nu
   const { error: deleteError } = await supabase.from("record_attachments").delete().eq("id", id)
   if (deleteError) return { error: "Could not delete this file." }
   await supabase.storage.from(bucket).remove([data.storage_path])
+  await removeQueuedAttachmentFiles(supabase)
   revalidatePath("/", "layout")
   return { error: null }
 }

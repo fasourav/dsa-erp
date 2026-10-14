@@ -94,8 +94,11 @@ export function ChoiceField({
   disabled?: boolean
   placeholder?: string
 }) {
+  // Keep the item list stable. Dropping the placeholder item as soon as a value is
+  // picked changed the list mid-selection and the Select snapped back to "unset",
+  // so a client, vendor, or project could never be chosen.
   const items = [
-    ...(value ? [] : [{ value: "unset", label: placeholder }]),
+    { value: "unset", label: placeholder },
     ...options.filter((option) => option.value !== "unset"),
   ]
   const selected = value || "unset"

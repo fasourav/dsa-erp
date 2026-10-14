@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Noto_Sans_Bengali } from "next/font/google"
 import localFont from "next/font/local"
 import { cookies } from "next/headers"
 
@@ -26,6 +26,12 @@ const taka = localFont({
   adjustFontFallback: false,
   fallback: [],
   declarations: [{ prop: "unicode-range", value: "U+09F3" }],
+})
+
+const bengali = Noto_Sans_Bengali({
+  variable: "--font-bengali",
+  subsets: ["bengali"],
+  preload: false,
 })
 
 async function currentTheme() {
@@ -73,7 +79,13 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={cn(inter.variable, taka.variable, "h-full", theme === "dark" && "dark")}
+      className={cn(
+        inter.variable,
+        taka.variable,
+        bengali.variable,
+        "h-full",
+        theme === "dark" && "dark",
+      )}
     >
       <body className="flex min-h-full flex-col">
         {children}

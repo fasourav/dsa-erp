@@ -8,6 +8,7 @@ import { overdraftMessage } from "@/lib/insufficient-balance"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
 
 export type ExpenseInput = {
@@ -95,6 +96,7 @@ export async function deleteOperationalExpense(
     return { error: "That expense could not be found." }
   }
 
+  cleanUpDeletedAttachmentFiles()
   revalidatePath("/accounts/expenses")
   revalidatePath("/accounts/bank")
   return { error: null }

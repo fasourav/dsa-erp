@@ -1,6 +1,7 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib"
+import { PDFDocument, rgb, type PDFPage } from "pdf-lib"
 
 import { reportCompanyName } from "@/lib/reports/catalog"
+import { embedReportFonts, type PdfTextStyle } from "@/lib/reports/pdf-text"
 import type { BuiltReport, ExportKind, ReportTable } from "@/lib/reports/types"
 import { pdfAmount } from "@/lib/reports/workbook"
 import { formatGroupedCount } from "@/lib/format"
@@ -13,8 +14,7 @@ export async function buildReportPdf(report: BuiltReport): Promise<Uint8Array> {
   const document = await PDFDocument.create()
   document.setTitle(`${report.title} · ${reportCompanyName}`)
   document.setAuthor(reportCompanyName)
-  const regular = await document.embedFont(StandardFonts.Helvetica)
-  const bold = await document.embedFont(StandardFonts.HelveticaBold)
+  const { regular, bold } = await embedReportFonts(document)
   const size: [number, number] = report.landscape ? [841.89, 595.28] : [595.28, 841.89]
   const cursor = new Cursor(document, size, regular, bold, report)
 
@@ -42,8 +42,8 @@ class Cursor {
   constructor(
     private readonly document: PDFDocument,
     private readonly size: [number, number],
-    private readonly regular: PDFFont,
-    private readonly bold: PDFFont,
+    private readonly regular: PdfTextStyle,
+    private readonly bold: PdfTextStyle,
     private readonly report: BuiltReport,
   ) {
     this.width = size[0]
@@ -80,11 +80,11 @@ class Cursor {
     this.y -= amount
   }
 
-  paragraph(text: string, size: number, color: ReturnType<typeof rgb>, font: PDFFont) {
+  paragraph(text: string, size: number, color: ReturnType<typeof rgb>, font: PdfTextStyle) {
     const lines = wrap(text, font, size, this.width - margin * 2)
     for (const line of lines) {
       this.ensure(size + 4)
-      this.page.drawText(line, { x: margin, y: this.y - size, size, font, color })
+      font.draw(this.page, line, { x: margin, y: this.y - size, size, color })
       this.y -= size + 4
     }
   }
@@ -93,12 +93,11 @@ class Cursor {
     const pages = this.document.getPages()
     pages.forEach((page, index) => {
       const label = `Page ${index + 1} of ${pages.length}`
-      const width = this.regular.widthOfTextAtSize(label, 8)
-      page.drawText(label, {
+      const width = this.regular.widthOf(label, 8)
+      this.regular.draw(page, label, {
         x: this.width - margin - width,
         y: 22,
         size: 8,
-        font: this.regular,
         color: muted,
       })
     })
@@ -123,13 +122,12 @@ class Cursor {
     wrapped.forEach((lines, index) => {
       const alignRight = kinds[index] !== "text"
       lines.forEach((line, lineIndex) => {
-        const textWidth = font.widthOfTextAtSize(line, 9)
+        const textWidth = font.widthOf(line, 9)
         const textX = alignRight ? x + widths[index] - 4 - textWidth : x + 4
-        this.page.drawText(line, {
+        font.draw(this.page, line, {
           x: textX,
           y: this.y - 14 - lineIndex * 12,
           size: 9,
-          font,
           color: ink,
         })
       })
@@ -174,7 +172,7 @@ function columnWidths(table: ReportTable, total: number): number[] {
   return weights.map((weight) => (total * weight) / sum)
 }
 
-function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
+function wrap(text: string, font: PdfTextStyle, size: number, width: number): string[] {
   const source = text.replace(/\s+/g, " ").trim() || "—"
   const words = source.split(" ")
   const lines: string[] = []
@@ -182,19 +180,20 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
 
   for (const word of words) {
     const next = current ? `${current} ${word}` : word
-    if (font.widthOfTextAtSize(next, size) <= width) {
+    if (font.widthOf(next, size) <= width) {
       current = next
       continue
     }
     if (current) lines.push(current)
     current = word
-    while (font.widthOfTextAtSize(current, size) > width && current.length > 1) {
-      let cut = current.length - 1
-      while (cut > 1 && font.widthOfTextAtSize(current.slice(0, cut), size) > width) {
+    while (font.widthOf(current, size) > width && Array.from(current).length > 1) {
+      const chars = Array.from(current)
+      let cut = chars.length - 1
+      while (cut > 1 && font.widthOf(chars.slice(0, cut).join(""), size) > width) {
         cut -= 1
       }
-      lines.push(current.slice(0, cut))
-      current = current.slice(cut)
+      lines.push(chars.slice(0, cut).join(""))
+      current = chars.slice(cut).join("")
     }
   }
   if (current) lines.push(current)

@@ -27,6 +27,7 @@ export type DocumentListItem = {
   title: string
   detail: string
   documentNo: string
+  status?: string
 }
 
 export type DocumentCatalog = {
@@ -738,8 +739,9 @@ export async function listQuotations(): Promise<{
     items: (data ?? []).map((row) => ({
       id: row.id,
       title: catalog.clients.find((client) => client.id === row.client_id)?.name || "—",
-      detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))} · ${row.status}`,
+      detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))}`,
       documentNo: row.document_no,
+      status: row.status,
     })),
     error: catalog.error,
   }
@@ -834,8 +836,9 @@ export async function listWorkOrders(): Promise<{
     items: (data ?? []).map((row) => ({
       id: row.id,
       title: catalog.vendors.find((vendor) => vendor.id === row.vendor_id)?.name || "—",
-      detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))} · ${row.status}`,
+      detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))}`,
       documentNo: row.document_no,
+      status: row.status,
     })),
     error: catalog.error,
   }
