@@ -1,7 +1,7 @@
 ---
 description: Hard constraint for add and edit dialogs. Keep the viewport-capped form shell, internal scroll, and background scroll lock.
 globs: src/**/*dialog*.tsx,src/components/ui/dialog.tsx
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Form dialogs

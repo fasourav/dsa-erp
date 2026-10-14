@@ -1,89 +1,33 @@
 ---
-description: Atrium UI rules for everything under src (Next.js, Tailwind v4, shadcn/ui). Tokens only, shared components, reference pages, mobile-native patterns.
+description: Atrium UI rules for src (Next.js, Tailwind v4, shadcn/ui). Tokens only, shared components, reference pages, mobile-native patterns.
 globs: src/**/*.tsx,src/**/*.css
-alwaysApply: true
+alwaysApply: false
 ---
 
 # UI (Atrium)
 
-The app uses the client-approved Atrium design. `docs/atrium-style-guide.md` is the full contract: tokens, components, page recipes, and the per-page mapping. The mockups are in `docs/atrium/mockups/desktop/dNN-*.html` and `docs/atrium/mockups/mobile/mNN-*.html`, in dark and light. Read the guide section for the pattern you are building before writing UI.
+`docs/atrium-style-guide.md` is the full contract; mockups are `docs/atrium/mockups/{desktop/dNN,mobile/mNN}-*-{light,dark}.html` (see `INDEX.md`). Read a mockup or guide section only when the task names it.
 
-## Copy a reference page
+## Reference pages (copy, don't design from scratch)
+- List: `src/app/(app)/clients/clients-table.tsx` (d04, m05)
+- Form: `src/app/(app)/clients/client-form-dialog.tsx` (d26, m27)
+- Dashboard/KPIs/charts: `src/app/(app)/dashboard/dashboard-view.tsx`, `dashboard-charts.tsx` (d02, m02)
+- Delete: `src/components/delete-confirm-dialog.tsx` + `slide-to-delete.tsx` (d27, m28, m29)
+- Signed-out: `src/app/login/*` (d01, m01); module launcher: `src/app/(app)/modules/modules-grid.tsx` (m03)
 
-Start every screen from the closest converted page and its mockup. Don't design from scratch.
-
-- List page: `src/app/(app)/clients/clients-table.tsx` (d04, m05)
-- Add or edit form: `src/app/(app)/clients/client-form-dialog.tsx` (d26, m27)
-- Dashboard, KPI cards, charts, metric tiles: `src/app/(app)/dashboard/dashboard-view.tsx` and `dashboard-charts.tsx` (d02, m02)
-- Delete: `src/components/delete-confirm-dialog.tsx` with `slide-to-delete.tsx` (d27, m28, m29)
-- Signed-out screens: `src/app/login/*` (d01, m01)
-- Module launcher: `src/app/(app)/modules/modules-grid.tsx` (m03)
-
-Keep layouts calm and uncluttered: one primary action per view, generous spacing, and hairline separators instead of boxes inside boxes. Use Title Case labels like the mockups.
-
-## Layout
-
-- Every layout is mobile-first. Unprefixed classes are the phone layout. `sm:`, `md:`, `lg:`, and `xl:` only add behavior for larger screens. The shell switches at `md:`.
-- Do not design a desktop layout and then hide or undo it with `max-sm:`, `max-md:`, `max-lg:`, or other max-width breakpoint variants. `max-w-*` for content width is fine.
-
-## App shell
-
-- Authenticated pages live in `src/app/(app)/` and render inside `AppShell` (desktop glass sidebar and top bar; phone top row and floating tab bar). Put only page content in `main`, starting with one `PageHeader`.
-- Do not add a second sidebar, header, tab bar, or layout. `bg-aurora` and safe-area padding come from the shell.
-- A new destination is an entry in `navItems` (`src/lib/access.ts`) and a lucide icon in `navIcons` (`src/lib/nav-icons.ts`). Never use dots, initials, or colored circles as icons.
-- Signed-out UI stays on the `/login` chrome (`AuthStage`). Do not invent another signed-out layout.
+## Layout and shell
+- Calm layouts: one primary action, generous spacing, hairlines not nested boxes, Title Case.
+- Mobile-first; `sm:`–`xl:` only add. Shell switches at `md:`. No `max-sm:`/`max-md:`/`max-lg:` undo variants.
+- Pages in `src/app/(app)/` render inside `AppShell`; content starts with one `PageHeader`. No second sidebar/header/tab bar. New destinations: `navItems` (`src/lib/access.ts`) + lucide icon in `navIcons` (`src/lib/nav-icons.ts`); never dots or initials. Signed-out UI stays on `AuthStage`.
 
 ## Components
+- Use: `PageHeader`, `SectionHeader`, `Card`/`Panel`, `Money`, `StatusBadge`, `Badge`, `DataList` (+`mobileItem`), `ListSearch`, `CustomizeColumns`, `ListExport`, `FieldGroup layout="inset"`/`Field`, `Select` (`capsule`), `Combobox`, `Dialog`, `DeleteConfirmDialog`, `Tabs`, `Empty`, `Skeleton`, `sonner`.
+- Primitives in `src/components/ui` (shadcn base-nova); extend with a variant there, never fork or hand-write lookalikes. No inline visual `style` or `<style>` tags.
 
-- Use the shared components before anything else:
-  - `PageHeader`, `SectionHeader`
-  - `Card`, plus the `Panel` pattern from the dashboard
-  - `Money` for every amount
-  - `StatusBadge` for every status, `Badge` for types and trends
-  - `DataList` with `mobileItem` for every list, `ListSearch`, `CustomizeColumns`, `ListExport`
-  - `FieldGroup layout="inset"` and `Field` for forms
-  - `Select` (`variant="capsule"` on the canvas), `Combobox`
-  - `Dialog` (sheet or drawer)
-  - `DeleteConfirmDialog`
-  - `Tabs` (segmented), `Empty`, `Skeleton`, `sonner` toasts
-- Primitives live in `src/components/ui` (shadcn `base-nova`, lucide icons). Restyle or extend them with a variant there. Do not fork them per page. If a primitive is missing, add it with `npx shadcn add <name>`, then align it to the Atrium tokens.
-- Do not hand-write a lookalike button, input, dialog, select, table, tabs, badge, or other primitive. No inline `style={{…}}` for visuals and no `<style>` tags.
+## Color, type, radius
+- No hardcoded colors (hex/rgb/hsl/oklch, palette or arbitrary color classes, incl. SVG/chart props). Only Atrium tokens from `globals.css`; glass via `glass-*`/`tile-sheen`/`shadow-*`. Token opacity ok. No `dark:` overrides. Don't change `globals.css` for one screen.
+- Type tokens (`text-page-title`…`text-micro`), weights `font-book|label|strong|semibold|bold`, radius tokens (`rounded-control`…`rounded-sheet`). Arbitrary sizes last resort.
 
-## Color
-
-- Do not hardcode colors: no hex, `rgb`/`rgba`, `hsl`/`hsla`, `oklch`/`oklab`, palette utilities (`bg-emerald-500`, `text-zinc-900`, `border-gray-200`), or arbitrary colors (`bg-[#45632d]`). This includes SVG and chart props; use `var(--chart-1)` and the like.
-- Color comes only from the Atrium semantic tokens in `src/app/globals.css`:
-  - Canvas and text: `background`, `foreground`, `muted-foreground`, `subtle-foreground`
-  - Brand: `primary`, `primary-foreground`, `primary-text`, `primary-tint`
-  - Status: `success`, `warning`, `destructive`, `info`, `neutral`, `violet`, each with a `*-tint`
-  - Surfaces: `card`, `surface`, `surface-strong`, `solid`, `popover`, `dialog`, `sheet`
-  - Fills: `fill`, `fill-strong`, `field`
-  - Lines: `border`, `border-subtle`, `rim`
-  - Overlay and navigation: `scrim`, `tab-active`, `segment-active`, `on-color`, the `sidebar-*` tokens
-  - Charts: `chart-1` through `chart-10` and `chart-gold`
-- Glass and elevation come from the utilities `glass-panel`, `glass-chrome`, `glass-control`, `glass-float`, `glass-sheet`, `tile-sheen`, and the `shadow-*` tokens. Don't hand-build blur or shadow stacks.
-- Opacity on a token is allowed (`bg-primary/90`). A raw color with opacity is not.
-- Do not add `dark:` overrides. Light and dark values live on the tokens under `:root` and `.dark`.
-- Do not add or change values in `src/app/globals.css` for a screen. A genuinely new token is added there for both themes, and its name is registered in `createCn` in `src/lib/utils.ts` if it is a size, weight, radius, shadow, or blur scale.
-
-## Type, spacing, and radius
-
-- Use the Atrium type tokens: `text-large-title`/`md:text-page-title` (via `PageHeader`), `text-dialog-title`, `text-section`, `text-panel-title`, `text-kpi`, `text-stat`, `text-metric`, `text-row`, `text-callout`, `text-ui`, `text-label`, `text-caption`, `text-micro`. Weights are `font-book`, `font-label`, `font-strong`, `font-semibold`, and `font-bold`.
-- Radius uses the theme tokens: `rounded-control`, `rounded-tile`, `rounded-card`, `rounded-group`, `rounded-dialog`, `rounded-sheet`, `rounded-full`, and `rounded-sm` through `rounded-4xl`.
-- Spacing uses the Tailwind scale. Arbitrary values such as `w-[437px]` are a last resort, and never for color.
-
-## Mobile-native behavior
-
-- Lists on phones are grouped list cards (`DataList` `mobileItem`), not squeezed tables. Without `mobileItem`, the table scrolls sideways inside its `min-w-0` card.
-- Add and edit dialogs are bottom sheets on phones (built into `DialogContent`). See `form-dialog.mdc`.
-- Touch targets are at least 44px on phones. Use `Button` sizes `default`, `lg`, `icon`, or `icon-lg`. Do not use `xs`, `sm`, `icon-xs`, or `icon-sm`, and do not lower height, padding, or font size below the primitive defaults.
-- Inputs stay 16px on phones so iOS doesn't zoom. Set `inputMode`, `type`, `autoComplete`, `autoCapitalize`, and `enterKeyHint` for each field (decimal for money, numeric for counts, tel, email, search).
-- Respect `prefers-reduced-motion` (`motion-safe:`) for any animation you add.
-
-## Interaction
-
-- Merge classes with `cn` from `@/lib/utils`, everywhere including `src/components/ui`. Do not import `cn` from `"cn"` directly and do not concatenate class strings by hand.
-- Do not remove focus rings. Do not add `outline-none`, `focus:outline-none`, `ring-0`, or `focus-visible:ring-0` on a control.
-- Icons come from `lucide-react`, sized with Tailwind (`size-4`) and colored with `text-*` tokens.
-- Deletes always go through `DeleteConfirmDialog` (slide to confirm). Transient results use `toast`. Empty lists use `Empty`. Loading uses `Skeleton`.
-- Keep the nonce CSP working: no inline `<script>`, and no `dangerouslySetInnerHTML` scripts.
+## Mobile and interaction
+- Phone lists are `DataList` cards; dialogs are bottom sheets (see `form-dialog.mdc`). Touch targets ≥44px (no `xs`/`sm`/`icon-xs`/`icon-sm` buttons). Inputs 16px with proper `inputMode`/`autoComplete`/`enterKeyHint`. `motion-safe:` for animation.
+- `cn` from `@/lib/utils` only. Keep focus rings. lucide icons sized with Tailwind. Deletes via `DeleteConfirmDialog`; toasts, `Empty`, `Skeleton`. Nonce CSP: no inline scripts.
