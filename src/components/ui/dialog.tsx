@@ -84,11 +84,12 @@ function DialogContent({
       >
         <DialogPrimitive.Popup
           data-slot="dialog-content"
+          data-variant={variant}
           data-layout={variant === "drawer" ? undefined : mobileLayout}
           className={cn(
             "group/dialog outline-none",
             variant === "drawer"
-              ? "relative flex h-full max-h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-sheet glass-sheet pb-[env(safe-area-inset-bottom,0px)] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom sm:max-w-xl md:ml-auto md:rounded-dialog md:bg-surface-strong md:pb-0 md:text-sm md:glass-float md:data-open:slide-in-from-right md:data-open:slide-in-from-bottom-0 md:data-closed:slide-out-to-right md:data-closed:slide-out-to-bottom-0"
+              ? "relative flex h-full max-h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-sheet glass-sheet px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom sm:max-w-xl md:ml-auto md:rounded-dialog md:bg-surface-strong md:p-6 md:text-sm md:glass-float md:data-open:slide-in-from-right md:data-open:slide-in-from-bottom-0 md:data-closed:slide-out-to-right md:data-closed:slide-out-to-bottom-0"
               : "relative flex max-h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-y-auto overscroll-contain rounded-sheet glass-sheet px-4 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom data-[layout=nav]:grid data-[layout=nav]:grid-cols-[auto_minmax(0,1fr)_auto] data-[layout=nav]:grid-rows-[auto_auto_minmax(0,1fr)] data-[layout=nav]:items-center data-[layout=nav]:gap-x-2 sm:max-w-sm md:gap-4 md:rounded-dialog md:bg-dialog md:p-6 md:text-sm md:duration-200 md:ease-out md:glass-float md:data-open:fade-in-0 md:data-open:zoom-in-95 md:data-open:slide-in-from-bottom-2 md:data-closed:fade-out-0 md:data-closed:zoom-out-95 md:data-closed:slide-out-to-bottom-2 md:data-[layout=nav]:flex md:data-[layout=nav]:items-stretch",
             className
           )}
@@ -108,7 +109,12 @@ function DialogContent({
               render={
                 <Button
                   variant="secondary"
-                  className="absolute top-5 right-3.5 group-data-[layout=nav]/dialog:hidden md:top-5 md:right-6 md:group-data-[layout=nav]/dialog:inline-flex"
+                  className={cn(
+                    "absolute group-data-[layout=nav]/dialog:hidden md:group-data-[layout=nav]/dialog:inline-flex",
+                    variant === "drawer"
+                      ? "top-4 right-4 md:top-6 md:right-6"
+                      : "top-5 right-3.5 md:top-5 md:right-6",
+                  )}
                   size="icon-sm"
                 />
               }
@@ -129,7 +135,7 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-body"
       className={cn(
-        "-mx-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain scroll-py-2 px-1 py-1 group-data-[layout=nav]/dialog:col-span-3 group-data-[layout=nav]/dialog:row-start-3 group-data-[layout=nav]/dialog:self-stretch",
+        "no-scrollbar -mx-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain scroll-py-2 px-1 py-1 group-data-[layout=nav]/dialog:col-span-3 group-data-[layout=nav]/dialog:row-start-3 group-data-[layout=nav]/dialog:self-stretch group-data-[variant=drawer]/dialog:flex-1 group-data-[variant=drawer]/dialog:py-4",
         className
       )}
       {...props}
@@ -142,7 +148,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-header"
       className={cn(
-        "flex shrink-0 flex-col gap-1.5 pt-2.5 pr-12 group-data-[layout=nav]/dialog:col-start-2 group-data-[layout=nav]/dialog:row-start-2 group-data-[layout=nav]/dialog:pt-0 group-data-[layout=nav]/dialog:pr-0 group-data-[layout=nav]/dialog:text-center md:pt-0 md:pr-12 md:group-data-[layout=nav]/dialog:pr-12 md:group-data-[layout=nav]/dialog:text-left",
+        "flex shrink-0 flex-col gap-1.5 pt-2.5 pr-12 group-data-[variant=drawer]/dialog:flex-row group-data-[variant=drawer]/dialog:items-start group-data-[variant=drawer]/dialog:justify-between group-data-[variant=drawer]/dialog:gap-3 group-data-[variant=drawer]/dialog:pt-0 group-data-[variant=drawer]/dialog:pr-14 group-data-[layout=nav]/dialog:col-start-2 group-data-[layout=nav]/dialog:row-start-2 group-data-[layout=nav]/dialog:pt-0 group-data-[layout=nav]/dialog:pr-0 group-data-[layout=nav]/dialog:text-center md:pt-0 md:pr-12 md:group-data-[variant=drawer]/dialog:pr-14 md:group-data-[layout=nav]/dialog:pr-12 md:group-data-[layout=nav]/dialog:text-left",
         className
       )}
       {...props}
@@ -162,7 +168,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex shrink-0 flex-wrap gap-2.5 pt-1 *:min-w-0 *:flex-1 group-data-[layout=nav]/dialog:contents group-data-[layout=nav]/dialog:*:row-start-2 group-data-[layout=nav]/dialog:*:flex-none group-data-[layout=nav]/dialog:*:first:col-start-1 group-data-[layout=nav]/dialog:*:first:glass-control group-data-[layout=nav]/dialog:*:last:col-start-3 md:-mx-6 md:-mb-6 md:justify-end md:border-t md:border-border md:px-6 md:py-4 md:*:flex-none md:group-data-[layout=nav]/dialog:flex",
+        "flex shrink-0 flex-wrap gap-2.5 pt-1 *:min-w-0 *:flex-1 group-data-[variant=drawer]/dialog:-mx-4 group-data-[variant=drawer]/dialog:mt-auto group-data-[variant=drawer]/dialog:border-t group-data-[variant=drawer]/dialog:border-border group-data-[variant=drawer]/dialog:px-4 group-data-[variant=drawer]/dialog:pt-4 group-data-[layout=nav]/dialog:contents group-data-[layout=nav]/dialog:*:row-start-2 group-data-[layout=nav]/dialog:*:flex-none group-data-[layout=nav]/dialog:*:first:col-start-1 group-data-[layout=nav]/dialog:*:first:glass-control group-data-[layout=nav]/dialog:*:last:col-start-3 md:-mx-6 md:-mb-6 md:justify-end md:border-t md:border-border md:px-6 md:py-4 md:*:flex-none md:group-data-[variant=drawer]/dialog:-mx-6 md:group-data-[variant=drawer]/dialog:px-6 md:group-data-[layout=nav]/dialog:flex",
         className
       )}
       {...props}
@@ -182,7 +188,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "font-heading text-panel-title leading-tight font-bold tracking-[-0.02em] group-data-[layout=nav]/dialog:truncate md:text-dialog-title",
+        "min-w-0 font-heading text-panel-title leading-tight font-bold tracking-[-0.02em] group-data-[layout=nav]/dialog:truncate md:text-dialog-title",
         className
       )}
       {...props}
