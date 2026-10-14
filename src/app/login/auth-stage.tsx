@@ -25,13 +25,13 @@ export function AuthStage({
 
       <div className="relative flex w-full max-w-xs flex-col items-center gap-4">
         <Image
-          src="/brand/lockup-white.png"
+          src="/brand/dsa-logo-login.png"
           alt="DynamicSpace Architects & Engineers"
-          width={2864}
-          height={1002}
+          width={2865}
+          height={1211}
           priority
-          loading="eager"
-          className="h-10 w-auto"
+          sizes="(min-width: 768px) 280px, 200px"
+          className="h-auto w-[200px] md:w-[280px]"
         />
         <div className="flex w-full flex-col gap-1 text-center">
           <h1 className="text-2xl leading-tight font-semibold tracking-tight text-login-ink">
