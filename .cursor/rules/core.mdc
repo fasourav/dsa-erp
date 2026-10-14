@@ -1,0 +1,18 @@
+---
+description: Core working rules for every task (scope, reuse, reading, verification, safety).
+alwaysApply: true
+---
+
+# Core
+
+- **Scope to what is named.** If the task mentions a specific page, module, section, or layout element, fix only that spot (page-level props/classes or a local wrapper). Change a shared component only when told the issue is app-wide or asked for the shared fix.
+- Reuse existing shared components and tokens; never add a new component, variant, or style when one fits. Note any exception in the PR.
+- Change only the files the task needs. No drive-by refactors, renames, formatting sweeps, or dependency upgrades. Leave unrelated dirty files alone.
+- Read narrowly: grep before opening. Never open lockfiles, `.next`, `node_modules`, generated files, images, or mockup HTML unless the task requires it.
+- Read schema/types/queries only when the task reads or writes data.
+- Don't paste long logs: show only error lines (about the last 40).
+- Verify: tsc + eslint on touched files, build once. Max 2 screenshots (390, 1440, light) of touched pages. Don't open a browser unless the task needs visual checks.
+- Don't re-run passing checks. Stop after 2 failed attempts at the same fix and report.
+- No schema, migration, RLS, or `globals.css` value changes unless asked; migrations are files only, never applied.
+- Never read, print, or commit secrets or `.env.local`.
+- Copy: Title Case labels, names never IDs, BDT in lakh/crore. Keep PR bodies short.
