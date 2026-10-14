@@ -4,7 +4,6 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import {
-  Check,
   ChevronDown,
   Columns3,
   FileText,
@@ -23,6 +22,7 @@ import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
+import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -446,29 +446,7 @@ const pillClassName =
   "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 function StatusValue({ status }: { status: ProjectRow["status"] }) {
-  if (status === "active") {
-    return (
-      <Badge
-        variant="outline"
-        className={cn(
-          pillClassName,
-          "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-        )}
-      >
-        {statusLabel(status)}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge
-      variant="secondary"
-      className={cn(pillClassName, "bg-primary/10 text-primary")}
-    >
-      <Check aria-hidden="true" />
-      {statusLabel(status)}
-    </Badge>
-  )
+  return <StatusBadge status={status} />
 }
 
 function PhaseValue({ phase }: { phase: string }) {
