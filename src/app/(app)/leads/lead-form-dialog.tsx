@@ -19,8 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -163,37 +168,41 @@ export function LeadFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
           <DialogTitle>{leadId ? "Edit Lead" : "Add New Lead"}</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-name">Lead Name</Label>
+          <FieldGroup layout="inset">
+            <Field span="half" data-invalid={Boolean(nameError) || undefined}>
+              <FieldLabel htmlFor="lead-name">Lead Name</FieldLabel>
               <Input
                 id="lead-name"
                 value={leadName}
+                autoComplete="name"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 disabled={pending}
                 aria-invalid={Boolean(nameError)}
                 onChange={(e) => setLeadName(e.target.value)}
               />
-              {nameError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {nameError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-type">Lead Type</Label>
+              {nameError ? <FieldError>{nameError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(kindError) || undefined}>
+              <FieldLabel htmlFor="lead-type">Lead Type</FieldLabel>
               <Select
                 items={typeItems}
                 value={kind || null}
                 disabled={pending}
                 onValueChange={(v) => setKind(v ?? "")}
               >
-                <SelectTrigger id="lead-type" className="w-full">
+                <SelectTrigger
+                  id="lead-type"
+                  className="w-full"
+                  aria-invalid={Boolean(kindError)}
+                >
                   <SelectValue placeholder="Select Type" />
                 </SelectTrigger>
                 <SelectContent align="start">
@@ -204,79 +213,70 @@ export function LeadFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {kindError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {kindError}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              {kindError ? <FieldError>{kindError}</FieldError> : null}
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="lead-added-on">Lead Add Date</Label>
-            <Input
-              id="lead-added-on"
-              type="date"
-              value={addedOn}
-              disabled={pending}
-              aria-invalid={Boolean(addedOnError)}
-              onChange={(event) => setAddedOn(event.target.value)}
-            />
-            {addedOnError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {addedOnError}
-              </p>
-            ) : null}
-          </div>
+            <Field data-invalid={Boolean(addedOnError) || undefined}>
+              <FieldLabel htmlFor="lead-added-on">Lead Add Date</FieldLabel>
+              <Input
+                id="lead-added-on"
+                type="date"
+                value={addedOn}
+                disabled={pending}
+                aria-invalid={Boolean(addedOnError)}
+                onChange={(event) => setAddedOn(event.target.value)}
+              />
+              {addedOnError ? <FieldError>{addedOnError}</FieldError> : null}
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-phone">Contact Number</Label>
+            <Field span="half" data-invalid={Boolean(fieldErrors.phone) || undefined}>
+              <FieldLabel htmlFor="lead-phone">Contact Number</FieldLabel>
               <Input
                 id="lead-phone"
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                enterKeyHint="next"
                 value={phone}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.phone)}
                 onChange={(e) => setPhone(e.target.value)}
               />
-              {fieldErrors.phone ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.phone}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-email">Email</Label>
+              {fieldErrors.phone ? <FieldError>{fieldErrors.phone}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.email) || undefined}>
+              <FieldLabel htmlFor="lead-email">Email</FieldLabel>
               <Input
                 id="lead-email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                enterKeyHint="next"
                 value={email}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.email)}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              {fieldErrors.email ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.email}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              {fieldErrors.email ? <FieldError>{fieldErrors.email}</FieldError> : null}
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="lead-project-name">Project Name</Label>
-            <Input
-              id="lead-project-name"
-              value={projectName}
-              disabled={pending}
-              onChange={(e) => setProjectName(e.target.value)}
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="lead-project-name">Project Name</FieldLabel>
+              <Input
+                id="lead-project-name"
+                value={projectName}
+                autoComplete="off"
+                autoCapitalize="words"
+                enterKeyHint="next"
+                disabled={pending}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-ptype">Project Type</Label>
+            <Field span="half">
+              <FieldLabel htmlFor="lead-ptype">Project Type</FieldLabel>
               <Select
                 items={ptItems}
                 value={projectType || null}
@@ -294,9 +294,9 @@ export function LeadFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-source">Source</Label>
+            </Field>
+            <Field span="half">
+              <FieldLabel htmlFor="lead-source">Source</FieldLabel>
               <NameCombobox
                 id="lead-source"
                 value={source}
@@ -305,25 +305,24 @@ export function LeadFormDialog({
                 placeholder="Type Or Select Source"
                 onValueChange={setSource}
               />
-            </div>
-          </div>
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-value">Estimated Value</Label>
+            <Field span="half">
+              <FieldLabel htmlFor="lead-value">Estimated Value</FieldLabel>
               <Input
                 id="lead-value"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={estimatedValue}
                 disabled={pending}
                 onChange={(e) => setEstimatedValue(e.target.value)}
               />
-            </div>
-            <div className="flex flex-col gap-2">
+            </Field>
+            <Field span="half">
               <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="lead-prob">Probability</Label>
-                <span className="text-sm tabular-nums text-muted-foreground">
+                <FieldLabel htmlFor="lead-prob">Probability</FieldLabel>
+                <span className="text-label tabular-nums text-muted-foreground">
                   {probabilityNumber}%
                 </span>
               </div>
@@ -341,12 +340,10 @@ export function LeadFormDialog({
                   setProbability(String(next ?? 0))
                 }}
               />
-            </div>
-          </div>
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-stage">Stage</Label>
+            <Field span="half">
+              <FieldLabel htmlFor="lead-stage">Stage</FieldLabel>
               <NameCombobox
                 id="lead-stage"
                 value={currentStage}
@@ -355,16 +352,20 @@ export function LeadFormDialog({
                 placeholder="Type Or Select Stage"
                 onValueChange={setCurrentStage}
               />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="lead-status">Status</Label>
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.status) || undefined}>
+              <FieldLabel htmlFor="lead-status">Status</FieldLabel>
               <Select
                 items={statusItems}
                 value={status}
                 disabled={pending}
                 onValueChange={(v) => setStatus((v as typeof status) ?? defaultStatus)}
               >
-                <SelectTrigger id="lead-status" className="w-full">
+                <SelectTrigger
+                  id="lead-status"
+                  className="w-full"
+                  aria-invalid={Boolean(fieldErrors.status)}
+                >
                   <SelectValue placeholder="Select Status" />
                 </SelectTrigger>
                 <SelectContent align="start">
@@ -375,26 +376,22 @@ export function LeadFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {fieldErrors.status ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.status}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              {fieldErrors.status ? <FieldError>{fieldErrors.status}</FieldError> : null}
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="lead-notes">Notes</Label>
-            <Textarea
-              id="lead-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="lead-notes">Notes</FieldLabel>
+              <Textarea
+                id="lead-notes"
+                value={notes}
+                disabled={pending}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </Field>
+          </FieldGroup>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

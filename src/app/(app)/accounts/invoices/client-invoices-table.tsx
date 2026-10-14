@@ -13,8 +13,9 @@ import { ClientInvoiceFormDialog } from "@/app/(app)/accounts/invoices/client-in
 import { ClientPaymentsDialog } from "@/app/(app)/accounts/invoices/client-payments-dialog"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -33,7 +34,7 @@ import {
 } from "@/lib/client-invoice-summary"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
-import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { paymentStatusLabel } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
@@ -43,8 +44,6 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
-
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function ClientInvoicesTable({
   invoices,
@@ -132,45 +131,56 @@ export function ClientInvoicesTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-2xl font-medium tracking-tight">Client Invoices</h1>
-        {projectFilter ? (
-          <p className="text-sm text-muted-foreground">
-            For {projectFilter.name || "this project"}.{" "}
-            <Link
-              href="/accounts/invoices"
-              className="font-medium text-foreground underline underline-offset-4"
-            >
-              Show All
-            </Link>
-          </p>
-        ) : null}
-        </div>
-        <ListExport
-          grid={{
-            filename: "client-invoices",
-            title: "Client Invoices",
-            columns: [
-              { header: "Issue Date", kind: "text" },
-              { header: "Project", kind: "text" },
-              { header: "Client", kind: "text" },
-              { header: "Amount", kind: "money" },
-              { header: "Paid", kind: "money" },
-              { header: "Status", kind: "text" },
-            ],
-            rows: filtered.map((invoice) => [
-              formatDayMonYear(invoice.issuedOn),
-              invoice.projectName,
-              invoice.clientName,
-              invoice.amount,
-              invoice.paid,
-              paymentStatusLabel(invoice.status),
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Client Invoices"
+        className="mb-0 md:mb-2"
+        description={
+          projectFilter ? (
+            <>
+              For {projectFilter.name || "this project"}.{" "}
+              <Link
+                href="/accounts/invoices"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Show All
+              </Link>
+            </>
+          ) : undefined
+        }
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "client-invoices",
+                title: "Client Invoices",
+                columns: [
+                  { header: "Issue Date", kind: "text" },
+                  { header: "Project", kind: "text" },
+                  { header: "Client", kind: "text" },
+                  { header: "Amount", kind: "money" },
+                  { header: "Paid", kind: "money" },
+                  { header: "Status", kind: "text" },
+                ],
+                rows: filtered.map((invoice) => [
+                  formatDayMonYear(invoice.issuedOn),
+                  invoice.projectName,
+                  invoice.clientName,
+                  invoice.amount,
+                  invoice.paid,
+                  paymentStatusLabel(invoice.status),
+                ]),
+              }}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add Client Invoice
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       <ListSearch
         query={query}
         onQueryChange={(value) => {
@@ -213,14 +223,17 @@ export function ClientInvoicesTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Client Invoices pagination"
-        toolbar={
-          canAdd ? (
-            <Button type="button" onClick={() => openForm(null)}>
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Client Invoice
-            </Button>
-          ) : null
-        }
+        mobileItem={(invoice) => ({
+          title: invoice.projectName || "—",
+          value: <StatusBadge status={invoice.status} />,
+          subtitle: [
+            invoice.clientName,
+            invoice.issuedOn ? formatIsoDate(invoice.issuedOn) : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          meta: <Money value={invoice.amount} />,
+        })}
         renderCell={(invoice, columnId) => (
           <InvoiceCell invoice={invoice} columnId={columnId} />
         )}
@@ -314,28 +327,36 @@ function InvoiceCell({
   switch (columnId) {
     case "issuedOn":
       return invoice.issuedOn ? (
-        <span>{formatIsoDate(invoice.issuedOn)}</span>
+        <span className="text-muted-foreground">{formatIsoDate(invoice.issuedOn)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "projectName":
-      return invoice.projectName ? (
-        <span className="font-medium">{invoice.projectName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
+      return (
+        <span
+          className={cn(
+            "text-ui font-semibold",
+            !invoice.projectName && "text-muted-foreground",
+          )}
+        >
+          {invoice.projectName || "—"}
+        </span>
       )
     case "clientName":
       return invoice.clientName ? (
-        <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-          {invoice.clientName}
-        </Badge>
+        <span>{invoice.clientName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "amount":
-      return <span className="tabular-nums">{formatMoney(invoice.amount)}</span>
+      return <Money value={invoice.amount} />
     case "paid":
-      return <span className="tabular-nums">{formatMoney(invoice.paid)}</span>
+      return (
+        <Money
+          value={invoice.paid}
+          className={invoice.paid > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
     case "status":
       return <StatusBadge status={invoice.status} />
   }

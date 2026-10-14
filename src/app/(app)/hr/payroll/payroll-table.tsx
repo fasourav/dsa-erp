@@ -11,6 +11,8 @@ import { useAccess, useCan } from "@/components/access-provider"
 import { PaySalariesDialog } from "@/app/(app)/hr/payroll/pay-salaries-dialog"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear, formatIsoDate, formatTaka } from "@/lib/format"
+import { formatDayMonYear } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -160,32 +162,43 @@ export function PayrollTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Payroll</h1>
-        <ListExport
-          grid={{
-            filename: "payroll",
-            title: "Payroll",
-            columns: [
-              { header: "Month", kind: "text" },
-              { header: "Employees", kind: "integer" },
-              { header: "Total Paid", kind: "money" },
-              { header: "Paid On", kind: "text" },
-              { header: "Bank Account", kind: "text" },
-              { header: "Status", kind: "text" },
-            ],
-            rows: filtered.map((salary) => [
-              monthLabel(salary.periodYear, salary.periodMonth),
-              salary.lineCount,
-              showFinancials ? salary.totalPaid : "Hidden",
-              salary.paidOn ? formatDayMonYear(salary.paidOn) : "—",
-              accountNames.get(salary.bankAccountId) || "—",
-              "Paid",
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Payroll"
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "payroll",
+                title: "Payroll",
+                columns: [
+                  { header: "Month", kind: "text" },
+                  { header: "Employees", kind: "integer" },
+                  { header: "Total Paid", kind: "money" },
+                  { header: "Paid On", kind: "text" },
+                  { header: "Bank Account", kind: "text" },
+                  { header: "Status", kind: "text" },
+                ],
+                rows: filtered.map((salary) => [
+                  monthLabel(salary.periodYear, salary.periodMonth),
+                  salary.lineCount,
+                  showFinancials ? salary.totalPaid : "Hidden",
+                  salary.paidOn ? formatDayMonYear(salary.paidOn) : "—",
+                  accountNames.get(salary.bankAccountId) || "—",
+                  "Paid",
+                ]),
+              }}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Pay Salaries
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       <ListSearch
         query={query}
         onQueryChange={(value) => {
@@ -217,14 +230,14 @@ export function PayrollTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Payroll pagination"
-        toolbar={
-          canAdd ? (
-            <Button type="button" onClick={() => openForm(null)}>
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Pay Salaries
-            </Button>
-          ) : null
-        }
+        mobileItem={(salary) => ({
+          title: monthLabel(salary.periodYear, salary.periodMonth),
+          value: <StatusBadge status="paid" />,
+          subtitle: `${salary.lineCount} ${salary.lineCount === 1 ? "Employee" : "Employees"} · ${
+            salary.paidOn ? formatDayMonYear(salary.paidOn) : "—"
+          }`,
+          meta: showFinancials ? <Money value={salary.totalPaid} /> : "Hidden",
+        })}
         renderCell={(salary, columnId) => (
           <Cell
             salary={salary}
@@ -321,18 +334,22 @@ function Cell({
       return (
         <Link
           href={`/hr/payroll/${salary.id}`}
-          className="font-medium underline underline-offset-4"
+          className="text-ui font-semibold"
         >
           {monthLabel(salary.periodYear, salary.periodMonth)}
         </Link>
       )
     case "employees":
-      return <span>{salary.lineCount}</span>
+      return <span className="tabular-nums">{salary.lineCount}</span>
     case "totalPaid":
-      return <span>{showFinancials ? formatTaka(salary.totalPaid) : "Hidden"}</span>
+      return showFinancials ? (
+        <Money value={salary.totalPaid} />
+      ) : (
+        <span className="text-muted-foreground">Hidden</span>
+      )
     case "paidOn":
       return salary.paidOn ? (
-        <span>{formatIsoDate(salary.paidOn)}</span>
+        <span>{formatDayMonYear(salary.paidOn)}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

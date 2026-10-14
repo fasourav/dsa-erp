@@ -17,10 +17,12 @@ import {
   deleteLead,
 } from "@/app/(app)/leads/actions"
 import { LeadFormDialog } from "@/app/(app)/leads/lead-form-dialog"
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
+import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,14 +32,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import {
   getColumnServerSnapshot,
   getColumnSnapshot,
@@ -53,7 +47,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
 import { cn } from "@/lib/utils"
 
@@ -195,42 +189,47 @@ export function LeadsTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Leads</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <ListExport
-            grid={{
-              filename: "leads",
-              title: "Leads",
-              columns: [
-                { header: "Lead Name", kind: "text" },
-                { header: "Lead Add Date", kind: "text" },
-                { header: "Project Name", kind: "text" },
-                { header: "Stage", kind: "text" },
-                { header: "Source", kind: "text" },
-                { header: "Est. Value", kind: "money" },
-                { header: "Probability", kind: "integer" },
-                { header: "Status", kind: "text" },
-              ],
-              rows: filtered.map((lead) => [
-                lead.leadName,
-                formatDayMonYear(lead.addedOn),
-                lead.projectName,
-                lead.currentStage,
-                lead.source,
-                lead.estimatedValue,
-                lead.probability,
-                lead.statusLabel,
-              ]),
-            }}
-          />
-          {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add New Lead
-          </Button>) : null}
-        </div>
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Leads"
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "leads",
+                title: "Leads",
+                columns: [
+                  { header: "Lead Name", kind: "text" },
+                  { header: "Lead Add Date", kind: "text" },
+                  { header: "Project Name", kind: "text" },
+                  { header: "Stage", kind: "text" },
+                  { header: "Source", kind: "text" },
+                  { header: "Est. Value", kind: "money" },
+                  { header: "Probability", kind: "integer" },
+                  { header: "Status", kind: "text" },
+                ],
+                rows: filtered.map((lead) => [
+                  lead.leadName,
+                  formatDayMonYear(lead.addedOn),
+                  lead.projectName,
+                  lead.currentStage,
+                  lead.source,
+                  lead.estimatedValue,
+                  lead.probability,
+                  lead.statusLabel,
+                ]),
+              }}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add New Lead
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {convertError ? (
         <p role="alert" className="text-sm text-destructive">
@@ -276,6 +275,12 @@ export function LeadsTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Leads pagination"
+        mobileItem={(lead) => ({
+          title: lead.leadName || "—",
+          value: <StatusBadge status={lead.status} />,
+          subtitle: [lead.projectName, lead.currentStage].filter(Boolean).join(" · "),
+          meta: <Money value={lead.estimatedValue} />,
+        })}
         renderCell={(lead, columnId) => (
           <CellValue lead={lead} columnId={columnId} />
         )}
@@ -298,30 +303,23 @@ export function LeadsTable({
         lookups={lookups}
       />
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Lead?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.leadName)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (!deleting) setDeleteOpen(false)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (open || deleting) {
+            return
+          }
+
+          setDeleteOpen(false)
+          setDeleteError(null)
+        }}
+        title="Delete Lead"
+        itemName={pendingDelete?.leadName}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }
@@ -337,14 +335,10 @@ function CellValue({
     case "leadName":
       return (
         <div className="flex w-full min-w-0 flex-col gap-1">
-          <span className={cn("font-medium", !lead.leadName && "text-muted-foreground")}>
+          <span className={cn("text-ui font-semibold", !lead.leadName && "text-muted-foreground")}>
             {lead.leadName || "—"}
           </span>
-          {lead.kindLabel ? (
-            <Badge variant="outline" className="w-fit rounded-full">
-              {lead.kindLabel}
-            </Badge>
-          ) : null}
+          {lead.kindLabel ? <Badge variant="outline">{lead.kindLabel}</Badge> : null}
         </div>
       )
     case "addedOn":
@@ -360,17 +354,13 @@ function CellValue({
             {lead.projectName || "—"}
           </span>
           {lead.projectType ? (
-            <Badge variant="secondary" className="w-fit rounded-full">
-              {lead.projectType}
-            </Badge>
+            <Badge variant="secondary">{lead.projectType}</Badge>
           ) : null}
         </div>
       )
     case "currentStage":
       return lead.currentStage ? (
-        <Badge variant="outline" className="rounded-full">
-          {lead.currentStage}
-        </Badge>
+        <Badge variant="outline">{lead.currentStage}</Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -381,9 +371,7 @@ function CellValue({
         <span className="text-muted-foreground">—</span>
       )
     case "estimatedValue":
-      return (
-        <span className="tabular-nums">{formatMoney(lead.estimatedValue)}</span>
-      )
+      return <Money value={lead.estimatedValue} />
     case "probability":
       return (
         <span className="tabular-nums">
@@ -391,20 +379,7 @@ function CellValue({
         </span>
       )
     case "status":
-      return (
-        <Badge
-          variant={
-            lead.status === "won"
-              ? "secondary"
-              : lead.status === "lost" || lead.status === "cancelled"
-                ? "destructive"
-                : "outline"
-          }
-          className="rounded-full"
-        >
-          {lead.statusLabel}
-        </Badge>
-      )
+      return <StatusBadge status={lead.status} />
   }
 }
 

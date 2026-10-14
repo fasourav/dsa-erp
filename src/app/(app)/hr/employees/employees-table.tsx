@@ -2,19 +2,17 @@
 
 import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import {
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteEmployee } from "@/app/(app)/hr/employees/actions"
 import { useAccess, useCan } from "@/components/access-provider"
 import { EmployeeFormDialog } from "@/app/(app)/hr/employees/employee-form-dialog"
+import { DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
+import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,39 +22,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
+import { formatDayMonYear } from "@/lib/format"
+import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 import {
   paginateRows,
-  paginationItems,
   rangeLabel,
   toggleSort,
+  type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import { formatDayMonYear, formatIsoDate, formatTaka } from "@/lib/format"
-import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 
 type ColumnId =
   | "fullName"
@@ -67,14 +41,14 @@ type ColumnId =
   | "joiningDate"
   | "isActive"
 
-const columns: { id: ColumnId; label: string; align: "left" | "right" }[] = [
-  { id: "fullName", label: "Name", align: "left" },
-  { id: "department", label: "Department", align: "left" },
-  { id: "designation", label: "Designation", align: "left" },
-  { id: "monthlySalary", label: "Monthly Salary", align: "right" },
-  { id: "allowance", label: "Allowance", align: "right" },
-  { id: "joiningDate", label: "Joining Date", align: "left" },
-  { id: "isActive", label: "Status", align: "left" },
+const columns: readonly ListColumn<ColumnId>[] = [
+  { id: "fullName", label: "Name", align: "left", locked: true },
+  { id: "department", label: "Department", align: "left", locked: true },
+  { id: "designation", label: "Designation", align: "left", locked: true },
+  { id: "monthlySalary", label: "Monthly Salary", align: "right", locked: true },
+  { id: "allowance", label: "Allowance", align: "right", locked: true },
+  { id: "joiningDate", label: "Joining Date", align: "left", locked: true },
+  { id: "isActive", label: "Status", align: "left", locked: true },
 ]
 
 function sortEmployees(
@@ -164,7 +138,6 @@ export function EmployeesTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function openForm(emp: EmployeeRow | null) {
     setFormEmployee(emp)
@@ -197,40 +170,45 @@ export function EmployeesTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Employees</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <ListExport
-            grid={{
-              filename: "employees",
-              title: "Employees",
-              columns: [
-                { header: "Name", kind: "text" },
-                { header: "Department", kind: "text" },
-                { header: "Designation", kind: "text" },
-                { header: "Monthly Salary", kind: "money" },
-                { header: "Allowance", kind: "money" },
-                { header: "Joining Date", kind: "text" },
-                { header: "Status", kind: "text" },
-              ],
-              rows: filtered.map((employee) => [
-                employee.fullName,
-                employee.department,
-                employee.designation,
-                showFinancials ? employee.monthlySalary : "Hidden",
-                showFinancials ? employee.allowance : "Hidden",
-                employee.joiningDate ? formatDayMonYear(employee.joiningDate) : "—",
-                employee.isActive ? "Active" : "Inactive",
-              ]),
-            }}
-          />
-        {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Add New Employee
-        </Button>) : null}
-        </div>
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Employees"
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "employees",
+                title: "Employees",
+                columns: [
+                  { header: "Name", kind: "text" },
+                  { header: "Department", kind: "text" },
+                  { header: "Designation", kind: "text" },
+                  { header: "Monthly Salary", kind: "money" },
+                  { header: "Allowance", kind: "money" },
+                  { header: "Joining Date", kind: "text" },
+                  { header: "Status", kind: "text" },
+                ],
+                rows: filtered.map((employee) => [
+                  employee.fullName,
+                  employee.department,
+                  employee.designation,
+                  showFinancials ? employee.monthlySalary : "Hidden",
+                  showFinancials ? employee.allowance : "Hidden",
+                  employee.joiningDate ? formatDayMonYear(employee.joiningDate) : "—",
+                  employee.isActive ? "Active" : "Inactive",
+                ]),
+              }}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add New Employee
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <ListSearch
         query={query}
@@ -247,171 +225,54 @@ export function EmployeesTable({
         }}
         options={filterOptions}
       />
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {columns.map((col) => {
-                const active = sort.key === col.id
-                return (
-                  <TableHead
-                    key={col.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={col.align === "right" ? "text-right" : ""}
-                  >
-                    <div
-                      className={`flex ${col.align === "right" ? "justify-end" : ""}`}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={col.align === "right" ? "-mr-2" : "-ml-2"}
-                        onClick={() => {
-                          setSort(toggleSort(sort, col.id))
-                          setPage(1)
-                        }}
-                      >
-                        {col.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columns.length + 1}
-                  role="alert"
-                  className="py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columns.length + 1}
-                  className="py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  No Employees Yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((emp) => (
-                <TableRow key={emp.id} className="group">
-                  <TableCell className="font-medium">
-                    {emp.fullName || "—"}
-                  </TableCell>
-                  <TableCell>{emp.department || "—"}</TableCell>
-                  <TableCell>{emp.designation || "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {showFinancials ? formatTaka(emp.monthlySalary) : "Hidden"}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {showFinancials ? formatTaka(emp.allowance) : "Hidden"}
-                  </TableCell>
-                  <TableCell>
-                    {emp.joiningDate ? formatIsoDate(emp.joiningDate) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={emp.isActive ? "secondary" : "outline"}
-                      className="rounded-full"
-                    >
-                      {emp.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
-                    <RowActions
-                      employee={emp}
-                      onEdit={openForm}
-                      onDelete={askDelete}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {rangeLabel(
-              pageResult.rangeStart,
-              pageResult.rangeEnd,
-              pageResult.total,
-              "employee",
-              "employees",
-            )}
-          </p>
-          <Pagination
-            aria-label="Employees pagination"
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => setPage(pageResult.currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant={
-                        item === pageResult.currentPage ? "outline" : "ghost"
-                      }
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={
-                        item === pageResult.currentPage ? "page" : undefined
-                      }
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage >= pageResult.pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => setPage(pageResult.currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+      <DataList
+        columns={columns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(employee) => employee.id}
+        sort={sort}
+        onSort={(key) => {
+          setSort((current) => toggleSort(current, key))
+          setPage(1)
+        }}
+        visibility={{}}
+        error={error}
+        emptyMessage="No Employees Yet."
+        rangeText={rangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+          "employee",
+          "employees",
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Employees pagination"
+        mobileItem={(employee) => ({
+          title: employee.fullName || "—",
+          value: (
+            <StatusBadge status={employee.isActive ? "active" : "inactive"} />
+          ),
+          subtitle:
+            [employee.designation, employee.department].filter(Boolean).join(" · ") ||
+            "—",
+          meta: showFinancials ? (
+            <Money value={employee.monthlySalary} />
+          ) : (
+            "Hidden"
+          ),
+        })}
+        renderCell={(employee, columnId) => (
+          <Cell employee={employee} columnId={columnId} />
+        )}
+        renderActions={(employee) => (
+          <RowActions
+            employee={employee}
+            onEdit={openForm}
+            onDelete={askDelete}
+          />
+        )}
+      />
 
       <EmployeeFormDialog
         key={formSession}
@@ -421,42 +282,71 @@ export function EmployeesTable({
         departments={departments}
       />
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (open || deleting) return
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.fullName)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Employee"
+        itemName={pendingDelete?.fullName}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
+}
+
+function Cell({
+  employee,
+  columnId,
+}: {
+  employee: EmployeeRow
+  columnId: ColumnId
+}) {
+  const showFinancials = useAccess().showFinancials
+
+  switch (columnId) {
+    case "fullName":
+      return (
+        <span className="text-ui font-semibold">{employee.fullName || "—"}</span>
+      )
+    case "department":
+      return employee.department ? (
+        <span>{employee.department}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "designation":
+      return employee.designation ? (
+        <Badge variant="outline">{employee.designation}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "monthlySalary":
+      return showFinancials ? (
+        <Money value={employee.monthlySalary} />
+      ) : (
+        <span className="text-muted-foreground">Hidden</span>
+      )
+    case "allowance":
+      return showFinancials ? (
+        <Money value={employee.allowance} />
+      ) : (
+        <span className="text-muted-foreground">Hidden</span>
+      )
+    case "joiningDate":
+      return employee.joiningDate ? (
+        <span>{formatDayMonYear(employee.joiningDate)}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "isActive":
+      return <StatusBadge status={employee.isActive ? "active" : "inactive"} />
+  }
 }
 
 function RowActions({
@@ -485,18 +375,22 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(employee)}>
-          <Pencil aria-hidden="true" />
-          Edit
-        </DropdownMenuItem>) : null}
-        <DropdownMenuSeparator />
-        {canDelete ? (<DropdownMenuItem
-          variant="destructive"
-          onClick={() => onDelete(employee)}
-        >
-          <Trash2 aria-hidden="true" />
-          Delete
-        </DropdownMenuItem>) : null}
+        {canEdit ? (
+          <DropdownMenuItem onClick={() => onEdit(employee)}>
+            <Pencil aria-hidden="true" />
+            Edit
+          </DropdownMenuItem>
+        ) : null}
+        {canEdit && canDelete ? <DropdownMenuSeparator /> : null}
+        {canDelete ? (
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => onDelete(employee)}
+          >
+            <Trash2 aria-hidden="true" />
+            Delete
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -1,6 +1,7 @@
 "use client"
 
 import { savedToast } from "@/lib/saved"
+import Link from "next/link"
 import { useState, useTransition } from "react"
 
 import {
@@ -10,8 +11,8 @@ import {
   type BankMovementFieldErrors,
   type BankTransferFieldErrors,
 } from "@/app/(app)/accounts/bank/actions"
+import { NameCombobox } from "@/components/name-combobox"
 import { RecordAttachments } from "@/components/record-attachments"
-import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,7 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -30,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { defaultBankAccountId } from "@/lib/bank-account"
 import type { BankAccountRow, BankTransactionRow } from "@/lib/bank"
@@ -76,6 +79,16 @@ export function BankMovementDialog({
   const [pending, startSubmit] = useTransition()
   const parsedAmount = parsePositiveAmount(amount)
   const title = kind === "deposit" ? "Deposit" : "Withdrawal"
+  const amountError =
+    serverErrors.amount ??
+    (attempted && parsedAmount === null
+      ? amount.trim()
+        ? "Enter an amount greater than 0."
+        : "Enter an amount."
+      : null)
+  const dateError =
+    serverErrors.transactionDate ??
+    (attempted && !isIsoDate(date) ? "Enter a date." : null)
 
   function handleSubmit() {
     setAttempted(true)
@@ -125,15 +138,19 @@ export function BankMovementDialog({
         onOpenChange(next)
       }}
     >
-      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>{transactionId ? `Edit ${title}` : title}</DialogTitle>
         </DialogHeader>
-        <DialogBody>
+        <DialogBody className="flex flex-col gap-4">
           {transactionId ? (
             <RecordAttachments parentType="bank_transaction" parentId={transactionId} />
           ) : null}
-          <RecordPaymentFields
+          <PaymentFields
             idPrefix={`bank-${kind}`}
             amount={amount}
             onAmountChange={setAmount}
@@ -141,6 +158,7 @@ export function BankMovementDialog({
             onDateChange={setDate}
             bankAccountId={bankAccountId}
             onBankAccountIdChange={setBankAccountId}
+            accountLabel="Bank Account"
             paymentMethod={paymentMethod}
             onPaymentMethodChange={setPaymentMethod}
             notes={notes}
@@ -148,22 +166,12 @@ export function BankMovementDialog({
             accounts={choices}
             paymentMethods={paymentMethods}
             disabled={pending}
-            amountError={
-              serverErrors.amount ??
-              (attempted && parsedAmount === null
-                ? amount.trim()
-                  ? "Enter an amount greater than 0."
-                  : "Enter an amount."
-                : null)
-            }
-            dateError={
-              serverErrors.transactionDate ??
-              (attempted && !isIsoDate(date) ? "Enter a date." : null)
-            }
+            amountError={amountError}
+            dateError={dateError}
             accountError={serverErrors.bankAccountId ?? null}
           />
           {formError ? (
-            <p role="alert" className="mt-4 text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}
@@ -214,6 +222,18 @@ export function BankTransferDialog({
     value: account.id,
     label: account.name || "Account",
   }))
+  const sameAccount = Boolean(fromAccountId) && fromAccountId === toAccountId
+  const toError = serverErrors.toAccountId ?? (attempted && sameAccount ? "Choose a different account." : null)
+  const amountError =
+    serverErrors.amount ??
+    (attempted && parsedAmount === null
+      ? amount.trim()
+        ? "Enter an amount greater than 0."
+        : "Enter an amount."
+      : null)
+  const dateError =
+    serverErrors.transactionDate ??
+    (attempted && !isIsoDate(date) ? "Enter a date." : null)
 
   function handleSubmit() {
     setAttempted(true)
@@ -262,74 +282,71 @@ export function BankTransferDialog({
         onOpenChange(next)
       }}
     >
-      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>Transfer</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <RecordPaymentFields
-            idPrefix="bank-transfer"
-            amount={amount}
-            onAmountChange={setAmount}
-            date={date}
-            onDateChange={setDate}
-            bankAccountId={fromAccountId}
-            onBankAccountIdChange={setFromAccountId}
-            paymentMethod={paymentMethod}
-            onPaymentMethodChange={setPaymentMethod}
-            notes={notes}
-            onNotesChange={setNotes}
-            accounts={choices}
-            paymentMethods={paymentMethods}
-            disabled={pending}
-            amountError={
-              serverErrors.amount ??
-              (attempted && parsedAmount === null
-                ? amount.trim()
-                  ? "Enter an amount greater than 0."
-                  : "Enter an amount."
-                : null)
-            }
-            dateError={
-              serverErrors.transactionDate ??
-              (attempted && !isIsoDate(date) ? "Enter a date." : null)
-            }
-            accountError={serverErrors.fromAccountId ?? null}
-            accountLabel="From Account"
-          />
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-transfer-to">To Account</Label>
-            <Select
-              items={items}
-              value={toAccountId}
+          <FieldGroup layout="inset">
+            <PaymentFieldRows
+              idPrefix="bank-transfer"
+              amount={amount}
+              onAmountChange={setAmount}
+              date={date}
+              onDateChange={setDate}
+              bankAccountId={fromAccountId}
+              onBankAccountIdChange={setFromAccountId}
+              accountLabel="From Account"
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
+              notes={notes}
+              onNotesChange={setNotes}
+              accounts={choices}
+              paymentMethods={paymentMethods}
               disabled={pending}
-              onValueChange={(value) => setToAccountId(value ?? "")}
-            >
-              <SelectTrigger id="bank-transfer-to" className="w-full">
-                <SelectValue placeholder="Choose An Account" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {items.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {serverErrors.toAccountId ||
-            (attempted && fromAccountId && fromAccountId === toAccountId) ? (
-              <p role="alert" className="text-sm text-destructive">
-                {serverErrors.toAccountId ?? "Choose a different account."}
-              </p>
+              amountError={amountError}
+              dateError={dateError}
+              accountError={serverErrors.fromAccountId ?? null}
+            />
+            <Field data-invalid={Boolean(toError) || undefined}>
+              <FieldLabel htmlFor="bank-transfer-to">To Account</FieldLabel>
+              <Select
+                items={items}
+                value={toAccountId}
+                disabled={pending}
+                onValueChange={(value) => setToAccountId(value ?? "")}
+              >
+                <SelectTrigger
+                  id="bank-transfer-to"
+                  className="w-full"
+                  aria-invalid={Boolean(toError)}
+                >
+                  <SelectValue placeholder="Choose An Account" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {items.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {toError ? <FieldError>{toError}</FieldError> : null}
+            </Field>
+            {choices.length < 2 ? (
+              <Field>
+                <p className="text-sm text-muted-foreground">
+                  Add another bank account before transferring.
+                </p>
+              </Field>
             ) : null}
-          </div>
-          {choices.length < 2 ? (
-            <p className="text-sm text-muted-foreground">
-              Add another bank account before transferring.
-            </p>
-          ) : null}
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}
@@ -348,5 +365,177 @@ export function BankTransferDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function PaymentFields(
+  props: {
+    idPrefix: string
+    amount: string
+    onAmountChange: (value: string) => void
+    date: string
+    onDateChange: (value: string) => void
+    bankAccountId: string
+    onBankAccountIdChange: (value: string) => void
+    accountLabel: string
+    paymentMethod: string
+    onPaymentMethodChange: (value: string) => void
+    notes: string
+    onNotesChange: (value: string) => void
+    accounts: readonly BankAccountChoice[]
+    paymentMethods: readonly string[]
+    disabled: boolean
+    amountError: string | null
+    dateError: string | null
+    accountError: string | null
+  },
+) {
+  return (
+    <FieldGroup layout="inset">
+      <PaymentFieldRows {...props} />
+    </FieldGroup>
+  )
+}
+
+function PaymentFieldRows({
+  idPrefix,
+  amount,
+  onAmountChange,
+  date,
+  onDateChange,
+  bankAccountId,
+  onBankAccountIdChange,
+  accountLabel,
+  paymentMethod,
+  onPaymentMethodChange,
+  notes,
+  onNotesChange,
+  accounts,
+  paymentMethods,
+  disabled,
+  amountError,
+  dateError,
+  accountError,
+}: {
+  idPrefix: string
+  amount: string
+  onAmountChange: (value: string) => void
+  date: string
+  onDateChange: (value: string) => void
+  bankAccountId: string
+  onBankAccountIdChange: (value: string) => void
+  accountLabel: string
+  paymentMethod: string
+  onPaymentMethodChange: (value: string) => void
+  notes: string
+  onNotesChange: (value: string) => void
+  accounts: readonly BankAccountChoice[]
+  paymentMethods: readonly string[]
+  disabled: boolean
+  amountError: string | null
+  dateError: string | null
+  accountError: string | null
+}) {
+  const choices = accounts.filter(
+    (account) => account.isActive || account.id === bankAccountId,
+  )
+  const items = choices.map((account) => ({
+    value: account.id,
+    label: account.name || "Account",
+  }))
+
+  return (
+    <>
+      <Field span="half" data-invalid={Boolean(amountError) || undefined}>
+        <FieldLabel htmlFor={`${idPrefix}-amount`}>Amount</FieldLabel>
+        <Input
+          id={`${idPrefix}-amount`}
+          inputMode="decimal"
+          autoComplete="off"
+          enterKeyHint="next"
+          value={amount}
+          disabled={disabled}
+          aria-invalid={Boolean(amountError)}
+          onChange={(event) => onAmountChange(event.target.value)}
+        />
+        {amountError ? <FieldError>{amountError}</FieldError> : null}
+      </Field>
+      <Field span="half" data-invalid={Boolean(dateError) || undefined}>
+        <FieldLabel htmlFor={`${idPrefix}-date`}>Date</FieldLabel>
+        <Input
+          id={`${idPrefix}-date`}
+          type="date"
+          enterKeyHint="next"
+          value={date}
+          disabled={disabled}
+          aria-invalid={Boolean(dateError)}
+          onChange={(event) => onDateChange(event.target.value)}
+        />
+        {dateError ? <FieldError>{dateError}</FieldError> : null}
+      </Field>
+      {choices.length === 0 ? (
+        <Field data-invalid={Boolean(accountError) || undefined}>
+          <p className="text-sm font-medium">Add Your First Bank Account</p>
+          <p className="text-sm text-muted-foreground">
+            Payments Need A Bank Account. Add One In Settings Before Saving.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full md:w-fit"
+            render={<Link href="/settings" />}
+          >
+            Open Settings
+          </Button>
+          {accountError ? <FieldError>{accountError}</FieldError> : null}
+        </Field>
+      ) : (
+        <Field data-invalid={Boolean(accountError) || undefined}>
+          <FieldLabel htmlFor={`${idPrefix}-account`}>{accountLabel}</FieldLabel>
+          <Select
+            items={items}
+            value={bankAccountId}
+            disabled={disabled}
+            onValueChange={(value) => onBankAccountIdChange(value ?? "")}
+          >
+            <SelectTrigger
+              id={`${idPrefix}-account`}
+              className="w-full"
+              aria-invalid={Boolean(accountError)}
+            >
+              <SelectValue placeholder="Choose An Account" />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {accountError ? <FieldError>{accountError}</FieldError> : null}
+        </Field>
+      )}
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-method`}>Payment Method</FieldLabel>
+        <NameCombobox
+          id={`${idPrefix}-method`}
+          value={paymentMethod}
+          names={paymentMethods}
+          disabled={disabled}
+          placeholder="Search Payment Methods"
+          onValueChange={onPaymentMethodChange}
+        />
+      </Field>
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-notes`}>Notes</FieldLabel>
+        <Textarea
+          id={`${idPrefix}-notes`}
+          value={notes}
+          disabled={disabled}
+          onChange={(event) => onNotesChange(event.target.value)}
+        />
+      </Field>
+    </>
   )
 }

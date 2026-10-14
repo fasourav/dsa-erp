@@ -16,12 +16,13 @@ import {
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,15 +35,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { formatMoney } from "@/lib/format"
-import {
   getColumnServerSnapshot,
   getColumnSnapshot,
   subscribeColumnVisibility,
@@ -50,7 +42,6 @@ import {
 } from "@/lib/project-column-store"
 import {
   dataColumns,
-  formatPercent,
   formatProjectDate,
   isOptionalColumn,
   paginateProjects,
@@ -167,10 +158,12 @@ export function ProjectsTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Projects</h1>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Projects"
+        className="mb-0 md:mb-2"
+        actions={
+        <>
           <ListExport
             grid={{
               filename: "projects",
@@ -243,8 +236,9 @@ export function ProjectsTable({
             Add New Project
           </Button>
           ) : null}
-        </div>
-      </div>
+        </>
+        }
+      />
 
       <ListSearch
         query={query}
@@ -279,6 +273,19 @@ export function ProjectsTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Projects pagination"
+        mobileItem={(project) => ({
+          title: (
+            <Link
+              href={`/projects/${project.id}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {project.name || "—"}
+            </Link>
+          ),
+          value: <StatusBadge status={project.status} />,
+          subtitle: [project.location, project.phase].filter(Boolean).join(" · "),
+          meta: <Money value={project.totalValue} />,
+        })}
         renderCell={(project, columnId) => (
           <CellValue project={project} columnId={columnId} />
         )}
@@ -300,7 +307,7 @@ export function ProjectsTable({
         projectPhases={projectPhases}
       />
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (open || deleting) {
@@ -310,33 +317,13 @@ export function ProjectsTable({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.name)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Project"
+        itemName={pendingDelete?.name}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }
@@ -351,26 +338,18 @@ function CellValue({
   switch (columnId) {
     case "name":
       return (
-        <div className="flex w-full min-w-0 flex-col gap-1">
-          <Link
-            href={`/projects/${project.id}`}
-            className={cn(
-              "cursor-pointer font-medium hover:text-primary",
-              !project.name && "text-muted-foreground",
-            )}
-          >
-            {project.name || "—"}
-          </Link>
-          {(project.clientName || project.projectType) ? (
-            <span className="inline-flex w-fit max-w-full items-center rounded-md border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground opacity-90">
-              <span className="truncate">
-                {[project.clientName, project.projectType]
-                  .filter(Boolean)
-                  .join(" / ")}
-              </span>
-            </span>
-          ) : null}
-        </div>
+        <Button
+          type="button"
+          variant="link"
+          nativeButton={false}
+          render={<Link href={`/projects/${project.id}`} />}
+          className={cn(
+            "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
+            !project.name && "text-muted-foreground",
+          )}
+        >
+          {project.name || "—"}
+        </Button>
       )
     case "location":
       return project.location ? (
@@ -385,76 +364,47 @@ function CellValue({
         <span className="text-muted-foreground">—</span>
       )
     case "status":
-      return <StatusValue status={project.status} />
+      return <StatusBadge status={project.status} />
     case "phase":
       return project.phase ? (
-        <PhaseValue phase={project.phase} />
+        <Badge variant="outline">{project.phase}</Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "totalValue":
-      return <MoneyValue value={project.totalValue} />
+      return <Money value={project.totalValue} />
     case "totalPaid":
       return (
-        <MoneyWithPercent
-          amount={project.totalPaid}
-          part={project.totalPaid}
-          total={project.totalValue}
+        <Money
+          value={project.totalPaid}
+          className={project.totalPaid > 0 ? "text-success" : "text-muted-foreground"}
         />
       )
     case "totalDue":
-      return <MoneyValue value={project.totalDue} />
+      return (
+        <Money
+          value={project.totalDue}
+          className={project.totalDue > 0 ? "text-destructive" : "text-muted-foreground"}
+        />
+      )
     case "expenseTotal":
-      return <MoneyValue value={project.expenseTotal} />
+      return <Money value={project.expenseTotal} />
     case "expenseDue":
-      return <MoneyValue value={project.expenseDue} />
+      return <Money value={project.expenseDue} />
     case "grossProfit":
       return (
-        <MoneyWithPercent
-          amount={project.grossProfit}
-          part={project.grossProfit}
-          total={project.totalValue}
+        <Money
+          value={project.grossProfit}
+          className={
+            project.grossProfit > 0
+              ? "text-success"
+              : project.grossProfit < 0
+                ? "text-destructive"
+                : "text-muted-foreground"
+          }
         />
       )
   }
-}
-
-function MoneyValue({ value }: { value: number }) {
-  return <span className="tabular-nums">{formatMoney(value)}</span>
-}
-
-function MoneyWithPercent({
-  amount,
-  part,
-  total,
-}: {
-  amount: number
-  part: number
-  total: number
-}) {
-  return (
-    <span className="flex flex-col items-end gap-0.5 leading-tight">
-      <span className="tabular-nums">{formatMoney(amount)}</span>
-      <span className="text-muted-foreground tabular-nums">
-        {formatPercent(part, total)}
-      </span>
-    </span>
-  )
-}
-
-const pillClassName =
-  "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
-
-function StatusValue({ status }: { status: ProjectRow["status"] }) {
-  return <StatusBadge status={status} />
-}
-
-function PhaseValue({ phase }: { phase: string }) {
-  return (
-    <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-      {phase}
-    </Badge>
-  )
 }
 
 function RowActions({

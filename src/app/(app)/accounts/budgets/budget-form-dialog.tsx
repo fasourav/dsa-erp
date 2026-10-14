@@ -18,8 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -33,7 +33,7 @@ import type { BudgetRow, DepartmentOption } from "@/lib/budgets"
 const monthItems = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
-].map((name, i) => ({ value: String(i + 1), label: name }))
+].map((name, index) => ({ value: String(index + 1), label: name }))
 
 export function BudgetFormDialog({
   open,
@@ -64,7 +64,10 @@ export function BudgetFormDialog({
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
 
-  const deptItems = departments.map((d) => ({ value: d.id, label: d.name }))
+  const deptItems = departments.map((department) => ({
+    value: department.id,
+    label: department.name,
+  }))
   if (
     budget?.departmentId &&
     !deptItems.some((item) => item.value === budget.departmentId)
@@ -116,7 +119,8 @@ export function BudgetFormDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="overflow-hidden sm:max-w-md"
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -125,61 +129,62 @@ export function BudgetFormDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bgt-dept">Department</Label>
-            <Select
-              items={deptItems}
-              value={departmentId || null}
-              disabled={pending}
-              onValueChange={(v) => setDepartmentId(v ?? "")}
-            >
-              <SelectTrigger
-                id="bgt-dept"
-                className="w-full"
-                aria-invalid={Boolean(fieldErrors.departmentId)}
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(fieldErrors.departmentId) || undefined}>
+              <FieldLabel htmlFor="bgt-dept">Department</FieldLabel>
+              <Select
+                items={deptItems}
+                value={departmentId || null}
+                disabled={pending}
+                onValueChange={(value) => setDepartmentId(value ?? "")}
               >
-                <SelectValue placeholder="Select Department" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {deptItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fieldErrors.departmentId ? (
-              <p role="alert" className="text-sm text-destructive">
-                {fieldErrors.departmentId}
-              </p>
-            ) : null}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bgt-year">Year</Label>
+                <SelectTrigger
+                  id="bgt-dept"
+                  className="w-full"
+                  aria-invalid={Boolean(fieldErrors.departmentId)}
+                >
+                  <SelectValue placeholder="Select Department" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {deptItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.departmentId ? (
+                <FieldError>{fieldErrors.departmentId}</FieldError>
+              ) : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.periodYear) || undefined}>
+              <FieldLabel htmlFor="bgt-year">Year</FieldLabel>
               <Input
                 id="bgt-year"
                 type="number"
+                inputMode="numeric"
+                autoComplete="off"
+                enterKeyHint="next"
                 value={periodYear}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.periodYear)}
-                onChange={(e) => setPeriodYear(e.target.value)}
+                onChange={(event) => setPeriodYear(event.target.value)}
               />
-              {fieldErrors.periodYear ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.periodYear}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bgt-month">Month</Label>
+              {fieldErrors.periodYear ? <FieldError>{fieldErrors.periodYear}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.periodMonth) || undefined}>
+              <FieldLabel htmlFor="bgt-month">Month</FieldLabel>
               <Select
                 items={monthItems}
                 value={periodMonth}
                 disabled={pending}
-                onValueChange={(v) => setPeriodMonth(v ?? "")}
+                onValueChange={(value) => setPeriodMonth(value ?? "")}
               >
-                <SelectTrigger id="bgt-month" className="w-full">
+                <SelectTrigger
+                  id="bgt-month"
+                  className="w-full"
+                  aria-invalid={Boolean(fieldErrors.periodMonth)}
+                >
                   <SelectValue placeholder="Select Month" />
                 </SelectTrigger>
                 <SelectContent align="start">
@@ -191,40 +196,39 @@ export function BudgetFormDialog({
                 </SelectContent>
               </Select>
               {fieldErrors.periodMonth ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.periodMonth}
-                </p>
+                <FieldError>{fieldErrors.periodMonth}</FieldError>
               ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bgt-amount">Allocated Budget</Label>
-            <Input
-              id="bgt-amount"
-              type="number"
-              step="0.01"
-              value={allocatedBudget}
-              disabled={pending}
-              aria-invalid={Boolean(fieldErrors.allocatedBudget)}
-              onChange={(e) => setAllocatedBudget(e.target.value)}
-            />
-            {fieldErrors.allocatedBudget ? (
-              <p role="alert" className="text-sm text-destructive">
-                {fieldErrors.allocatedBudget}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bgt-notes">Notes</Label>
-            <Textarea
-              id="bgt-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+            </Field>
+            <Field data-invalid={Boolean(fieldErrors.allocatedBudget) || undefined}>
+              <FieldLabel htmlFor="bgt-amount">Allocated Budget</FieldLabel>
+              <Input
+                id="bgt-amount"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                autoComplete="off"
+                enterKeyHint="next"
+                value={allocatedBudget}
+                disabled={pending}
+                aria-invalid={Boolean(fieldErrors.allocatedBudget)}
+                onChange={(event) => setAllocatedBudget(event.target.value)}
+              />
+              {fieldErrors.allocatedBudget ? (
+                <FieldError>{fieldErrors.allocatedBudget}</FieldError>
+              ) : null}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="bgt-notes">Notes</FieldLabel>
+              <Textarea
+                id="bgt-notes"
+                value={notes}
+                disabled={pending}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

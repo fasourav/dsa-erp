@@ -7,8 +7,8 @@ import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
-import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
-import { Badge } from "@/components/ui/badge"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,7 +23,6 @@ import {
   type PayableColumnId,
   type PayableRow,
 } from "@/lib/accounts-payable"
-import { formatMoney } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -32,8 +31,6 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
-
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function PayableTable({
   rows,
@@ -54,30 +51,33 @@ export function PayableTable({
   const pageResult = paginateRows(filtered, page)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Accounts Payable</h1>
-        <ListExport
-          grid={{
-            filename: "accounts-payable",
-            title: "Accounts Payable",
-            columns: [
-              { header: "Project", kind: "text" },
-              { header: "Vendor", kind: "text" },
-              { header: "Total Payable", kind: "money" },
-              { header: "Total Paid", kind: "money" },
-              { header: "Pending Payable", kind: "money" },
-            ],
-            rows: filtered.map((row) => [
-              row.projectName,
-              row.vendorName,
-              row.totalPayable,
-              row.totalPaid,
-              row.pendingPayable,
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Accounts Payable"
+        className="mb-0 md:mb-2"
+        actions={
+          <ListExport
+            grid={{
+              filename: "accounts-payable",
+              title: "Accounts Payable",
+              columns: [
+                { header: "Project", kind: "text" },
+                { header: "Vendor", kind: "text" },
+                { header: "Total Payable", kind: "money" },
+                { header: "Total Paid", kind: "money" },
+                { header: "Pending Payable", kind: "money" },
+              ],
+              rows: filtered.map((row) => [
+                row.projectName,
+                row.vendorName,
+                row.totalPayable,
+                row.totalPaid,
+                row.pendingPayable,
+              ]),
+            }}
+          />
+        }
+      />
       <ListSearch
         query={query}
         onQueryChange={(value) => {
@@ -109,6 +109,18 @@ export function PayableTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Accounts Payable pagination"
+        mobileItem={(row) => ({
+          title: row.vendorName || "—",
+          subtitle: row.projectName || "—",
+          meta: (
+            <Money
+              value={row.pendingPayable}
+              className={
+                row.pendingPayable > 0 ? "text-destructive" : "text-muted-foreground"
+              }
+            />
+          ),
+        })}
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
         renderActions={(row) => (
           <DropdownMenu>
@@ -158,41 +170,39 @@ function Cell({
 }) {
   switch (columnId) {
     case "projectName":
-      return row.projectName ? (
-        <span className="font-medium">{row.projectName}</span>
+      return (
+        <span
+          className={cn(
+            "text-ui font-semibold",
+            !row.projectName && "text-muted-foreground",
+          )}
+        >
+          {row.projectName || "—"}
+        </span>
+      )
+    case "vendorName":
+      return row.vendorName ? (
+        <span>{row.vendorName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
-    case "vendorName":
-      return <VendorValue row={row} />
     case "totalPayable":
+      return <Money value={row.totalPayable} />
     case "totalPaid":
+      return (
+        <Money
+          value={row.totalPaid}
+          className={row.totalPaid > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
     case "pendingPayable":
-      return <span className="tabular-nums">{formatMoney(row[columnId])}</span>
+      return (
+        <Money
+          value={row.pendingPayable}
+          className={
+            row.pendingPayable > 0 ? "text-destructive" : "text-muted-foreground"
+          }
+        />
+      )
   }
-}
-
-function VendorValue({ row }: { row: PayableRow }) {
-  return (
-    <div className="flex min-w-0 flex-col items-start gap-1">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <span
-          className={cn(
-            "font-medium",
-            !row.vendorName && "text-muted-foreground",
-          )}
-        >
-          {row.vendorName || "—"}
-        </span>
-        {row.workType ? (
-          <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-            {row.workType}
-          </Badge>
-        ) : null}
-      </div>
-      <StatusBadge
-        status={paymentBalanceStatus(row.totalPaid, row.pendingPayable)}
-      />
-    </div>
-  )
 }

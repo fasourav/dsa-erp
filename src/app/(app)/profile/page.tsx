@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { ProfileForm } from "@/app/(app)/profile/profile-form"
+import { PageHeader } from "@/components/page-header"
 import { getAccountIdentity } from "@/lib/account"
 
 export const metadata = { title: "My Profile" }
@@ -10,11 +11,8 @@ export default async function ProfilePage() {
   if (!account) redirect("/login")
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-sm text-muted-foreground">Account / My Profile</p>
-        <h1 className="text-2xl font-medium tracking-tight">My Profile</h1>
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader title="My Profile" className="mb-0 md:mb-2" />
       <ProfileForm
         name={account.name}
         email={account.email}

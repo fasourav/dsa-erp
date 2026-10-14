@@ -1,6 +1,6 @@
 "use client"
 
-import { FileText, Paperclip, Upload } from "lucide-react"
+import { File, FileImage, FileSpreadsheet, FileText, FileType, Paperclip, Trash2 } from "lucide-react"
 import { useEffect, useId, useState, useTransition } from "react"
 
 import {
@@ -124,15 +124,63 @@ export function RecordAttachments({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-medium">Attachments</h2>
-        <div className="flex flex-wrap gap-2">
-          {collapsed ? (
-            <Button type="button" variant="outline" onClick={() => setOpen((current) => !current)}>
-              <Paperclip aria-hidden="true" className="size-4" />
-              {open ? "Hide Files" : `Files${rows.length ? ` (${rows.length})` : ""}`}
-            </Button>
+        <h2 className="text-ui font-semibold">Attachments</h2>
+        {collapsed ? (
+          <Button type="button" variant="outline" onClick={() => setOpen((current) => !current)}>
+            <Paperclip aria-hidden="true" data-icon="inline-start" />
+            {open ? "Hide Files" : `Files${rows.length ? ` (${rows.length})` : ""}`}
+          </Button>
+        ) : null}
+      </div>
+      {open ? (
+        <div className="flex flex-col gap-3 rounded-control bg-fill p-3">
+          {error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
           ) : null}
-          {canEdit && open ? (
+          {rows.length === 0 ? (
+            <p className="text-label text-muted-foreground">
+              No files yet. PDF, JPG, PNG, WEBP, XLSX, or DOCX up to 10 MB.
+            </p>
+          ) : (
+            <ul className="flex flex-col">
+              {rows.map((row) => {
+                const Icon = fileIcon(row.contentType)
+                return (
+                  <li key={row.id} className="flex items-center gap-3 py-2 not-first:border-t not-first:border-border">
+                    <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 rounded-lg text-left focus-visible:ring-3 focus-visible:ring-ring/50"
+                      aria-label={`Preview ${row.fileName}`}
+                      disabled={pending}
+                      onClick={() => openPreview(row)}
+                    >
+                      <span className="block truncate text-ui font-semibold">{row.fileName}</span>
+                      <span className="block text-label text-muted-foreground">{formatBytes(row.byteSize)}</span>
+                    </button>
+                    {canDelete ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Remove ${row.fileName}`}
+                        disabled={pending}
+                        onClick={() => {
+                          setDeleteError(null)
+                          setDeleteId(row.id)
+                        }}
+                      >
+                        <Trash2 aria-hidden="true" />
+                      </Button>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          {canEdit ? (
             <>
               <input
                 id={inputId}
@@ -148,62 +196,16 @@ export function RecordAttachments({
               <Button
                 type="button"
                 variant="outline"
+                className="w-full md:w-fit"
                 disabled={pending}
                 onClick={() => document.getElementById(inputId)?.click()}
               >
-                <Upload aria-hidden="true" className="size-4" />
+                <Paperclip aria-hidden="true" data-icon="inline-start" />
                 Upload
               </Button>
             </>
           ) : null}
         </div>
-      </div>
-      {open ? (
-        <>
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No Files Yet. PDF, JPG, PNG, WEBP, XLSX, or DOCX up to 10 MB.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {rows.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <FileText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{row.fileName}</p>
-                      <p className="text-xs text-muted-foreground">{formatBytes(row.byteSize)}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" disabled={pending} onClick={() => openPreview(row)}>
-                      Preview
-                    </Button>
-                    {canDelete ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={pending}
-                        onClick={() => {
-                          setDeleteError(null)
-                          setDeleteId(row.id)
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
       ) : null}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="overflow-hidden sm:max-w-3xl">
@@ -261,6 +263,15 @@ export function RecordAttachments({
       />
     </section>
   )
+}
+
+function fileIcon(contentType: string) {
+  const kind = attachmentKind(contentType)
+  if (kind === "pdf") return FileText
+  if (kind === "image") return FileImage
+  if (contentType.includes("spreadsheet")) return FileSpreadsheet
+  if (contentType.includes("wordprocessing")) return FileType
+  return File
 }
 
 function formatBytes(bytes: number): string {

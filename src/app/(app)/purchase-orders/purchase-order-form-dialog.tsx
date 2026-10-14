@@ -25,8 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -185,6 +190,7 @@ export function PurchaseOrderFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -200,71 +206,63 @@ export function PurchaseOrderFormDialog({
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
-          {operational ? null : (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="po-project">Project</Label>
+          <FieldGroup layout="inset">
+            {operational ? null : (
+              <Field data-invalid={Boolean(projectError) || undefined}>
+                <FieldLabel htmlFor="po-project">Project</FieldLabel>
+                <Select
+                  items={projectItems}
+                  value={projectId || null}
+                  disabled={pending}
+                  onValueChange={(value) => setProjectId(value ?? "")}
+                >
+                  <SelectTrigger
+                    id="po-project"
+                    className="w-full"
+                    aria-invalid={Boolean(projectError)}
+                  >
+                    <SelectValue placeholder="Select A Project" />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {projectItems.map((project) => (
+                      <SelectItem key={project.value} value={project.value}>
+                        {project.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {projectError ? <FieldError>{projectError}</FieldError> : null}
+              </Field>
+            )}
+
+            <Field data-invalid={Boolean(vendorError) || undefined}>
+              <FieldLabel htmlFor="po-vendor">Vendor</FieldLabel>
               <Select
-                items={projectItems}
-                value={projectId || null}
+                items={vendorItems}
+                value={vendorId || null}
                 disabled={pending}
-                onValueChange={(value) => setProjectId(value ?? "")}
+                onValueChange={(value) => setVendorId(value ?? "")}
               >
                 <SelectTrigger
-                  id="po-project"
+                  id="po-vendor"
                   className="w-full"
-                  aria-invalid={Boolean(projectError)}
+                  aria-invalid={Boolean(vendorError)}
                 >
-                  <SelectValue placeholder="Select A Project" />
+                  <SelectValue placeholder="Select A Vendor" />
                 </SelectTrigger>
                 <SelectContent align="start">
-                  {projectItems.map((project) => (
-                    <SelectItem key={project.value} value={project.value}>
-                      {project.label}
+                  {vendorItems.map((vendor) => (
+                    <SelectItem key={vendor.value} value={vendor.value}>
+                      {vendor.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {projectError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {projectError}
-                </p>
-              ) : null}
-            </div>
-          )}
+              {vendorError ? <FieldError>{vendorError}</FieldError> : null}
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="po-vendor">Vendor</Label>
-            <Select
-              items={vendorItems}
-              value={vendorId || null}
-              disabled={pending}
-              onValueChange={(value) => setVendorId(value ?? "")}
-            >
-              <SelectTrigger
-                id="po-vendor"
-                className="w-full"
-                aria-invalid={Boolean(vendorError)}
-              >
-                <SelectValue placeholder="Select A Vendor" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {vendorItems.map((vendor) => (
-                  <SelectItem key={vendor.value} value={vendor.value}>
-                    {vendor.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {vendorError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {vendorError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="po-issued-on">Date</Label>
+            <Field span="half" data-invalid={Boolean(dateError) || undefined}>
+              <FieldLabel htmlFor="po-issued-on">Date</FieldLabel>
               <Input
                 id="po-issued-on"
                 type="date"
@@ -273,72 +271,65 @@ export function PurchaseOrderFormDialog({
                 aria-invalid={Boolean(dateError)}
                 onChange={(event) => setIssuedOn(event.target.value)}
               />
-              {dateError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dateError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="po-total-value">Purchase Order Value</Label>
+              {dateError ? <FieldError>{dateError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(valueError) || undefined}>
+              <FieldLabel htmlFor="po-total-value">Purchase Order Value</FieldLabel>
               <Input
                 id="po-total-value"
                 inputMode="decimal"
+                autoComplete="off"
                 value={totalValue}
                 disabled={pending}
                 aria-invalid={Boolean(valueError)}
                 onChange={(event) => setTotalValue(event.target.value)}
               />
-              {valueError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {valueError}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              {valueError ? <FieldError>{valueError}</FieldError> : null}
+            </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="po-work-type">Vendor Work Type</Label>
-            <Combobox
-              autoComplete="off"
-              items={workTypes}
-              inputValue={workType}
-              onInputValueChange={handleWorkTypeInput}
-              onValueChange={(value) => {
-                if (typeof value === "string") {
-                  setWorkType(value)
-                }
-              }}
-            >
-              <ComboboxInput
-                id="po-work-type"
-                className="w-full"
+            <Field>
+              <FieldLabel htmlFor="po-work-type">Vendor Work Type</FieldLabel>
+              <Combobox
+                autoComplete="off"
+                items={workTypes}
+                inputValue={workType}
+                onInputValueChange={handleWorkTypeInput}
+                onValueChange={(value) => {
+                  if (typeof value === "string") {
+                    setWorkType(value)
+                  }
+                }}
+              >
+                <ComboboxInput
+                  id="po-work-type"
+                  className="w-full"
+                  disabled={pending}
+                />
+                <ComboboxContent className="data-empty:hidden">
+                  <ComboboxList>
+                    {(item: string) => (
+                      <ComboboxItem key={item} value={item}>
+                        {item}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="po-notes">Notes</FieldLabel>
+              <Textarea
+                id="po-notes"
+                value={notes}
                 disabled={pending}
+                onChange={(event) => setNotes(event.target.value)}
               />
-              <ComboboxContent className="data-empty:hidden">
-                <ComboboxList>
-                  {(item: string) => (
-                    <ComboboxItem key={item} value={item}>
-                      {item}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="po-notes">Notes</Label>
-            <Textarea
-              id="po-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
+            </Field>
+          </FieldGroup>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

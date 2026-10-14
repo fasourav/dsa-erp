@@ -1,7 +1,7 @@
 "use client"
 
 import { savedToast } from "@/lib/saved"
-import { useState, useTransition, type ReactNode } from "react"
+import { useState, useTransition } from "react"
 
 import {
   addBankAccount,
@@ -18,8 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -160,125 +166,166 @@ export function BankAccountFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>{accountId ? "Edit Bank Account" : "Add Bank Account"}</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <Field id="bank-account-name" label="Account Name" error={nameError}>
-            <Input
-              id="bank-account-name"
-              value={name}
-              disabled={pending}
-              aria-invalid={Boolean(nameError)}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </Field>
-          <Field id="bank-account-holder" label="Account Holder Name" error={holderError}>
-            <Input
-              id="bank-account-holder"
-              value={accountHolderName}
-              disabled={pending}
-              aria-invalid={Boolean(holderError)}
-              onChange={(event) => setAccountHolderName(event.target.value)}
-            />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="bank-account-number" label="Account Number" error={numberError}>
+          <FieldGroup layout="inset">
+            <Field span="half" data-invalid={Boolean(nameError) || undefined}>
+              <FieldLabel htmlFor="bank-account-name">Account Name</FieldLabel>
+              <Input
+                id="bank-account-name"
+                value={name}
+                autoComplete="off"
+                autoCapitalize="words"
+                enterKeyHint="next"
+                disabled={pending}
+                aria-invalid={Boolean(nameError)}
+                onChange={(event) => setName(event.target.value)}
+              />
+              {nameError ? <FieldError>{nameError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(holderError) || undefined}>
+              <FieldLabel htmlFor="bank-account-holder">Account Holder Name</FieldLabel>
+              <Input
+                id="bank-account-holder"
+                value={accountHolderName}
+                autoComplete="name"
+                autoCapitalize="words"
+                enterKeyHint="next"
+                disabled={pending}
+                aria-invalid={Boolean(holderError)}
+                onChange={(event) => setAccountHolderName(event.target.value)}
+              />
+              {holderError ? <FieldError>{holderError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(numberError) || undefined}>
+              <FieldLabel htmlFor="bank-account-number">Account Number</FieldLabel>
               <Input
                 id="bank-account-number"
                 value={accountNumber}
+                autoComplete="off"
+                enterKeyHint="next"
                 disabled={pending}
                 aria-invalid={Boolean(numberError)}
                 onChange={(event) => setAccountNumber(event.target.value)}
               />
+              {numberError ? <FieldError>{numberError}</FieldError> : null}
             </Field>
-            <Field id="bank-account-bank" label="Bank Name" error={bankError}>
+            <Field span="half" data-invalid={Boolean(bankError) || undefined}>
+              <FieldLabel htmlFor="bank-account-bank">Bank Name</FieldLabel>
               <Input
                 id="bank-account-bank"
                 value={bankName}
+                autoComplete="organization"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 disabled={pending}
                 aria-invalid={Boolean(bankError)}
                 onChange={(event) => setBankName(event.target.value)}
               />
+              {bankError ? <FieldError>{bankError}</FieldError> : null}
             </Field>
-          </div>
-          <Field id="bank-account-routing" label="Routing Number" error={routingError}>
-            <Input
-              id="bank-account-routing"
-              value={routingNumber}
-              disabled={pending}
-              aria-invalid={Boolean(routingError)}
-              onChange={(event) => setRoutingNumber(event.target.value)}
-            />
-          </Field>
-          <Field id="bank-account-address" label="Address" error={addressError}>
-            <Textarea
-              id="bank-account-address"
-              value={address}
-              disabled={pending}
-              aria-invalid={Boolean(addressError)}
-              onChange={(event) => setAddress(event.target.value)}
-            />
-          </Field>
-          <Field id="bank-account-opening" label="Opening Balance" error={openingError}>
-            <Input
-              id="bank-account-opening"
-              inputMode="decimal"
-              value={openingBalance}
-              disabled={pending || Boolean(accountId)}
-              aria-invalid={Boolean(openingError)}
-              onChange={(event) => setOpeningBalance(event.target.value)}
-            />
-            {accountId ? (
-              <p className="text-sm text-muted-foreground">
-                Opening balance is set when the account is created.
-              </p>
-            ) : null}
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="bank-account-currency" label="Currency" error={currencyError}>
+            <Field data-invalid={Boolean(routingError) || undefined}>
+              <FieldLabel htmlFor="bank-account-routing">Routing Number</FieldLabel>
+              <Input
+                id="bank-account-routing"
+                value={routingNumber}
+                autoComplete="off"
+                enterKeyHint="next"
+                disabled={pending}
+                aria-invalid={Boolean(routingError)}
+                onChange={(event) => setRoutingNumber(event.target.value)}
+              />
+              {routingError ? <FieldError>{routingError}</FieldError> : null}
+            </Field>
+            <Field data-invalid={Boolean(addressError) || undefined}>
+              <FieldLabel htmlFor="bank-account-address">Address</FieldLabel>
+              <Textarea
+                id="bank-account-address"
+                value={address}
+                autoComplete="street-address"
+                disabled={pending}
+                aria-invalid={Boolean(addressError)}
+                onChange={(event) => setAddress(event.target.value)}
+              />
+              {addressError ? <FieldError>{addressError}</FieldError> : null}
+            </Field>
+            <Field data-invalid={Boolean(openingError) || undefined}>
+              <FieldLabel htmlFor="bank-account-opening">Opening Balance</FieldLabel>
+              <Input
+                id="bank-account-opening"
+                inputMode="decimal"
+                autoComplete="off"
+                enterKeyHint="next"
+                value={openingBalance}
+                disabled={pending || Boolean(accountId)}
+                aria-invalid={Boolean(openingError)}
+                onChange={(event) => setOpeningBalance(event.target.value)}
+              />
+              {accountId ? (
+                <FieldDescription>
+                  Opening balance is set when the account is created.
+                </FieldDescription>
+              ) : null}
+              {openingError ? <FieldError>{openingError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(currencyError) || undefined}>
+              <FieldLabel htmlFor="bank-account-currency">Currency</FieldLabel>
               <Input
                 id="bank-account-currency"
                 value={currency}
+                autoComplete="off"
+                autoCapitalize="characters"
+                enterKeyHint="next"
                 disabled={pending}
                 aria-invalid={Boolean(currencyError)}
                 onChange={(event) => setCurrency(event.target.value)}
               />
+              {currencyError ? <FieldError>{currencyError}</FieldError> : null}
             </Field>
-            <Field id="bank-account-sort-order" label="Sort Order" error={sortOrderError}>
+            <Field span="half" data-invalid={Boolean(sortOrderError) || undefined}>
+              <FieldLabel htmlFor="bank-account-sort-order">Sort Order</FieldLabel>
               <Input
                 id="bank-account-sort-order"
                 inputMode="numeric"
+                autoComplete="off"
+                enterKeyHint="next"
                 value={sortOrder}
                 disabled={pending}
                 aria-invalid={Boolean(sortOrderError)}
                 onChange={(event) => setSortOrder(event.target.value)}
               />
+              {sortOrderError ? <FieldError>{sortOrderError}</FieldError> : null}
             </Field>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bank-account-status">Status</Label>
-            <Select
-              items={statusItems}
-              value={isActive ? "active" : "inactive"}
-              disabled={pending}
-              onValueChange={(value) => setIsActive(value !== "inactive")}
-            >
-              <SelectTrigger id="bank-account-status" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {statusItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <Field>
+              <FieldLabel htmlFor="bank-account-status">Status</FieldLabel>
+              <Select
+                items={statusItems}
+                value={isActive ? "active" : "inactive"}
+                disabled={pending}
+                onValueChange={(value) => setIsActive(value !== "inactive")}
+              >
+                <SelectTrigger id="bank-account-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {statusItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}
@@ -293,29 +340,5 @@ export function BankAccountFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function Field({
-  id,
-  label,
-  error,
-  children,
-}: {
-  id: string
-  label: string
-  error: string | null
-  children: ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-    </div>
   )
 }

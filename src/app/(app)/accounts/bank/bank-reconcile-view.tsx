@@ -14,18 +14,21 @@ import {
 } from "@/app/(app)/accounts/bank/reconcile-actions"
 import { useCan } from "@/components/access-provider"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogBody,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -33,10 +36,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   bankFlowLabel,
   bankSourceLabel,
   type BankAccountRow,
+  type BankDirection,
   type BankTransactionRow,
 } from "@/lib/bank"
 import {
@@ -49,6 +54,12 @@ import {
 } from "@/lib/bank-reconcile"
 import { formatExactBdt } from "@/lib/dashboard-metrics"
 import { formatIsoDate } from "@/lib/format"
+import { cn } from "@/lib/utils"
+
+function signedFlow(direction: BankDirection, amount: number) {
+  const magnitude = Math.abs(amount)
+  return direction === "outflow" ? -magnitude : magnitude
+}
 
 export function BankReconcileView({
   accounts,
@@ -57,13 +68,15 @@ export function BankReconcileView({
   reconciliation,
   periodFrom,
   periodTo,
+  showFinancials,
 }: {
   accounts: BankAccountRow[]
   account: BankAccountRow | null
   transactions: BankTransactionRow[]
-  reconciliation: ReconciliationBundle
+  reconciliation: ReconciliationBundle | null
   periodFrom: string
   periodTo: string
+  showFinancials: boolean
 }) {
   const router = useRouter()
   const canEdit = useCan("banking", "edit")
@@ -71,12 +84,16 @@ export function BankReconcileView({
   const [from, setFrom] = useState(periodFrom)
   const [to, setTo] = useState(periodTo)
   const [statementBalance, setStatementBalance] = useState("")
-  const [days, setDays] = useState<number | null>(defaultToleranceDays(reconciliation.tolerances))
+  const [days, setDays] = useState<number | null>(
+    defaultToleranceDays(reconciliation?.tolerances ?? []),
+  )
   const [notice, setNotice] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(reconciliation.error)
+  const [error, setError] = useState<string | null>(reconciliation?.error ?? null)
   const [addOpen, setAddOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<StatementLine | null>(null)
   const [pending, start] = useTransition()
+
+  const ledgerHref = account ? `/accounts/bank?account=${account.id}` : "/accounts/bank"
 
   const accountRows = useMemo(
     () => (account ? transactions.filter((row) => row.bankAccountId === account.id) : []),
@@ -84,16 +101,18 @@ export function BankReconcileView({
   )
   const inPeriod = useMemo(
     () =>
-      reconciliation.lines.filter((line) => line.lineDate >= periodFrom && line.lineDate <= periodTo),
-    [reconciliation.lines, periodFrom, periodTo],
+      (reconciliation?.lines ?? []).filter(
+        (line) => line.lineDate >= periodFrom && line.lineDate <= periodTo,
+      ),
+    [reconciliation?.lines, periodFrom, periodTo],
   )
   const matchedIds = useMemo(() => {
     const ids = new Set<string>()
-    for (const line of reconciliation.lines) {
+    for (const line of reconciliation?.lines ?? []) {
       if (line.bankTransactionId) ids.add(line.bankTransactionId)
     }
     return ids
-  }, [reconciliation.lines])
+  }, [reconciliation?.lines])
   const bookRows = useMemo(
     () =>
       accountRows.filter(
@@ -104,14 +123,19 @@ export function BankReconcileView({
       ),
     [accountRows, matchedIds, periodFrom, periodTo],
   )
-  const locked = periodOverlaps(reconciliation.periods, periodFrom, periodTo)
-  const exact = reconciliation.periods.find(
+  const locked = periodOverlaps(reconciliation?.periods ?? [], periodFrom, periodTo)
+  const exact = reconciliation?.periods.find(
     (period) => period.periodStart === periodFrom && period.periodEnd === periodTo,
   )
   const book = account ? bookBalanceAsOf(account.openingBalance, accountRows, periodTo) : 0
   const statementValue = exact ? exact.statementBalance : Number(statementBalance)
   const statementKnown = exact != null || (statementBalance.trim() !== "" && Number.isFinite(statementValue))
   const difference = statementKnown ? Math.round((statementValue - (exact?.bookBalance ?? book)) * 100) / 100 : null
+
+  function close() {
+    if (pending) return
+    router.push(ledgerHref)
+  }
 
   function applyPeriod() {
     if (!account || to < from) {
@@ -141,34 +165,58 @@ export function BankReconcileView({
     })
   }
 
+  const title = account ? `Reconcile ${account.name || "Account"}` : "Reconcile"
+
+  if (!showFinancials) {
+    return (
+      <ReconcileDrawer title="Bank" pending={false} onClose={close}>
+        <p className="text-sm text-muted-foreground">
+          Reconciliation is available when financial figures are visible.
+        </p>
+      </ReconcileDrawer>
+    )
+  }
+
+  if (!reconciliation) {
+    return (
+      <ReconcileDrawer title={title} pending={false} onClose={close}>
+        <p className="text-sm text-muted-foreground">
+          Reconciliation is available when financial figures are visible.
+        </p>
+      </ReconcileDrawer>
+    )
+  }
+
   if (reconciliation.status === "missing") {
     return (
-      <Frame account={account}>
+      <ReconcileDrawer title={title} pending={pending} onClose={close}>
         <p className="text-sm text-muted-foreground">
           Bank reconciliation is not installed on this database yet.
         </p>
-      </Frame>
+      </ReconcileDrawer>
     )
   }
 
   if (!account) {
     return (
-      <Frame account={null}>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <ReconcileDrawer title="Choose An Account To Reconcile" pending={pending} onClose={close}>
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
           {accounts.map((row) => (
-            <Link
+            <Button
               key={row.id}
-              href={`/accounts/bank?view=reconcile&account=${row.id}`}
-              className="rounded-xl border border-border bg-card p-5 hover:bg-accent"
+              variant="outline"
+              className="w-full justify-start"
+              nativeButton={false}
+              render={<Link href={`/accounts/bank?view=reconcile&account=${row.id}`} />}
             >
-              <span className="font-medium">{row.name || "Account"}</span>
-            </Link>
+              {row.name || "Account"}
+            </Button>
           ))}
         </div>
         {accounts.length === 0 ? (
           <p className="text-sm text-muted-foreground">Add a bank account in Settings first.</p>
         ) : null}
-      </Frame>
+      </ReconcileDrawer>
     )
   }
 
@@ -177,9 +225,11 @@ export function BankReconcileView({
     value: String(row.days),
     label: row.label,
   }))
+  const unmatchedLines = inPeriod.filter((line) => !line.bankTransactionId)
+  const matchedLines = inPeriod.filter((line) => line.bankTransactionId)
 
   return (
-    <Frame account={account}>
+    <ReconcileDrawer title={title} pending={pending} onClose={close}>
       {locked ? (
         <p className="text-sm text-muted-foreground">This Period Is Reconciled And Locked.</p>
       ) : null}
@@ -190,18 +240,19 @@ export function BankReconcileView({
       ) : null}
       {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Statement Balance</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4">
+        <Card size="sm">
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-label font-semibold text-muted-foreground">Statement Balance</p>
             {exact ? (
-              <p className="text-2xl font-medium tabular-nums">{formatExactBdt(exact.statementBalance)}</p>
+              <p className="text-metric">
+                <Money value={exact.statementBalance} />
+              </p>
             ) : (
               <Input
                 id="statement-balance"
                 inputMode="decimal"
+                autoComplete="off"
                 aria-label="Statement Balance"
                 value={statementBalance}
                 disabled={!canEdit || pending || locked}
@@ -210,37 +261,52 @@ export function BankReconcileView({
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Book Balance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-medium tabular-nums">
-              {formatExactBdt(exact?.bookBalance ?? book)}
+        <Card size="sm">
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-label font-semibold text-muted-foreground">Book Balance</p>
+            <p className="text-metric">
+              <Money value={exact?.bookBalance ?? book} />
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Difference</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={difference != null && difference !== 0 ? "text-2xl font-medium tabular-nums text-destructive" : "text-2xl font-medium tabular-nums"}>
-              {difference == null ? "—" : formatExactBdt(difference)}
+        <Card size="sm" className="col-span-2 md:col-span-1">
+          <CardContent className="flex flex-col gap-1">
+            <p className="text-label font-semibold text-muted-foreground">Difference</p>
+            <p className="text-metric">
+              {difference == null ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                <Money
+                  value={difference}
+                  className={difference !== 0 ? "text-destructive" : undefined}
+                />
+              )}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="reconcile-from">From</Label>
-          <Input id="reconcile-from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="reconcile-to">To</Label>
-          <Input id="reconcile-to" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-        </div>
+      <FieldGroup layout="inset">
+        <Field span="half">
+          <FieldLabel htmlFor="reconcile-from">From</FieldLabel>
+          <Input
+            id="reconcile-from"
+            type="date"
+            value={from}
+            onChange={(event) => setFrom(event.target.value)}
+          />
+        </Field>
+        <Field span="half">
+          <FieldLabel htmlFor="reconcile-to">To</FieldLabel>
+          <Input
+            id="reconcile-to"
+            type="date"
+            value={to}
+            onChange={(event) => setTo(event.target.value)}
+          />
+        </Field>
+      </FieldGroup>
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
         <Button type="button" variant="outline" onClick={applyPeriod}>
           Apply Period
         </Button>
@@ -252,7 +318,7 @@ export function BankReconcileView({
               if (value) setDays(Number(value))
             }}
           >
-            <SelectTrigger aria-label="Match Tolerance">
+            <SelectTrigger aria-label="Match Tolerance" className="w-full md:w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -268,7 +334,7 @@ export function BankReconcileView({
         )}
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
         {canEdit ? (
           <Button
             type="button"
@@ -346,57 +412,104 @@ export function BankReconcileView({
         ) : null}
       </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium tracking-tight">Statement Lines</h2>
-        {inPeriod.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No Statement Lines In This Period.</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {inPeriod.map((line) => (
-              <StatementCard
-                key={line.id}
-                line={line}
-                transactions={accountRows}
-                candidates={candidates}
-                locked={locked}
-                canEdit={canEdit}
-                canDelete={canDelete}
-                pending={pending}
-                onMatch={(transactionId) =>
-                  run(
-                    () => matchStatementLine(line.id, transactionId),
-                    transactionId ? "Line matched." : "Line unmatched.",
-                  )
-                }
-                onDelete={() => {
-                  setError(null)
-                  setPendingDelete(line)
-                }}
-              />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium tracking-tight">Unmatched Book Lines</h2>
-        {bookRows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Every book line in this period is matched.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {bookRows.map((row) => (
-              <li key={row.id} className="rounded-xl border border-border bg-card p-4 text-sm">
-                {bookLabel(row)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <Tabs defaultValue="unmatched">
+        <TabsList>
+          <TabsTrigger value="unmatched">Unmatched</TabsTrigger>
+          <TabsTrigger value="matched">Matched</TabsTrigger>
+        </TabsList>
+        <TabsContent value="unmatched" className="flex flex-col gap-4">
+          <section className="flex flex-col gap-2">
+            <h2 className="text-section">Statement Lines</h2>
+            {unmatchedLines.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No unmatched statement lines in this period.</p>
+            ) : (
+              <ul className="flex flex-col">
+                {unmatchedLines.map((line) => (
+                  <StatementCard
+                    key={line.id}
+                    line={line}
+                    transactions={accountRows}
+                    candidates={candidates}
+                    locked={locked}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    pending={pending}
+                    onMatch={(transactionId) =>
+                      run(
+                        () => matchStatementLine(line.id, transactionId),
+                        transactionId ? "Line matched." : "Line unmatched.",
+                      )
+                    }
+                    onDelete={() => {
+                      setError(null)
+                      setPendingDelete(line)
+                    }}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+          <section className="flex flex-col gap-2">
+            <h2 className="text-section">Unmatched Book Lines</h2>
+            {bookRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Every book line in this period is matched.</p>
+            ) : (
+              <ul className="flex flex-col">
+                {bookRows.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-col gap-2 border-b border-border py-3 md:flex-row md:items-start md:gap-6"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-label text-muted-foreground">Statement</p>
+                      <p className="text-muted-foreground">—</p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-label text-muted-foreground">Ledger</p>
+                      <LedgerAmount row={row} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </TabsContent>
+        <TabsContent value="matched">
+          {matchedLines.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No matched lines in this period.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {matchedLines.map((line) => (
+                <StatementCard
+                  key={line.id}
+                  line={line}
+                  transactions={accountRows}
+                  candidates={candidates}
+                  locked={locked}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  pending={pending}
+                  onMatch={(transactionId) =>
+                    run(
+                      () => matchStatementLine(line.id, transactionId),
+                      transactionId ? "Line matched." : "Line unmatched.",
+                    )
+                  }
+                  onDelete={() => {
+                    setError(null)
+                    setPendingDelete(line)
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {reconciliation.periods.length > 0 ? (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium tracking-tight">Locked Periods</h2>
-          <ul className="flex flex-col gap-2">
+          <h2 className="text-section">Locked Periods</h2>
+          <ul className="flex flex-col gap-3">
             {reconciliation.periods.map((period) => (
               <li key={period.id}>
                 <LockedPeriodRow period={period} />
@@ -441,33 +554,37 @@ export function BankReconcileView({
           }, "Line deleted.")
         }}
       />
-    </Frame>
+    </ReconcileDrawer>
   )
 }
 
-function Frame({
-  account,
+function ReconcileDrawer({
+  title,
+  pending,
+  onClose,
   children,
 }: {
-  account: BankAccountRow | null
+  title: string
+  pending: boolean
+  onClose: () => void
   children: ReactNode
 }) {
-  const ledgerHref = account ? `/accounts/bank?account=${account.id}` : "/accounts/bank"
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
-          <p className="text-sm text-muted-foreground">
-            {account ? `Reconcile ${account.name || "Account"}` : "Choose An Account To Reconcile"}
-          </p>
-        </div>
-        <Button variant="outline" nativeButton={false} render={<Link href={ledgerHref} />}>
-          Ledger
-        </Button>
-      </div>
-      {children}
-    </div>
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose()
+      }}
+    >
+      <DialogContent variant="drawer" className="overflow-hidden" showCloseButton={!pending}>
+        <DialogHeader className="border-b px-4 py-4 pr-14">
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
+          {children}
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -497,62 +614,100 @@ function StatementCard({
   const items = choices.map((row) => ({ value: row.id, label: bookLabel(row) }))
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex flex-col gap-1">
-        <p className="font-medium">
-          {formatIsoDate(line.lineDate)} · {bankFlowLabel(line.direction)} · {formatExactBdt(line.amount)}
-        </p>
-        <p className="text-sm text-muted-foreground">
+    <li className="flex flex-col gap-3 border-b border-border py-3 md:flex-row md:items-start md:gap-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="text-label text-muted-foreground">Statement</p>
+        <p className="text-ui font-semibold">
           {line.description || line.reference || "No description"}
         </p>
+        <p className="text-sm text-muted-foreground">
+          {formatIsoDate(line.lineDate)} · {bankFlowLabel(line.direction)}
+        </p>
+        <Money
+          value={signedFlow(line.direction, line.amount)}
+          className={line.direction === "outflow" ? "text-destructive" : "text-success"}
+        />
       </div>
-      {matched ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm">Matched to {bookLabel(matched)}</p>
-          {canEdit ? (
-            <Button type="button" variant="outline" disabled={pending || locked} onClick={() => onMatch(null)}>
-              Unmatch
-            </Button>
-          ) : null}
-        </div>
-      ) : canEdit && items.length > 0 ? (
-        <Select
-          items={items}
-          value={null}
-          onValueChange={(value) => {
-            if (value) onMatch(value)
-          }}
-        >
-          <SelectTrigger aria-label="Match To A Book Line" className="w-full sm:max-w-md">
-            <SelectValue placeholder="Match To A Book Line" />
-          </SelectTrigger>
-          <SelectContent>
-            {items.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <p className="text-sm text-muted-foreground">Unmatched</p>
-      )}
-      {canDelete ? (
-        <Button type="button" variant="outline" disabled={pending || locked} onClick={onDelete}>
-          Delete
-        </Button>
-      ) : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <p className="text-label text-muted-foreground">Ledger</p>
+        {matched ? (
+          <>
+            <LedgerAmount row={matched} />
+            <StatusBadge status="paid" />
+            {canEdit ? (
+              <Button type="button" variant="outline" disabled={pending || locked} onClick={() => onMatch(null)}>
+                Unmatch
+              </Button>
+            ) : null}
+          </>
+        ) : canEdit && items.length > 0 ? (
+          <Select
+            items={items}
+            value={null}
+            onValueChange={(value) => {
+              if (value) onMatch(value)
+            }}
+          >
+            <SelectTrigger aria-label="Match To A Book Line" className="w-full">
+              <SelectValue placeholder="Match To A Book Line" />
+            </SelectTrigger>
+            <SelectContent>
+              {items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="text-sm text-muted-foreground">Unmatched</p>
+        )}
+        {canDelete ? (
+          <Button type="button" variant="outline" disabled={pending || locked} onClick={onDelete}>
+            Delete
+          </Button>
+        ) : null}
+      </div>
     </li>
+  )
+}
+
+function LedgerAmount({ row }: { row: BankTransactionRow }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-ui font-semibold">{bankSourceLabel(row.sourceKind)}</p>
+      <p className="text-sm text-muted-foreground">
+        {formatIsoDate(row.transactionDate)}
+        {row.notes.trim() ? ` · ${row.notes.trim()}` : ""}
+      </p>
+      <Money
+        value={signedFlow(row.direction, row.amount)}
+        className={row.direction === "outflow" ? "text-destructive" : "text-success"}
+      />
+    </div>
   )
 }
 
 function LockedPeriodRow({ period }: { period: LockedPeriod }) {
   return (
-    <p className="text-sm text-muted-foreground">
-      {formatIsoDate(period.periodStart)} – {formatIsoDate(period.periodEnd)} · Statement{" "}
-      {formatExactBdt(period.statementBalance)} · Book {formatExactBdt(period.bookBalance)} · Difference{" "}
-      {formatExactBdt(period.difference)}
-    </p>
+    <div className="flex flex-col gap-2 border-b border-border py-3 md:flex-row md:items-center md:gap-6">
+      <p className="text-sm text-muted-foreground">
+        {formatIsoDate(period.periodStart)} – {formatIsoDate(period.periodEnd)}
+      </p>
+      <p className="text-sm">
+        Statement <Money value={period.statementBalance} />
+      </p>
+      <p className="text-sm">
+        Book <Money value={period.bookBalance} />
+      </p>
+      <p className="text-sm">
+        Difference{" "}
+        <Money
+          value={period.difference}
+          className={cn(period.difference !== 0 && "text-destructive")}
+        />
+      </p>
+    </div>
   )
 }
 
@@ -586,55 +741,90 @@ function AddLineDialog({
   const [amount, setAmount] = useState("")
   const [reference, setReference] = useState("")
   const directions = [
-    { value: "inflow", label: "Incoming" },
-    { value: "outflow", label: "Outgoing" },
+    { value: "inflow", label: "Inflow" },
+    { value: "outflow", label: "Outflow" },
   ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>Add Statement Line</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {error ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {error}
             </p>
           ) : null}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="line-date">Date</Label>
-            <Input id="line-date" type="date" value={lineDate} onChange={(event) => setLineDate(event.target.value)} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="line-description">Description</Label>
-            <Input id="line-description" value={description} onChange={(event) => setDescription(event.target.value)} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="line-direction">Direction</Label>
-            <Select items={directions} value={direction} onValueChange={(value) => value && setDirection(value)}>
-              <SelectTrigger id="line-direction" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {directions.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="line-amount">Amount</Label>
-            <Input id="line-amount" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="line-reference">Reference</Label>
-            <Input id="line-reference" value={reference} onChange={(event) => setReference(event.target.value)} />
-          </div>
+          <FieldGroup layout="inset">
+            <Field span="half">
+              <FieldLabel htmlFor="line-date">Date</FieldLabel>
+              <Input
+                id="line-date"
+                type="date"
+                enterKeyHint="next"
+                value={lineDate}
+                onChange={(event) => setLineDate(event.target.value)}
+              />
+            </Field>
+            <Field span="half">
+              <FieldLabel htmlFor="line-direction">Direction</FieldLabel>
+              <Select items={directions} value={direction} onValueChange={(value) => value && setDirection(value)}>
+                <SelectTrigger id="line-direction" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {directions.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="line-description">Description</FieldLabel>
+              <Input
+                id="line-description"
+                autoComplete="off"
+                autoCapitalize="sentences"
+                enterKeyHint="next"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </Field>
+            <Field span="half">
+              <FieldLabel htmlFor="line-amount">Amount</FieldLabel>
+              <Input
+                id="line-amount"
+                inputMode="decimal"
+                autoComplete="off"
+                enterKeyHint="next"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+              />
+            </Field>
+            <Field span="half">
+              <FieldLabel htmlFor="line-reference">Reference</FieldLabel>
+              <Input
+                id="line-reference"
+                autoComplete="off"
+                enterKeyHint="done"
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
         </DialogBody>
         <DialogFooter>
+          <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>
+            Cancel
+          </DialogClose>
           <Button
             type="button"
             disabled={pending}

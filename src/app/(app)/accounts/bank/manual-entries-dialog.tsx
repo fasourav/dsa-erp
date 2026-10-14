@@ -7,6 +7,8 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { DataList } from "@/components/data-list"
+import { Money } from "@/components/money"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,7 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { bankSourceLabel, type BankTransactionRow } from "@/lib/bank"
-import { formatExactBdt } from "@/lib/dashboard-metrics"
 import { formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
@@ -34,6 +35,7 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import { cn } from "@/lib/utils"
 
 type ColumnId =
   | "transactionDate"
@@ -51,6 +53,11 @@ const columns: readonly ListColumn<ColumnId>[] = [
   { id: "paymentMethod", label: "Payment Method", align: "left", locked: true },
   { id: "notes", label: "Notes", align: "left", locked: true },
 ]
+
+function signedFlow(direction: BankTransactionRow["direction"], amount: number) {
+  const magnitude = Math.abs(amount)
+  return direction === "outflow" ? -magnitude : magnitude
+}
 
 export function ManualEntriesDialog({
   open,
@@ -80,20 +87,20 @@ export function ManualEntriesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden sm:max-w-4xl" showCloseButton>
-        <DialogHeader>
+      <DialogContent variant="drawer" className="overflow-hidden" showCloseButton>
+        <DialogHeader className="border-b px-4 py-4 pr-14">
           <DialogTitle>Deposits & Withdrawals</DialogTitle>
         </DialogHeader>
-        <DialogBody className="overflow-x-auto">
+        <DialogBody className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
           <ListSearch
-        query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
-        placeholder="Search entries"
-      />
-      <DataList
+            query={query}
+            onQueryChange={(value) => {
+              setQuery(value)
+              setPage(1)
+            }}
+            placeholder="Search entries"
+          />
+          <DataList
             columns={columns}
             rows={pageResult.rows}
             rowKey={(row) => row.id}
@@ -116,6 +123,18 @@ export function ManualEntriesDialog({
             pageCount={pageResult.pageCount}
             onPageChange={setPage}
             pagingLabel="Deposits and withdrawals pagination"
+            mobileItem={(row) => ({
+              title: bankSourceLabel(row.sourceKind),
+              subtitle: [row.accountName, row.transactionDate ? formatIsoDate(row.transactionDate) : null]
+                .filter(Boolean)
+                .join(" · "),
+              meta: (
+                <Money
+                  value={signedFlow(row.direction, row.amount)}
+                  className={row.direction === "outflow" ? "text-destructive" : "text-success"}
+                />
+              ),
+            })}
             renderCell={(row, columnId) => (
               <EntryCell row={row} columnId={columnId} />
             )}
@@ -148,7 +167,7 @@ export function ManualEntriesDialog({
             )}
           />
         </DialogBody>
-        <DialogFooter>
+        <DialogFooter className="mx-0 mb-0 rounded-none px-4">
           <DialogClose render={<Button type="button" variant="outline" />}>
             Close
           </DialogClose>
@@ -173,18 +192,23 @@ function EntryCell({
         <span className="text-muted-foreground">—</span>
       )
     case "type":
-      return <span>{bankSourceLabel(row.sourceKind)}</span>
+      return <Badge variant="outline">{bankSourceLabel(row.sourceKind)}</Badge>
     case "accountName":
-      return row.accountName ? (
-        <span className="font-medium">{row.accountName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
+      return (
+        <span className={cn("text-ui font-semibold", !row.accountName && "text-muted-foreground")}>
+          {row.accountName || "—"}
+        </span>
       )
     case "amount":
-      return <span className="tabular-nums">{formatExactBdt(row.amount)}</span>
+      return (
+        <Money
+          value={signedFlow(row.direction, row.amount)}
+          className={row.direction === "outflow" ? "text-destructive" : "text-success"}
+        />
+      )
     case "paymentMethod":
       return row.paymentMethod ? (
-        <span>{row.paymentMethod}</span>
+        <Badge variant="secondary">{row.paymentMethod}</Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

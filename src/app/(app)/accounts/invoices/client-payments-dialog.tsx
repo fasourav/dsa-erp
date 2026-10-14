@@ -14,6 +14,8 @@ import {
 } from "@/app/(app)/accounts/invoices/actions"
 import { RecordPaymentFields } from "@/components/record-payment-fields"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,7 +35,7 @@ import type {
   ClientPaymentRow,
 } from "@/lib/client-invoice-summary"
 import { RecordAttachments } from "@/components/record-attachments"
-import { formatIsoDate, formatMoney } from "@/lib/format"
+import { formatIsoDate } from "@/lib/format"
 import { moneyCents, parsePositiveAmount, sumAmounts } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 
@@ -108,7 +110,7 @@ export function ClientPaymentsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton>
+        <DialogContent variant="drawer" showCloseButton>
           <DialogHeader>
             <DialogTitle>
               {editing
@@ -132,38 +134,84 @@ export function ClientPaymentsDialog({
             <>
               <DialogBody className="flex flex-col gap-4">
                 {invoice ? (
-                  <p className="text-sm text-muted-foreground">
-                    {invoice.projectName || "Project"} · {invoice.clientName || "Client"} ·
-                    Amount {formatMoney(invoice.amount)} · Paid{" "}
-                    {formatMoney(invoice.paid)} · Balance{" "}
-                    {formatMoney(invoice.balance)}
-                  </p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-ui font-semibold">
+                          {invoice.projectName || "Project"}
+                        </p>
+                        <p className="truncate text-label text-muted-foreground">
+                          {invoice.clientName || "Client"}
+                        </p>
+                      </div>
+                      <StatusBadge status={invoice.status} />
+                    </div>
+                    <dl className="overflow-hidden rounded-group border border-border">
+                      <div className="flex items-center justify-between gap-3 px-4 py-3">
+                        <dt className="text-label text-muted-foreground">Amount</dt>
+                        <dd>
+                          <Money value={invoice.amount} />
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+                        <dt className="text-label text-muted-foreground">Paid</dt>
+                        <dd>
+                          <Money
+                            value={invoice.paid}
+                            className={
+                              invoice.paid > 0 ? "text-success" : "text-muted-foreground"
+                            }
+                          />
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+                        <dt className="text-label text-muted-foreground">Balance</dt>
+                        <dd>
+                          <Money
+                            value={invoice.balance}
+                            className={
+                              invoice.balance > 0
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                            }
+                          />
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
                 ) : null}
                 {invoice && invoice.payments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-label text-muted-foreground">
                     No Payments Recorded Yet.
                   </p>
                 ) : null}
                 {invoice?.payments.map((row) => (
                   <div
                     key={row.id}
-                    className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 border-t border-border py-3 md:flex-row md:items-center md:justify-between"
                   >
                     <div className="min-w-0">
-                      <p className="font-medium tabular-nums">
-                        {formatMoney(row.amount)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {row.paidOn ? formatIsoDate(row.paidOn) : "—"}
-                        {row.method ? ` · ${row.method}` : ""}
-                        {row.bankAccountName ? ` · ${row.bankAccountName}` : ""}
-                        {row.reference ? ` · ${row.reference}` : ""}
+                      <Money
+                        value={row.amount}
+                        className={
+                          row.amount > 0 ? "text-success" : "text-muted-foreground"
+                        }
+                      />
+                      <p className="text-label text-muted-foreground">
+                        {[
+                          row.paidOn ? formatIsoDate(row.paidOn) : "—",
+                          row.method,
+                          row.bankAccountName,
+                          row.reference,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                       {row.notes ? (
-                        <p className="text-sm text-muted-foreground">{row.notes}</p>
+                        <p className="text-label text-muted-foreground">{row.notes}</p>
                       ) : null}
                       {row.remarks ? (
-                        <p className="text-sm text-muted-foreground">{row.remarks}</p>
+                        <p className="text-label text-muted-foreground">{row.remarks}</p>
                       ) : null}
                       <RecordAttachments parentType="client_payment" parentId={row.id} collapsed />
                     </div>

@@ -18,8 +18,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLegend,
+  FieldSet,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -171,217 +178,208 @@ export function ProjectFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-hidden sm:max-w-lg" showCloseButton={!pending}>
+      <DialogContent
+        className="overflow-hidden sm:max-w-xl"
+        mobileLayout="nav"
+        showCloseButton={!pending}
+      >
         <DialogHeader>
           <DialogTitle>
             {projectId ? "Edit Project" : "Add New Project"}
           </DialogTitle>
         </DialogHeader>
 
-        <DialogBody className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="project-name">Name</Label>
-            <Input
-              id="project-name"
-              value={name}
-              disabled={pending}
-              aria-invalid={Boolean(nameError)}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {nameError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {nameError}
-              </p>
-            ) : null}
-          </div>
+        <DialogBody className="flex flex-col gap-5">
+          <FieldSet>
+            <FieldLegend>Project</FieldLegend>
+            <FieldGroup layout="inset">
+              <Field data-invalid={Boolean(nameError) || undefined}>
+                <FieldLabel htmlFor="project-name">Name</FieldLabel>
+                <Input
+                  id="project-name"
+                  value={name}
+                  autoComplete="off"
+                  autoCapitalize="words"
+                  enterKeyHint="next"
+                  disabled={pending}
+                  aria-invalid={Boolean(nameError)}
+                  onChange={(event) => setName(event.target.value)}
+                />
+                {nameError ? <FieldError>{nameError}</FieldError> : null}
+              </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="project-client">Client</Label>
-            <Select
-              items={clientItems}
-              value={clientId || null}
-              disabled={pending}
-              onValueChange={(value) => setClientId(value ?? "")}
-            >
-              <SelectTrigger
-                id="project-client"
-                className="w-full"
-                aria-invalid={Boolean(clientError)}
-              >
-                <SelectValue placeholder="Select A Client" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {clientItems.map((client) => (
-                  <SelectItem key={client.value} value={client.value}>
-                    {client.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {clientError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {clientError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="project-location">Location</Label>
-              <Input
-                id="project-location"
-                value={location}
-                disabled={pending}
-                onChange={(event) => setLocation(event.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="project-started-on">Start Date</Label>
-              <Input
-                id="project-started-on"
-                type="date"
-                value={startedOn}
-                disabled={pending}
-                aria-invalid={Boolean(dateError)}
-                onChange={(event) => setStartedOn(event.target.value)}
-              />
-              {dateError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dateError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="project-type">Project Type</Label>
-            <Select
-              items={typeItems}
-              value={projectType || null}
-              disabled={pending}
-              onValueChange={(value) => setProjectType(value ?? "")}
-            >
-              <SelectTrigger
-                id="project-type"
-                className="w-full"
-                aria-invalid={Boolean(typeError)}
-              >
-                <SelectValue placeholder="Select A Type" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {typeItems.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {typeError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {typeError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="project-status">Status</Label>
-              <Select
-                items={statusOptions}
-                value={status}
-                disabled={pending}
-                onValueChange={(value) => {
-                  if (value && isProjectStatus(value)) {
-                    setStatus(value)
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="project-status"
-                  className="w-full"
-                  aria-invalid={Boolean(statusError)}
+              <Field data-invalid={Boolean(clientError) || undefined}>
+                <FieldLabel htmlFor="project-client">Client</FieldLabel>
+                <Select
+                  items={clientItems}
+                  value={clientId || null}
+                  disabled={pending}
+                  onValueChange={(value) => setClientId(value ?? "")}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {statusError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {statusError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="project-phase">Project Phase</Label>
-              <Select
-                items={phaseItems}
-                value={phase || null}
-                disabled={pending}
-                onValueChange={(value) => setPhase(value ?? "")}
-              >
-                <SelectTrigger
-                  id="project-phase"
-                  className="w-full"
-                  aria-invalid={Boolean(phaseError)}
+                  <SelectTrigger
+                    id="project-client"
+                    className="w-full"
+                    aria-invalid={Boolean(clientError)}
+                  >
+                    <SelectValue placeholder="Select A Client" />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {clientItems.map((client) => (
+                      <SelectItem key={client.value} value={client.value}>
+                        {client.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {clientError ? <FieldError>{clientError}</FieldError> : null}
+              </Field>
+
+              <Field span="half">
+                <FieldLabel htmlFor="project-location">Location</FieldLabel>
+                <Input
+                  id="project-location"
+                  value={location}
+                  autoComplete="off"
+                  autoCapitalize="words"
+                  enterKeyHint="next"
+                  disabled={pending}
+                  onChange={(event) => setLocation(event.target.value)}
+                />
+              </Field>
+              <Field span="half" data-invalid={Boolean(dateError) || undefined}>
+                <FieldLabel htmlFor="project-started-on">Start Date</FieldLabel>
+                <Input
+                  id="project-started-on"
+                  type="date"
+                  value={startedOn}
+                  disabled={pending}
+                  aria-invalid={Boolean(dateError)}
+                  onChange={(event) => setStartedOn(event.target.value)}
+                />
+                {dateError ? <FieldError>{dateError}</FieldError> : null}
+              </Field>
+            </FieldGroup>
+          </FieldSet>
+
+          <FieldSet>
+            <FieldLegend>Type And Status</FieldLegend>
+            <FieldGroup layout="inset">
+              <Field data-invalid={Boolean(typeError) || undefined}>
+                <FieldLabel htmlFor="project-type">Project Type</FieldLabel>
+                <Select
+                  items={typeItems}
+                  value={projectType || null}
+                  disabled={pending}
+                  onValueChange={(value) => setProjectType(value ?? "")}
                 >
-                  <SelectValue placeholder="Select A Phase" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {phaseItems.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {phaseError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {phaseError}
-                </p>
-              ) : null}
-            </div>
-          </div>
+                  <SelectTrigger
+                    id="project-type"
+                    className="w-full"
+                    aria-invalid={Boolean(typeError)}
+                  >
+                    <SelectValue placeholder="Select A Type" />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {typeItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {typeError ? <FieldError>{typeError}</FieldError> : null}
+              </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="project-value">Project Value</Label>
-              <Input
-                id="project-value"
-                type="number"
-                min={0}
-                step="0.01"
-                inputMode="decimal"
-                value={totalValue}
-                disabled={pending}
-                aria-invalid={Boolean(valueError)}
-                onChange={(event) => setTotalValue(event.target.value)}
-              />
-              {valueError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {valueError}
-                </p>
-              ) : null}
-            </div>
-          </div>
+              <Field span="half" data-invalid={Boolean(statusError) || undefined}>
+                <FieldLabel htmlFor="project-status">Status</FieldLabel>
+                <Select
+                  items={statusOptions}
+                  value={status}
+                  disabled={pending}
+                  onValueChange={(value) => {
+                    if (value && isProjectStatus(value)) {
+                      setStatus(value)
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id="project-status"
+                    className="w-full"
+                    aria-invalid={Boolean(statusError)}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {statusError ? <FieldError>{statusError}</FieldError> : null}
+              </Field>
+              <Field span="half" data-invalid={Boolean(phaseError) || undefined}>
+                <FieldLabel htmlFor="project-phase">Project Phase</FieldLabel>
+                <Select
+                  items={phaseItems}
+                  value={phase || null}
+                  disabled={pending}
+                  onValueChange={(value) => setPhase(value ?? "")}
+                >
+                  <SelectTrigger
+                    id="project-phase"
+                    className="w-full"
+                    aria-invalid={Boolean(phaseError)}
+                  >
+                    <SelectValue placeholder="Select A Phase" />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {phaseItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {phaseError ? <FieldError>{phaseError}</FieldError> : null}
+              </Field>
+            </FieldGroup>
+          </FieldSet>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="project-details">Details</Label>
-            <Textarea
-              id="project-details"
-              value={details}
-              disabled={pending}
-              onChange={(event) => setDetails(event.target.value)}
-            />
-          </div>
+          <FieldSet>
+            <FieldLegend>Value</FieldLegend>
+            <FieldGroup layout="inset">
+              <Field data-invalid={Boolean(valueError) || undefined}>
+                <FieldLabel htmlFor="project-value">Project Value</FieldLabel>
+                <Input
+                  id="project-value"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  value={totalValue}
+                  disabled={pending}
+                  aria-invalid={Boolean(valueError)}
+                  onChange={(event) => setTotalValue(event.target.value)}
+                />
+                {valueError ? <FieldError>{valueError}</FieldError> : null}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="project-details">Details</FieldLabel>
+                <Textarea
+                  id="project-details"
+                  value={details}
+                  disabled={pending}
+                  onChange={(event) => setDetails(event.target.value)}
+                />
+              </Field>
+            </FieldGroup>
+          </FieldSet>
 
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

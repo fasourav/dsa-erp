@@ -1,14 +1,18 @@
 "use client"
 
-import { Printer } from "lucide-react"
+import { Download, Share2 } from "lucide-react"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
 import { DocumentSheet } from "@/components/documents/document-sheet"
 import { RecordAttachments } from "@/components/record-attachments"
 import type { AttachmentParent } from "@/lib/attachments"
+import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
 import type { PrintDocument } from "@/lib/documents/present"
+import { cn } from "@/lib/utils"
 
 import "./document.css"
 
@@ -37,6 +41,14 @@ export function DocumentWorkspace({
 }) {
   const top = clampPrintMargin(margins.topMm, 32)
   const bottom = clampPrintMargin(margins.bottomMm, 28)
+  const [pane, setPane] = useState<"edit" | "preview">("edit")
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!copied) return
+    const timer = window.setTimeout(() => setCopied(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [copied])
 
   useEffect(() => {
     const style = document.createElement("style")
@@ -63,40 +75,77 @@ export function DocumentWorkspace({
     }
   }, [top, bottom])
 
+  async function shareDocument() {
+    const url = window.location.href
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, url })
+      } catch {
+        // The share sheet was dismissed, or this browser cannot share.
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+    } catch {
+      // Leave the button labeled Share when the clipboard is unavailable.
+    }
+  }
+
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-4">
-        <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {canSave ? (
-            <Button type="button" disabled={pending} onClick={onSave}>
-              {pending ? "Saving…" : "Save"}
+    <div className="flex w-full min-w-0 flex-col gap-3.5 print:block">
+      <PageHeader
+        className="print:hidden!"
+        title={title}
+        description={description}
+        actions={
+          <>
+            <Button type="button" variant="outline" onClick={() => void shareDocument()}>
+              <Share2 aria-hidden="true" data-icon="inline-start" />
+              {copied ? "Link Copied" : "Share"}
             </Button>
-          ) : null}
-          <Button type="button" variant="outline" onClick={() => window.print()}>
-            <Printer aria-hidden="true" className="size-4" />
-            Print / Save PDF
-          </Button>
-        </div>
-      </div>
+            <Button type="button" variant="outline" onClick={() => window.print()}>
+              <Download aria-hidden="true" data-icon="inline-start" />
+              Download PDF
+            </Button>
+            {canSave ? (
+              <Button type="button" disabled={pending} onClick={onSave}>
+                {pending ? "Saving…" : "Save"}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {error ? (
-        <p role="alert" className="text-sm text-destructive print:hidden">
+        <p role="alert" className="text-sm text-destructive print:hidden!">
           {error}
         </p>
       ) : null}
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-4 print:hidden">
-          {children}
-          {files?.parentId ? (
-            <RecordAttachments parentType={files.parentType} parentId={files.parentId} />
-          ) : null}
+      <Tabs
+        value={pane}
+        onValueChange={(value) => setPane(value === "preview" ? "preview" : "edit")}
+        className="print:hidden! md:hidden"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="edit">Edit</TabsTrigger>
+          <TabsTrigger value="preview">Preview</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 md:grid-cols-2 md:gap-6">
+        <Card className={cn("min-w-0 print:hidden!", pane === "preview" && "hidden md:flex")}>
+          <CardContent className="flex flex-col gap-4">
+            {children}
+            {files?.parentId ? (
+              <RecordAttachments parentType={files.parentType} parentId={files.parentId} />
+            ) : null}
+          </CardContent>
+        </Card>
+        <div className={cn("min-w-0", pane === "edit" && "hidden print:block! md:block")}>
+          <PreviewStage top={top} bottom={bottom} measureKey={pane}>
+            <DocumentSheet document={preview} />
+          </PreviewStage>
         </div>
-        <PreviewStage top={top} bottom={bottom}>
-          <DocumentSheet document={preview} />
-        </PreviewStage>
       </div>
     </div>
   )
@@ -105,10 +154,12 @@ export function DocumentWorkspace({
 function PreviewStage({
   top,
   bottom,
+  measureKey,
   children,
 }: {
   top: number
   bottom: number
+  measureKey: string
   children: ReactNode
 }) {
   const frame = useRef<HTMLDivElement>(null)
@@ -139,12 +190,12 @@ function PreviewStage({
     observer.observe(frameEl)
     observer.observe(pageEl)
     return () => observer.disconnect()
-  }, [top, bottom])
+  }, [top, bottom, measureKey])
 
   return (
     <div
       ref={frame}
-      className="doc-stage min-w-0 overflow-hidden rounded-xl bg-muted p-4 sm:p-8 print:overflow-visible print:bg-transparent print:p-0"
+      className="doc-stage min-w-0 overflow-hidden rounded-card bg-fill p-4 print:overflow-visible print:bg-transparent print:p-0 md:p-8"
     >
       <div className="doc-stage-slot mx-auto" style={{ height: height ?? undefined }}>
         <div

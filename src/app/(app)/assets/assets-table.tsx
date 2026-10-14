@@ -4,20 +4,16 @@ import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteAsset } from "@/app/(app)/assets/actions"
 import { AssetFormDialog } from "@/app/(app)/assets/asset-form-dialog"
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
+import { DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -28,47 +24,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   paginateRows,
-  paginationItems,
   rangeLabel,
   toggleSort,
+  type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import { formatDayMonYear, formatIsoDate, formatMoney, formatTaka } from "@/lib/format"
+import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 import { cn } from "@/lib/utils"
 
 type ColId = "name" | "category" | "purchaseDate" | "quantity" | "totalCost" | "currentValue"
 
-const columns: { id: ColId; label: string; align: "left" | "right" }[] = [
-  { id: "name", label: "Name", align: "left" },
-  { id: "category", label: "Category", align: "left" },
-  { id: "purchaseDate", label: "Purchase Date", align: "left" },
-  { id: "quantity", label: "Qty", align: "right" },
-  { id: "totalCost", label: "Total Cost", align: "right" },
-  { id: "currentValue", label: "Current Value", align: "right" },
+const columns: readonly ListColumn<ColId>[] = [
+  { id: "name", label: "Name", align: "left", locked: true },
+  { id: "category", label: "Category", align: "left", locked: false },
+  { id: "purchaseDate", label: "Purchase Date", align: "left", locked: false },
+  { id: "quantity", label: "Qty", align: "right", locked: false },
+  { id: "totalCost", label: "Total Cost", align: "right", locked: false },
+  { id: "currentValue", label: "Current Value", align: "right", locked: false },
 ]
 
 function sortAssets(rows: AssetRow[], sort: SortState<ColId>): AssetRow[] {
@@ -144,11 +118,10 @@ export function AssetsTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function openForm(asset: AssetRow | null) {
     setFormAsset(asset)
-    setFormSession((s) => s + 1)
+    setFormSession((session) => session + 1)
     setFormOpen(true)
   }
 
@@ -177,46 +150,51 @@ export function AssetsTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-medium tracking-tight">Assets</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <ListExport
-            grid={{
-              filename: "assets",
-              title: "Assets",
-              columns: [
-                { header: "Name", kind: "text" },
-                { header: "Category", kind: "text" },
-                { header: "Purchase Date", kind: "text" },
-                { header: "Qty", kind: "integer" },
-                { header: "Total Cost", kind: "money" },
-                { header: "Current Value", kind: "money" },
-              ],
-              rows: filtered.map((asset) => [
-                asset.name,
-                asset.category,
-                asset.purchaseDate ? formatDayMonYear(asset.purchaseDate) : "—",
-                asset.quantity,
-                asset.totalCost,
-                asset.currentValue,
-              ]),
-            }}
-          />
-        {canAdd ? (<Button type="button" onClick={() => openForm(null)}>
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Add New Asset
-        </Button>) : null}
-        </div>
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Assets"
+        className="mb-0 md:mb-2"
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "assets",
+                title: "Assets",
+                columns: [
+                  { header: "Name", kind: "text" },
+                  { header: "Category", kind: "text" },
+                  { header: "Purchase Date", kind: "text" },
+                  { header: "Qty", kind: "integer" },
+                  { header: "Total Cost", kind: "money" },
+                  { header: "Current Value", kind: "money" },
+                ],
+                rows: filtered.map((asset) => [
+                  asset.name,
+                  asset.category,
+                  asset.purchaseDate ? formatDayMonYear(asset.purchaseDate) : "—",
+                  asset.quantity,
+                  asset.totalCost,
+                  asset.currentValue,
+                ]),
+              }}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add New Asset
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {error ? null : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+          <Card size="sm" className="col-span-2 md:col-span-1">
             <CardContent className="flex flex-col gap-1">
-              <p className="text-sm text-muted-foreground">Total Asset Value</p>
-              <p className="text-2xl font-medium tabular-nums">
-                {formatTaka(totalAssetValue)}
+              <p className="text-label font-semibold text-muted-foreground">Total Asset Value</p>
+              <p className="text-metric">
+                <Money value={totalAssetValue} />
               </p>
             </CardContent>
           </Card>
@@ -238,174 +216,119 @@ export function AssetsTable({
         }}
         options={filterOptions}
       />
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {columns.map((col) => {
-                const active = sort.key === col.id
-                return (
-                  <TableHead
-                    key={col.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(col.align === "right" && "text-right")}
-                  >
-                    <div className={cn("flex", col.align === "right" && "justify-end")}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(col.align === "right" ? "-mr-2" : "-ml-2")}
-                        onClick={() => {
-                          setSort(toggleSort(sort, col.id))
-                          setPage(1)
-                        }}
-                      >
-                        {col.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columns.length + 1}
-                  role="alert"
-                  className="py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columns.length + 1}
-                  className="py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  No Assets Yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((asset) => (
-                <TableRow key={asset.id} className="group">
-                  <TableCell className="font-medium">{asset.name || "—"}</TableCell>
-                  <TableCell>{asset.category || "—"}</TableCell>
-                  <TableCell>
-                    {asset.purchaseDate ? formatIsoDate(asset.purchaseDate) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {asset.quantity}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(asset.totalCost)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(asset.currentValue)}
-                  </TableCell>
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card group-hover:bg-muted">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Actions for ${asset.name}`}
-                          />
-                        }
-                      >
-                        <MoreHorizontal aria-hidden="true" className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        {canEdit ? (<DropdownMenuItem onClick={() => openForm(asset)}>
-                          <Pencil aria-hidden="true" />
-                          Edit
-                        </DropdownMenuItem>) : null}
-                        <DropdownMenuSeparator />
-                        {canDelete ? (<DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => askDelete(asset)}
-                        >
-                          <Trash2 aria-hidden="true" />
-                          Delete
-                        </DropdownMenuItem>) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {rangeLabel(pageResult.rangeStart, pageResult.rangeEnd, pageResult.total, "asset", "assets")}
-          </p>
-          <Pagination aria-label="Assets pagination" className="mx-0 w-auto justify-start sm:justify-end">
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button type="button" variant="ghost" disabled={pageResult.currentPage <= 1} aria-label="Go to previous page" onClick={() => setPage(pageResult.currentPage - 1)}>
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}><PaginationEllipsis /></PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button type="button" variant={item === pageResult.currentPage ? "outline" : "ghost"} size="icon" aria-label={`Page ${item}`} aria-current={item === pageResult.currentPage ? "page" : undefined} onClick={() => setPage(item)}>
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button type="button" variant="ghost" disabled={pageResult.currentPage >= pageResult.pageCount} aria-label="Go to next page" onClick={() => setPage(pageResult.currentPage + 1)}>
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+      <DataList
+        columns={columns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(asset) => asset.id}
+        sort={sort}
+        onSort={(key) => {
+          setSort(toggleSort(sort, key))
+          setPage(1)
+        }}
+        visibility={{}}
+        error={error}
+        emptyMessage="No Assets Yet."
+        rangeText={rangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+          "asset",
+          "assets",
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Assets pagination"
+        mobileItem={(asset) => ({
+          title: asset.name || "—",
+          subtitle: [asset.category, `Qty ${asset.quantity}`].filter(Boolean).join(" · "),
+          meta: <Money value={asset.currentValue} />,
+        })}
+        renderCell={(asset, columnId) => <Cell asset={asset} columnId={columnId} />}
+        renderActions={(asset) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Actions for ${asset.name}`}
+                />
+              }
+            >
+              <MoreHorizontal aria-hidden="true" className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {canEdit ? (
+                <DropdownMenuItem onClick={() => openForm(asset)}>
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator />
+              {canDelete ? (
+                <DropdownMenuItem variant="destructive" onClick={() => askDelete(asset)}>
+                  <Trash2 aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      />
 
-      <AssetFormDialog key={formSession} open={formOpen} onOpenChange={setFormOpen} asset={formAsset} categories={categories} />
+      <AssetFormDialog
+        key={formSession}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        asset={formAsset}
+        categories={categories}
+      />
 
-      <AlertDialog open={deleteOpen} onOpenChange={(open) => { if (open || deleting) return; setDeleteOpen(false); setDeleteError(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Asset</AlertDialogTitle>
-            <AlertDialogDescription>{deleteConfirmMessage(pendingDelete?.name)}</AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? <p role="alert" className="text-sm text-destructive">{deleteError}</p> : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen || deleting) return
+          setDeleteOpen(false)
+          setDeleteError(null)
+        }}
+        title="Delete Asset"
+        itemName={pendingDelete?.name}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
+}
+
+function Cell({ asset, columnId }: { asset: AssetRow; columnId: ColId }) {
+  switch (columnId) {
+    case "name":
+      return (
+        <span className={cn("text-ui font-semibold", !asset.name && "text-muted-foreground")}>
+          {asset.name || "—"}
+        </span>
+      )
+    case "category":
+      return asset.category ? (
+        <Badge variant="outline">{asset.category}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "purchaseDate":
+      return asset.purchaseDate ? (
+        <span>{formatIsoDate(asset.purchaseDate)}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "quantity":
+      return <span className="tabular-nums">{asset.quantity}</span>
+    case "totalCost":
+      return <Money value={asset.totalCost} />
+    case "currentValue":
+      return <Money value={asset.currentValue} />
+  }
 }

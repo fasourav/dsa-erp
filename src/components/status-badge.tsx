@@ -43,15 +43,22 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 function statusTone(status: string): StatusTone {
-  switch (status.trim().toLowerCase()) {
+  switch (status.trim().toLowerCase().replace(/[_-]+/g, " ")) {
     case "paid":
+    case "won":
+    case "inflow":
       return "paid"
     case "pending":
     case "partial":
+    case "on hold":
+    case "invited":
       return "pending"
     case "unpaid":
+    case "lost":
+    case "outflow":
       return "unpaid"
     case "active":
+    case "open":
       return "active"
     case "completed":
       return "completed"

@@ -1,6 +1,7 @@
 "use client"
 
 import { Plus, Trash2 } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -159,11 +160,11 @@ export function EmployeeField({
   )
 }
 
-export function ReadOnlyField({ label, value }: { label: string; value: string }) {
+export function ReadOnlyField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium">{label}</p>
-      <p className="text-sm text-foreground">{value || "—"}</p>
+      <p className="text-label font-semibold">{label}</p>
+      <p className="text-ui text-foreground">{value || "—"}</p>
     </div>
   )
 }
@@ -190,13 +191,13 @@ export function LineEditor({
           onClick={() => onChange([...lines, blankLine()])}
         >
           <Plus aria-hidden="true" className="size-4" />
-          Add item
+          Add Item
         </Button>
       </div>
       {lines.map((line, index) => (
         <div key={index} className="flex flex-col gap-3 rounded-xl border border-border p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">Item {String(index + 1).padStart(2, "0")}</p>
+            <p className="text-ui font-semibold">Item {String(index + 1).padStart(2, "0")}</p>
             <Button
               type="button"
               variant="outline"
@@ -208,7 +209,7 @@ export function LineEditor({
               <Trash2 aria-hidden="true" className="size-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {showSection ? (
               <TextField
                 id={`section-${index}`}
@@ -284,7 +285,7 @@ export function MilestoneEditor({
         </Button>
       </div>
       {milestones.map((milestone, index) => (
-        <div key={index} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem_auto] sm:items-end">
+        <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
           <TextField
             id={`milestone-${index}`}
             label="Milestone"

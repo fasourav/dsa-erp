@@ -19,8 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -69,6 +69,14 @@ export function AssetFormDialog({
       ? "Enter a purchase date."
       : fieldErrors.purchaseDate
 
+  const categoryItems = [
+    { value: "none", label: "None" },
+    ...categories.map((category) => ({
+      value: category.id,
+      label: category.name,
+    })),
+  ]
+
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) return
     onOpenChange(nextOpen)
@@ -116,7 +124,8 @@ export function AssetFormDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="overflow-hidden sm:max-w-md"
+        className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -124,38 +133,36 @@ export function AssetFormDialog({
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {assetId ? <RecordAttachments parentType="asset" parentId={assetId} /> : null}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="asset-name">Name</Label>
-            <Input
-              id="asset-name"
-              value={name}
-              disabled={pending}
-              aria-invalid={Boolean(nameError)}
-              onChange={(e) => setName(e.target.value)}
-            />
-            {nameError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {nameError}
-              </p>
-            ) : null}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="asset-category">Category</Label>
+          <FieldGroup layout="inset">
+            <Field data-invalid={Boolean(nameError) || undefined}>
+              <FieldLabel htmlFor="asset-name">Name</FieldLabel>
+              <Input
+                id="asset-name"
+                value={name}
+                autoComplete="off"
+                autoCapitalize="words"
+                enterKeyHint="next"
+                disabled={pending}
+                aria-invalid={Boolean(nameError)}
+                onChange={(event) => setName(event.target.value)}
+              />
+              {nameError ? <FieldError>{nameError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.categoryId) || undefined}>
+              <FieldLabel htmlFor="asset-category">Category</FieldLabel>
               <Select
-                items={[
-                  { value: "none", label: "None" },
-                  ...categories.map((category) => ({
-                    value: category.id,
-                    label: category.name,
-                  })),
-                ]}
+                items={categoryItems}
                 value={categoryId || "none"}
                 onValueChange={(value) => {
                   setCategoryId(!value || value === "none" ? "" : value)
                 }}
               >
-                <SelectTrigger id="asset-category" className="w-full" disabled={pending}>
+                <SelectTrigger
+                  id="asset-category"
+                  className="w-full"
+                  disabled={pending}
+                  aria-invalid={Boolean(fieldErrors.categoryId)}
+                >
                   <SelectValue placeholder="Choose a category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -167,93 +174,83 @@ export function AssetFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {fieldErrors.categoryId ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.categoryId}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="asset-date">Purchase Date</Label>
+              {fieldErrors.categoryId ? <FieldError>{fieldErrors.categoryId}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(dateError) || undefined}>
+              <FieldLabel htmlFor="asset-date">Purchase Date</FieldLabel>
               <Input
                 id="asset-date"
                 type="date"
+                enterKeyHint="next"
                 value={purchaseDate}
                 disabled={pending}
                 aria-invalid={Boolean(dateError)}
-                onChange={(e) => setPurchaseDate(e.target.value)}
+                onChange={(event) => setPurchaseDate(event.target.value)}
               />
-              {dateError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dateError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="asset-qty">Quantity</Label>
+              {dateError ? <FieldError>{dateError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.quantity) || undefined}>
+              <FieldLabel htmlFor="asset-qty">Quantity</FieldLabel>
               <Input
                 id="asset-qty"
                 type="number"
+                inputMode="numeric"
                 min="1"
+                enterKeyHint="next"
+                autoComplete="off"
                 value={quantity}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.quantity)}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={(event) => setQuantity(event.target.value)}
               />
-              {fieldErrors.quantity ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.quantity}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="asset-cost">Unit Cost</Label>
+              {fieldErrors.quantity ? <FieldError>{fieldErrors.quantity}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.unitCost) || undefined}>
+              <FieldLabel htmlFor="asset-cost">Unit Cost</FieldLabel>
               <Input
                 id="asset-cost"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
+                enterKeyHint="next"
+                autoComplete="off"
                 value={unitCost}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.unitCost)}
-                onChange={(e) => setUnitCost(e.target.value)}
+                onChange={(event) => setUnitCost(event.target.value)}
               />
-              {fieldErrors.unitCost ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.unitCost}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="asset-lifespan">Lifespan (Years)</Label>
+              {fieldErrors.unitCost ? <FieldError>{fieldErrors.unitCost}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(fieldErrors.lifespanYears) || undefined}>
+              <FieldLabel htmlFor="asset-lifespan">Lifespan (Years)</FieldLabel>
               <Input
                 id="asset-lifespan"
                 type="number"
+                inputMode="numeric"
                 min="1"
+                enterKeyHint="next"
+                autoComplete="off"
                 value={lifespanYears}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.lifespanYears)}
-                onChange={(e) => setLifespanYears(e.target.value)}
+                onChange={(event) => setLifespanYears(event.target.value)}
               />
               {fieldErrors.lifespanYears ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fieldErrors.lifespanYears}
-                </p>
+                <FieldError>{fieldErrors.lifespanYears}</FieldError>
               ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="asset-notes">Notes</Label>
-            <Textarea
-              id="asset-notes"
-              value={notes}
-              disabled={pending}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="asset-notes">Notes</FieldLabel>
+              <Textarea
+                id="asset-notes"
+                value={notes}
+                disabled={pending}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

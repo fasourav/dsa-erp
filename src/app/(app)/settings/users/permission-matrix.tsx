@@ -41,10 +41,10 @@ export function PermissionMatrixEditor({
   onToggle: (module: string, field: keyof PermissionFlags, value: boolean) => void
 }) {
   return (
-    <div className="min-w-0 overflow-x-auto rounded-xl border border-border">
+    <div className="min-w-0 overflow-x-auto rounded-card border border-border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted hover:bg-muted">
+          <TableRow className="hover:bg-transparent">
             <TableHead>Module</TableHead>
             {actions.map(([, label]) => (
               <TableHead key={label} className="text-center">
@@ -63,7 +63,7 @@ export function PermissionMatrixEditor({
                   <span className="flex items-center gap-2">
                     {module.label}
                     {module.ownersOnly ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 text-label font-normal text-muted-foreground">
                         <Lock aria-hidden="true" className="size-3" />
                         Owners Only
                       </span>

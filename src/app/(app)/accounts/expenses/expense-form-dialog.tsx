@@ -21,8 +21,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -187,6 +192,7 @@ export function ExpenseFormDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="overflow-hidden sm:max-w-lg"
+        mobileLayout="nav"
         showCloseButton={!pending}
       >
         <DialogHeader>
@@ -196,95 +202,89 @@ export function ExpenseFormDialog({
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {expenseId ? <RecordAttachments parentType="expense" parentId={expenseId} /> : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-date">Date</Label>
+          <FieldGroup layout="inset">
+            <Field span="half" data-invalid={Boolean(dateError) || undefined}>
+              <FieldLabel htmlFor="expense-date">Date</FieldLabel>
               <Input
                 id="expense-date"
                 type="date"
+                enterKeyHint="next"
                 value={expenseDate}
                 disabled={pending}
                 aria-invalid={Boolean(dateError)}
                 onChange={(event) => setExpenseDate(event.target.value)}
               />
-              {dateError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {dateError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-amount">Amount</Label>
+              {dateError ? <FieldError>{dateError}</FieldError> : null}
+            </Field>
+            <Field span="half" data-invalid={Boolean(amountError) || undefined}>
+              <FieldLabel htmlFor="expense-amount">Amount</FieldLabel>
               <Input
                 id="expense-amount"
                 inputMode="decimal"
+                autoComplete="off"
+                enterKeyHint="next"
                 value={amount}
                 disabled={pending}
                 aria-invalid={Boolean(amountError)}
                 onChange={(event) => setAmount(event.target.value)}
               />
-              {amountError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {amountError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="expense-category">Category</Label>
-            <Select
-              items={categoryItems}
-              value={category || null}
-              disabled={pending}
-              onValueChange={(value) => setCategory(value ?? "")}
-            >
-              <SelectTrigger
-                id="expense-category"
-                className="w-full"
-                aria-invalid={Boolean(categoryError)}
+              {amountError ? <FieldError>{amountError}</FieldError> : null}
+            </Field>
+            <Field data-invalid={Boolean(categoryError) || undefined}>
+              <FieldLabel htmlFor="expense-category">Category</FieldLabel>
+              <Select
+                items={categoryItems}
+                value={category || null}
+                disabled={pending}
+                onValueChange={(value) => setCategory(value ?? "")}
               >
-                <SelectValue placeholder="Select A Category" />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {categoryItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {categoryError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {categoryError}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="expense-method">Payment Method</Label>
-            <NameCombobox
-              id="expense-method"
-              value={paymentMethod}
-              names={paymentMethods}
-              disabled={pending}
-              placeholder="Search Payment Methods"
-              onValueChange={setPaymentMethod}
-            />
-          </div>
-          <BankAccountField
-            idPrefix="expense"
-            accounts={bankAccounts}
-            accountId={bankAccountId}
-            onAccountIdChange={setBankAccountId}
-            accountName={accountName}
-            onAccountNameChange={setAccountName}
-            bankName={bankName}
-            onBankNameChange={setBankName}
-            disabled={pending}
-            error={accountError}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-department">Department</Label>
+                <SelectTrigger
+                  id="expense-category"
+                  className="w-full"
+                  aria-invalid={Boolean(categoryError)}
+                >
+                  <SelectValue placeholder="Select A Category" />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {categoryItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {categoryError ? <FieldError>{categoryError}</FieldError> : null}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="expense-method">Payment Method</FieldLabel>
+              <NameCombobox
+                id="expense-method"
+                value={paymentMethod}
+                names={paymentMethods}
+                disabled={pending}
+                placeholder="Search Payment Methods"
+                onValueChange={setPaymentMethod}
+              />
+            </Field>
+            <div className="px-4 py-2.5 md:col-span-2 md:p-0">
+              <BankAccountField
+                idPrefix="expense"
+                accounts={bankAccounts}
+                accountId={bankAccountId}
+                onAccountIdChange={setBankAccountId}
+                accountName={accountName}
+                onAccountNameChange={setAccountName}
+                bankName={bankName}
+                onBankNameChange={setBankName}
+                disabled={pending}
+                error={accountError}
+              />
+            </div>
+            <Field
+              span="half"
+              data-invalid={Boolean(serverErrors.departmentId) || undefined}
+            >
+              <FieldLabel htmlFor="expense-department">Department</FieldLabel>
               <Select
                 items={departmentItems}
                 value={departmentId || noneValue}
@@ -293,7 +293,11 @@ export function ExpenseFormDialog({
                   setDepartmentId(!value || value === noneValue ? "" : value)
                 }
               >
-                <SelectTrigger id="expense-department" className="w-full">
+                <SelectTrigger
+                  id="expense-department"
+                  className="w-full"
+                  aria-invalid={Boolean(serverErrors.departmentId)}
+                >
                   <SelectValue placeholder="Select A Department" />
                 </SelectTrigger>
                 <SelectContent align="start">
@@ -305,13 +309,11 @@ export function ExpenseFormDialog({
                 </SelectContent>
               </Select>
               {serverErrors.departmentId ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {serverErrors.departmentId}
-                </p>
+                <FieldError>{serverErrors.departmentId}</FieldError>
               ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-vendor">Vendor</Label>
+            </Field>
+            <Field span="half" data-invalid={Boolean(serverErrors.vendorId) || undefined}>
+              <FieldLabel htmlFor="expense-vendor">Vendor</FieldLabel>
               <Select
                 items={vendorItems}
                 value={vendorId || noneValue}
@@ -320,7 +322,11 @@ export function ExpenseFormDialog({
                   setVendorId(!value || value === noneValue ? "" : value)
                 }
               >
-                <SelectTrigger id="expense-vendor" className="w-full">
+                <SelectTrigger
+                  id="expense-vendor"
+                  className="w-full"
+                  aria-invalid={Boolean(serverErrors.vendorId)}
+                >
                   <SelectValue placeholder="Select A Vendor" />
                 </SelectTrigger>
                 <SelectContent align="start">
@@ -332,24 +338,22 @@ export function ExpenseFormDialog({
                 </SelectContent>
               </Select>
               {serverErrors.vendorId ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {serverErrors.vendorId}
-                </p>
+                <FieldError>{serverErrors.vendorId}</FieldError>
               ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="expense-notes">Notes</Label>
-            <Textarea
-              id="expense-notes"
-              value={notes}
-              disabled={pending}
-              placeholder="Add Notes"
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="expense-notes">Notes</FieldLabel>
+              <Textarea
+                id="expense-notes"
+                value={notes}
+                disabled={pending}
+                placeholder="Add Notes"
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
           {formError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}
             </p>
           ) : null}

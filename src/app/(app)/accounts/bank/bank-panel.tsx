@@ -18,6 +18,9 @@ import {
 } from "@/app/(app)/accounts/bank/bank-transaction-form-dialog"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader, SectionHeader } from "@/components/page-header"
+import { StatusBadge } from "@/components/status-badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,7 +44,6 @@ import {
 } from "@/lib/bank"
 import { bankTransactionColumnStore } from "@/lib/bank-column-store"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
-import { formatExactBdt } from "@/lib/dashboard-metrics"
 import {
   paginateRows,
   rangeLabel,
@@ -52,7 +54,10 @@ import { useColumnVisibility } from "@/lib/use-column-visibility"
 import type { ReconciliationBundle } from "@/lib/bank-reconcile"
 import { cn } from "@/lib/utils"
 
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
+function signedFlow(direction: BankTransactionRow["direction"], amount: number) {
+  const magnitude = Math.abs(amount)
+  return direction === "outflow" ? -magnitude : magnitude
+}
 
 export function BankPanel({
   accounts,
@@ -167,58 +172,37 @@ export function BankPanel({
     }
   })
 
-  if (view === "reconcile") {
-    if (!showFinancials || !reconciliation) {
-      return (
-        <div className="flex flex-col gap-4">
-          <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
-          <p className="text-sm text-muted-foreground">
-            Reconciliation is available when financial figures are visible.
-          </p>
-        </div>
-      )
-    }
-    const account = accountFilter
-      ? accounts.find((row) => row.id === accountFilter.id) ?? null
-      : null
-    return (
-      <BankReconcileView
-        accounts={accounts}
-        account={account}
-        transactions={transactions}
-        reconciliation={reconciliation}
-        periodFrom={periodFrom}
-        periodTo={periodTo}
-      />
-    )
-  }
+  const reconcileAccount = accountFilter
+    ? accounts.find((row) => row.id === accountFilter.id) ?? null
+    : null
 
   if (view === "statement") {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
-            <p className="text-sm text-muted-foreground">Statement</p>
-          </div>
-          {showFinancials ? (
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={
-                <Link
-                  href={
-                    accountFilter
-                      ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
-                      : "/accounts/bank?view=reconcile"
-                  }
-                />
-              }
-            >
-              Reconcile
-            </Button>
-          ) : null}
-        </div>
+      <div className="flex flex-col gap-3.5">
+        <PageHeader
+          title="Bank"
+          description="Statement"
+          className="mb-0 md:mb-2"
+          actions={
+            showFinancials ? (
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={
+                  <Link
+                    href={
+                      accountFilter
+                        ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
+                        : "/accounts/bank?view=reconcile"
+                    }
+                  />
+                }
+              >
+                Reconcile
+              </Button>
+            ) : null
+          }
+        />
         <BankStatementView
           accounts={accounts}
           transactions={transactions}
@@ -230,35 +214,36 @@ export function BankPanel({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-medium tracking-tight">Bank</h1>
-          <p className="text-sm text-muted-foreground">Transactions Log</p>
-        </div>
-        <ListExport
-          grid={{
-            filename: "bank-transactions",
-            title: "Bank Transactions",
-            columns: [
-              { header: "Date", kind: "text" },
-              { header: "Account", kind: "text" },
-              { header: "Direction", kind: "text" },
-              { header: "Source", kind: "text" },
-              { header: "Amount", kind: "money" },
-              { header: "Balance", kind: "money" },
-            ],
-            rows: filtered.map((transaction) => [
-              formatDayMonYear(transaction.transactionDate),
-              transaction.accountName,
-              bankFlowLabel(transaction.direction),
-              bankSourceLabel(transaction.sourceKind),
-              showFinancials ? transaction.amount : "Hidden",
-              showFinancials ? transaction.balance : "Hidden",
-            ]),
-          }}
-        />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Bank"
+        description="Transactions Log"
+        className="mb-0 md:mb-2"
+        actions={
+          <ListExport
+            grid={{
+              filename: "bank-transactions",
+              title: "Bank Transactions",
+              columns: [
+                { header: "Date", kind: "text" },
+                { header: "Account", kind: "text" },
+                { header: "Direction", kind: "text" },
+                { header: "Source", kind: "text" },
+                { header: "Amount", kind: "money" },
+                { header: "Balance", kind: "money" },
+              ],
+              rows: filtered.map((transaction) => [
+                formatDayMonYear(transaction.transactionDate),
+                transaction.accountName,
+                bankFlowLabel(transaction.direction),
+                bankSourceLabel(transaction.sourceKind),
+                showFinancials ? transaction.amount : "Hidden",
+                showFinancials ? transaction.balance : "Hidden",
+              ]),
+            }}
+          />
+        }
+      />
       {accounts.length === 0 ? (
         <Card>
           <CardHeader>
@@ -269,7 +254,7 @@ export function BankPanel({
               Payments, Payroll, And Transfers Need A Bank Account. Add One In Settings.
             </p>
             <Button
-              className="w-full sm:w-fit"
+              className="w-full md:w-fit"
               nativeButton={false}
               render={<Link href="/settings" />}
             >
@@ -278,38 +263,37 @@ export function BankPanel({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
           {balances.map((account) => (
-            <Card key={account.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{account.name || "Account"}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Balance</p>
-                <p className="text-2xl font-medium tabular-nums">
-                  {showFinancials ? formatExactBdt(account.balance) : "Hidden"}
+            <Card key={account.id} size="sm">
+              <CardContent className="flex flex-col gap-1">
+                <p className="truncate text-ui font-semibold">{account.name || "Account"}</p>
+                <p className="text-label text-muted-foreground">Balance</p>
+                <p className="text-metric">
+                  {showFinancials ? (
+                    <Money value={account.balance} />
+                  ) : (
+                    <span className="text-muted-foreground">Hidden</span>
+                  )}
                 </p>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
-      <section className="flex flex-col gap-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="text-lg font-medium tracking-tight">Transactions</h2>
-          {accountFilter ? (
-            <p className="text-sm text-muted-foreground">
-              For {accountFilter.name || "this account"}.{" "}
-              <Link
-                href="/accounts/bank"
-                className="font-medium text-foreground underline underline-offset-4"
-              >
-                Show All
-              </Link>
-            </p>
-          ) : null}
-        </div>
-        <ListSearch
+      <SectionHeader title="Transactions" />
+      {accountFilter ? (
+        <p className="px-1 text-sm text-muted-foreground md:px-0">
+          For {accountFilter.name || "this account"}.{" "}
+          <Link
+            href="/accounts/bank"
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            Show All
+          </Link>
+        </p>
+      ) : null}
+      <ListSearch
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
@@ -344,8 +328,26 @@ export function BankPanel({
           pageCount={pageResult.pageCount}
           onPageChange={setPage}
           pagingLabel="Bank transactions pagination"
+          mobileItem={(transaction) => ({
+            title: bankSourceLabel(transaction.sourceKind),
+            value: <StatusBadge status={transaction.direction} />,
+            subtitle: [
+              transaction.accountName,
+              transaction.transactionDate ? formatIsoDate(transaction.transactionDate) : null,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            meta: showFinancials ? (
+              <Money
+                value={signedFlow(transaction.direction, transaction.amount)}
+                className={transaction.direction === "outflow" ? "text-destructive" : "text-success"}
+              />
+            ) : (
+              "Hidden"
+            ),
+          })}
           toolbar={
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
               <Button
                 variant="outline"
                 nativeButton={false}
@@ -484,7 +486,6 @@ export function BankPanel({
             </DropdownMenu>
           )}
         />
-      </section>
       <ManualEntriesDialog
         open={manualOpen}
         onOpenChange={setManualOpen}
@@ -541,6 +542,17 @@ export function BankPanel({
         confirmKey={pendingDelete?.id}
         onConfirm={confirmDelete}
       />
+      {view === "reconcile" ? (
+        <BankReconcileView
+          accounts={accounts}
+          account={reconcileAccount}
+          transactions={transactions}
+          reconciliation={reconciliation}
+          periodFrom={periodFrom}
+          periodTo={periodTo}
+          showFinancials={showFinancials}
+        />
+      ) : null}
     </div>
   )
 }
@@ -561,33 +573,29 @@ function TransactionCell({
         <span className="text-muted-foreground">—</span>
       )
     case "accountName":
-      return transaction.accountName ? (
-        <span className="font-medium">{transaction.accountName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
+      return (
+        <span className={cn("text-ui font-semibold", !transaction.accountName && "text-muted-foreground")}>
+          {transaction.accountName || "—"}
+        </span>
       )
     case "direction":
-      return (
-        <Badge
-          variant="outline"
-          className={cn(
-            pillClassName,
-            transaction.direction === "inflow"
-              ? "border-primary text-primary"
-              : "border-destructive text-destructive",
-          )}
-        >
-          {bankFlowLabel(transaction.direction)}
-        </Badge>
-      )
+      return <StatusBadge status={transaction.direction} />
     case "sourceKind":
-      return <span>{bankSourceLabel(transaction.sourceKind)}</span>
+      return <Badge variant="outline">{bankSourceLabel(transaction.sourceKind)}</Badge>
     case "amount":
+      return showFinancials ? (
+        <Money
+          value={signedFlow(transaction.direction, transaction.amount)}
+          className={transaction.direction === "outflow" ? "text-destructive" : "text-success"}
+        />
+      ) : (
+        <span className="text-muted-foreground">Hidden</span>
+      )
     case "balance":
-      return (
-        <span className="tabular-nums">
-          {showFinancials ? formatExactBdt(transaction[columnId]) : "Hidden"}
-        </span>
+      return showFinancials ? (
+        <Money value={transaction.balance} />
+      ) : (
+        <span className="text-muted-foreground">Hidden</span>
       )
   }
 }

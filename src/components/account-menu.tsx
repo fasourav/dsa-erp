@@ -51,7 +51,7 @@ function AccountHeader({ account }: { account: AccountIdentity }) {
           {account.name}
         </span>
         <span className="block truncate text-caption font-normal text-muted-foreground">
-          {accountSubtitle(account)}
+          {account.email || accountSubtitle(account)}
         </span>
       </span>
     </DropdownMenuLabel>
@@ -82,9 +82,8 @@ export function AccountMenu({ account }: { account: AccountIdentity }) {
           <Button
             type="button"
             variant="outline"
-            size="sm"
             className="pr-2.5 pl-1.5"
-            aria-label={`${account.name}, ${accountSubtitle(account)}`}
+            aria-label={`${account.name}, ${account.email || accountSubtitle(account)}`}
           />
         }
       >
@@ -99,7 +98,8 @@ export function AccountMenu({ account }: { account: AccountIdentity }) {
           <UserRound aria-hidden="true" />
           My Profile
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={pending} onClick={handleSignOut}>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" disabled={pending} onClick={handleSignOut}>
           <LogOut aria-hidden="true" />
           Sign Out
         </DropdownMenuItem>

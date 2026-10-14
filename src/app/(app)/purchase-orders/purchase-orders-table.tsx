@@ -4,23 +4,17 @@ import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { FileText, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
-import { deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
 import { deletePurchaseOrder } from "@/app/(app)/purchase-orders/actions"
 import { OperationalPurchaseOrdersDialog } from "@/app/(app)/purchase-orders/operational-purchase-orders-dialog"
 import { PurchaseOrderFormDialog } from "@/app/(app)/purchase-orders/purchase-order-form-dialog"
+import { CustomizeColumns, DataList } from "@/components/data-list"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
 import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,40 +26,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from "@/components/ui/pagination"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { formatMoney } from "@/lib/format"
-import {
   getColumnServerSnapshot,
   getColumnSnapshot,
   subscribeColumnVisibility,
+  writeColumnVisibility,
 } from "@/lib/purchase-order-column-store"
 import type { ProjectFilter } from "@/lib/purchase-orders"
 import {
   dataColumns,
   formatPurchaseOrderDate,
-  isColumnVisible,
+  isOptionalColumn,
   paginatePurchaseOrders,
-  paginationItems,
   purchaseOrderRangeLabel,
   sortPurchaseOrders,
   type ColumnId,
@@ -75,8 +46,6 @@ import {
   type VendorOption,
 } from "@/lib/purchase-order-summary"
 import { cn } from "@/lib/utils"
-
-const pillClassName = "h-7 gap-1.5 rounded-full px-2.5 text-sm font-medium"
 
 export function PurchaseOrdersTable({
   orders,
@@ -118,10 +87,6 @@ export function PurchaseOrdersTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const visibleColumns = dataColumns.filter((column) =>
-    isColumnVisible(column.id, visibility),
-  )
-  const columnCount = visibleColumns.length + 1
   const sorted = useMemo(
     () => sortPurchaseOrders(orders, sort),
     [orders, sort],
@@ -145,7 +110,6 @@ export function PurchaseOrdersTable({
     () => paginatePurchaseOrders(filtered, page),
     [filtered, page],
   )
-  const pages = paginationItems(pageResult.currentPage, pageResult.pageCount)
 
   function toggleSort(key: ColumnId) {
     setSort((current) => {
@@ -197,62 +161,77 @@ export function PurchaseOrdersTable({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-medium tracking-tight">
-            Purchase Orders
-          </h1>
-          {projectFilter ? (
-            <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3.5">
+      <PageHeader
+        title="Purchase Orders"
+        className="mb-0 md:mb-2"
+        description={
+          projectFilter ? (
+            <>
               For {projectFilter.name || "this project"}.{" "}
               <Link
                 href="/purchase-orders"
-                className="font-medium text-foreground underline underline-offset-4"
+                className="font-semibold text-foreground underline underline-offset-4"
               >
                 Show all
               </Link>
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ListExport
-            grid={{
-              filename: "purchase-orders",
-              title: "Purchase Orders",
-              columns: [
-                { header: "Date", kind: "text" },
-                { header: "Project Name", kind: "text" },
-                { header: "Vendor Name", kind: "text" },
-                { header: "Work Type", kind: "text" },
-                { header: "Purchase Order Value", kind: "money" },
-                { header: "Total Paid", kind: "money" },
-                { header: "Pending Due", kind: "money" },
-              ],
-              rows: filtered.map((order) => [
-                formatPurchaseOrderDate(order.issuedOn),
-                order.projectName,
-                order.vendorName,
-                order.workType,
-                order.totalValue,
-                order.totalPaid,
-                order.totalPending,
-              ]),
-            }}
-          />
-          <OperationalPurchaseOrdersDialog
-            orders={orders}
-            vendors={vendors}
-            workTypes={workTypes}
-          />
-          {canAdd ? (
-            <Button type="button" onClick={() => openForm(null)}>
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Assign Purchase Order
-            </Button>
-          ) : null}
-        </div>
-      </div>
+            </>
+          ) : undefined
+        }
+        actions={
+          <>
+            <ListExport
+              grid={{
+                filename: "purchase-orders",
+                title: "Purchase Orders",
+                columns: [
+                  { header: "Date", kind: "text" },
+                  { header: "Project Name", kind: "text" },
+                  { header: "Vendor Name", kind: "text" },
+                  { header: "Work Type", kind: "text" },
+                  { header: "Purchase Order Value", kind: "money" },
+                  { header: "Total Paid", kind: "money" },
+                  { header: "Pending Due", kind: "money" },
+                ],
+                rows: filtered.map((order) => [
+                  formatPurchaseOrderDate(order.issuedOn),
+                  order.projectName,
+                  order.vendorName,
+                  order.workType,
+                  order.totalValue,
+                  order.totalPaid,
+                  order.totalPending,
+                ]),
+              }}
+            />
+            <CustomizeColumns
+              columns={dataColumns}
+              visibility={visibility}
+              onVisibilityChange={(id, checked) => {
+                if (!isOptionalColumn(id)) {
+                  return
+                }
+
+                writeColumnVisibility({
+                  ...visibility,
+                  [id]: checked,
+                })
+              }}
+            />
+            <OperationalPurchaseOrdersDialog
+              orders={orders}
+              vendors={vendors}
+              workTypes={workTypes}
+            />
+            {canAdd ? (
+              <Button type="button" onClick={() => openForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Assign Purchase Order
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <ListSearch
         query={query}
@@ -269,172 +248,50 @@ export function PurchaseOrdersTable({
         }}
         options={filterOptions}
       />
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-        <Table className="min-w-max">
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted">
-              {visibleColumns.map((column) => {
-                const active = sort.key === column.id
-                return (
-                  <TableHead
-                    key={column.id}
-                    aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(
-                      "px-3 text-sm",
-                      column.align === "right" && "text-right",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex",
-                        column.align === "right" && "justify-end",
-                      )}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                          "border-0",
-                          column.align === "right" ? "-mr-2.5" : "-ml-2.5",
-                        )}
-                        aria-label={
-                          active
-                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                            : `Sort by ${column.label}`
-                        }
-                        onClick={() => toggleSort(column.id)}
-                      >
-                        {column.label}
-                      </Button>
-                    </div>
-                  </TableHead>
-                )
-              })}
-              <TableHead className="sticky right-0 z-10 w-16 bg-muted px-3">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {error ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  role="alert"
-                  className="px-3 py-8 text-center whitespace-normal text-destructive"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : pageResult.rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={columnCount}
-                  className="px-3 py-8 text-center whitespace-normal text-muted-foreground"
-                >
-                  {projectFilter
-                    ? "No Purchase Orders For This Project."
-                    : "No Purchase Orders Yet."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageResult.rows.map((order) => (
-                <TableRow key={order.id} className="group">
-                  {visibleColumns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className={cn(
-                        "p-3 text-sm",
-                        column.align === "right" && "text-right",
-                        column.id === "vendorName" && "whitespace-normal",
-                      )}
-                    >
-                      <CellValue order={order} columnId={column.id} />
-                    </TableCell>
-                  ))}
-                  <TableCell className="sticky right-0 z-10 w-16 bg-card p-3 text-sm group-hover:bg-muted">
-                    <RowActions
-                      order={order}
-                      onEdit={openForm}
-                      onDelete={askDelete}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {purchaseOrderRangeLabel(
-              pageResult.rangeStart,
-              pageResult.rangeEnd,
-              pageResult.total,
-            )}
-          </p>
-          <Pagination
-            aria-label="Purchase orders pagination"
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => setPage(pageResult.currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant={
-                        item === pageResult.currentPage ? "outline" : "ghost"
-                      }
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={
-                        item === pageResult.currentPage ? "page" : undefined
-                      }
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={pageResult.currentPage >= pageResult.pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => setPage(pageResult.currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+      <DataList
+        columns={dataColumns}
+        rows={error ? [] : pageResult.rows}
+        rowKey={(order) => order.id}
+        sort={sort}
+        onSort={toggleSort}
+        visibility={visibility}
+        error={error}
+        emptyMessage={
+          projectFilter
+            ? "No Purchase Orders For This Project."
+            : "No Purchase Orders Yet."
+        }
+        rangeText={purchaseOrderRangeLabel(
+          pageResult.rangeStart,
+          pageResult.rangeEnd,
+          error ? 0 : pageResult.total,
+        )}
+        currentPage={pageResult.currentPage}
+        pageCount={pageResult.pageCount}
+        onPageChange={setPage}
+        pagingLabel="Purchase orders pagination"
+        mobileItem={(order) => ({
+          title: order.projectId == null ? "Operational" : order.projectName || "—",
+          subtitle: [
+            order.vendorName,
+            order.issuedOn ? formatPurchaseOrderDate(order.issuedOn) : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          value: <Money value={order.totalValue} />,
+          meta: (
+            <StatusBadge
+              status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
+            />
+          ),
+        })}
+        renderCell={(order, columnId) => (
+          <CellValue order={order} columnId={columnId} />
+        )}
+        renderActions={(order) => (
+          <RowActions order={order} onEdit={openForm} onDelete={askDelete} />
+        )}
+      />
 
       <PurchaseOrderFormDialog
         key={formSession}
@@ -448,7 +305,7 @@ export function PurchaseOrdersTable({
         operational={formOperational}
       />
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (open || deleting) {
@@ -458,33 +315,13 @@ export function PurchaseOrdersTable({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.vendorName)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Purchase Order"
+        itemName={pendingDelete?.vendorName}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }
@@ -505,10 +342,10 @@ function CellValue({
       )
     case "projectName":
       if (order.projectId == null) {
-        return <span className="text-muted-foreground">Operational</span>
+        return <span className="text-ui font-semibold text-muted-foreground">Operational</span>
       }
       return order.projectName ? (
-        <span className="font-medium">{order.projectName}</span>
+        <span className="text-ui font-semibold">{order.projectName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -518,16 +355,14 @@ function CellValue({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span
               className={cn(
-                "font-medium",
+                "text-ui font-semibold",
                 !order.vendorName && "text-muted-foreground",
               )}
             >
               {order.vendorName || "—"}
             </span>
             {order.workType ? (
-              <Badge variant="outline" className={cn(pillClassName, "bg-card")}>
-                {order.workType}
-              </Badge>
+              <Badge variant="outline">{order.workType}</Badge>
             ) : null}
           </div>
           <StatusBadge
@@ -536,10 +371,22 @@ function CellValue({
         </div>
       )
     case "totalValue":
+      return <Money value={order.totalValue} />
     case "totalPaid":
+      return (
+        <Money
+          value={order.totalPaid}
+          className={order.totalPaid > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
     case "totalPending":
       return (
-        <span className="tabular-nums">{formatMoney(order[columnId])}</span>
+        <Money
+          value={order.totalPending}
+          className={
+            order.totalPending > 0 ? "text-destructive" : "text-muted-foreground"
+          }
+        />
       )
   }
 }
@@ -572,10 +419,12 @@ function RowActions({
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(order)}>
-          <Pencil aria-hidden="true" />
-          Edit
-        </DropdownMenuItem>) : null}
+        {canEdit ? (
+          <DropdownMenuItem onClick={() => onEdit(order)}>
+            <Pencil aria-hidden="true" />
+            Edit
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem
           nativeButton={false}
           render={<Link href={`/purchase-orders/${order.id}`} />}
@@ -584,10 +433,12 @@ function RowActions({
           Vendor Payments
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {canDelete ? (<DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>
-          <Trash2 aria-hidden="true" />
-          Delete
-        </DropdownMenuItem>) : null}
+        {canDelete ? (
+          <DropdownMenuItem variant="destructive" onClick={() => onDelete(order)}>
+            <Trash2 aria-hidden="true" />
+            Delete
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

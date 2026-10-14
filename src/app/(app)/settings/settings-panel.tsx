@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Landmark, ListTree, Plus } from "lucide-react"
+import { ArrowLeft, Inbox, Landmark, ListTree, Plus } from "lucide-react"
 import { useMemo, useState, useTransition } from "react"
 
 import {
@@ -13,16 +13,10 @@ import {
 import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-form-dialog"
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
 import { CatalogFormDialog } from "@/app/(app)/settings/catalog-form-dialog"
-import { SlideToDelete } from "@/components/slide-to-delete"
-import { DeleteConfirmDialog, deleteConfirmMessage } from "@/components/delete-confirm-dialog"
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { Money } from "@/components/money"
+import { PageHeader } from "@/components/page-header"
+import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,14 +30,14 @@ import {
 } from "@/components/ui/select"
 import {
   Card,
-  CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import type { BankAccountRow } from "@/lib/bank"
 import type { PrintMargins } from "@/lib/documents/drafts"
-import { formatExactBdt } from "@/lib/dashboard-metrics"
 import { formatDayMonYear } from "@/lib/format"
 import { fiscalMonthOptions } from "@/lib/fiscal-year"
 import {
@@ -215,14 +209,12 @@ export function SettingsPanel({
   }
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Settings</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Manage Lookup Lists For Departments, Projects, Expenses, Payments,
-          Vendors, Leads, And Bank Accounts.
-        </p>
-      </div>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <PageHeader
+        title="Settings"
+        className="mb-0 md:mb-2"
+        description="Manage Lookup Lists For Departments, Projects, Expenses, Payments, Vendors, Leads, And Bank Accounts."
+      />
 
       {error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -238,28 +230,31 @@ export function SettingsPanel({
               Revenue Per Day And Net Profit Per Day Count From This Launch Date.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2 sm:max-w-xs">
+          <div className="border-t border-border">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-6">
               <Label htmlFor="launch-date">Launch Date</Label>
               <Input
                 id="launch-date"
                 type="date"
+                className="w-40 md:w-48"
                 value={launchDate}
                 disabled={savingLaunch}
                 onChange={(event) => setLaunchDate(event.target.value)}
               />
-              <p className="text-sm text-muted-foreground">
-                Shown As {formatDayMonYear(launchDate)}
-              </p>
             </div>
-            {launchError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {launchError}
-              </p>
-            ) : null}
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 md:px-6">
+              <span className="text-muted-foreground">Shown As</span>
+              <span>{formatDayMonYear(launchDate)}</span>
+            </div>
+          </div>
+          {launchError ? (
+            <p role="alert" className="px-4 py-3 text-sm text-destructive md:px-6">
+              {launchError}
+            </p>
+          ) : null}
+          <CardFooter className="justify-end">
             <Button
               type="button"
-              className="w-full sm:w-fit"
               disabled={savingLaunch}
               onClick={() => {
                 setLaunchError(null)
@@ -273,56 +268,59 @@ export function SettingsPanel({
             >
               {savingLaunch ? "Saving…" : "Save Launch Date"}
             </Button>
-          </CardContent>
+          </CardFooter>
         </Card>
       ) : null}
 
       {view.kind === "home" ? (
         <Card>
           <CardHeader>
-            <CardTitle>Print margins</CardTitle>
+            <CardTitle>Print Margins</CardTitle>
             <CardDescription>
               Blank space above and below document content so it fits the pre-printed letterhead pad.
               Print output has no logo or footer.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:max-w-md">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="print-margin-top">Top margin (mm)</Label>
-                <Input
-                  id="print-margin-top"
-                  type="number"
-                  min={0}
-                  max={80}
-                  step={1}
-                  value={marginTop}
-                  disabled={savingMargins}
-                  onChange={(event) => setMarginTop(event.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="print-margin-bottom">Bottom margin (mm)</Label>
-                <Input
-                  id="print-margin-bottom"
-                  type="number"
-                  min={0}
-                  max={80}
-                  step={1}
-                  value={marginBottom}
-                  disabled={savingMargins}
-                  onChange={(event) => setMarginBottom(event.target.value)}
-                />
-              </div>
+          <div className="border-t border-border">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-6">
+              <Label htmlFor="print-margin-top">Top Margin (mm)</Label>
+              <Input
+                id="print-margin-top"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={80}
+                step={1}
+                className="w-24 text-right"
+                value={marginTop}
+                disabled={savingMargins}
+                onChange={(event) => setMarginTop(event.target.value)}
+              />
             </div>
-            {marginError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {marginError}
-              </p>
-            ) : null}
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 md:px-6">
+              <Label htmlFor="print-margin-bottom">Bottom Margin (mm)</Label>
+              <Input
+                id="print-margin-bottom"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={80}
+                step={1}
+                className="w-24 text-right"
+                value={marginBottom}
+                disabled={savingMargins}
+                onChange={(event) => setMarginBottom(event.target.value)}
+              />
+            </div>
+          </div>
+          {marginError ? (
+            <p role="alert" className="px-4 py-3 text-sm text-destructive md:px-6">
+              {marginError}
+            </p>
+          ) : null}
+          <CardFooter className="justify-end">
             <Button
               type="button"
-              className="w-full sm:w-fit"
               disabled={savingMargins}
               onClick={() => {
                 setMarginError(null)
@@ -332,63 +330,50 @@ export function SettingsPanel({
                 })
               }}
             >
-              {savingMargins ? "Saving…" : "Save print margins"}
+              {savingMargins ? "Saving…" : "Save Print Margins"}
             </Button>
-          </CardContent>
+          </CardFooter>
         </Card>
       ) : null}
 
       {view.kind === "home" ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {catalogs.map((catalog) => (
-            <button
-              key={catalog.key}
-              type="button"
-              onClick={() => setView({ kind: "catalog", key: catalog.key })}
-              className="group flex min-h-28 flex-col items-start justify-between rounded-xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-foreground/20 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <div className="flex w-full items-start justify-between gap-3">
-                <span className="rounded-lg border border-border bg-background p-2 text-muted-foreground transition group-hover:text-foreground">
-                  <ListTree className="size-5" aria-hidden="true" />
+        <Card>
+          <CardHeader>
+            <CardTitle>Lookup Lists</CardTitle>
+            <CardDescription>Add, Edit, Or Remove Entries</CardDescription>
+          </CardHeader>
+          <div className="border-t border-border">
+            {catalogs.map((catalog) => (
+              <button
+                key={catalog.key}
+                type="button"
+                onClick={() => setView({ kind: "catalog", key: catalog.key })}
+                className="flex min-h-11 w-full items-center gap-3 border-t border-border px-4 py-3 text-left first:border-t-0 md:px-6"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-fill text-muted-foreground">
+                  <ListTree className="size-4" aria-hidden="true" />
                 </span>
+                <span className="min-w-0 flex-1 font-medium">{catalog.label}</span>
                 <Badge variant="outline" className="tabular-nums">
                   {itemCountLabel(catalog.items.length)}
                 </Badge>
-              </div>
-              <div className="mt-4">
-                <p className="text-base font-medium tracking-tight">
-                  {catalog.label}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Add, Edit, Or Remove Entries
-                </p>
-              </div>
-            </button>
-          ))}
-
-          <button
-            type="button"
-            onClick={() => setView({ kind: "bank" })}
-            className="group flex min-h-28 flex-col items-start justify-between rounded-xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-foreground/20 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <div className="flex w-full items-start justify-between gap-3">
-              <span className="rounded-lg border border-border bg-background p-2 text-muted-foreground transition group-hover:text-foreground">
-                <Landmark className="size-5" aria-hidden="true" />
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setView({ kind: "bank" })}
+              className="flex min-h-11 w-full items-center gap-3 border-t border-border px-4 py-3 text-left first:border-t-0 md:px-6"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-fill text-muted-foreground">
+                <Landmark className="size-4" aria-hidden="true" />
               </span>
+              <span className="min-w-0 flex-1 font-medium">Bank Accounts</span>
               <Badge variant="outline" className="tabular-nums">
                 {itemCountLabel(bankAccounts.length)}
               </Badge>
-            </div>
-            <div className="mt-4">
-              <p className="text-base font-medium tracking-tight">
-                Bank Accounts
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Add, Edit, Or Remove Accounts
-              </p>
-            </div>
-          </button>
-        </div>
+            </button>
+          </div>
+        </Card>
       ) : null}
 
       {view.kind === "catalog" && activeCatalog ? (
@@ -402,72 +387,50 @@ export function SettingsPanel({
       ) : null}
 
       {view.kind === "bank" ? (
-        <Card>
-          <CardHeader className="gap-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="-ml-2 mb-2 h-auto px-2 py-1"
-                  onClick={() => setView({ kind: "home" })}
-                >
-                  <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-                  All Categories
-                </Button>
-                <CardTitle>Bank Accounts</CardTitle>
-                <CardDescription>
-                  {bankAccounts.length === 0
-                    ? "Add Your First Bank Account Before Recording Payments."
-                    : `${itemCountLabel(bankAccounts.length)}. Ordered By Sort Order, Then Name.`}
-                </CardDescription>
-              </div>
+        <>
+          <Card>
+            <CardHeader>
               <Button
                 type="button"
-                className="h-auto min-h-8 w-full whitespace-normal sm:w-fit"
-                onClick={() => openBankForm(null)}
+                variant="ghost"
+                onClick={() => setView({ kind: "home" })}
               >
-                <Plus aria-hidden="true" data-icon="inline-start" />
-                Add Bank Account
+                <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+                All Categories
               </Button>
+              <CardTitle>Fiscal Year</CardTitle>
+              <CardDescription>
+                Statements Label A July Start As FY 2025–26. Bangladesh Tax Year Stays 1 July–30 June.
+              </CardDescription>
+            </CardHeader>
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 md:px-6">
+              <Label htmlFor="fiscal-year-start">Starts In</Label>
+              <Select
+                items={fiscalMonthOptions}
+                value={fiscalMonth}
+                disabled={savingFiscal}
+                onValueChange={(value) => setFiscalMonth(value ?? "7")}
+              >
+                <SelectTrigger id="fiscal-year-start" className="w-40 md:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {fiscalMonthOptions.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
-              <div className="flex flex-col gap-1">
-                <p className="font-medium">Fiscal Year</p>
-                <p className="text-sm text-muted-foreground">
-                  Statements Label A July Start As FY 2025–26. Bangladesh Tax Year Stays 1 July–30 June.
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 sm:max-w-xs">
-                <Label htmlFor="fiscal-year-start">Starts In</Label>
-                <Select
-                  items={fiscalMonthOptions}
-                  value={fiscalMonth}
-                  disabled={savingFiscal}
-                  onValueChange={(value) => setFiscalMonth(value ?? "7")}
-                >
-                  <SelectTrigger id="fiscal-year-start" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    {fiscalMonthOptions.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {fiscalError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {fiscalError}
-                </p>
-              ) : null}
+            {fiscalError ? (
+              <p role="alert" className="px-4 py-3 text-sm text-destructive md:px-6">
+                {fiscalError}
+              </p>
+            ) : null}
+            <CardFooter className="justify-end">
               <Button
                 type="button"
-                className="w-full sm:w-fit"
                 disabled={savingFiscal}
                 onClick={() => {
                   setFiscalError(null)
@@ -479,39 +442,43 @@ export function SettingsPanel({
               >
                 {savingFiscal ? "Saving…" : "Save Fiscal Year"}
               </Button>
-            </div>
+            </CardFooter>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Bank Accounts</CardTitle>
+              <CardDescription>
+                {bankAccounts.length === 0
+                  ? "Add Your First Bank Account Before Recording Payments."
+                  : `${itemCountLabel(bankAccounts.length)}. Ordered By Sort Order, Then Name.`}
+              </CardDescription>
+            </CardHeader>
             {bankError ? (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="px-4 pb-3 text-sm text-destructive md:px-6">
                 {bankError}
               </p>
             ) : null}
             {bankAccounts.length === 0 ? (
-              <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted p-4">
-                <p className="font-medium">Add Your First Bank Account</p>
-                <p className="text-sm text-muted-foreground">
-                  Account Holder, Account Number, Bank Name, Routing Number, And Address Are Required.
-                </p>
-                <Button
-                  type="button"
-                  className="w-full sm:w-fit"
-                  onClick={() => openBankForm(null)}
-                >
-                  <Plus aria-hidden="true" data-icon="inline-start" />
-                  Add Bank Account
-                </Button>
-              </div>
+              <Empty>
+                <EmptyMedia variant="icon">
+                  <Landmark aria-hidden="true" />
+                </EmptyMedia>
+                <EmptyTitle>Add Your First Bank Account</EmptyTitle>
+              </Empty>
             ) : (
-              <ul className="flex flex-col divide-y divide-border">
+              <ul className="border-t border-border">
                 {bankAccounts.map((account) => (
                   <li
                     key={account.id}
-                    className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 border-t border-border px-4 py-3 first:border-t-0 md:px-6 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium break-words">{account.name}</p>
-                        {account.isActive ? null : (
-                          <Badge variant="outline">Inactive</Badge>
+                        {account.isActive ? (
+                          <StatusBadge status="active" />
+                        ) : (
+                          <StatusBadge status="inactive" />
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -524,8 +491,8 @@ export function SettingsPanel({
                           ? `Account Number ${account.accountNumber}`
                           : "Account Number Missing"}
                       </p>
-                      <p className="text-sm text-muted-foreground tabular-nums">
-                        Opening Balance {formatExactBdt(account.openingBalance)} · Sort Order{" "}
+                      <p className="text-sm text-muted-foreground">
+                        Opening Balance <Money value={account.openingBalance} /> · Sort Order{" "}
                         {account.sortOrder}
                       </p>
                     </div>
@@ -563,8 +530,14 @@ export function SettingsPanel({
                 ))}
               </ul>
             )}
-          </CardContent>
-        </Card>
+            <CardFooter className="justify-end">
+              <Button type="button" onClick={() => openBankForm(null)}>
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add Bank Account
+              </Button>
+            </CardFooter>
+          </Card>
+        </>
       ) : null}
 
       <BankAccountFormDialog
@@ -601,7 +574,7 @@ export function SettingsPanel({
         item={formItem}
       />
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (open || deleting) {
@@ -611,35 +584,17 @@ export function SettingsPanel({
           setDeleteOpen(false)
           setDeleteError(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="break-words">
-              Delete {pendingDelete?.item.name ?? "item"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmMessage(pendingDelete?.item.name)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {deleteError}
-            </p>
-          ) : null}
-          <AlertDialogFooter>
-            <SlideToDelete
-              key={pendingDelete?.item.id}
-              pending={deleting}
-              onConfirm={confirmDelete}
-              onCancel={() => {
-                if (deleting) return
-                setDeleteOpen(false)
-                setDeleteError(null)
-              }}
-            />
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={
+          pendingDelete
+            ? `Delete ${catalogSingularTitle(pendingDelete.catalog.singular)}`
+            : "Delete Item"
+        }
+        itemName={pendingDelete?.item.name}
+        error={deleteError}
+        pending={deleting}
+        confirmKey={pendingDelete?.item.id}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }
@@ -659,76 +614,62 @@ function CatalogDetail({
 }) {
   return (
     <Card>
-      <CardHeader className="gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <Button
-              type="button"
-              variant="ghost"
-              className="-ml-2 mb-2 h-auto px-2 py-1"
-              onClick={onBack}
-            >
-              <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-              All Categories
-            </Button>
-            <CardTitle>{catalog.label}</CardTitle>
-            <CardDescription>
-              {itemCountLabel(catalog.items.length)}. Ordered By Sort Order,
-              Then Name.
-            </CardDescription>
-          </div>
-          <Button
-            type="button"
-            className="h-auto min-h-8 w-full whitespace-normal sm:w-fit"
-            onClick={onCreate}
-          >
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add {catalogSingularTitle(catalog.singular)}
-          </Button>
-        </div>
+      <CardHeader>
+        <Button type="button" variant="ghost" onClick={onBack}>
+          <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+          All Categories
+        </Button>
+        <CardTitle>{catalog.label}</CardTitle>
+        <CardDescription>
+          {itemCountLabel(catalog.items.length)}. Ordered By Sort Order, Then Name.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {catalog.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No Items Yet.</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-border">
-            {catalog.items.map((item) => (
-              <li
-                key={item.id}
-                className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium break-words">{item.name}</p>
-                    {catalog.hasActive && item.isActive === false ? (
-                      <Badge variant="outline">Inactive</Badge>
-                    ) : null}
-                  </div>
-                  <p className="text-sm text-muted-foreground tabular-nums">
-                    Sort Order {item.sortOrder}
-                  </p>
+      {catalog.items.length === 0 ? (
+        <Empty>
+          <EmptyMedia variant="icon">
+            <Inbox aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>No Items Yet.</EmptyTitle>
+        </Empty>
+      ) : (
+        <ul className="border-t border-border">
+          {catalog.items.map((item) => (
+            <li
+              key={item.id}
+              className="flex flex-col gap-3 border-t border-border px-4 py-3 first:border-t-0 md:px-6 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium break-words">{item.name}</p>
+                  {catalog.hasActive && item.isActive === false ? (
+                    <StatusBadge status="inactive" />
+                  ) : null}
+                  {catalog.hasActive && item.isActive !== false ? (
+                    <StatusBadge status="active" />
+                  ) : null}
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => onEdit(item)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => onDelete(item)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
+                <p className="text-sm text-muted-foreground tabular-nums">
+                  Sort Order {item.sortOrder}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => onEdit(item)}>
+                  Edit
+                </Button>
+                <Button type="button" variant="destructive" onClick={() => onDelete(item)}>
+                  Delete
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <CardFooter className="justify-end">
+        <Button type="button" onClick={onCreate}>
+          <Plus aria-hidden="true" data-icon="inline-start" />
+          Add {catalogSingularTitle(catalog.singular)}
+        </Button>
+      </CardFooter>
     </Card>
   )
 }

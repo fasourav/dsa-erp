@@ -1,4 +1,5 @@
-import { ActivityLog, type ActivityRow } from "@/app/(app)/activity/activity-log"
+import { ActivityLog, type ActivityChange, type ActivityRow } from "@/app/(app)/activity/activity-log"
+import { PageHeader } from "@/components/page-header"
 import { requireOwner } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 import { fetchAllPages } from "@/lib/fetch-pages"
@@ -108,8 +109,10 @@ export default async function ActivityPage() {
       id: row.id,
       when: formatWhen(row.created_at),
       whenIso: dhakaDate(row.created_at),
+      createdAt: row.created_at,
       who: row.actor_id ? (names.get(row.actor_id) ?? "User") : "System",
       what,
+      record: label || (moduleLabels[row.module] ?? fieldLabel(row.module)),
       action: row.action,
       module: row.module,
       moduleLabel: moduleLabels[row.module] ?? fieldLabel(row.module),
@@ -118,15 +121,14 @@ export default async function ActivityPage() {
   })
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-sm text-muted-foreground">Admin / Activity Log</p>
-        <h1 className="text-2xl font-medium tracking-tight">Activity Log</h1>
-      </div>
+    <div className="flex flex-col gap-3.5">
       {loadError ? (
-        <p role="alert" className="text-sm text-destructive">
-          Could not load the activity log.
-        </p>
+        <>
+          <PageHeader title="Activity Log" eyebrow="Admin" className="mb-0 md:mb-2" />
+          <p role="alert" className="text-sm text-destructive">
+            Could not load the activity log.
+          </p>
+        </>
       ) : (
         <ActivityLog rows={activity} />
       )}
@@ -188,7 +190,7 @@ function asRecord(value: Json | null): Record<string, Json | undefined> {
   return value
 }
 
-function diffLines(oldValues: Json | null, newValues: Json | null): string[] {
+function diffLines(oldValues: Json | null, newValues: Json | null): ActivityChange[] {
   const previous = asRecord(oldValues)
   const next = asRecord(newValues)
   const keys = [...new Set([...Object.keys(previous), ...Object.keys(next)])].filter(
@@ -198,10 +200,10 @@ function diffLines(oldValues: Json | null, newValues: Json | null): string[] {
   return keys.flatMap((key) => {
     // Names only: never show raw record ids, even in free-form columns.
     if (isUuidValue(previous[key]) || isUuidValue(next[key])) return []
-    const from = displayValue(previous[key])
-    const to = displayValue(next[key])
-    if (from === to) return []
-    return [`${fieldLabel(key)}: ${from} to ${to}`]
+    const before = displayValue(previous[key])
+    const after = displayValue(next[key])
+    if (before === after) return []
+    return [{ label: fieldLabel(key), before, after }]
   })
 }
 
