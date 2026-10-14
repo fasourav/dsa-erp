@@ -3,7 +3,8 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 // Large title + actions. Phones: 34px title, actions wrap below as capsules.
-// Desktop: 38px title, actions right-aligned on the title baseline.
+// Desktop: 38px title, actions right-aligned on the title baseline, wrapping to
+// their own right-aligned row when the title and actions don't fit (tablets).
 export function PageHeader({
   title,
   description,
@@ -20,11 +21,11 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "mb-2.5 flex flex-col gap-3.5 px-1 pt-1.5 md:mt-1.5 md:mb-6 md:flex-row md:items-end md:justify-between md:gap-6 md:px-0 md:pt-0",
+        "mb-2.5 flex flex-col gap-3.5 px-1 pt-1.5 md:mt-1.5 md:mb-6 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-x-6 md:gap-y-3 md:px-0 md:pt-0",
         className,
       )}
     >
-      <div className="min-w-0">
+      <div className="min-w-0 md:max-w-full md:shrink-0">
         {eyebrow ? (
           <p className="mb-0.5 text-label font-semibold text-muted-foreground md:mb-1 md:font-medium">
             {eyebrow}
@@ -36,7 +37,7 @@ export function PageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex flex-wrap items-center gap-2 md:shrink-0 md:flex-nowrap md:gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end md:gap-2.5">
           {actions}
         </div>
       ) : null}
