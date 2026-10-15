@@ -43,13 +43,19 @@ import type { PrintMargins } from "@/lib/documents/drafts"
 import { formatDayMonYear } from "@/lib/format"
 import { fiscalMonthOptions } from "@/lib/fiscal-year"
 import {
-  catalogSingularTitle,
+  catalogSingularTitle
   nextSortOrder,
   type CatalogItem,
   type CatalogList,
 } from "@/lib/lookup-catalogs"
 import type { DocumentTemplate } from "@/lib/document-templates"
 import type { StageTemplate } from "@/lib/project-progress"
+
+type LastBackupStatus = {
+  ranAtLabel: string
+  sizeLabel: string
+  status: string
+} | null
 
 type ActiveView =
   | { kind: "home" }
@@ -66,6 +72,7 @@ export function SettingsPanel({
   fiscalYearStartMonth,
   launchDate: initialLaunchDate,
   printMargins,
+  lastBackup,
   error,
 }: {
   catalogs: CatalogList[]
@@ -75,6 +82,7 @@ export function SettingsPanel({
   fiscalYearStartMonth: number
   launchDate: string
   printMargins: PrintMargins
+  lastBackup: LastBackupStatus
   error: string | null
 }) {
   const [view, setView] = useState<ActiveView>({ kind: "home" })
@@ -279,6 +287,31 @@ export function SettingsPanel({
               {savingLaunch ? "Saving…" : "Save Launch Date"}
             </Button>
           </CardFooter>
+        </Card>
+      ) : null}
+
+      {view.kind === "home" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Last Backup</CardTitle>
+            <CardDescription>
+              Daily Zip Built At 02:00 Dhaka. Email Sending Stays Off.
+            </CardDescription>
+          </CardHeader>
+          <div className="border-t border-border">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-6">
+              <span className="text-muted-foreground">Time</span>
+              <span>{lastBackup?.ranAtLabel ?? "No Backup Yet"}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 md:px-6">
+              <span className="text-muted-foreground">Size</span>
+              <span>{lastBackup?.sizeLabel ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 md:px-6">
+              <span className="text-muted-foreground">Status</span>
+              {lastBackup ? <StatusBadge status={lastBackup.status} /> : <span>—</span>}
+            </div>
+          </div>
         </Card>
       ) : null}
 

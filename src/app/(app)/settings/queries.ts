@@ -11,6 +11,12 @@ export type LookupCatalogsResult = {
   error: string | null
 }
 
+export type LastBackupStatus = {
+  ranAtLabel: string
+  sizeLabel: string
+  status: string
+} | null
+
 const sharedCatalogs = [
   "project_types",
   "project_phases",
@@ -94,6 +100,46 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
     })),
     error: failed ? "Could not load lookup catalogs." : null,
   }
+}
+
+export async function getLastBackupStatus(): Promise<LastBackupStatus> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("backup_runs")
+    .select("ran_at, size_bytes, status")
+    .order("ran_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  return {
+    ranAtLabel: formatBackupWhen(data.ran_at),
+    sizeLabel: formatBackupSize(data.size_bytes),
+    status: data.status,
+  }
+}
+
+function formatBackupWhen(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
+
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date)
+}
+
+function formatBackupSize(bytes: number | null): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return "—"
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function loadShared(

@@ -26,6 +26,7 @@ export const moduleKeys = [
   "payroll",
   "settings",
   "users",
+  "backups",
 ] as const
 
 export type ModuleKey = (typeof moduleKeys)[number]

@@ -372,6 +372,33 @@ export type Database = {
           },
         ]
       }
+      backup_runs: {
+        Row: {
+          error: string | null
+          id: string
+          ran_at: string
+          size_bytes: number | null
+          status: string
+          storage_path: string | null
+        }
+        Insert: {
+          error?: string | null
+          id?: string
+          ran_at?: string
+          size_bytes?: number | null
+          status: string
+          storage_path?: string | null
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          ran_at?: string
+          size_bytes?: number | null
+          status?: string
+          storage_path?: string | null
+        }
+        Relationships: []
+      }
       client_invoices: {
         Row: {
           amount: number
