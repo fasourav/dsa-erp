@@ -146,9 +146,15 @@ export function WorkOrderStudio({
         value={form.purchaseOrderId}
         disabled={!canSave}
         options={purchaseOrders.map((item) => ({ value: item.id, label: item.label }))}
-        onChange={(purchaseOrderId) =>
+        onChange={(purchaseOrderId) => {
+          // A work order is the printable form of its PO: it can switch PO but never silently lose it.
+          if (!purchaseOrderId && (!form.id || draft.purchaseOrderId)) {
+            setError("Choose a purchase order. A work order can't be saved without one.")
+            return
+          }
+          setError(null)
           setForm(withPurchaseOrder(form, purchaseOrders.find((item) => item.id === purchaseOrderId)))
-        }
+        }}
       />
       <ChoiceField
         id="vendor"

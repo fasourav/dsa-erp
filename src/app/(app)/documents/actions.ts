@@ -521,6 +521,18 @@ export async function saveWorkOrder(input: {
   if (denied) return { error: denied }
   if (input.id && !isUuid(input.id)) return { error: "That work order could not be found." }
 
+  // A work order linked to a purchase order stays linked (it is that PO's printable form);
+  // it can move to another PO but not be cleared. Older work orders without a PO still save.
+  let previousPurchaseOrderId = ""
+  if (input.id) {
+    const current = await supabase.from("work_orders").select("purchase_order_id").eq("id", input.id).maybeSingle()
+    if (current.error || !current.data) return { error: "That work order could not be found." }
+    previousPurchaseOrderId = current.data.purchase_order_id ?? ""
+    if (previousPurchaseOrderId && !purchaseOrderId) {
+      return { error: "This work order belongs to a purchase order. Choose a purchase order; it can't be removed." }
+    }
+  }
+
   // A linked work order takes its vendor and project from the purchase order so they can't drift.
   let vendorId = input.vendorId
   let projectId = input.projectId
@@ -562,5 +574,8 @@ export async function saveWorkOrder(input: {
   revalidatePath("/documents/work-orders")
   revalidatePath(`/documents/work-orders/${id}`)
   if (purchaseOrderId) revalidatePath(`/purchase-orders/${purchaseOrderId}`)
+  if (previousPurchaseOrderId && previousPurchaseOrderId !== purchaseOrderId) {
+    revalidatePath(`/purchase-orders/${previousPurchaseOrderId}`)
+  }
   return saved
 }
