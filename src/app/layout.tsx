@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, Noto_Sans_Bengali } from "next/font/google"
 import localFont from "next/font/local"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 
 import { ServiceWorker } from "@/components/service-worker"
 import { Toaster } from "@/components/ui/sonner"
 import { APP_DESCRIPTION, APP_NAME, startupImages } from "@/lib/pwa"
-import { parseTheme, THEME_COOKIE, themeColors } from "@/lib/theme"
+import { parseTheme, parseThemePreference, systemThemeScript, THEME_COOKIE, themeColors } from "@/lib/theme"
 import { cn } from "@/lib/utils"
 
 import "./globals.css"
@@ -37,6 +37,11 @@ const bengali = Noto_Sans_Bengali({
 async function currentTheme() {
   const cookieStore = await cookies()
   return parseTheme(cookieStore.get(THEME_COOKIE)?.value)
+}
+
+async function currentThemePreference() {
+  const cookieStore = await cookies()
+  return parseThemePreference(cookieStore.get(THEME_COOKIE)?.value)
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -75,10 +80,15 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const theme = await currentTheme()
+  const nonce = (await headers()).get("x-nonce") ?? undefined
+  const preference = await currentThemePreference()
 
   return (
     <html
       lang="en"
+      data-theme-preference={preference}
+      // The head script may add "dark" for the System preference before hydration.
+      suppressHydrationWarning
       className={cn(
         inter.variable,
         taka.variable,
@@ -87,6 +97,9 @@ export default async function RootLayout({
         theme === "dark" && "dark",
       )}
     >
+      <head>
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: systemThemeScript }} />
+      </head>
       <body className="flex min-h-full flex-col">
         {children}
         <Toaster />

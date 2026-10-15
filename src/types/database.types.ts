@@ -3262,6 +3262,7 @@ export type Database = {
       }
       settle_attachment_file_purges: { Args: { p_paths: string[] }; Returns: number }
       sweep_orphan_attachments: { Args: never; Returns: number }
+      purge_document_verify_hits: { Args: never; Returns: number }
     }
     Enums: {
       bank_flow_direction: "inflow" | "outflow"

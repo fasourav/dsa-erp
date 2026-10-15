@@ -15,7 +15,7 @@ export async function getIncome(): Promise<{
         supabase
           .from("client_invoices")
           .select("id, amount, project_id")
-          .eq("status", "paid")
+          .in("status", ["paid", "partial"])
           .order("id", { ascending: true })
           .range(from, to),
       "Income list is larger than expected.",
@@ -31,7 +31,7 @@ export async function getIncome(): Promise<{
       fetchByIds(invoiceIds, (ids) =>
         supabase
           .from("client_payments")
-          .select("id, client_invoice_id, paid_on, bank_account_id")
+          .select("id, client_invoice_id, paid_on, bank_account_id, amount")
           .in("client_invoice_id", ids),
       ),
     ])
@@ -40,7 +40,7 @@ export async function getIncome(): Promise<{
       payments.map((payment) => payment.id),
       (ids) =>
         supabase
-          .from("bank_transactions")
+          .from("bank_transactions_readable")
           .select("income_id, transaction_date, bank_account_id")
           .in("income_id", ids),
     )
@@ -52,7 +52,7 @@ export async function getIncome(): Promise<{
       ),
     ]
     const accounts = await fetchByIds(accountIds, (ids) =>
-      supabase.from("bank_accounts").select("id, name").in("id", ids),
+      supabase.from("bank_accounts_readable").select("id, name").in("id", ids),
     )
 
     const projectById = new Map(projects.map((project) => [project.id, project]))
@@ -73,13 +73,15 @@ export async function getIncome(): Promise<{
       }
 
       ledgerByPayment.set(transaction.income_id, {
-        transactionDate: transaction.transaction_date,
+        transactionDate: transaction.transaction_date ?? "",
         bankAccountId: transaction.bank_account_id ?? "",
       })
     }
 
     const accountNames = new Map(
-      accounts.map((account) => [account.id, account.name]),
+      accounts.flatMap((account) =>
+        account.id ? [[account.id, account.name ?? ""] as const] : [],
+      ),
     )
 
     const rows = invoices.map((invoice) => {
@@ -100,6 +102,10 @@ export async function getIncome(): Promise<{
         projectName: project?.name.trim() ?? "",
         projectType: project?.project_type?.trim() ?? "",
         invoiceAmount: toNumber(invoice.amount),
+        collectedAmount: invoicePayments.reduce(
+          (total, payment) => total + toNumber(payment.amount),
+          0,
+        ),
         bankingChannel: settled.bankingChannel,
         paidOn: settled.paidOn,
       } satisfies IncomeRow

@@ -24,13 +24,13 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "h-9.5 gap-2 px-3.75 text-sm md:px-4.25 md:text-ui has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
-        xs: "h-9.5 gap-1.5 px-3.25 text-sm md:h-8 md:text-label",
-        sm: "h-9.5 gap-1.5 px-3.25 text-sm md:h-8 md:text-label",
+          "h-11 gap-2 px-3.75 text-sm md:h-9.5 md:px-4.25 md:text-ui has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+        xs: "h-11 gap-1.5 px-3.25 text-sm md:h-8 md:text-label",
+        sm: "h-11 gap-1.5 px-3.25 text-sm md:h-8 md:text-label",
         lg: "h-12 gap-2 px-5 text-callout",
         icon: "size-11 md:size-9",
-        "icon-xs": "size-9.5 md:size-7.5",
-        "icon-sm": "size-9.5 md:size-7.5",
+        "icon-xs": "size-11 md:size-7.5",
+        "icon-sm": "size-11 md:size-7.5",
         "icon-lg": "size-11",
       },
     },

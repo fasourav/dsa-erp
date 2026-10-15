@@ -1,7 +1,7 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { useCan } from "@/components/access-provider"
+import { useAccess, useCan } from "@/components/access-provider"
 
 import {
   ChevronDown,
@@ -70,6 +70,7 @@ export function ProjectsTable({
   error: string | null
 }) {
   const canAdd = useCan("projects", "add")
+  const showFinancials = useAccess().showFinancials
 
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
@@ -190,11 +191,11 @@ export function ProjectsTable({
                 statusLabel(project.status),
                 project.phase || "—",
                 project.totalValue,
-                project.totalPaid,
-                project.totalDue,
-                project.expenseTotal,
-                project.expenseDue,
-                project.grossProfit,
+                showFinancials ? project.totalPaid : "Hidden",
+                showFinancials ? project.totalDue : "Hidden",
+                showFinancials ? project.expenseTotal : "Hidden",
+                showFinancials ? project.expenseDue : "Hidden",
+                showFinancials ? project.grossProfit : "Hidden",
               ]),
             }}
           />
@@ -335,6 +336,18 @@ function CellValue({
   project: ProjectRow
   columnId: ColumnId
 }) {
+  const showFinancials = useAccess().showFinancials
+  if (
+    !showFinancials &&
+    (columnId === "totalPaid" ||
+      columnId === "totalDue" ||
+      columnId === "expenseTotal" ||
+      columnId === "expenseDue" ||
+      columnId === "grossProfit")
+  ) {
+    return <span className="text-muted-foreground">Hidden</span>
+  }
+
   switch (columnId) {
     case "name":
       return (

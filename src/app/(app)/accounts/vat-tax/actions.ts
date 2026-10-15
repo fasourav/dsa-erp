@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache"
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { overdraftMessage } from "@/lib/insufficient-balance"
-import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import {
+  isFutureIsoDate,
+  isIsoDate,
+  parseProjectValue,
+} from "@/lib/project-validation"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
@@ -52,6 +56,8 @@ export async function addVatTaxPayment(
 
   if (!isUuid(projectId)) fieldErrors.projectId = "Choose a project."
   if (!isIsoDate(paidOn)) fieldErrors.paidOn = "Enter a date."
+  else if (isFutureIsoDate(paidOn))
+    fieldErrors.paidOn = "Payment date can't be in the future."
   if (amount === null || amount <= 0)
     fieldErrors.amount = input.amount.trim()
       ? "Enter an amount greater than 0."

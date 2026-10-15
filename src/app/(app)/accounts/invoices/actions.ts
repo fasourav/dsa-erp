@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
-import { toNumber } from "@/lib/format"
+import { formatMoney, toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { denyUnless } from "@/lib/permissions"
@@ -14,7 +14,11 @@ import {
   parsePositiveAmount,
   sumAmounts,
 } from "@/lib/payment-status"
-import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import {
+  isFutureIsoDate,
+  isIsoDate,
+  parseProjectValue,
+} from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 
@@ -209,6 +213,8 @@ async function saveClientInvoice(
 
   if (dueOn && !isIsoDate(dueOn)) {
     fieldErrors.dueOn = "Enter a due date."
+  } else if (dueOn && isIsoDate(issuedOn) && dueOn < issuedOn) {
+    fieldErrors.dueOn = "Due date can't be before the issue date."
   }
 
   if (amount === null || amount <= 0) {
@@ -268,7 +274,7 @@ async function saveClientInvoice(
     return {
       error: null,
       fieldErrors: {
-        amount: "Amount is less than payments already recorded.",
+        amount: `Amount can't be less than ${formatMoney(paid)} already paid.`,
       },
     }
   }
@@ -363,6 +369,8 @@ async function saveClientPayment(
 
   if (!isIsoDate(paidOn)) {
     fieldErrors.paidOn = "Enter a payment date."
+  } else if (isFutureIsoDate(paidOn)) {
+    fieldErrors.paidOn = "Payment date can't be in the future."
   }
 
   if (amount === null) {

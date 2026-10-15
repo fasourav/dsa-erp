@@ -2,7 +2,6 @@ import { ActivityLog, type ActivityChange, type ActivityRow } from "@/app/(app)/
 import { PageHeader } from "@/components/page-header"
 import { requireOwner } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
-import { fetchAllPages } from "@/lib/fetch-pages"
 import { formatDayMonYear } from "@/lib/format"
 import type { Json } from "@/types/database.types"
 
@@ -47,57 +46,102 @@ type ActivityRecord = {
   new_values?: Json | null
 }
 
-export default async function ActivityPage() {
+const PAGE_SIZE = 50
+const ACTIONS: Record<string, string> = { creates: "insert", edits: "update", deletes: "delete" }
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>
+
+function param(params: Record<string, string | string[] | undefined>, key: string) {
+  const value = params[key]
+  return (Array.isArray(value) ? value[0] : value)?.trim() ?? ""
+}
+
+// Dhaka midnight (UTC+6, no DST) as an ISO instant.
+function dhakaStart(day: string, addDays = 0) {
+  const date = new Date(`${day}T00:00:00+06:00`)
+  date.setUTCDate(date.getUTCDate() + addDays)
+  return date.toISOString()
+}
+
+export default async function ActivityPage({ searchParams }: { searchParams: SearchParams }) {
   await requireOwner()
+  const params = await searchParams
+  const filters = {
+    q: param(params, "q").slice(0, 100),
+    module: param(params, "module") in moduleLabels ? param(params, "module") : "all",
+    user: UUID.test(param(params, "user")) || param(params, "user") === "system" ? param(params, "user") : "all",
+    from: DATE.test(param(params, "from")) ? param(params, "from") : "",
+    to: DATE.test(param(params, "to")) ? param(params, "to") : "",
+    action: param(params, "action") in ACTIONS ? param(params, "action") : "all",
+  }
+  const requestedPage = Math.max(1, Math.floor(Number(param(params, "page")) || 1))
   const supabase = await createClient()
   let rows: ActivityRecord[] = []
+  let total = 0
   let loadError: string | null = null
 
-  try {
-    rows = await fetchAllPages(
-      (from, to) =>
-        supabase
-          .from("activity_log")
-          .select(
-            "id, action, module, summary, created_at, actor_id, record_label, old_values, new_values",
-          )
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to),
-      "Activity log is larger than expected.",
-    )
-  } catch (error) {
-    const message = readError(error)
-    if (/record_label|old_values|new_values|schema cache/i.test(message)) {
-      try {
-        rows = await fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("activity_log")
-              .select("id, action, module, summary, created_at, actor_id")
-              .order("created_at", { ascending: false })
-              .order("id", { ascending: false })
-              .range(from, to),
-          "Activity log is larger than expected.",
+  const load = async (columns: string, page: number) => {
+    let query = supabase.from("activity_log").select(columns, { count: "exact" })
+    if (filters.module !== "all") query = query.eq("module", filters.module)
+    if (filters.user === "system") query = query.is("actor_id", null)
+    else if (filters.user !== "all") query = query.eq("actor_id", filters.user)
+    if (filters.from) query = query.gte("created_at", dhakaStart(filters.from))
+    if (filters.to) query = query.lt("created_at", dhakaStart(filters.to, 1))
+    if (filters.action !== "all") query = query.eq("action", ACTIONS[filters.action])
+    if (filters.q) {
+      const term = filters.q.replace(/[%_\\,()"']/g, " ").trim()
+      if (term) {
+        const like = `%${term}%`
+        query = query.or(
+          columns.includes("record_label")
+            ? `summary.ilike.${like},record_label.ilike.${like},module.ilike.${like}`
+            : `summary.ilike.${like},module.ilike.${like}`,
         )
-      } catch (fallbackError) {
-        loadError = readError(fallbackError) || "Could not load the activity log."
       }
-    } else {
-      loadError = message || "Could not load the activity log."
     }
+    const from = (page - 1) * PAGE_SIZE
+    return query
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1)
   }
 
-  const actorIds = [
-    ...new Set(rows.map((row) => row.actor_id).filter((id): id is string => Boolean(id))),
-  ]
-  const { data: actors } = actorIds.length
-    ? await supabase.from("profiles").select("id, display_name, email").in("id", actorIds)
-    : { data: [] as { id: string; display_name: string | null; email: string | null }[] }
+  const run = async (columns: string) => {
+    let result = await load(columns, requestedPage)
+    // Past the end (PostgREST answers PGRST103): reload the first page, then the last one.
+    if (requestedPage > 1 && result.error?.code === "PGRST103") {
+      result = await load(columns, 1)
+      const lastPage = Math.ceil((result.count ?? 0) / PAGE_SIZE)
+      if (!result.error && lastPage > 1) result = await load(columns, lastPage)
+    }
+    return result
+  }
 
+  const full = "id, action, module, summary, created_at, actor_id, record_label, old_values, new_values"
+  let result = await run(full)
+  if (result.error && /record_label|old_values|new_values|schema cache/i.test(result.error.message)) {
+    result = await run("id, action, module, summary, created_at, actor_id")
+  }
+  if (result.error) loadError = result.error.message || "Could not load the activity log."
+  else {
+    rows = (result.data ?? []) as unknown as ActivityRecord[]
+    total = result.count ?? rows.length
+  }
+  const page = Math.min(requestedPage, Math.max(1, Math.ceil(total / PAGE_SIZE)))
+
+  const { data: profiles } = await supabase.from("profiles").select("id, display_name, email")
   const names = new Map(
-    (actors ?? []).map((actor) => [actor.id, actor.display_name || actor.email || "User"]),
+    (profiles ?? []).map((actor) => [actor.id, actor.display_name || actor.email || "User"]),
   )
+  const userOptions = [
+    { value: "system", label: "System" },
+    ...[...names.entries()].map(([value, label]) => ({ value, label })),
+  ].sort((a, b) => a.label.localeCompare(b.label))
+  const moduleOptions = Object.entries(moduleLabels)
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label))
 
   const activity: ActivityRow[] = rows.map((row) => {
     const verb =
@@ -130,18 +174,18 @@ export default async function ActivityPage() {
           </p>
         </>
       ) : (
-        <ActivityLog rows={activity} />
+        <ActivityLog
+          rows={activity}
+          total={total}
+          page={page}
+          pageSize={PAGE_SIZE}
+          filters={filters}
+          moduleOptions={moduleOptions}
+          userOptions={userOptions}
+        />
       )}
     </div>
   )
-}
-
-function readError(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
-    return error.message
-  }
-  return ""
 }
 
 function formatWhen(value: string) {

@@ -197,6 +197,7 @@ export function ProjectFormDialog({
                 <FieldLabel htmlFor="project-name">Name</FieldLabel>
                 <Input
                   id="project-name"
+                  maxLength={120}
                   value={name}
                   autoComplete="off"
                   autoCapitalize="words"

@@ -33,7 +33,7 @@ export function insufficientBalanceMessage(
   needed: number,
 ): string {
   const name = accountName.trim() || "this account"
-  return `Insufficient Balance In ${name}: ${formatMoney(available)} Available, ${formatMoney(needed)} Needed.`
+  return `Insufficient balance in ${name}: ${formatMoney(available)} available, ${formatMoney(needed)} needed.`
 }
 
 const constraintMessages: Record<string, { message: string; field?: string }> = {
@@ -215,7 +215,7 @@ function balanceIssue(error: DbError): DbIssue | null {
         field: "bankAccountId",
       }
     }
-    return { message: `Insufficient Balance In ${name}.`, field: "bankAccountId" }
+    return { message: `Insufficient balance in ${name}.`, field: "bankAccountId" }
   }
 
   if (/bank balance negative/i.test(error.message ?? "")) {

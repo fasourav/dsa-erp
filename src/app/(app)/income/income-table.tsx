@@ -57,6 +57,7 @@ export function IncomeTable({
                 { header: "Project", kind: "text" },
                 { header: "Project Type", kind: "text" },
                 { header: "Invoice Amount", kind: "money" },
+                { header: "Collected", kind: "money" },
                 { header: "Banking Channel", kind: "text" },
                 { header: "Paid Date", kind: "text" },
               ],
@@ -64,6 +65,7 @@ export function IncomeTable({
                 row.projectName,
                 row.projectType,
                 row.invoiceAmount,
+                row.collectedAmount,
                 row.bankingChannel,
                 formatDayMonYear(row.paidOn),
               ]),
@@ -90,7 +92,7 @@ export function IncomeTable({
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No Paid Invoices Yet."
+        emptyMessage="No Collected Invoices Yet."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
@@ -109,9 +111,9 @@ export function IncomeTable({
             .join(" · "),
           meta: (
             <Money
-              value={row.invoiceAmount}
+              value={row.collectedAmount}
               className={
-                row.invoiceAmount > 0 ? "text-success" : "text-muted-foreground"
+                row.collectedAmount > 0 ? "text-success" : "text-muted-foreground"
               }
             />
           ),
@@ -146,6 +148,13 @@ function Cell({ row, columnId }: { row: IncomeRow; columnId: IncomeColumnId }) {
         <Money
           value={row.invoiceAmount}
           className={row.invoiceAmount > 0 ? "text-success" : "text-muted-foreground"}
+        />
+      )
+    case "collectedAmount":
+      return (
+        <Money
+          value={row.collectedAmount}
+          className={row.collectedAmount > 0 ? "text-success" : "text-muted-foreground"}
         />
       )
     case "bankingChannel":

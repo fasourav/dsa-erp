@@ -234,6 +234,7 @@ export function VatTaxFormDialog({
             <Field>
               <FieldLabel htmlFor="vat-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="vat-notes"
                 value={notes}
                 disabled={pending}

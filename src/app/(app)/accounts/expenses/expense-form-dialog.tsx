@@ -344,6 +344,7 @@ export function ExpenseFormDialog({
             <Field>
               <FieldLabel htmlFor="expense-notes">Notes</FieldLabel>
               <Textarea
+                maxLength={1000}
                 id="expense-notes"
                 value={notes}
                 disabled={pending}

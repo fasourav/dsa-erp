@@ -29,5 +29,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Could not sweep attachments." }, { status: 500 })
   }
   const removed = await removeQueuedAttachmentFiles(admin)
+  // 90-day backstop for QR verify rate-limit hits; failure here never blocks the sweep.
+  await admin.rpc("purge_document_verify_hits")
   return NextResponse.json({ queued: sweep.data ?? 0, removed }, { headers: { "Cache-Control": "no-store" } })
 }
