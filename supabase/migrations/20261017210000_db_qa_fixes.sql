@@ -358,7 +358,7 @@ select
   direction,
   source_kind,
   transaction_date,
-  amount,
+  amount::numeric(14, 2) as amount,
   payment_method,
   income_id,
   vendor_payment_id,
@@ -436,9 +436,9 @@ select
   purchase_order_id,
   project_id,
   vendor_id,
-  total_value,
-  total_paid,
-  total_pending
+  total_value::numeric(14, 2) as total_value,
+  total_paid::numeric(14, 2) as total_paid,
+  total_pending::numeric(14, 2) as total_pending
 from private.vendor_po_balance_rows();
 
 alter view public.vendor_po_balances set (security_invoker = true);
@@ -480,8 +480,8 @@ select
   project_name,
   category_id,
   category_name,
-  actual_amount,
-  committed_amount
+  actual_amount::numeric(14, 2) as actual_amount,
+  committed_amount::numeric(14, 2) as committed_amount
 from private.project_budget_actual_visible();
 
 alter view public.project_budget_actual set (security_invoker = true);
