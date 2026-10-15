@@ -262,6 +262,10 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
     return { error: "You must be signed in." }
   }
 
+  const linked = "This project is linked to other records and cannot be deleted."
+  const blocked = await projectDeleteBlock(supabase, id)
+  if (blocked) return { error: blocked === "linked" ? linked : "Could not delete this project." }
+
   const { data, error } = await supabase
     .from("projects")
     .delete()
@@ -270,15 +274,16 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
 
   if (error) {
     if (error.code === "23503" || /foreign key/i.test(error.message)) {
-      return {
-        error: "This project is linked to other records and cannot be deleted.",
-      }
+      return { error: linked }
     }
 
     return { error: "Could not delete this project." }
   }
 
   if (!data || data.length === 0) {
+    const still = await supabase.from("projects").select("id").eq("id", id).maybeSingle()
+    if (still.error) return { error: "Could not delete this project." }
+    if (still.data) return { error: linked }
     return { error: "That project could not be found." }
   }
 
@@ -286,6 +291,22 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
   revalidatePath("/projects")
   revalidatePath("/clients")
   return { error: null }
+}
+
+async function projectDeleteBlock(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string,
+): Promise<"linked" | "error" | null> {
+  const checks = await Promise.all([
+    supabase.from("client_invoices").select("id").eq("project_id", id).limit(1),
+    supabase.from("vendor_purchase_orders").select("id").eq("project_id", id).limit(1),
+    supabase.from("work_orders").select("id").eq("project_id", id).limit(1),
+    supabase.from("quotations").select("id").eq("project_id", id).limit(1),
+    supabase.from("vat_tax_payments").select("id").eq("project_id", id).limit(1),
+  ])
+  if (checks.some((check) => check.error)) return "error"
+  if (checks.some((check) => (check.data?.length ?? 0) > 0)) return "linked"
+  return null
 }
 
 async function catalogFieldErrors(

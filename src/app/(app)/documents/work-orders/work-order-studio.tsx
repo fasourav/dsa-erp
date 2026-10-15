@@ -33,6 +33,7 @@ import {
   templateMilestonesFromDraft,
   type DocumentTemplate,
 } from "@/lib/document-templates"
+import { isIsoDate } from "@/lib/project-validation"
 import { savedToast } from "@/lib/saved"
 import type { PurchaseOrderChoice, WorkOrderDraft } from "@/lib/documents/queries"
 
@@ -170,6 +171,21 @@ export function WorkOrderStudio({
         setError(null)
         if (!form.id && !form.purchaseOrderId) {
           setError("Choose a purchase order.")
+          return
+        }
+        if (!isIsoDate(form.issuedOn)) {
+          setError("Enter an issue date.")
+          return
+        }
+        if (!form.lines.some((line) => line.item.trim())) {
+          setError("Add at least one item.")
+          return
+        }
+        if (
+          !form.id &&
+          !form.lines.some((line) => line.item.trim() && Number(line.unitPrice) > 0)
+        ) {
+          setError("Add at least one item with a price.")
           return
         }
         startSave(async () => {

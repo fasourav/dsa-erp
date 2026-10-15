@@ -30,7 +30,7 @@ export type ProjectRow = {
   details: string
   progressPercent: number
   overdueMilestones: number
-  budgetStatus: "ok" | "warning" | "over" | null
+  budgetStatus: "ok" | "warning" | "over" | "unplanned" | null
 }
 
 export type ClientOption = {

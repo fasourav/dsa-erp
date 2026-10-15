@@ -85,6 +85,9 @@ export function BudgetTab({
     )
   }, [budget.lines, sort])
   const pageResult = useMemo(() => paginateRows(sorted, page), [page, sorted])
+  const shownColumns = budget.hidden
+    ? columns.filter((column) => column.id !== "status")
+    : columns
 
   function openForm(line: BudgetLineView | null) {
     setFormLine(line)
@@ -145,7 +148,7 @@ export function BudgetTab({
       </div>
 
       <DataList
-        columns={columns}
+        columns={shownColumns}
         rows={pageResult.rows}
         rowKey={(line) => line.key}
         sort={sort}
@@ -167,8 +170,10 @@ export function BudgetTab({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Budget lines pagination"
-        mobileItem={(line) => mobileLine(line)}
-        renderCell={(line, columnId) => <LineCell line={line} columnId={columnId} />}
+        mobileItem={(line) => mobileLine(line, budget.hidden)}
+        renderCell={(line, columnId) => (
+          <LineCell line={line} columnId={columnId} hidden={budget.hidden} />
+        )}
         renderActions={
           canEdit || canDelete
             ? (line) =>
@@ -240,7 +245,15 @@ function Total({
   )
 }
 
-function LineCell({ line, columnId }: { line: BudgetLineView; columnId: ColumnId }) {
+function LineCell({
+  line,
+  columnId,
+  hidden,
+}: {
+  line: BudgetLineView
+  columnId: ColumnId
+  hidden: boolean
+}) {
   switch (columnId) {
     case "category":
       return (
@@ -265,18 +278,22 @@ function LineCell({ line, columnId }: { line: BudgetLineView; columnId: ColumnId
         />
       )
     case "status":
-      return line.status === "ok" ? (
-        <span className="text-muted-foreground">{budgetStatusLabel(line.status)}</span>
-      ) : (
-        <BudgetStatusBadge status={line.status} />
-      )
+      return lineStatus(line, hidden)
   }
 }
 
-function mobileLine(line: BudgetLineView): DataListMobileItem {
+function lineStatus(line: BudgetLineView, hidden: boolean) {
+  if (hidden) return null
+  if (line.status === "ok" || line.status === "unplanned") {
+    return <span className="text-muted-foreground">{budgetStatusLabel(line.status)}</span>
+  }
+  return <BudgetStatusBadge status={line.status} />
+}
+
+function mobileLine(line: BudgetLineView, hidden: boolean): DataListMobileItem {
   return {
     title: line.categoryName,
-    value: <BudgetStatusBadge status={line.status} />,
+    value: lineStatus(line, hidden),
     subtitle: line.notes || "Planned / Committed / Actual",
     meta: <Money value={line.remaining} />,
   }

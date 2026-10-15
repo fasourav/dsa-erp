@@ -31,6 +31,11 @@ function newToken(): string {
   return randomBytes(32).toString("hex")
 }
 
+function newWorkOrderHasPrice(lines: LineInput[]): boolean {
+  if (priceLines(lines).subtotal > 0) return true
+  return lines.some((line) => line.item.trim() && Number(line.unitPrice) > 0)
+}
+
 function newDocumentNo(prefix: string, issuedOn: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(issuedOn)
   const stamp = match ? `${match[3]}${match[2]}${match[1]}` : "00000000"
@@ -515,6 +520,9 @@ export async function saveWorkOrder(input: {
   if (input.projectId && !isUuid(input.projectId)) return { error: "Choose a project." }
   if (!input.lines.some((line) => line.item.trim())) return { error: "Add at least one item." }
   if (input.lines.some((line) => Number(line.unitPrice) < 0)) return { error: "Unit price can't be negative." }
+  if (!input.id && !newWorkOrderHasPrice(input.lines)) {
+    return { error: "Add at least one item with a price." }
+  }
 
   const supabase = await createClient()
   const denied = await guardWrite("work_orders", Boolean(input.id))

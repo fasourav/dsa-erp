@@ -96,7 +96,7 @@ export async function getProjectBudget(projectId: string): Promise<ProjectBudget
     const lines = assembleLines(lineRows, actualRows, categoryList)
     const totals = totalLines(lines)
     return {
-      lines,
+      lines: hidden ? lines.map((line) => ({ ...line, status: "ok" as const })) : lines,
       categories: categoryList,
       totals,
       status: hidden ? null : projectBudgetStatus(lines),
@@ -253,7 +253,7 @@ export async function loadProjectBudgetReport(): Promise<
         committed: totals.committed,
         actual: totals.actual,
         remaining: totals.remaining,
-        status: projectBudgetStatus(assembled) ?? "ok",
+        status: projectBudgetStatus(assembled) ?? (sum(assembled.map((l) => l.planned)) <= 0 && sum(assembled.map((l) => l.actual)) > 0 ? "unplanned" : "ok"),
         emphasis: "subtotal",
       })
     }
@@ -275,7 +275,7 @@ export async function loadProjectBudgetReport(): Promise<
         committed: totals.committed,
         actual: totals.actual,
         remaining: totals.remaining,
-        status: projectBudgetStatus(body) ?? "ok",
+        status: projectBudgetStatus(body) ?? (sum(body.map((l) => l.planned)) <= 0 && sum(body.map((l) => l.actual)) > 0 ? "unplanned" : "ok"),
         emphasis: "total",
       })
     }
@@ -366,7 +366,10 @@ function assembleLines(
       actual: entry.actual,
       remaining: roundMoney(entry.planned - entry.actual),
       notes: entry.notes,
-      status: lineBudgetStatus(entry.planned, entry.actual),
+      status:
+        entry.lineId === null && entry.planned <= 0
+          ? "unplanned"
+          : lineBudgetStatus(entry.planned, entry.actual),
       sortOrder: entry.sortOrder,
     }))
     .sort(

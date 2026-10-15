@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { businessTodayIsoDate } from "@/lib/project-validation"
+import { amountError, businessTodayIsoDate } from "@/lib/project-validation"
 
 export const stageStatuses = ["Not Started", "In Progress", "Done"] as const
 
@@ -120,6 +120,27 @@ export function parseAmount(value: string): number | null {
   const parsed = Number(trimmed)
   if (!Number.isFinite(parsed) || parsed < 0) return null
   return parsed
+}
+
+/** One milestone may not exceed MAX_AMOUNT or that project's value. The sum of milestones is not capped. */
+export function milestoneAmountError(value: string, projectValue: number | null): string | null {
+  const capped = amountError(value, "amount")
+  if (capped) return capped
+  if (value.trim() === "") return null
+  const parsed = parseAmount(value)
+  if (parsed === null) return "Enter an amount of 0 or more."
+  if (projectValue !== null && Math.round(parsed * 100) > Math.round(projectValue * 100)) {
+    return "Amount cannot be more than the project value."
+  }
+  return null
+}
+
+export function doneOnBeforeStartError(doneOn: string, startedOn: string | null): string | null {
+  const done = doneOn.trim()
+  const start = startedOn?.slice(0, 10) ?? ""
+  if (!done || !start) return null
+  if (done < start) return "Done On cannot be before the project start date."
+  return null
 }
 
 export function isStageStatus(value: string): value is StageStatus {

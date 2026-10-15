@@ -56,7 +56,7 @@ export function DeleteConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" aria-live="assertive" className="text-sm text-destructive">
             {error}
           </p>
         ) : null}

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 
 import {
+  loadProjectMilestoneLimits,
   saveProjectMilestone,
   type ProgressFieldErrors,
 } from "@/app/(app)/projects/[id]/progress-actions"
@@ -30,7 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { ProjectMilestone, ProjectStage } from "@/lib/project-progress"
+import {
+  doneOnBeforeStartError,
+  milestoneAmountError,
+  type ProjectMilestone,
+  type ProjectStage,
+} from "@/lib/project-progress"
 import { savedToast } from "@/lib/saved"
 
 export function MilestoneFormDialog({
@@ -61,6 +67,21 @@ export function MilestoneFormDialog({
   const [fieldErrors, setFieldErrors] = useState<ProgressFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
+  const [limits, setLimits] = useState<{
+    startedOn: string | null
+    totalValue: number | null
+  } | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    let cancel = false
+    void loadProjectMilestoneLimits(projectId).then((result) => {
+      if (!cancel) setLimits(result)
+    })
+    return () => {
+      cancel = true
+    }
+  }, [open, projectId])
 
   const stageItems = [
     { value: "none", label: "No Stage" },
@@ -69,6 +90,15 @@ export function MilestoneFormDialog({
 
   function handleSubmit() {
     setFormError(null)
+    const nextErrors: ProgressFieldErrors = {}
+    const amountMessage = milestoneAmountError(amount, limits?.totalValue ?? null)
+    const doneMessage = doneOnBeforeStartError(doneOn, limits?.startedOn ?? null)
+    if (amountMessage) nextErrors.amount = amountMessage
+    if (doneMessage) nextErrors.doneOn = doneMessage
+    if (amountMessage || doneMessage) {
+      setFieldErrors(nextErrors)
+      return
+    }
     setFieldErrors({})
     startSubmit(async () => {
       const result = await saveProjectMilestone(projectId, milestone?.id ?? null, {
