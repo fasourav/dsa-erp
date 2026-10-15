@@ -1,0 +1,39 @@
+---
+description: Hard guardrails for every task (UI reuse, additive DB changes, money figures, safety, shipping). Complements core.mdc, ui.mdc and form-dialog.mdc.
+alwaysApply: true
+---
+
+# Guardrails
+
+Breaking the live system is worse than shipping late. When a rule blocks the task, stop and say so in the PR body.
+
+## UI: reuse, don't invent
+Use what exists before writing anything new:
+- Shell and headers: `src/components/app-shell.tsx`, `page-header.tsx`, `shell-header.tsx`
+- Lists: `src/components/data-list.tsx` (phone cards via `mobileItem`), `list-search.tsx`, `list-export.tsx`, `src/components/ui/table.tsx`, `ui/pagination.tsx`
+- Dialogs and forms: `src/components/ui/dialog.tsx` (see form-dialog.mdc), `ui/field.tsx`, `ui/input.tsx`, `ui/select.tsx`, `ui/combobox.tsx`, `ui/textarea.tsx`, `ui/checkbox.tsx`, `ui/tabs.tsx`
+- Pickers and fields: `name-combobox.tsx`, `phone-input.tsx`, `bank-account-field.tsx`, `record-payment-fields.tsx`
+- Values and states: `money.tsx` (BDT lakh/crore), `status-badge.tsx`, `ui/badge.tsx`, `ui/empty.tsx`, `ui/skeleton.tsx`, `ui/sonner.tsx`
+- Deletes: `delete-confirm-dialog.tsx` + `slide-to-delete.tsx` (always the double confirm)
+- Documents: `src/components/documents/document-workspace.tsx`, `document-sheet.tsx`, `document-fields.tsx`, `document-list.tsx`, `verify-qr.tsx`
+- Files: `record-attachments.tsx`
+
+Also:
+- No new colors, fonts, font sizes, spacing, radius or shadow tokens, and no `globals.css` edits.
+- Don't edit anything in `src/components` (incl. `ui/`) unless the task says the change is app-wide. Otherwise wrap or pass props locally.
+- Copy the layout of the nearest existing page of the same kind (ui.mdc reference pages).
+- Check every touched page at 390 (phone) and 1440 (desktop), light theme: no horizontal overflow, no console errors.
+
+## Database: additive only
+- Each change is a new timestamped file in `supabase/migrations/`. Never edit a migration that already exists.
+- Never drop, rename or retype existing tables, columns, triggers, functions, views or RLS policies, unless the task is explicitly about that object.
+- Every new table: `enable row level security`, with policies through `private.can('<module>', '<action>')` like existing tables. Never weaken, widen or drop an existing policy.
+- If you change a function signature, existing callers must keep working: add params with `DEFAULT`, drop the old signature in the same migration (no overloads), and end with `notify pgrst, 'reload schema';`.
+- Never change how financial figures are calculated: AP/AR, revenue, income, expense, VAT/tax, bank balances, reports. The only exception is when the task asks for exactly that.
+- New triggers on existing tables must only write the new columns they own.
+
+## Safety
+- Never put `SUPABASE_SERVICE_ROLE_KEY` in client code or in any `NEXT_PUBLIC_` variable. Never print or commit secrets or `.env*`.
+- Before finishing, run `npx tsc --noEmit`, `npm run lint`, `npm run build`, plus any existing tests the change touches. All must pass.
+- The PR body lists any risky change: migrations, RLS, triggers, shared components, money logic. Say "None" if there is none.
+- Open a draft PR only. Never merge, never apply migrations, never deploy.
