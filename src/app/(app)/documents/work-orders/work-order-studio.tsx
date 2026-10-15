@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
 import { saveWorkOrder } from "@/app/(app)/documents/actions"
+import { saveDocumentAsTemplate } from "@/app/(app)/settings/document-template-actions"
 import { useCan } from "@/components/access-provider"
 import {
   AreaField,
@@ -24,6 +25,15 @@ import {
 } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentWorkOrder } from "@/lib/documents/present"
+import {
+  draftLinesFromTemplate,
+  draftMilestonesFromTemplate,
+  joinedTerms,
+  templateLinesFromDraft,
+  templateMilestonesFromDraft,
+  type DocumentTemplate,
+} from "@/lib/document-templates"
+import { savedToast } from "@/lib/saved"
 import type { PurchaseOrderChoice, WorkOrderDraft } from "@/lib/documents/queries"
 
 /** Links the purchase order: vendor and project follow it; items and amount are pre-filled only when still empty. */
@@ -59,6 +69,7 @@ export function WorkOrderStudio({
   purchaseOrders,
   origin,
   margins,
+  templates,
 }: {
   draft: WorkOrderDraft
   purchaseOrders: PurchaseOrderChoice[]
@@ -67,6 +78,7 @@ export function WorkOrderStudio({
   employees: EmployeeChoice[]
   origin: string
   margins: PrintMargins
+  templates: DocumentTemplate[]
 }) {
   const router = useRouter()
   const [form, setForm] = useState(() =>
@@ -80,6 +92,9 @@ export function WorkOrderStudio({
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("work_orders", form.id ? "edit" : "add")
+  const canStartFromTemplate = useCan("work_orders", "add")
+  const canManageTemplates = useCan("document_templates", "add")
+  const canSaveAsTemplate = Boolean(form.id) && canManageTemplates
   const vendor = vendors.find((item) => item.id === form.vendorId)
   const project = projects.find((item) => item.id === form.projectId)
   const preview = useMemo(
@@ -118,6 +133,39 @@ export function WorkOrderStudio({
       pending={pending}
       error={error}
       files={{ parentType: "work_order", parentId: form.id }}
+      templateNames={templates.map((item) => item.name)}
+      canStartFromTemplate={canStartFromTemplate}
+      onPickTemplate={(name) => {
+        const template = templates.find((item) => item.name === name)
+        if (!template) return
+        setForm((current) => ({
+          ...current,
+          introduction: template.scopeText,
+          terms: joinedTerms(template.termsText, template.paymentTerms),
+          lines: draftLinesFromTemplate(template.lines),
+          milestones: draftMilestonesFromTemplate(template.milestones),
+        }))
+      }}
+      canSaveAsTemplate={canSaveAsTemplate}
+      onSaveAsTemplate={async (name) => {
+        const result = await saveDocumentAsTemplate({
+          kind: "work_order",
+          name,
+          payload: {
+            scopeText: form.introduction,
+            termsText: form.terms,
+            paymentTerms: "",
+            lines: templateLinesFromDraft(form.lines),
+            milestones: templateMilestonesFromDraft(form.milestones),
+          },
+        })
+        if (result.fieldErrors?.name) return result.fieldErrors.name
+        if (result.fieldErrors?.lines) return result.fieldErrors.lines
+        if (result.fieldErrors?.milestones) return result.fieldErrors.milestones
+        if (result.error) return result.error
+        savedToast("Saved As Template.")
+        return null
+      }}
       onSave={() => {
         setError(null)
         if (!form.id && !form.purchaseOrderId) {

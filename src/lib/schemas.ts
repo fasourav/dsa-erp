@@ -81,6 +81,74 @@ export const employeeLeaveSchema = z
     },
   )
 
+export const documentTemplateKindSchema = z.enum(["quotation", "work_order"])
+
+export const documentTemplateNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Enter a name.")
+  .max(120, "Use 120 characters or fewer.")
+
+const templateAmount = z
+  .string()
+  .trim()
+  .refine((value) => {
+    const parsed = Number(value.replace(/,/g, ""))
+    return Number.isFinite(parsed) && parsed >= 0
+  }, "Enter a rate of 0 or more.")
+
+const templateQuantity = z
+  .string()
+  .trim()
+  .refine((value) => {
+    const parsed = Number(value.replace(/,/g, ""))
+    return Number.isFinite(parsed) && parsed > 0
+  }, "Enter a quantity greater than 0.")
+
+export const documentTemplateLineSchema = z.object({
+  description: z.string().trim().min(1, "Enter a description."),
+  unit: z.string().trim().min(1, "Enter a unit."),
+  qty: templateQuantity,
+  rate: templateAmount,
+})
+
+export const documentTemplateMilestoneSchema = z.object({
+  label: z.string().trim().min(1, "Enter a milestone."),
+  percent: z
+    .string()
+    .trim()
+    .refine((value) => {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100
+    }, "Enter a percent from 0 to 100."),
+})
+
+export const documentTemplateSchema = z
+  .object({
+    kind: documentTemplateKindSchema,
+    name: documentTemplateNameSchema,
+    projectType: z.string().trim(),
+    scopeText: z.string(),
+    termsText: z.string(),
+    paymentTerms: z.string(),
+    lines: z.array(documentTemplateLineSchema),
+    milestones: z.array(documentTemplateMilestoneSchema),
+    isActive: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.milestones.length === 0) return
+    const total = value.milestones.reduce((sum, milestone) => sum + Number(milestone.percent), 0)
+    if (Math.abs(total - 100) > 0.05) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Milestone percents must total 100.",
+        path: ["milestones"],
+      })
+    }
+  })
+
+export type DocumentTemplateInput = z.infer<typeof documentTemplateSchema>
+
 export function firstIssue(error: z.ZodError, field: string): string | undefined {
   return error.issues.find((issue) => issue.path[0] === field)?.message
 }

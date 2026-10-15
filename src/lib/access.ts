@@ -8,6 +8,7 @@ export const moduleKeys = [
   "purchase_orders",
   "quotations",
   "work_orders",
+  "document_templates",
   "vendors",
   "vendor_payments",
   "accounts_payable",

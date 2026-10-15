@@ -926,6 +926,51 @@ export type Database = {
         }
         Relationships: []
       }
+      document_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          kind: string
+          lines: Json
+          milestones: Json
+          name: string
+          payment_terms: string
+          project_type: string | null
+          scope_text: string
+          terms_text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind: string
+          lines?: Json
+          milestones?: Json
+          name: string
+          payment_terms?: string
+          project_type?: string | null
+          scope_text?: string
+          terms_text?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          lines?: Json
+          milestones?: Json
+          name?: string
+          payment_terms?: string
+          project_type?: string | null
+          scope_text?: string
+          terms_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           allowance: number

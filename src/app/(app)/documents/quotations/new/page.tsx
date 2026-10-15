@@ -2,6 +2,7 @@ import { QuotationStudio } from "@/app/(app)/documents/quotations/quotation-stud
 import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
+import { listActiveDocumentTemplates } from "@/lib/document-templates-data"
 import { loadDocumentCatalog, loadQuotationDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
@@ -9,11 +10,12 @@ export const metadata = { title: "New Quotation" }
 
 export default async function NewQuotationPage() {
   await requireModule("quotations")
-  const [catalog, loaded, margins, origin] = await Promise.all([
+  const [catalog, loaded, margins, origin, templateList] = await Promise.all([
     loadDocumentCatalog(),
     loadQuotationDraft(null),
     getPrintMargins(),
     requestOrigin(),
+    listActiveDocumentTemplates("quotation"),
   ])
 
   if (!loaded.draft) {
@@ -35,6 +37,7 @@ export default async function NewQuotationPage() {
       employees={catalog.employees}
       origin={origin}
       margins={margins}
+      templates={templateList.templates}
     />
   )
 }
