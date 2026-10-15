@@ -78,4 +78,4 @@ Projects, clients, vendors, leads, purchase orders, vendor invoices, client invo
 
 ## PR
 
-See the draft PR for `cursor/test-smoke-private-usage-3fac`. Migration is not applied.
+Draft: https://github.com/fasourav/dsa-erp/pull/78 (`cursor/test-smoke-private-usage-3fac`). Migration is not applied.
