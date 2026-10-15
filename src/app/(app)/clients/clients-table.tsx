@@ -6,11 +6,13 @@ import { useAccess, useCan } from "@/components/access-provider"
 import {
   ChevronDown,
   Columns3,
+  FileText,
   MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { deleteClient } from "@/app/(app)/clients/actions"
@@ -417,6 +419,9 @@ function RowActions({
   onEdit: (client: ClientSummary) => void
   onDelete: (client: ClientSummary) => void
 }) {
+  const canViewClients = useCan("clients", "view")
+  const canViewReceivable = useCan("accounts_receivable", "view")
+  const canStatement = canViewClients && canViewReceivable
   const canEdit = useCan("clients", "edit")
   const canDelete = useCan("clients", "delete")
   const label = client.displayName || "client"
@@ -435,16 +440,26 @@ function RowActions({
       >
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        {canEdit ? (<DropdownMenuItem onClick={() => onEdit(client)}>
-          <Pencil aria-hidden="true" />
-          Edit
-        </DropdownMenuItem>) : null}
-        <DropdownMenuSeparator />
-        {canDelete ? (<DropdownMenuItem variant="destructive" onClick={() => onDelete(client)}>
-          <Trash2 aria-hidden="true" />
-          Delete
-        </DropdownMenuItem>) : null}
+      <DropdownMenuContent align="end" className="w-44">
+        {canStatement ? (
+          <DropdownMenuItem render={<Link href={`/clients/${client.id}/statement`} />}>
+            <FileText aria-hidden="true" />
+            Statement
+          </DropdownMenuItem>
+        ) : null}
+        {canEdit ? (
+          <DropdownMenuItem onClick={() => onEdit(client)}>
+            <Pencil aria-hidden="true" />
+            Edit
+          </DropdownMenuItem>
+        ) : null}
+        {canDelete ? <DropdownMenuSeparator /> : null}
+        {canDelete ? (
+          <DropdownMenuItem variant="destructive" onClick={() => onDelete(client)}>
+            <Trash2 aria-hidden="true" />
+            Delete
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
