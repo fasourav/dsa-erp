@@ -29,6 +29,9 @@ export async function GET(
   if (!allows(access, "vendors", "view") || !allows(access, "accounts_payable", "view")) {
     return NextResponse.json({ error: "You do not have access to this statement." }, { status: 403 })
   }
+  if (!access.isOwner && !access.showFinancials) {
+    return NextResponse.json({ error: "You do not have access to this statement." }, { status: 403 })
+  }
   if (!isUuid(id)) {
     return NextResponse.json({ error: "Unknown vendor." }, { status: 404 })
   }

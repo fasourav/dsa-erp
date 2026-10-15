@@ -35,6 +35,7 @@ export default async function ClientStatementPage({
   if (!allows(access, "clients", "view") || !allows(access, "accounts_receivable", "view")) {
     redirect(homePath(access))
   }
+  if (!access.isOwner && !access.showFinancials) redirect(homePath(access))
   if (!isUuid(id)) notFound()
 
   const supabase = await createClient()

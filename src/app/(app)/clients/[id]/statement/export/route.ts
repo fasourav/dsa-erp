@@ -30,6 +30,9 @@ export async function GET(
   if (!allows(access, "clients", "view") || !allows(access, "accounts_receivable", "view")) {
     return NextResponse.json({ error: "You do not have access to this statement." }, { status: 403 })
   }
+  if (!access.isOwner && !access.showFinancials) {
+    return NextResponse.json({ error: "You do not have access to this statement." }, { status: 403 })
+  }
   if (!isUuid(id)) {
     return NextResponse.json({ error: "Unknown client." }, { status: 404 })
   }

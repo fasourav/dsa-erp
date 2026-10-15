@@ -33,6 +33,7 @@ export default async function VendorStatementPage({
   if (!allows(access, "vendors", "view") || !allows(access, "accounts_payable", "view")) {
     redirect(homePath(access))
   }
+  if (!access.isOwner && !access.showFinancials) redirect(homePath(access))
   if (!isUuid(id)) notFound()
 
   const supabase = await createClient()

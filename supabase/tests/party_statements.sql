@@ -1,5 +1,6 @@
 -- Closing statement balances match AP and AR aging for the same party.
--- Purchase orders are not amounts owed. Run with `supabase test db`.
+-- Purchase orders are not amounts owed. Requires bill-based report_ap_aging (qa16_fixes).
+-- Run with `supabase test db`.
 
 begin;
 
