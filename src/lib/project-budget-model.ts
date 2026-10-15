@@ -71,14 +71,13 @@ export function projectBudgetStatus(
   lines: readonly { planned: number; actual: number }[],
 ): BudgetStatus | null {
   if (lines.length === 0) return null
-  const statuses = lines.map((line) => lineBudgetStatus(line.planned, line.actual))
-  statuses.push(
-    lineBudgetStatus(
-      sum(lines.map((line) => line.planned)),
-      sum(lines.map((line) => line.actual)),
-    ),
+  // Project status follows totals only. A line with no plan (for example
+  // Uncategorised actual) can still show Over on that row without putting the
+  // whole project on the Over Budget list when remaining is still positive.
+  return lineBudgetStatus(
+    sum(lines.map((line) => line.planned)),
+    sum(lines.map((line) => line.actual)),
   )
-  return worstStatus(statuses)
 }
 
 export function roundMoney(value: number) {
@@ -88,13 +87,6 @@ export function roundMoney(value: number) {
 export function sum(values: readonly number[]) {
   return values.reduce((total, value) => total + value, 0)
 }
-
-function worstStatus(statuses: readonly BudgetStatus[]): BudgetStatus {
-  if (statuses.includes("over")) return "over"
-  if (statuses.includes("warning")) return "warning"
-  return "ok"
-}
-
 function cents(value: number) {
   return Math.round(value * 100)
 }
