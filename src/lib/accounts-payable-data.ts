@@ -1,6 +1,7 @@
 import type { PayableRow } from "@/lib/accounts-payable"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
+import { openPayableForBill, paidByBillId } from "@/lib/open-payable"
 import { getAccess } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 
@@ -48,11 +49,12 @@ export async function getAccountsPayable(): Promise<{
     ])
     const seesMoney = !access || access.isOwner || access.showFinancials
 
-    const paidByBill = new Map<string, number>()
-    for (const payment of payments) {
-      if (!payment.vendor_invoice_id) continue
-      paidByBill.set(payment.vendor_invoice_id, (paidByBill.get(payment.vendor_invoice_id) ?? 0) + toNumber(payment.amount))
-    }
+    const paidByBill = paidByBillId(
+      payments.map((payment) => ({
+        billId: payment.vendor_invoice_id,
+        amount: toNumber(payment.amount),
+      })),
+    )
 
     const totals = new Map<string, { billed: number; paid: number; open: number }>()
     for (const bill of bills) {
@@ -62,7 +64,7 @@ export async function getAccountsPayable(): Promise<{
       const entry = totals.get(bill.purchase_order_id) ?? { billed: 0, paid: 0, open: 0 }
       entry.billed += amount
       entry.paid += paid
-      entry.open += Math.max(amount - paid, 0)
+      entry.open += openPayableForBill(amount, paid, bill.status)
       totals.set(bill.purchase_order_id, entry)
     }
 

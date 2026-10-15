@@ -1,6 +1,7 @@
 import { classifyOperational, isMaterialWork } from "@/lib/dashboard-metrics"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
+import { openPayableByPurchaseOrder } from "@/lib/open-payable"
 import { sumAmounts } from "@/lib/payment-status"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -257,7 +258,7 @@ export async function getProjectDetail(projectId: string): Promise<{
             (from, to) =>
               supabase
                 .from("vendor_po_balances")
-                .select("purchase_order_id, total_paid, total_pending")
+                .select("purchase_order_id, total_paid")
                 .in("purchase_order_id", poIds)
                 .order("purchase_order_id", { ascending: true })
                 .range(from, to),
@@ -269,7 +270,7 @@ export async function getProjectDetail(projectId: string): Promise<{
             (from, to) =>
               supabase
                 .from("vendor_invoices")
-                .select("id, purchase_order_id")
+                .select("id, purchase_order_id, amount, status")
                 .in("purchase_order_id", poIds)
                 .order("id", { ascending: true })
                 .range(from, to),
@@ -340,9 +341,13 @@ function buildOverview(input: {
   balances: {
     purchase_order_id: string | null
     total_paid: number | null
-    total_pending: number | null
   }[]
-  vendorInvoices: { id: string; purchase_order_id: string }[]
+  vendorInvoices: {
+    id: string
+    purchase_order_id: string
+    amount: number
+    status: string
+  }[]
   vendorPayments: {
     amount: number
     paid_on: string
@@ -370,21 +375,29 @@ function buildOverview(input: {
       .filter((invoice) => invoice.status !== "void")
       .map((invoice) => invoice.amount),
   )
-  const balanceByPo = new Map<string, { paid: number; pending: number }>()
+  const paidByPo = new Map<string, number>()
   for (const balance of input.balances) {
     if (!balance.purchase_order_id) continue
-    balanceByPo.set(balance.purchase_order_id, {
-      paid: toNumber(balance.total_paid),
-      pending: toNumber(balance.total_pending),
-    })
+    paidByPo.set(balance.purchase_order_id, toNumber(balance.total_paid))
   }
+  const pendingByPo = openPayableByPurchaseOrder(
+    input.vendorInvoices.map((bill) => ({
+      id: bill.id,
+      purchaseOrderId: bill.purchase_order_id,
+      amount: toNumber(bill.amount),
+      status: bill.status,
+    })),
+    input.vendorPayments.map((payment) => ({
+      billId: payment.vendor_invoice_id,
+      amount: toNumber(payment.amount),
+    })),
+  )
 
   let paidToVendors = 0
   let payable = 0
   for (const po of input.purchaseOrders) {
-    const balance = balanceByPo.get(po.id)
-    paidToVendors = sumAmounts([paidToVendors, balance?.paid ?? 0])
-    payable = sumAmounts([payable, balance?.pending ?? po.totalValue])
+    paidToVendors = sumAmounts([paidToVendors, paidByPo.get(po.id) ?? 0])
+    payable = sumAmounts([payable, pendingByPo.get(po.id) ?? 0])
   }
 
   const operational = sumAmounts(
@@ -497,9 +510,8 @@ function buildOverview(input: {
       return [{ ...invoice, paid, balance }]
     }),
     openPurchaseOrders: input.purchaseOrders.flatMap((po) => {
-      const balance = balanceByPo.get(po.id)
-      const paid = balance?.paid ?? 0
-      const pending = balance?.pending ?? po.totalValue
+      const paid = paidByPo.get(po.id) ?? 0
+      const pending = pendingByPo.get(po.id) ?? 0
       if (pending <= 0) return []
       return [{ ...po, paid, pending }]
     }),

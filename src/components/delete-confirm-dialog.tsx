@@ -27,6 +27,7 @@ export function DeleteConfirmDialog({
   onOpenChange,
   title,
   itemName,
+  description,
   error,
   pending,
   confirmKey,
@@ -36,6 +37,7 @@ export function DeleteConfirmDialog({
   onOpenChange: (open: boolean) => void
   title: string
   itemName?: string | null
+  description?: string | null
   error: string | null
   pending: boolean
   confirmKey: string | undefined
@@ -50,7 +52,7 @@ export function DeleteConfirmDialog({
           </AlertDialogMedia>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            {deleteConfirmMessage(itemName)}
+            {description ?? deleteConfirmMessage(itemName)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (

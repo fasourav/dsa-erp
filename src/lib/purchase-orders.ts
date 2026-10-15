@@ -1,4 +1,5 @@
 import { toNumber } from "@/lib/format"
+import { openPayableByPurchaseOrder } from "@/lib/open-payable"
 import { dateInputValue } from "@/lib/project-validation"
 import {
   type ProjectOption,
@@ -38,7 +39,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
   }
 
   try {
-    const [orderRows, balanceRows, projectRows, vendorRows, categoryRows] =
+    const [orderRows, balanceRows, billRows, paymentRows, projectRows, vendorRows, categoryRows] =
       await Promise.all([
         fetchPages((from, to) =>
           supabase
@@ -52,8 +53,22 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         fetchPages((from, to) =>
           supabase
             .from("vendor_po_balances")
-            .select("purchase_order_id, total_paid, total_pending")
+            .select("purchase_order_id, total_paid")
             .order("purchase_order_id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchPages((from, to) =>
+          supabase
+            .from("vendor_invoices")
+            .select("id, purchase_order_id, amount, status")
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchPages((from, to) =>
+          supabase
+            .from("vendor_payments")
+            .select("vendor_invoice_id, amount")
+            .order("id", { ascending: true })
             .range(from, to),
         ),
         fetchPages((from, to) =>
@@ -114,6 +129,18 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         row.purchase_order_id ? [[row.purchase_order_id, row] as const] : [],
       ),
     )
+    const pendingByPo = openPayableByPurchaseOrder(
+      billRows.map((bill) => ({
+        id: bill.id,
+        purchaseOrderId: bill.purchase_order_id,
+        amount: toNumber(bill.amount),
+        status: bill.status,
+      })),
+      paymentRows.map((payment) => ({
+        billId: payment.vendor_invoice_id,
+        amount: toNumber(payment.amount),
+      })),
+    )
 
     const orders = orderRows.map((row) => {
       const balance = balancesById.get(row.id)
@@ -130,7 +157,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         workType: row.work_type?.trim() ?? "",
         totalValue: toNumber(row.total_value),
         totalPaid: toNumber(balance?.total_paid),
-        totalPending: toNumber(balance?.total_pending),
+        totalPending: pendingByPo.get(row.id) ?? 0,
         notes: row.notes ?? "",
       } satisfies PurchaseOrderRow
     })

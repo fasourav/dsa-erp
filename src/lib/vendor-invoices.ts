@@ -3,11 +3,11 @@ import { listBankAccounts } from "@/lib/bank-accounts"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
+import { openPayableForBill, sumOpenPayable } from "@/lib/open-payable"
 import { dateInputValue } from "@/lib/project-validation"
 import {
   derivePaymentStatus,
   isPaymentStatus,
-  moneyCents,
   sumAmounts,
 } from "@/lib/payment-status"
 import { createClient } from "@/lib/supabase/server"
@@ -71,7 +71,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
           .limit(1),
         supabase
           .from("vendor_po_balances")
-          .select("purchase_order_id, total_paid, total_pending")
+          .select("purchase_order_id, total_paid")
           .eq("purchase_order_id", order.id)
           .limit(1),
         fetchAllPages(
@@ -156,7 +156,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
 
       const payments = paymentsByInvoice.get(row.id) ?? []
       const paid = sumAmounts(payments.map((payment) => payment.amount))
-      const balance = Math.max(0, (moneyCents(toNumber(row.amount)) - moneyCents(paid)) / 100)
+      const balance = openPayableForBill(toNumber(row.amount), paid, row.status)
 
       return [
         {
@@ -186,7 +186,14 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
       workType: order.work_type?.trim() ?? "",
       totalValue: toNumber(order.total_value),
       totalPaid: toNumber(balance?.total_paid),
-      totalPending: toNumber(balance?.total_pending),
+      totalPending: sumOpenPayable(
+        invoices.map((invoice) => ({
+          id: invoice.id,
+          amount: invoice.amount,
+          status: invoice.status,
+        })),
+        new Map(invoices.map((invoice) => [invoice.id, invoice.paid])),
+      ),
       notes: order.notes ?? "",
     }
 
