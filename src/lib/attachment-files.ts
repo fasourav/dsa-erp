@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { after } from "next/server"
 
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
@@ -12,12 +13,14 @@ const maxBatches = 5
 // its storage path in the database. Storage objects can only be removed through the
 // Storage API, so this drains that queue. It never throws: a file left behind stays
 // queued and the next drain or the daily sweep retries it.
+// claim and settle are granted only to service_role, so the drain uses that client.
 export async function removeQueuedAttachmentFiles(
   client?: SupabaseClient<Database>,
 ): Promise<number> {
   let removed = 0
   try {
-    const supabase = client ?? (await createClient())
+    const admin = createAdminClient()
+    const supabase = (admin ?? client ?? (await createClient())) as SupabaseClient<Database>
     for (let batch = 0; batch < maxBatches; batch += 1) {
       const { data, error } = await supabase.rpc("claim_attachment_file_purges", { p_limit: batchSize })
       if (error || !data || data.length === 0) break
