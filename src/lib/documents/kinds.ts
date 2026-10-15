@@ -16,7 +16,7 @@ export const documentKinds: Array<{
     href: "/documents/work-orders",
     module: "work_orders",
     title: "Work Order",
-    detail: "Vendor work order with items and payment terms.",
+    detail: "Printable work order for a purchase order.",
   },
   {
     href: "/documents/purchase-orders",

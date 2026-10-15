@@ -488,6 +488,7 @@ export async function saveWorkOrder(input: {
   status: string
   vendorId: string
   projectId: string
+  purchaseOrderId?: string
   proposalOn: string
   workStart: string
   workEnd: string
@@ -507,7 +508,10 @@ export async function saveWorkOrder(input: {
   const endError = optionalDate(input.workEnd, "work end date")
   if (endError) return { error: endError }
   if (!isWorkOrderStatus(input.status)) return { error: "Choose a status." }
-  if (!isUuid(input.vendorId)) return { error: "Choose a vendor." }
+  const purchaseOrderId = input.purchaseOrderId?.trim() ?? ""
+  if (!input.id && !purchaseOrderId) return { error: "Choose a purchase order." }
+  if (purchaseOrderId && !isUuid(purchaseOrderId)) return { error: "Choose a purchase order." }
+  if (!purchaseOrderId && !isUuid(input.vendorId)) return { error: "Choose a vendor." }
   if (input.projectId && !isUuid(input.projectId)) return { error: "Choose a project." }
   if (!input.lines.some((line) => line.item.trim())) return { error: "Add at least one item." }
   if (input.lines.some((line) => Number(line.unitPrice) < 0)) return { error: "Unit price can't be negative." }
@@ -517,15 +521,30 @@ export async function saveWorkOrder(input: {
   if (denied) return { error: denied }
   if (input.id && !isUuid(input.id)) return { error: "That work order could not be found." }
 
-  const vendor = await supabase.from("vendors").select("id").eq("id", input.vendorId).maybeSingle()
+  // A linked work order takes its vendor and project from the purchase order so they can't drift.
+  let vendorId = input.vendorId
+  let projectId = input.projectId
+  if (purchaseOrderId) {
+    const order = await supabase
+      .from("vendor_purchase_orders")
+      .select("vendor_id, project_id")
+      .eq("id", purchaseOrderId)
+      .maybeSingle()
+    if (order.error || !order.data) return { error: "Choose a purchase order." }
+    vendorId = order.data.vendor_id
+    projectId = order.data.project_id ?? ""
+  }
+
+  const vendor = await supabase.from("vendors").select("id").eq("id", vendorId).maybeSingle()
   if (vendor.error || !vendor.data) return { error: "Choose a vendor." }
 
   const total = priceLines(input.lines).subtotal
   const fields = {
     issued_on: input.issuedOn,
     status: input.status,
-    vendor_id: input.vendorId,
-    project_id: input.projectId || null,
+    vendor_id: vendorId,
+    project_id: projectId || null,
+    ...(purchaseOrderId ? { purchase_order_id: purchaseOrderId } : {}),
     proposal_on: input.proposalOn || null,
     work_start: input.workStart || null,
     work_end: input.workEnd || null,
@@ -542,5 +561,6 @@ export async function saveWorkOrder(input: {
   const id = saved.id
   revalidatePath("/documents/work-orders")
   revalidatePath(`/documents/work-orders/${id}`)
+  if (purchaseOrderId) revalidatePath(`/purchase-orders/${purchaseOrderId}`)
   return saved
 }

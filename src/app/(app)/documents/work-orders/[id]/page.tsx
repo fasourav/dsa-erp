@@ -2,7 +2,7 @@ import { WorkOrderStudio } from "@/app/(app)/documents/work-orders/work-order-st
 import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
-import { loadDocumentCatalog, loadWorkOrderDraft } from "@/lib/documents/queries"
+import { loadDocumentCatalog, loadPurchaseOrderChoices, loadWorkOrderDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Work Order" }
@@ -20,6 +20,7 @@ export default async function WorkOrderPage({
     getPrintMargins(),
     requestOrigin(),
   ])
+  const purchaseOrders = await loadPurchaseOrderChoices(catalog)
 
   if (!loaded.draft) {
     return (
@@ -44,6 +45,7 @@ export default async function WorkOrderPage({
         vendors={catalog.vendors}
         projects={catalog.projects}
         employees={catalog.employees}
+        purchaseOrders={purchaseOrders}
         origin={origin}
         margins={margins}
       />

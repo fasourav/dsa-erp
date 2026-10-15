@@ -139,6 +139,7 @@ export type WorkOrderDraft = {
   status: string
   vendorId: string
   projectId: string
+  purchaseOrderId: string
   proposalOn: string
   workStart: string
   workEnd: string
@@ -862,6 +863,7 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
         status: "draft",
         vendorId: "",
         projectId: "",
+        purchaseOrderId: "",
         proposalOn: "",
         workStart: "",
         workEnd: "",
@@ -906,6 +908,7 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
       status: row.status,
       vendorId: row.vendor_id,
       projectId: row.project_id ?? "",
+      purchaseOrderId: row.purchase_order_id ?? "",
       proposalOn: row.proposal_on ? dateInputValue(row.proposal_on) : "",
       workStart: row.work_start ? dateInputValue(row.work_start) : "",
       workEnd: row.work_end ? dateInputValue(row.work_end) : "",
@@ -922,3 +925,53 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
 }
 
 export type { Json }
+
+export type PurchaseOrderChoice = {
+  id: string
+  label: string
+  vendorId: string
+  projectId: string
+  workType: string
+  notes: string
+  totalValue: number
+}
+
+/** Purchase orders for the work order picker, labelled by work type, vendor, project and date (never ids). */
+export async function loadPurchaseOrderChoices(catalog: DocumentCatalog): Promise<PurchaseOrderChoice[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("vendor_purchase_orders")
+    .select("id, vendor_id, project_id, issued_on, work_type, notes, total_value")
+    .order("issued_on", { ascending: false })
+    .limit(500)
+  return (data ?? []).map((row) => {
+    const vendor = catalog.vendors.find((item) => item.id === row.vendor_id)?.name || "Vendor"
+    const project = row.project_id
+      ? catalog.projects.find((item) => item.id === row.project_id)?.name || "Project"
+      : "Operational"
+    const workType = row.work_type?.trim() || "Purchase Order"
+    return {
+      id: row.id,
+      label: `${workType} · ${vendor} · ${project} · ${formatIsoDate(dateInputValue(row.issued_on))}`,
+      vendorId: row.vendor_id,
+      projectId: row.project_id ?? "",
+      workType: row.work_type?.trim() ?? "",
+      notes: row.notes?.trim() ?? "",
+      totalValue: toNumber(row.total_value),
+    }
+  })
+}
+
+/** The work order already printed for a purchase order, if any. Null before the link migration is applied. */
+export async function workOrderForPurchaseOrder(purchaseOrderId: string): Promise<string | null> {
+  if (!isUuid(purchaseOrderId)) return null
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("work_orders")
+    .select("id")
+    .eq("purchase_order_id", purchaseOrderId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+  if (error) return null
+  return data?.[0]?.id ?? null
+}

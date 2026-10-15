@@ -24,17 +24,44 @@ import {
 } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentWorkOrder } from "@/lib/documents/present"
-import type { WorkOrderDraft } from "@/lib/documents/queries"
+import type { PurchaseOrderChoice, WorkOrderDraft } from "@/lib/documents/queries"
+
+/** Links the purchase order: vendor and project follow it; items and amount are pre-filled only when still empty. */
+function withPurchaseOrder(form: WorkOrderDraft, order: PurchaseOrderChoice | undefined): WorkOrderDraft {
+  if (!order) return { ...form, purchaseOrderId: "" }
+  const blank = !form.lines.some((line) => line.item.trim() || line.unitPrice.trim())
+  return {
+    ...form,
+    purchaseOrderId: order.id,
+    vendorId: order.vendorId,
+    projectId: order.projectId,
+    subject: form.subject || (order.workType ? `Work order for ${order.workType}` : form.subject),
+    lines: blank
+      ? [
+          {
+            section: "",
+            item: order.workType || "Work as per purchase order",
+            specification: order.notes,
+            quantity: "1",
+            unit: "Job",
+            unitPrice: order.totalValue > 0 ? String(order.totalValue) : "",
+          },
+        ]
+      : form.lines,
+  }
+}
 
 export function WorkOrderStudio({
   draft,
   vendors,
   projects,
   employees,
+  purchaseOrders,
   origin,
   margins,
 }: {
   draft: WorkOrderDraft
+  purchaseOrders: PurchaseOrderChoice[]
   vendors: NamedOption[]
   projects: ProjectChoice[]
   employees: EmployeeChoice[]
@@ -42,7 +69,12 @@ export function WorkOrderStudio({
   margins: PrintMargins
 }) {
   const router = useRouter()
-  const [form, setForm] = useState(draft)
+  const [form, setForm] = useState(() =>
+    draft.purchaseOrderId && !draft.id
+      ? withPurchaseOrder(draft, purchaseOrders.find((item) => item.id === draft.purchaseOrderId))
+      : draft,
+  )
+  const linked = Boolean(form.purchaseOrderId)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("work_orders", form.id ? "edit" : "add")
@@ -76,7 +108,7 @@ export function WorkOrderStudio({
   return (
     <DocumentWorkspace
       title="Work Order"
-      description="Prints the work order only. The letterhead and footer stay on the pad."
+      description="Printable work order for a purchase order. The letterhead and footer stay on the pad."
       margins={margins}
       preview={preview}
       canSave={canSave}
@@ -86,6 +118,10 @@ export function WorkOrderStudio({
       files={{ parentType: "work_order", parentId: form.id }}
       onSave={() => {
         setError(null)
+        if (!form.id && !form.purchaseOrderId) {
+          setError("Choose a purchase order.")
+          return
+        }
         startSave(async () => {
           const result = await saveWorkOrder(form)
           if (result.error || !result.id) {
@@ -104,10 +140,21 @@ export function WorkOrderStudio({
       }}
     >
       <ChoiceField
+        id="purchase-order"
+        label="Purchase Order"
+        placeholder={form.id && !linked ? "No purchase order (older work order)" : "Choose a purchase order"}
+        value={form.purchaseOrderId}
+        disabled={!canSave}
+        options={purchaseOrders.map((item) => ({ value: item.id, label: item.label }))}
+        onChange={(purchaseOrderId) =>
+          setForm(withPurchaseOrder(form, purchaseOrders.find((item) => item.id === purchaseOrderId)))
+        }
+      />
+      <ChoiceField
         id="vendor"
         label="Vendor Name"
         value={form.vendorId}
-        disabled={!canSave}
+        disabled={!canSave || linked}
         options={vendors.map((item) => ({ value: item.id, label: item.name }))}
         onChange={(vendorId) => setForm({ ...form, vendorId })}
       />
@@ -115,7 +162,7 @@ export function WorkOrderStudio({
         id="project"
         label="Project Name"
         value={form.projectId}
-        disabled={!canSave}
+        disabled={!canSave || linked}
         options={projects.map((item) => ({ value: item.id, label: item.name }))}
         onChange={(projectId) => setForm({ ...form, projectId })}
       />

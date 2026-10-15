@@ -843,6 +843,7 @@ export type Database = {
           issued_on: string
           prepared_by: string
           project_id: string | null
+          purchase_order_id: string | null
           proposal_on: string | null
           status: string
           subject: string
@@ -863,6 +864,7 @@ export type Database = {
           issued_on: string
           prepared_by?: string
           project_id?: string | null
+          purchase_order_id?: string | null
           proposal_on?: string | null
           status?: string
           subject?: string
@@ -883,6 +885,7 @@ export type Database = {
           issued_on?: string
           prepared_by?: string
           project_id?: string | null
+          purchase_order_id?: string | null
           proposal_on?: string | null
           status?: string
           subject?: string
