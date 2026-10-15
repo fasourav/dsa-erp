@@ -1,7 +1,7 @@
 "use client"
 
 import { SlidersHorizontal } from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useState, type FormEvent } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,7 @@ export function ReportFilters({
 }) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const years = reportYears(launch, today)
   const matched = years.find((year) => {
     const period = periodForYear(year, launch, today)
@@ -52,7 +53,9 @@ export function ReportFilters({
   ]
 
   function openPeriod(nextFrom: string, nextTo: string) {
-    const params = new URLSearchParams({ from: nextFrom, to: nextTo })
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("from", nextFrom)
+    params.set("to", nextTo)
     setFiltersOpen(false)
     router.push(`${pathname}?${params.toString()}`)
   }

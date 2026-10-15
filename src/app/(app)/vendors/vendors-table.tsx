@@ -4,7 +4,7 @@ import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan, useSeesMoney } from "@/components/access-provider"
 
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { FileText, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
@@ -352,6 +352,9 @@ function RowActions({
   onEdit: (vendor: VendorSummary) => void
   onDelete: (vendor: VendorSummary) => void
 }) {
+  const canViewVendors = useCan("vendors", "view")
+  const canViewPayable = useCan("accounts_payable", "view")
+  const canStatement = canViewVendors && canViewPayable
   const canEdit = useCan("vendors", "edit")
   const canDelete = useCan("vendors", "delete")
   const label = vendor.displayName || "vendor"
@@ -370,14 +373,20 @@ function RowActions({
       >
         <MoreHorizontal aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
+      <DropdownMenuContent align="end" className="w-44">
+        {canStatement ? (
+          <DropdownMenuItem render={<Link href={`/vendors/${vendor.id}/statement`} />}>
+            <FileText aria-hidden="true" />
+            Statement
+          </DropdownMenuItem>
+        ) : null}
         {canEdit ? (
           <DropdownMenuItem onClick={() => onEdit(vendor)}>
             <Pencil aria-hidden="true" />
             Edit
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuSeparator />
+        {canDelete ? <DropdownMenuSeparator /> : null}
         {canDelete ? (
           <DropdownMenuItem variant="destructive" onClick={() => onDelete(vendor)}>
             <Trash2 aria-hidden="true" />

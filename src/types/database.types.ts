@@ -3386,6 +3386,19 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: Json
       }
+      vendor_statement: {
+        Args: { p_vendor_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
+      client_statement: {
+        Args: {
+          p_client_id: string
+          p_from: string
+          p_to: string
+          p_project_id?: string
+        }
+        Returns: Json
+      }
       record_backup: { Args: { p_kind: string }; Returns: undefined }
       claim_attachment_file_purges: {
         Args: { p_limit?: number }
