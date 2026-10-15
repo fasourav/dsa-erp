@@ -1604,6 +1604,120 @@ export type Database = {
         }
         Relationships: []
       }
+      project_milestones: {
+        Row: {
+          amount: number | null
+          created_at: string
+          done_on: string | null
+          due_on: string | null
+          id: string
+          label: string
+          percent_of_value: number | null
+          project_id: string
+          stage_id: string | null
+          updated_at: string
+          work_order_milestone_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          done_on?: string | null
+          due_on?: string | null
+          id?: string
+          label: string
+          percent_of_value?: number | null
+          project_id: string
+          stage_id?: string | null
+          updated_at?: string
+          work_order_milestone_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          done_on?: string | null
+          due_on?: string | null
+          id?: string
+          label?: string
+          percent_of_value?: number | null
+          project_id?: string
+          stage_id?: string | null
+          updated_at?: string
+          work_order_milestone_id?: string | null
+        }
+        Relationships: []
+      }
+      project_stage_templates: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order: number
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      project_stages: {
+        Row: {
+          created_at: string
+          done_on: string | null
+          id: string
+          name: string
+          notes: string
+          planned_end: string | null
+          planned_start: string | null
+          project_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["project_stage_status"]
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          done_on?: string | null
+          id?: string
+          name: string
+          notes?: string
+          planned_end?: string | null
+          planned_start?: string | null
+          project_id: string
+          sort_order: number
+          status?: Database["public"]["Enums"]["project_stage_status"]
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          done_on?: string | null
+          id?: string
+          name?: string
+          notes?: string
+          planned_end?: string | null
+          planned_start?: string | null
+          project_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["project_stage_status"]
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       project_phases: {
         Row: {
           created_at: string
@@ -1657,6 +1771,7 @@ export type Database = {
           lead_id: string | null
           location: string | null
           name: string
+          progress_percent: number
           project_type: string | null
           recovery_plan: string | null
           started_on: string
@@ -1675,6 +1790,7 @@ export type Database = {
           lead_id?: string | null
           location?: string | null
           name: string
+          progress_percent?: number
           project_type?: string | null
           recovery_plan?: string | null
           started_on?: string
@@ -1693,6 +1809,7 @@ export type Database = {
           lead_id?: string | null
           location?: string | null
           name?: string
+          progress_percent?: number
           project_type?: string | null
           recovery_plan?: string | null
           started_on?: string
@@ -3292,6 +3409,7 @@ export type Database = {
         | "withdrawal"
       party_kind: "person" | "company"
       payment_status: "unpaid" | "partial" | "paid" | "void"
+      project_stage_status: "Not Started" | "In Progress" | "Done"
       project_status: "active" | "completed"
       vendor_kind: "private" | "company"
     }
@@ -3435,6 +3553,7 @@ export const Constants = {
       ],
       party_kind: ["person", "company"],
       payment_status: ["unpaid", "partial", "paid", "void"],
+      project_stage_status: ["Not Started", "In Progress", "Done"],
       project_status: ["active", "completed"],
       vendor_kind: ["private", "company"],
     },

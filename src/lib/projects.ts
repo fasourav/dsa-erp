@@ -5,6 +5,7 @@ import {
   type ClientOption,
   type ProjectRow,
 } from "@/lib/project-summary"
+import { overdueCountsByProject } from "@/lib/project-progress-data"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 
@@ -21,13 +22,13 @@ export async function getProjects(): Promise<{
   const supabase = await createClient()
 
   try {
-    const [projectRows, financialRows, clientRows, typeRows, phaseRows] =
+    const [projectRows, financialRows, clientRows, typeRows, phaseRows, overdue] =
       await Promise.all([
       fetchPages((from, to) =>
         supabase
           .from("projects")
           .select(
-            "id, name, client_id, location, started_on, project_type, status, current_phase, total_value, details",
+            "id, name, client_id, location, started_on, project_type, status, current_phase, total_value, details, progress_percent",
           )
           .order("id", { ascending: true })
           .range(from, to),
@@ -64,6 +65,7 @@ export async function getProjects(): Promise<{
           .order("id", { ascending: true })
           .range(from, to),
       ),
+      overdueCountsByProject(),
     ])
 
     const clientsById = new Map(clientRows.map((row) => [row.id, row]))
@@ -96,6 +98,8 @@ export async function getProjects(): Promise<{
         expenseDue: toNumber(financial?.expense_due),
         grossProfit: toNumber(financial?.gross_profit),
         details: row.details ?? "",
+        progressPercent: toNumber(row.progress_percent),
+        overdueMilestones: overdue.get(row.id) ?? 0,
       } satisfies ProjectRow
     })
 

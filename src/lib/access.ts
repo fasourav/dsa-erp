@@ -3,6 +3,7 @@ export const moduleKeys = [
   "leads",
   "clients",
   "projects",
+  "project_progress",
   "backlog",
   "purchase_orders",
   "quotations",

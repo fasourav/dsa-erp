@@ -12,6 +12,7 @@ const moduleLabels: Record<string, string> = {
   leads: "Leads",
   clients: "Clients",
   projects: "Projects",
+  project_progress: "Project Progress",
   backlog: "Backlog",
   purchase_orders: "Purchase Orders",
   quotations: "Quotations",

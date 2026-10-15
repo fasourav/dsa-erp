@@ -33,7 +33,9 @@ import type {
   ProjectOverview,
   RecentClientPayment,
 } from "@/lib/project-detail"
+import { ProjectProgressPanel } from "@/app/(app)/projects/[id]/project-progress-panel"
 import { formatPercent } from "@/lib/project-summary"
+import type { ProjectProgressData } from "@/lib/project-progress"
 import { cn } from "@/lib/utils"
 
 type PaymentColumn = "paidOn" | "amount" | "method"
@@ -68,10 +70,14 @@ export function ProjectSummarySection({
   project,
   overview,
   backlog,
+  progress,
+  progressError,
 }: {
   project: ProjectDetail
   overview: ProjectOverview
   backlog: BacklogEntry | null
+  progress: ProjectProgressData | null
+  progressError: string | null
 }) {
   const slices = expenseSliceStyle.flatMap((style) => {
     const amount =
@@ -111,6 +117,7 @@ export function ProjectSummarySection({
       <Tabs defaultValue="overview">
         <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
@@ -174,6 +181,14 @@ export function ProjectSummarySection({
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent keepMounted value="progress">
+          <ProjectProgressPanel
+            projectId={project.id}
+            progress={progress}
+            error={progressError}
+          />
         </TabsContent>
 
         <TabsContent keepMounted value="payments" className="flex flex-col gap-3">
