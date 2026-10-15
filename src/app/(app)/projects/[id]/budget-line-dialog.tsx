@@ -71,6 +71,12 @@ export function BudgetLineDialog({
   function handleSubmit() {
     setFormError(null)
     setFieldErrors({})
+    const planned = Number(plannedAmount.trim().replace(/,/g, ""))
+    if (plannedAmount.trim() && planned === 0) {
+      setFieldErrors({ plannedAmount: "Enter a planned amount greater than 0." })
+      setFormError("Check the highlighted fields.")
+      return
+    }
     const input = {
       projectId,
       categoryId,

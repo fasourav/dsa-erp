@@ -1,6 +1,6 @@
 "use server"
 
-import { withVersion } from "@/lib/record-version"
+import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, mentions } from "@/lib/db-errors"
@@ -200,10 +200,16 @@ async function saveProject(
   }
 
   const { data, error } = id
-    ? await supabase.from("projects").update(withVersion(values, input.version)).eq("id", id).select("id")
+    ? await eqVersion(
+        supabase.from("projects").update(withVersion(values, input.version)).eq("id", id),
+        input.version,
+      ).select("id")
     : await supabase.from("projects").insert(values).select("id")
 
   if (error) {
+    const stale = staleWriteMessage(error)
+    if (stale) return { error: stale }
+
     if (error.code === "23503") {
       return {
         error: null,
@@ -240,7 +246,7 @@ async function saveProject(
   }
 
   if (!data || data.length === 0) {
-    return { error: "That project could not be found." }
+    return { error: missedUpdateMessage(id ? input.version : undefined, "That project could not be found.") }
   }
 
   revalidatePath("/projects")

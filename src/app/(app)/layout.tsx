@@ -13,6 +13,8 @@ export default async function AuthenticatedLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Shared by every app page, including /modules. That page has no fetch of its own.
+  // Cost here is one cached access read (session, profile, grants) and the theme cookie.
   const access = await getAccess()
 
   if (!access || access.status === "deactivated") {

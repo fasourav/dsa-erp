@@ -28,6 +28,9 @@ function templateError(error: { message?: string; code?: string }): string {
   if (/duplicate key|unique/i.test(message)) {
     return "A template with this name already exists for that document kind."
   }
+  if (/document_templates_name_len|name_len/i.test(message)) {
+    return "Use 120 characters or fewer."
+  }
   if (/payload_check|check constraint/i.test(message)) {
     return "Lines need a description, unit, quantity, and rate. Milestone percents must total 100."
   }

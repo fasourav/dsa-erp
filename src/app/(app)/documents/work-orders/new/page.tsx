@@ -13,7 +13,7 @@ export default async function NewWorkOrderPage({
 }: {
   searchParams: Promise<{ po?: string }>
 }) {
-  await requireModule("work_orders")
+  await requireModule("work_orders", "add")
   const { po } = await searchParams
   const [catalog, loaded, margins, origin, templateList] = await Promise.all([
     loadDocumentCatalog(),

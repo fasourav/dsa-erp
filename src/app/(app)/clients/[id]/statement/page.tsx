@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation"
 import { ReportFilters } from "@/app/(app)/reports/report-filters"
 import { PageHeader } from "@/components/page-header"
 import { StatementView } from "@/components/statement-view"
-import { allows, homePath } from "@/lib/access"
+import { allows } from "@/lib/access"
 import { isUuid } from "@/lib/ids"
 import { reportLaunchDate } from "@/lib/reports/load"
 import { clampPeriod, currentReportPeriod, officeToday } from "@/lib/reports/period"
@@ -33,9 +33,9 @@ export default async function ClientStatementPage({
   const [{ id }, query, access] = await Promise.all([params, searchParams, getAccess()])
   if (!access || access.status === "deactivated") redirect("/login")
   if (!allows(access, "clients", "view") || !allows(access, "accounts_receivable", "view")) {
-    redirect(homePath(access))
+    redirect("/no-access")
   }
-  if (!access.isOwner && !access.showFinancials) redirect(homePath(access))
+  if (!access.isOwner && !access.showFinancials) redirect("/no-access")
   if (!isUuid(id)) notFound()
 
   const supabase = await createClient()

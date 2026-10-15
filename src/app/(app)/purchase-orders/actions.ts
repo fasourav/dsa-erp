@@ -1,6 +1,6 @@
 "use server"
 
-import { withVersion } from "@/lib/record-version"
+import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
@@ -179,17 +179,19 @@ async function savePurchaseOrder(
   }
 
   const { data, error } = id
-    ? await supabase
-        .from("vendor_purchase_orders")
-        .update(withVersion(values, input.version))
-        .eq("id", id)
-        .select("id")
+    ? await eqVersion(
+        supabase.from("vendor_purchase_orders").update(withVersion(values, input.version)).eq("id", id),
+        input.version,
+      ).select("id")
     : await supabase
         .from("vendor_purchase_orders")
         .insert(values)
         .select("id")
 
   if (error) {
+    const stale = staleWriteMessage(error)
+    if (stale) return { error: stale }
+
     if (error.code === "23503") {
       if (/vendor/i.test(error.message)) {
         return {
@@ -221,7 +223,7 @@ async function savePurchaseOrder(
   }
 
   if (!data || data.length === 0) {
-    return { error: "That purchase order could not be found." }
+    return { error: missedUpdateMessage(id ? input.version : undefined, "That purchase order could not be found.") }
   }
 
   revalidatePurchaseOrders()

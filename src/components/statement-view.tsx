@@ -223,7 +223,12 @@ function StatementLines({
       mobileItem={(row) => ({
         title: row.kind === "payment" ? "Payment" : debitLabel.replace(/s$/, ""),
         subtitle: [formatDayMonYear(row.occurredOn), row.reference, row.project].filter(Boolean).join(" · "),
-        meta: <Money value={row.running} />,
+        value: <Money value={row.kind === "payment" ? row.credit : row.debit} />,
+        meta: (
+          <span className="text-label font-book text-muted-foreground">
+            Balance <Money value={row.running} />
+          </span>
+        ),
       })}
       renderCell={(row, columnId) => renderLine(row, columnId, debitLabel)}
     />

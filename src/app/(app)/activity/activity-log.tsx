@@ -266,7 +266,11 @@ export function ActivityLog({
         pagingLabel="Activity pagination"
         mobileItem={(row) => ({
           title: row.what,
-          subtitle: [row.who, row.record].filter(Boolean).join(" · "),
+          subtitle: (
+            <span className="block truncate">
+              {[row.who, row.record].filter(Boolean).join(" · ")}
+            </span>
+          ),
           value: <RelativeTime iso={row.createdAt} absolute={row.when} />,
         })}
         renderCell={(row, columnId) => {
@@ -280,16 +284,16 @@ export function ActivityLog({
                 <Button
                   type="button"
                   variant="link"
-                  className="px-0"
+                  className="max-w-64 truncate px-0"
                   onClick={() => setDiff(row)}
                 >
                   {row.what}
                 </Button>
               ) : (
-                <span>{row.what}</span>
+                <span className="block max-w-64 truncate">{row.what}</span>
               )
             case "record":
-              return <span>{row.record || "—"}</span>
+              return <span className="block max-w-64 truncate">{row.record || "—"}</span>
           }
         }}
         renderActions={(row) =>

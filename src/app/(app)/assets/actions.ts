@@ -1,6 +1,6 @@
 "use server"
 
-import { withVersion } from "@/lib/record-version"
+import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError } from "@/lib/db-errors"
@@ -129,12 +129,15 @@ async function saveAsset(
   }
 
   const { data, error } = id
-    ? await supabase.from("assets").update(withVersion(values, input.version)).eq("id", id).select("id")
+    ? await eqVersion(
+        supabase.from("assets").update(withVersion(values, input.version)).eq("id", id),
+        input.version,
+      ).select("id")
     : await supabase.from("assets").insert(values).select("id")
 
-  if (error) return { error: friendlyDbError(error, "Could not save this asset.") }
+  if (error) return { error: staleWriteMessage(error) ?? friendlyDbError(error, "Could not save this asset.") }
   if (!data || data.length === 0)
-    return { error: "That asset could not be found." }
+    return { error: missedUpdateMessage(id ? input.version : undefined, "That asset could not be found.") }
 
   revalidatePath("/assets")
   return { error: null }

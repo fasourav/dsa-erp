@@ -41,6 +41,9 @@ export type AccessSnapshot = {
   status: "active" | "invited" | "deactivated"
   showFinancials: boolean
   isOwner: boolean
+  displayName: string
+  email: string
+  designation: string | null
   grants: Record<string, ModuleGrant>
   ownersOnly: string[]
 }

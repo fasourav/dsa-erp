@@ -1,7 +1,7 @@
 "use server"
 
 import { titleCaseName } from "@/lib/format"
-import { withVersion } from "@/lib/record-version"
+import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, mentions } from "@/lib/db-errors"
@@ -197,14 +197,16 @@ async function saveEmployee(
   }
 
   const { data, error } = id
-    ? await supabase
-        .from("employees")
-        .update(withVersion(keepPay ? details : values, input.version))
-        .eq("id", id)
-        .select("id")
+    ? await eqVersion(
+        supabase.from("employees").update(withVersion(keepPay ? details : values, input.version)).eq("id", id),
+        input.version,
+      ).select("id")
     : await supabase.from("employees").insert(values).select("id")
 
   if (error) {
+    const stale = staleWriteMessage(error)
+    if (stale) return { error: stale }
+
     if (error.code === "23503") {
       return { error: "Choose a valid department." }
     }
@@ -220,7 +222,7 @@ async function saveEmployee(
   }
 
   if (!data || data.length === 0) {
-    return { error: "That employee could not be found." }
+    return { error: missedUpdateMessage(id ? input.version : undefined, "That employee could not be found.") }
   }
 
   revalidatePath("/hr/employees")

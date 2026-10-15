@@ -42,6 +42,8 @@ export async function saveProjectBudgetLine(
   if (!isUuid(categoryId)) fieldErrors.categoryId = "Choose a category."
   if (!input.plannedAmount.trim()) {
     fieldErrors.plannedAmount = "Enter a planned amount."
+  } else if (Number(input.plannedAmount.trim().replace(/,/g, "")) === 0) {
+    fieldErrors.plannedAmount = "Enter a planned amount greater than 0."
   } else {
     const amountMessage = amountError(input.plannedAmount, "planned amount")
     if (amountMessage) fieldErrors.plannedAmount = amountMessage
@@ -52,7 +54,7 @@ export async function saveProjectBudgetLine(
   }
 
   const planned = parseProjectValue(input.plannedAmount)
-  if (planned == null) return { error: "Enter a planned amount." }
+  if (planned == null || planned <= 0) return { error: "Enter a planned amount greater than 0." }
 
   const supabase = await createClient()
   const values = {

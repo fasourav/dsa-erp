@@ -17,7 +17,7 @@ import {
 import { PageHeader } from "@/components/page-header"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { canOpenReports, canSeeReport, homePath } from "@/lib/access"
+import { canOpenReports, canSeeReport } from "@/lib/access"
 import { reportDefinitions } from "@/lib/reports/catalog"
 import type { ReportSlug } from "@/lib/reports/types"
 import { getAccess } from "@/lib/permissions"
@@ -41,7 +41,7 @@ const reportIcons: Record<ReportSlug, LucideIcon> = {
 export default async function ReportsPage() {
   const access = await getAccess()
   if (!access || access.status === "deactivated") redirect("/login")
-  if (!canOpenReports(access)) redirect(homePath(access))
+  if (!canOpenReports(access)) redirect("/no-access")
 
   const visible = reportDefinitions.filter((report) => canSeeReport(access, report.slug))
 

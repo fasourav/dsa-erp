@@ -4,7 +4,7 @@ import { Banknote, ClipboardList, FileText, Receipt, ScrollText, type LucideIcon
 
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent } from "@/components/ui/card"
-import { allows, homePath } from "@/lib/access"
+import { allows } from "@/lib/access"
 import { documentKinds } from "@/lib/documents/kinds"
 import { getAccess } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
@@ -25,7 +25,7 @@ export default async function DocumentsPage() {
   const access = await getAccess()
   if (!access || access.status === "deactivated") redirect("/login")
   const visible = documentKinds.filter((kind) => allows(access, kind.module, "view"))
-  if (visible.length === 0) redirect(homePath(access))
+  if (visible.length === 0) redirect("/no-access")
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
