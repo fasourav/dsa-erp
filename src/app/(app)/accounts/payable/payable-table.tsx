@@ -54,6 +54,7 @@ export function PayableTable({
     <div className="flex flex-col gap-3.5">
       <PageHeader
         title="Accounts Payable"
+        description="Open vendor bills by purchase order: billed, paid and still to pay. Unbilled order value isn't a payable yet. Matches the reports and dashboard."
         className="mb-0 md:mb-2"
         actions={
           <ListExport
@@ -63,9 +64,9 @@ export function PayableTable({
               columns: [
                 { header: "Project", kind: "text" },
                 { header: "Vendor", kind: "text" },
-                { header: "Total Payable", kind: "money" },
-                { header: "Total Paid", kind: "money" },
-                { header: "Pending Payable", kind: "money" },
+                { header: "Billed", kind: "money" },
+                { header: "Paid", kind: "money" },
+                { header: "Open Payable", kind: "money" },
               ],
               rows: filtered.map((row) => [
                 row.projectName,

@@ -1,16 +1,18 @@
 "use server"
 
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { assetQuantitySchema, firstIssue } from "@/lib/schemas"
-import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
 
 export type AssetInput = {
+  version?: string
   purchaseDate: string
   name: string
   categoryId: string
@@ -95,6 +97,8 @@ async function saveAsset(
   if (!name) fieldErrors.name = "Enter an asset name."
   if (!isIsoDate(purchaseDate))
     fieldErrors.purchaseDate = "Enter a purchase date."
+  else if (isFutureIsoDate(purchaseDate))
+    fieldErrors.purchaseDate = "Purchase date can't be in the future."
   if (!quantityCheck.success) {
     fieldErrors.quantity = firstIssue(quantityCheck.error, "quantity")
   }
@@ -125,7 +129,7 @@ async function saveAsset(
   }
 
   const { data, error } = id
-    ? await supabase.from("assets").update(values).eq("id", id).select("id")
+    ? await supabase.from("assets").update(withVersion(values, input.version)).eq("id", id).select("id")
     : await supabase.from("assets").insert(values).select("id")
 
   if (error) return { error: friendlyDbError(error, "Could not save this asset.") }

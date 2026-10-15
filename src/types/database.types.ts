@@ -843,6 +843,7 @@ export type Database = {
           issued_on: string
           prepared_by: string
           project_id: string | null
+          purchase_order_id: string | null
           proposal_on: string | null
           status: string
           subject: string
@@ -863,6 +864,7 @@ export type Database = {
           issued_on: string
           prepared_by?: string
           project_id?: string | null
+          purchase_order_id?: string | null
           proposal_on?: string | null
           status?: string
           subject?: string
@@ -883,6 +885,7 @@ export type Database = {
           issued_on?: string
           prepared_by?: string
           project_id?: string | null
+          purchase_order_id?: string | null
           proposal_on?: string | null
           status?: string
           subject?: string
@@ -3251,6 +3254,17 @@ export type Database = {
         }[]
       }
       set_own_display_name: { Args: { next_name: string }; Returns: undefined }
+      save_business_document: {
+        Args: {
+          p_fields: Json
+          p_id?: string
+          p_kind: string
+          p_lines: Json
+          p_milestones: Json
+          p_version?: string
+        }
+        Returns: Json
+      }
       financial_report: {
         Args: { p_from: string; p_to: string }
         Returns: Json

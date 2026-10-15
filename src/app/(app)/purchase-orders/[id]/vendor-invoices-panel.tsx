@@ -3,7 +3,7 @@
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
-import { MoreHorizontal, Pencil, Trash2, Wallet } from "lucide-react"
+import { FileText, MoreHorizontal, Pencil, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition, type ReactNode } from "react"
 
@@ -51,17 +51,21 @@ export function VendorInvoicesPanel({
   expenseCategories,
   bankAccounts,
   error,
+  workOrderId = null,
 }: {
   purchaseOrder: PurchaseOrderDetail | null
   invoices: VendorInvoiceRow[]
   paymentMethods: string[]
   expenseCategories: string[]
   bankAccounts: BankAccountChoice[]
+  workOrderId?: string | null
   error: string | null
 }) {
   const canAdd = useCan("vendor_payments", "add")
   const canEdit = useCan("vendor_payments", "edit")
   const canDelete = useCan("vendor_payments", "delete")
+  const canViewWorkOrder = useCan("work_orders", "view")
+  const canAddWorkOrder = useCan("work_orders", "add")
 
   const [sort, setSort] = useState<SortState<VendorInvoiceColumnId>>({
     key: "issuedOn",
@@ -155,6 +159,25 @@ export function VendorInvoicesPanel({
             >
               All Purchase Orders
             </Button>
+            {purchaseOrder && workOrderId && canViewWorkOrder ? (
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`/documents/work-orders/${workOrderId}`} />}
+              >
+                <FileText aria-hidden="true" data-icon="inline-start" />
+                View Work Order
+              </Button>
+            ) : purchaseOrder && !workOrderId && canAddWorkOrder ? (
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`/documents/work-orders/new?po=${purchaseOrder.id}`} />}
+              >
+                <FileText aria-hidden="true" data-icon="inline-start" />
+                Create Work Order
+              </Button>
+            ) : null}
             {canAdd ? (
               <Button
                 type="button"

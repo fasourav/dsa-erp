@@ -38,6 +38,17 @@ export function parseProjectValue(value: string): number | null {
   return parsed
 }
 
+/** Why an amount is not accepted, or null when it is valid (blank counts as valid). */
+export function amountError(value: string, label: string): string | null {
+  const trimmed = value.trim().replace(/,/g, "")
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  if (!Number.isFinite(parsed)) return `Enter a valid ${label}.`
+  if (parsed < 0) return `The ${label} can't be negative.`
+  if (parsed > MAX_AMOUNT) return `The ${label} can't be more than ৳99,99,99,999.99.`
+  return null
+}
+
 export function todayIsoDate(): string {
   const now = new Date()
   const month = String(now.getMonth() + 1).padStart(2, "0")

@@ -33,9 +33,9 @@ export type PayableColumnVisibility = Record<PayableOptionalColumnId, boolean>
 export const payableColumns: readonly ListColumn<PayableColumnId>[] = [
   { id: "projectName", label: "Project", align: "left", locked: true },
   { id: "vendorName", label: "Vendor", align: "left", locked: true },
-  { id: "totalPayable", label: "Total Payable", align: "right", locked: false },
-  { id: "totalPaid", label: "Total Paid", align: "right", locked: false },
-  { id: "pendingPayable", label: "Pending Payable", align: "right", locked: false },
+  { id: "totalPayable", label: "Billed", align: "right", locked: false },
+  { id: "totalPaid", label: "Paid", align: "right", locked: false },
+  { id: "pendingPayable", label: "Open Payable", align: "right", locked: false },
 ]
 
 const defaultVisibility: PayableColumnVisibility = {

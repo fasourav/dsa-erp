@@ -1,4 +1,5 @@
 import { VendorInvoicesPanel } from "@/app/(app)/purchase-orders/[id]/vendor-invoices-panel"
+import { workOrderForPurchaseOrder } from "@/lib/documents/queries"
 import { getVendorInvoicePage } from "@/lib/vendor-invoices"
 import { requireModule } from "@/lib/permissions"
 
@@ -11,7 +12,7 @@ export default async function PurchaseOrderInvoicesPage({
 }) {
   await requireModule("purchase_orders")
   const { id } = await params
-  const page = await getVendorInvoicePage(id)
+  const [page, workOrderId] = await Promise.all([getVendorInvoicePage(id), workOrderForPurchaseOrder(id)])
 
   return (
     <VendorInvoicesPanel
@@ -21,6 +22,7 @@ export default async function PurchaseOrderInvoicesPage({
       expenseCategories={page.expenseCategories}
       bankAccounts={page.bankAccounts}
       error={page.error}
+      workOrderId={workOrderId}
     />
   )
 }

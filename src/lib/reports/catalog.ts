@@ -30,7 +30,7 @@ export const reportDefinitions: Array<{
   {
     slug: "ap-aging",
     title: "Accounts Payable Aging",
-    detail: "Open purchase orders in 0-30, 31-60, 61-90, and 90+ days.",
+    detail: "Open vendor bills in 0-30, 31-60, 61-90, and 90+ days.",
   },
   {
     slug: "project-profitability",

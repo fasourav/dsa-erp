@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useEffect, useState, useTransition } from "react"
 
@@ -67,6 +68,7 @@ export function VendorFormDialog({
   categories: readonly string[]
 }) {
   const vendorId = vendor?.id ?? null
+  const version = useRecordVersion("vendors", vendorId, open)
   const [supabase] = useState(() => createClient())
   const [kind, setKind] = useState<VendorKind | null>(vendor?.kind ?? null)
   const [personName, setPersonName] = useState(vendor?.personName ?? "")
@@ -246,7 +248,7 @@ export function VendorFormDialog({
     startSubmit(async () => {
       try {
         const result = vendorId
-          ? await updateVendor(vendorId, input)
+          ? await updateVendor(vendorId, { ...input, version })
           : await addVendor(input)
 
         if (result.fieldErrors) {

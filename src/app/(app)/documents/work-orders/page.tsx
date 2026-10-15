@@ -20,7 +20,7 @@ export default async function WorkOrdersPage() {
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       <PageHeader
         title="Work Orders"
-        description="Orders issued to vendors and service providers."
+        description="Printable work order for a purchase order."
         actions={
           <>
             <ListExport grid={documentExportGrid(page.items, "work-orders", "Work Orders")} />

@@ -2,19 +2,25 @@ import { WorkOrderStudio } from "@/app/(app)/documents/work-orders/work-order-st
 import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
-import { loadDocumentCatalog, loadWorkOrderDraft } from "@/lib/documents/queries"
+import { loadDocumentCatalog, loadPurchaseOrderChoices, loadWorkOrderDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "New Work Order" }
 
-export default async function NewWorkOrderPage() {
+export default async function NewWorkOrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ po?: string }>
+}) {
   await requireModule("work_orders")
+  const { po } = await searchParams
   const [catalog, loaded, margins, origin] = await Promise.all([
     loadDocumentCatalog(),
     loadWorkOrderDraft(null),
     getPrintMargins(),
     requestOrigin(),
   ])
+  const purchaseOrders = await loadPurchaseOrderChoices(catalog)
 
   if (!loaded.draft) {
     return (
@@ -29,10 +35,15 @@ export default async function NewWorkOrderPage() {
 
   return (
     <WorkOrderStudio
-      draft={loaded.draft}
+      draft={
+        po && purchaseOrders.some((item) => item.id === po)
+          ? { ...loaded.draft, purchaseOrderId: po }
+          : loaded.draft
+      }
       vendors={catalog.vendors}
       projects={catalog.projects}
       employees={catalog.employees}
+      purchaseOrders={purchaseOrders}
       origin={origin}
       margins={margins}
     />

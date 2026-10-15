@@ -1,5 +1,6 @@
 "use server"
 
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
@@ -25,6 +26,7 @@ import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 export type ClientInvoiceInput = {
+  version?: string
   projectId: string
   issuedOn: string
   dueOn: string
@@ -209,6 +211,8 @@ async function saveClientInvoice(
 
   if (!isIsoDate(issuedOn)) {
     fieldErrors.issuedOn = "Enter an issue date."
+  } else if (isFutureIsoDate(issuedOn)) {
+    fieldErrors.issuedOn = "Issue date can't be in the future."
   }
 
   if (dueOn && !isIsoDate(dueOn)) {
@@ -316,7 +320,7 @@ async function saveClientInvoice(
   }
 
   const { data, error } = id
-    ? await supabase.from("client_invoices").update(values).eq("id", id).select("id")
+    ? await supabase.from("client_invoices").update(withVersion(values, input.version)).eq("id", id).select("id")
     : await supabase.from("client_invoices").insert(values).select("id")
 
   if (error) {
@@ -415,7 +419,7 @@ async function saveClientPayment(
 
   const invoice = await supabase
     .from("client_invoices")
-    .select("id, amount, status")
+    .select("id, amount, status, issued_on")
     .eq("id", invoiceId)
     .limit(1)
 
@@ -424,6 +428,10 @@ async function saveClientPayment(
   }
 
   const invoiceRow = invoice.data?.[0]
+
+  if (invoiceRow?.issued_on && paidOn < invoiceRow.issued_on) {
+    return { error: null, fieldErrors: { paidOn: "Payment date can't be before the invoice issue date." } }
+  }
   if (!invoiceRow || !isClientInvoiceStatus(invoiceRow.status)) {
     return { error: "That invoice could not be found." }
   }

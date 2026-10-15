@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useEffect, useRef, useState, useTransition } from "react"
 
@@ -61,6 +62,7 @@ export function ClientFormDialog({
   client: ClientSummary | null
 }) {
   const clientId = client?.id ?? null
+  const version = useRecordVersion("clients", clientId, open)
   const [supabase] = useState(() => createClient())
   const [kind, setKind] = useState<ClientKind | null>(client?.kind ?? null)
   const [name, setName] = useState(client?.personName ?? "")
@@ -225,7 +227,7 @@ export function ClientFormDialog({
     startSubmit(async () => {
       try {
         const result = clientId
-          ? await updateClient(clientId, input)
+          ? await updateClient(clientId, { ...input, version })
           : await addClient(input)
 
         if (result.fieldErrors) {

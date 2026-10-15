@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -49,6 +50,7 @@ export function EmployeeFormDialog({
   const showFinancials = useAccess().showFinancials
   const hidePay = Boolean(employee) && !showFinancials
   const employeeId = employee?.id ?? null
+  const version = useRecordVersion("employees", employeeId, open)
   const [fullName, setFullName] = useState(employee?.fullName ?? "")
   const [departmentId, setDepartmentId] = useState(
     employee?.departmentId ?? "",
@@ -115,7 +117,7 @@ export function EmployeeFormDialog({
     startSubmit(async () => {
       try {
         const result = employeeId
-          ? await updateEmployee(employeeId, input)
+          ? await updateEmployee(employeeId, { ...input, version })
           : await addEmployee(input)
 
         if (result.fieldErrors) {

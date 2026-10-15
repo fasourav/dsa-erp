@@ -215,8 +215,8 @@ export function VendorPaymentsDialog({
                           </p>
                           <p className="text-label text-muted-foreground">
                             {row.paidOn ? formatIsoDate(row.paidOn) : "—"}
-                            {row.method ? ` · ${row.method}` : ""}
                             {row.bankAccountName ? ` · ${row.bankAccountName}` : ""}
+                            {row.method ? ` · via ${row.method}` : ""}
                             {row.expenseCategory ? ` · ${row.expenseCategory}` : ""}
                             {row.reference ? ` · ${row.reference}` : ""}
                           </p>

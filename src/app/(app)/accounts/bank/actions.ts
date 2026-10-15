@@ -9,7 +9,7 @@ import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isUuid } from "@/lib/ids"
 import { isSortOrder } from "@/lib/lookup-catalogs"
 import { parsePositiveAmount } from "@/lib/payment-status"
-import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless, denyUnlessOwner } from "@/lib/permissions"
@@ -229,6 +229,8 @@ export async function addBankTransfer(
   }
   if (!isIsoDate(transactionDate)) {
     fieldErrors.transactionDate = "Enter a date."
+  } else if (isFutureIsoDate(transactionDate)) {
+    fieldErrors.transactionDate = "Date can't be in the future."
   }
   if (amount === null) {
     fieldErrors.amount = input.amount.trim()
@@ -594,6 +596,8 @@ async function saveBankMovement(
   }
   if (!isIsoDate(transactionDate)) {
     fieldErrors.transactionDate = "Enter a date."
+  } else if (isFutureIsoDate(transactionDate)) {
+    fieldErrors.transactionDate = "Date can't be in the future."
   }
   if (amount === null) {
     fieldErrors.amount = input.amount.trim()

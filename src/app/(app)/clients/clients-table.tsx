@@ -186,7 +186,7 @@ export function ClientsTable({
                 client.ongoingProjects,
                 client.completedProjects,
                 client.totalProjects,
-                client.totalProjectValue,
+                showFinancials ? client.totalProjectValue : "Hidden",
                 showFinancials ? client.totalPaid : "Hidden",
                 showFinancials ? client.totalPending : "Hidden",
                 showFinancials ? client.grossProfit : "Hidden",

@@ -445,7 +445,8 @@ function DashboardSections({ model }: { model: DashboardModel }) {
           {model.trend.length > 0 ? <TrendChart data={model.trend} /> : <EmptyChart />}
         </Panel>
         <Panel title="Operational Tenure" className="md:col-span-2 xl:col-span-1">
-          <dl className="flex flex-col text-sm md:text-label">
+          <div className="flex flex-col text-sm md:text-label">
+            <dl className="contents">
             <div className="flex items-center justify-between gap-3 border-t border-border py-2.5 md:flex-col md:items-start md:gap-0.5 md:border-0 md:py-0">
               <dt className="text-muted-foreground md:font-label">Launch Date</dt>
               <dd className="font-strong md:text-[0.90625rem]">{model.tenure.launchDateLabel}</dd>
@@ -457,7 +458,8 @@ function DashboardSections({ model }: { model: DashboardModel }) {
               </dd>
               <dd className="text-caption text-muted-foreground md:mt-0.5 md:font-label">{model.tenure.daysLabel}</dd>
             </div>
-            <div className="flex flex-col md:mt-4.5 md:gap-2.5 md:border-t md:border-border md:pt-3.5">
+            </dl>
+            <dl className="flex flex-col md:mt-4.5 md:gap-2.5 md:border-t md:border-border md:pt-3.5">
               <TenureRow label="Revenue Per Day">
                 <Money value={model.tenure.revenuePerDay} />
               </TenureRow>
@@ -467,8 +469,8 @@ function DashboardSections({ model }: { model: DashboardModel }) {
                   className={model.tenure.netProfitPerDay < 0 ? "text-destructive" : "text-success"}
                 />
               </TenureRow>
-            </div>
-          </dl>
+            </dl>
+          </div>
         </Panel>
       </section>
     </div>

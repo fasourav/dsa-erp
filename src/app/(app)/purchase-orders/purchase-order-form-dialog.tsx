@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -42,6 +43,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import {
   isIsoDate,
+  amountError,
   parseProjectValue,
   todayIsoDate,
 } from "@/lib/project-validation"
@@ -71,6 +73,7 @@ export function PurchaseOrderFormDialog({
   operational?: boolean
 }) {
   const purchaseOrderId = purchaseOrder?.id ?? null
+  const version = useRecordVersion("vendor_purchase_orders", purchaseOrderId, open)
   const [projectId, setProjectId] = useState(
     operational ? "" : (purchaseOrder?.projectId ?? defaultProjectId ?? ""),
   )
@@ -112,7 +115,7 @@ export function PurchaseOrderFormDialog({
     serverErrors.totalValue ??
     (attempted && parseProjectValue(totalValue) === null
       ? totalValue.trim()
-        ? "Enter a purchase order value of 0 or more."
+        ? amountError(totalValue, "purchase order value")
         : "Enter a purchase order value."
       : null)
 
@@ -165,7 +168,7 @@ export function PurchaseOrderFormDialog({
     startSubmit(async () => {
       try {
         const result = purchaseOrderId
-          ? await updatePurchaseOrder(purchaseOrderId, input)
+          ? await updatePurchaseOrder(purchaseOrderId, { ...input, version })
           : await addPurchaseOrder(input)
 
         if (result.fieldErrors) {

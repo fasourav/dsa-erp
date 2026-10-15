@@ -116,3 +116,13 @@ function formatParts(parts: { year: number; month: number; day: number }): strin
   const day = String(parts.day).padStart(2, "0")
   return `${day} ${shortMonths[parts.month - 1]} ${parts.year}`
 }
+
+/** Capitalises each all-lowercase word of a person or company name; keeps acronyms and mixed case. */
+export function titleCaseName(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => (word === word.toLowerCase() ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join(" ")
+}

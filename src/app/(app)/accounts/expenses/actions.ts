@@ -1,17 +1,19 @@
 "use server"
 
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { overdraftMessage } from "@/lib/insufficient-balance"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
-import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
 
 export type ExpenseInput = {
+  version?: string
   expenseDate: string
   category: string
   amount: string
@@ -117,6 +119,8 @@ async function saveExpense(
 
   if (!isIsoDate(expenseDate)) {
     fieldErrors.expenseDate = "Enter a date."
+  } else if (isFutureIsoDate(expenseDate)) {
+    fieldErrors.expenseDate = "Date can't be in the future."
   }
 
   if (!category) {
@@ -237,7 +241,7 @@ async function saveExpense(
   const { data, error } = id
     ? await supabase
         .from("operational_expenses")
-        .update(values)
+        .update(withVersion(values, input.version))
         .eq("id", id)
         .select("id")
     : await supabase.from("operational_expenses").insert(values).select("id")

@@ -207,8 +207,8 @@ export function ClientPaymentsDialog({
                       <p className="text-label text-muted-foreground">
                         {[
                           row.paidOn ? formatIsoDate(row.paidOn) : "—",
-                          row.method,
                           row.bankAccountName,
+                          row.method ? `via ${row.method}` : "",
                           row.reference,
                         ]
                           .filter(Boolean)

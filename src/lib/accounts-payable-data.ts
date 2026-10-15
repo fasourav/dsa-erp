@@ -1,8 +1,14 @@
 import type { PayableRow } from "@/lib/accounts-payable"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
+import { getAccess } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 
+/**
+ * Accounts payable is bill-based, matching the reports and dashboard: per purchase order,
+ * Billed = non-void vendor bills, Paid = payments against those bills, Open = the sum of each
+ * bill's unpaid balance (never below 0). Unbilled order value is a commitment, not a payable.
+ */
 export async function getAccountsPayable(): Promise<{
   rows: PayableRow[]
   error: string | null
@@ -10,34 +16,72 @@ export async function getAccountsPayable(): Promise<{
   const supabase = await createClient()
 
   try {
-    const invoiceRows = await fetchAllPages(
-      (from, to) =>
-        supabase
-          .from("accounts_payable")
-          .select(
-            "id, vendor_name, work_type, project_id, project_name, purchase_order_id, total_payable, total_paid, pending_payable",
-          )
-          .order("id", { ascending: true })
-          .range(from, to),
-      "Accounts payable list is larger than expected.",
-    )
+    const [access, orders, bills, payments] = await Promise.all([
+      getAccess(),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("vendor_purchase_orders")
+            .select("id, work_type, project_id, vendor_id, projects(name), vendors(person_name, company_name)")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Accounts payable list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("vendor_invoices")
+            .select("id, purchase_order_id, amount, status")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Accounts payable list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("vendor_payments")
+            .select("id, vendor_invoice_id, amount")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Accounts payable list is larger than expected.",
+      ),
+    ])
+    const seesMoney = !access || access.isOwner || access.showFinancials
 
-    const rows = invoiceRows.flatMap((row) => {
-      if (!row.id) {
-        return []
-      }
+    const paidByBill = new Map<string, number>()
+    for (const payment of payments) {
+      if (!payment.vendor_invoice_id) continue
+      paidByBill.set(payment.vendor_invoice_id, (paidByBill.get(payment.vendor_invoice_id) ?? 0) + toNumber(payment.amount))
+    }
 
+    const totals = new Map<string, { billed: number; paid: number; open: number }>()
+    for (const bill of bills) {
+      if (!bill.purchase_order_id || bill.status === "void") continue
+      const amount = toNumber(bill.amount)
+      const paid = paidByBill.get(bill.id) ?? 0
+      const entry = totals.get(bill.purchase_order_id) ?? { billed: 0, paid: 0, open: 0 }
+      entry.billed += amount
+      entry.paid += paid
+      entry.open += Math.max(amount - paid, 0)
+      totals.set(bill.purchase_order_id, entry)
+    }
+
+    const rows = orders.flatMap((order) => {
+      const entry = totals.get(order.id)
+      if (!entry) return []
+      const project = order.projects as { name: string | null } | null
+      const vendor = order.vendors as { person_name: string | null; company_name: string | null } | null
       return [
         {
-          id: row.id,
-          vendorName: row.vendor_name?.trim() ?? "",
-          workType: row.work_type?.trim() ?? "",
-          projectId: row.project_id ?? "",
-          projectName: row.project_name?.trim() ?? "",
-          purchaseOrderId: row.purchase_order_id ?? "",
-          totalPayable: toNumber(row.total_payable),
-          totalPaid: toNumber(row.total_paid),
-          pendingPayable: toNumber(row.pending_payable),
+          id: order.id,
+          vendorName: (vendor?.person_name || vendor?.company_name || "").trim(),
+          workType: order.work_type?.trim() ?? "",
+          projectId: order.project_id ?? "",
+          projectName: order.project_id ? (project?.name?.trim() ?? "") : "Operational",
+          purchaseOrderId: order.id,
+          totalPayable: seesMoney ? entry.billed : 0,
+          totalPaid: seesMoney ? entry.paid : 0,
+          pendingPayable: seesMoney ? entry.open : 0,
         } satisfies PayableRow,
       ]
     })

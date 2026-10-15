@@ -1,5 +1,6 @@
 "use server"
 
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, mentions } from "@/lib/db-errors"
@@ -10,6 +11,7 @@ import {
   isIsoDate,
   isProjectStatus,
   parseProjectValue,
+  isFutureIsoDate,
 } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
@@ -18,6 +20,7 @@ const idPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type ProjectFormInput = {
+  version?: string
   name: string
   clientId: string
   location: string
@@ -93,6 +96,8 @@ async function saveProject(
 
   if (!isIsoDate(startedOn)) {
     fieldErrors.startedOn = "Enter a start date."
+  } else if (isFutureIsoDate(startedOn)) {
+    fieldErrors.startedOn = "Start date can't be in the future."
   }
 
   if (!isProjectStatus(input.status)) {
@@ -195,7 +200,7 @@ async function saveProject(
   }
 
   const { data, error } = id
-    ? await supabase.from("projects").update(values).eq("id", id).select("id")
+    ? await supabase.from("projects").update(withVersion(values, input.version)).eq("id", id).select("id")
     : await supabase.from("projects").insert(values).select("id")
 
   if (error) {

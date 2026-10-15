@@ -2,7 +2,7 @@ import { ActivityLog, type ActivityChange, type ActivityRow } from "@/app/(app)/
 import { PageHeader } from "@/components/page-header"
 import { requireOwner } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
-import { formatDayMonYear } from "@/lib/format"
+import { formatDayMonYear, formatMoney } from "@/lib/format"
 import type { Json } from "@/types/database.types"
 
 export const metadata = { title: "Activity Log" }
@@ -82,6 +82,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
   let total = 0
   let loadError: string | null = null
 
+  let searchColumn = "search_text"
   const load = async (columns: string, page: number) => {
     let query = supabase.from("activity_log").select(columns, { count: "exact" })
     if (filters.module !== "all") query = query.eq("module", filters.module)
@@ -94,9 +95,10 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
       const term = filters.q.replace(/[%_\\,()"']/g, " ").trim()
       if (term) {
         const like = `%${term}%`
+        // search_text also covers the changed field values (old and new).
         query = query.or(
           columns.includes("record_label")
-            ? `summary.ilike.${like},record_label.ilike.${like},module.ilike.${like}`
+            ? `${searchColumn}.ilike.${like},record_label.ilike.${like},module.ilike.${like}`
             : `summary.ilike.${like},module.ilike.${like}`,
         )
       }
@@ -121,6 +123,10 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
 
   const full = "id, action, module, summary, created_at, actor_id, record_label, old_values, new_values"
   let result = await run(full)
+  if (result.error && /search_text/i.test(result.error.message)) {
+    searchColumn = "summary"
+    result = await run(full)
+  }
   if (result.error && /record_label|old_values|new_values|schema cache/i.test(result.error.message)) {
     result = await run("id, action, module, summary, created_at, actor_id")
   }
@@ -219,12 +225,15 @@ function fieldLabel(key: string) {
     .join(" ")
 }
 
-function displayValue(value: Json | undefined): string {
+const MONEY_FIELD = /amount|total|value|price|salary|allowance|bonus|deduction|cost|budget|balance|paid|due/
+
+function displayValue(value: Json | undefined, key = ""): string {
   if (value === undefined || value === null || value === "") return "—"
   if (typeof value === "string") {
     return value.length > 80 ? `${value.slice(0, 77)}...` : value
   }
-  if (typeof value === "number" || typeof value === "boolean") return String(value)
+  if (typeof value === "number") return MONEY_FIELD.test(key) ? formatMoney(value) : value.toLocaleString("en-IN")
+  if (typeof value === "boolean") return value ? "Yes" : "No"
   const text = JSON.stringify(value)
   return text.length > 80 ? `${text.slice(0, 77)}...` : text
 }
@@ -244,8 +253,8 @@ function diffLines(oldValues: Json | null, newValues: Json | null): ActivityChan
   return keys.flatMap((key) => {
     // Names only: never show raw record ids, even in free-form columns.
     if (isUuidValue(previous[key]) || isUuidValue(next[key])) return []
-    const before = displayValue(previous[key])
-    const after = displayValue(next[key])
+    const before = displayValue(previous[key], key)
+    const after = displayValue(next[key], key)
     if (before === after) return []
     return [{ label: fieldLabel(key), before, after }]
   })

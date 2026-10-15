@@ -24,6 +24,7 @@ export type DocumentSaveResult = {
   id?: string
   documentNo?: string
   verifyToken?: string
+  version?: string
 }
 
 function newToken(): string {
@@ -43,12 +44,15 @@ function writeError(error: { message?: string; code?: string } | null, fallback:
     return "Document storage is not available until the business documents migration is applied."
   }
   if (error.code === "23505") return "That document number is already in use."
+  if (error.code === "40001") return "This record was changed by someone else — reload."
+  if (/unit_price_nonneg/.test(text)) return "Unit price can't be negative."
+  if (/valid_after_issue/.test(text)) return "Valid until must be on or after the issue date."
   return fallback
 }
 
 async function guardWrite(module: ModuleKey, exists: boolean): Promise<string | null> {
   const access = await getAccess()
-  if (!access || access.status === "deactivated") return "You must be signed in."
+  if (!access || access.status === "deactivated") return "Your session has expired. Sign in again."
   if (!allows(access, module, exists ? "edit" : "add")) {
     return "You do not have permission to do that."
   }
@@ -132,7 +136,6 @@ export async function saveInvoicePrint(input: {
         total,
         status: invoice.data.status,
         body,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", existing.data.id)
     const message = writeError(error, "Could not save this invoice.")
@@ -227,7 +230,6 @@ export async function saveReceiptPrint(input: {
         total,
         status: "received",
         body,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", existing.data.id)
     const message = writeError(error, "Could not save this receipt.")
@@ -324,7 +326,6 @@ export async function savePurchaseOrderPrint(input: {
         total,
         status: "issued",
         body,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", existing.data.id)
     const message = writeError(error, "Could not save this purchase order.")
@@ -362,8 +363,51 @@ export async function savePurchaseOrderPrint(input: {
   return { error: "Could not assign a document number." }
 }
 
+// One RPC call saves the header, lines and payment schedule in a single
+// transaction, so a failing line can't leave a header with a stale total.
+async function saveDocumentAtomically(
+  kind: "quotation" | "work_order",
+  input: { id: string | null; version?: string; issuedOn: string; lines: LineInput[]; milestones: MilestoneInput[] },
+  fields: Record<string, unknown>,
+  prefix: string,
+  fallback: string,
+): Promise<DocumentSaveResult> {
+  const supabase = await createClient()
+  const lines = storedLines(input.lines)
+  const milestones = storedMilestones(input.milestones)
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const payload = input.id
+      ? fields
+      : { ...fields, document_no: newDocumentNo(prefix, input.issuedOn), verify_token: newToken() }
+    const { data, error } = await supabase.rpc("save_business_document", {
+      p_kind: kind,
+      p_id: input.id ?? undefined,
+      p_version: input.id ? input.version : undefined,
+      p_fields: payload as Json,
+      p_lines: lines as unknown as Json,
+      p_milestones: milestones as unknown as Json,
+    })
+    if (!error) {
+      const saved = (data ?? {}) as { id?: string; document_no?: string; verify_token?: string; version?: string }
+      if (!saved.id) return { error: fallback }
+      return {
+        error: null,
+        id: saved.id,
+        documentNo: saved.document_no,
+        verifyToken: saved.verify_token,
+        version: saved.version,
+      }
+    }
+    if (input.id || error.code !== "23505" || !/document_no|verify_token/.test(error.message ?? "")) {
+      return { error: writeError(error, fallback) }
+    }
+  }
+  return { error: "Could not assign a document number." }
+}
+
 export async function saveQuotation(input: {
   id: string | null
+  version?: string
   issuedOn: string
   validUntil: string
   status: string
@@ -388,6 +432,10 @@ export async function saveQuotation(input: {
   const ait = percentOrZero(input.aitPercent)
   if (ait === null) return { error: "Enter an AIT percent from 0 to 100." }
   if (!input.lines.some((line) => line.item.trim())) return { error: "Add at least one item." }
+  if (input.validUntil && input.validUntil < input.issuedOn) {
+    return { error: "Valid until must be on or after the issue date." }
+  }
+  if (input.lines.some((line) => Number(line.unitPrice) < 0)) return { error: "Unit price can't be negative." }
 
   const supabase = await createClient()
   const exists = Boolean(input.id)
@@ -423,89 +471,24 @@ export async function saveQuotation(input: {
     total,
     prepared_by: clip(input.preparedBy, 120),
     authorized_by: clip(input.authorizedBy, 120),
-    updated_at: new Date().toISOString(),
   }
 
-  let id = input.id
-  let documentNo = ""
-  let verifyToken = ""
-
-  if (id) {
-    const current = await supabase
-      .from("quotations")
-      .select("document_no, verify_token")
-      .eq("id", id)
-      .maybeSingle()
-    if (current.error || !current.data) return { error: "That quotation could not be found." }
-    documentNo = current.data.document_no
-    verifyToken = current.data.verify_token
-    const { error } = await supabase.from("quotations").update(fields).eq("id", id)
-    const message = writeError(error, "Could not save this quotation.")
-    if (message) return { error: message }
-  } else {
-    let inserted = false
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      documentNo = newDocumentNo("QTN", input.issuedOn)
-      verifyToken = newToken()
-      const created = await supabase
-        .from("quotations")
-        .insert({ ...fields, document_no: documentNo, verify_token: verifyToken })
-        .select("id")
-        .maybeSingle()
-      if (!created.error && created.data) {
-        id = created.data.id
-        inserted = true
-        break
-      }
-      if (created.error && created.error.code !== "23505") {
-        return { error: writeError(created.error, "Could not save this quotation.") }
-      }
-    }
-    if (!inserted || !id) return { error: "Could not assign a document number." }
-  }
-
-  const lineRows = storedLines(input.lines).map((line) => ({ ...line, quotation_id: id }))
-  const milestoneRows = storedMilestones(input.milestones).map((row) => ({
-    ...row,
-    quotation_id: id,
-  }))
-  if (lineRows.length > 0) {
-    const upserted = await supabase
-      .from("quotation_lines")
-      .upsert(lineRows, { onConflict: "quotation_id,sort_order" })
-    if (upserted.error) return { error: "Could not save the quotation items." }
-  }
-  const deletedLines = await supabase
-    .from("quotation_lines")
-    .delete()
-    .eq("quotation_id", id)
-    .gte("sort_order", lineRows.length)
-  if (deletedLines.error) return { error: "Could not save the quotation items." }
-
-  if (milestoneRows.length > 0) {
-    const upserted = await supabase
-      .from("quotation_milestones")
-      .upsert(milestoneRows, { onConflict: "quotation_id,sort_order" })
-    if (upserted.error) return { error: "Could not save the payment schedule." }
-  }
-  const deletedMilestones = await supabase
-    .from("quotation_milestones")
-    .delete()
-    .eq("quotation_id", id)
-    .gte("sort_order", milestoneRows.length)
-  if (deletedMilestones.error) return { error: "Could not save the payment schedule." }
-
+  const saved = await saveDocumentAtomically("quotation", input, fields, "QTN", "Could not save this quotation.")
+  if (saved.error || !saved.id) return saved
+  const id = saved.id
   revalidatePath("/documents/quotations")
   revalidatePath(`/documents/quotations/${id}`)
-  return { error: null, id, documentNo, verifyToken }
+  return saved
 }
 
 export async function saveWorkOrder(input: {
   id: string | null
+  version?: string
   issuedOn: string
   status: string
   vendorId: string
   projectId: string
+  purchaseOrderId?: string
   proposalOn: string
   workStart: string
   workEnd: string
@@ -525,24 +508,55 @@ export async function saveWorkOrder(input: {
   const endError = optionalDate(input.workEnd, "work end date")
   if (endError) return { error: endError }
   if (!isWorkOrderStatus(input.status)) return { error: "Choose a status." }
-  if (!isUuid(input.vendorId)) return { error: "Choose a vendor." }
+  const purchaseOrderId = input.purchaseOrderId?.trim() ?? ""
+  if (!input.id && !purchaseOrderId) return { error: "Choose a purchase order." }
+  if (purchaseOrderId && !isUuid(purchaseOrderId)) return { error: "Choose a purchase order." }
+  if (!purchaseOrderId && !isUuid(input.vendorId)) return { error: "Choose a vendor." }
   if (input.projectId && !isUuid(input.projectId)) return { error: "Choose a project." }
   if (!input.lines.some((line) => line.item.trim())) return { error: "Add at least one item." }
+  if (input.lines.some((line) => Number(line.unitPrice) < 0)) return { error: "Unit price can't be negative." }
 
   const supabase = await createClient()
   const denied = await guardWrite("work_orders", Boolean(input.id))
   if (denied) return { error: denied }
   if (input.id && !isUuid(input.id)) return { error: "That work order could not be found." }
 
-  const vendor = await supabase.from("vendors").select("id").eq("id", input.vendorId).maybeSingle()
+  // A work order linked to a purchase order stays linked (it is that PO's printable form);
+  // it can move to another PO but not be cleared. Older work orders without a PO still save.
+  let previousPurchaseOrderId = ""
+  if (input.id) {
+    const current = await supabase.from("work_orders").select("purchase_order_id").eq("id", input.id).maybeSingle()
+    if (current.error || !current.data) return { error: "That work order could not be found." }
+    previousPurchaseOrderId = current.data.purchase_order_id ?? ""
+    if (previousPurchaseOrderId && !purchaseOrderId) {
+      return { error: "This work order belongs to a purchase order. Choose a purchase order; it can't be removed." }
+    }
+  }
+
+  // A linked work order takes its vendor and project from the purchase order so they can't drift.
+  let vendorId = input.vendorId
+  let projectId = input.projectId
+  if (purchaseOrderId) {
+    const order = await supabase
+      .from("vendor_purchase_orders")
+      .select("vendor_id, project_id")
+      .eq("id", purchaseOrderId)
+      .maybeSingle()
+    if (order.error || !order.data) return { error: "Choose a purchase order." }
+    vendorId = order.data.vendor_id
+    projectId = order.data.project_id ?? ""
+  }
+
+  const vendor = await supabase.from("vendors").select("id").eq("id", vendorId).maybeSingle()
   if (vendor.error || !vendor.data) return { error: "Choose a vendor." }
 
   const total = priceLines(input.lines).subtotal
   const fields = {
     issued_on: input.issuedOn,
     status: input.status,
-    vendor_id: input.vendorId,
-    project_id: input.projectId || null,
+    vendor_id: vendorId,
+    project_id: projectId || null,
+    ...(purchaseOrderId ? { purchase_order_id: purchaseOrderId } : {}),
     proposal_on: input.proposalOn || null,
     work_start: input.workStart || null,
     work_end: input.workEnd || null,
@@ -552,78 +566,16 @@ export async function saveWorkOrder(input: {
     total,
     prepared_by: clip(input.preparedBy, 120),
     authorized_by: clip(input.authorizedBy, 120),
-    updated_at: new Date().toISOString(),
   }
 
-  let id = input.id
-  let documentNo = ""
-  let verifyToken = ""
-
-  if (id) {
-    const current = await supabase
-      .from("work_orders")
-      .select("document_no, verify_token")
-      .eq("id", id)
-      .maybeSingle()
-    if (current.error || !current.data) return { error: "That work order could not be found." }
-    documentNo = current.data.document_no
-    verifyToken = current.data.verify_token
-    const { error } = await supabase.from("work_orders").update(fields).eq("id", id)
-    const message = writeError(error, "Could not save this work order.")
-    if (message) return { error: message }
-  } else {
-    let inserted = false
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      documentNo = newDocumentNo("WO", input.issuedOn)
-      verifyToken = newToken()
-      const created = await supabase
-        .from("work_orders")
-        .insert({ ...fields, document_no: documentNo, verify_token: verifyToken })
-        .select("id")
-        .maybeSingle()
-      if (!created.error && created.data) {
-        id = created.data.id
-        inserted = true
-        break
-      }
-      if (created.error && created.error.code !== "23505") {
-        return { error: writeError(created.error, "Could not save this work order.") }
-      }
-    }
-    if (!inserted || !id) return { error: "Could not assign a document number." }
-  }
-
-  const lineRows = storedLines(input.lines).map((line) => ({ ...line, work_order_id: id }))
-  const milestoneRows = storedMilestones(input.milestones).map((row) => ({
-    ...row,
-    work_order_id: id,
-  }))
-  if (lineRows.length > 0) {
-    const upserted = await supabase
-      .from("work_order_lines")
-      .upsert(lineRows, { onConflict: "work_order_id,sort_order" })
-    if (upserted.error) return { error: "Could not save the work order items." }
-  }
-  const deletedLines = await supabase
-    .from("work_order_lines")
-    .delete()
-    .eq("work_order_id", id)
-    .gte("sort_order", lineRows.length)
-  if (deletedLines.error) return { error: "Could not save the work order items." }
-  if (milestoneRows.length > 0) {
-    const upserted = await supabase
-      .from("work_order_milestones")
-      .upsert(milestoneRows, { onConflict: "work_order_id,sort_order" })
-    if (upserted.error) return { error: "Could not save the payment terms." }
-  }
-  const deletedMilestones = await supabase
-    .from("work_order_milestones")
-    .delete()
-    .eq("work_order_id", id)
-    .gte("sort_order", milestoneRows.length)
-  if (deletedMilestones.error) return { error: "Could not save the payment terms." }
-
+  const saved = await saveDocumentAtomically("work_order", input, fields, "WO", "Could not save this work order.")
+  if (saved.error || !saved.id) return saved
+  const id = saved.id
   revalidatePath("/documents/work-orders")
   revalidatePath(`/documents/work-orders/${id}`)
-  return { error: null, id, documentNo, verifyToken }
+  if (purchaseOrderId) revalidatePath(`/purchase-orders/${purchaseOrderId}`)
+  if (previousPurchaseOrderId && previousPurchaseOrderId !== purchaseOrderId) {
+    revalidatePath(`/purchase-orders/${previousPurchaseOrderId}`)
+  }
+  return saved
 }

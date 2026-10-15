@@ -229,9 +229,9 @@ export function buildReport(
         title,
         periodLabel: asOf,
         landscape: true,
-        tables: agingTables(title, report.apAging, "Orders"),
+        tables: agingTables(title, report.apAging, "Bills"),
         notes: [
-          "Open purchase orders as of the end date, including operational orders. Days run up to today or the end date, whichever is earlier, and use the earliest vendor-invoice due date, or the order date when none is set. The 0-30 bucket includes amounts that are not yet due.",
+          "Open vendor bills as of the end date, including bills on operational orders. Days run up to today or the end date, whichever is earlier, counting from the bill due date, or the bill date when no due date is set. The 0-30 bucket includes amounts that are not yet due.",
         ],
       }
     case "project-profitability":

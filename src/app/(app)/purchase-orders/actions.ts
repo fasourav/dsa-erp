@@ -1,5 +1,6 @@
 "use server"
 
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
@@ -9,6 +10,7 @@ import { firstIssue, purchaseOrderValueSchema } from "@/lib/schemas"
 import {
   isIsoDate,
   parseProjectValue,
+  isFutureIsoDate,
 } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
@@ -17,6 +19,7 @@ const idPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type PurchaseOrderFormInput = {
+  version?: string
   projectId: string
   vendorId: string
   issuedOn: string
@@ -85,6 +88,8 @@ async function savePurchaseOrder(
 
   if (!isIsoDate(issuedOn)) {
     fieldErrors.issuedOn = "Enter a date."
+  } else if (isFutureIsoDate(issuedOn)) {
+    fieldErrors.issuedOn = "Date can't be in the future."
   }
 
   if (totalValue === null || totalValue <= 0) {
@@ -111,8 +116,8 @@ async function savePurchaseOrder(
 
   const [projectLookup, vendorLookup] = await Promise.all([
     operational
-      ? Promise.resolve({ data: [{ id: "" }], error: null })
-      : supabase.from("projects").select("id").eq("id", projectId).limit(1),
+      ? Promise.resolve({ data: [{ id: "", total_value: null }], error: null })
+      : supabase.from("projects").select("id, total_value").eq("id", projectId).limit(1),
     supabase.from("vendors").select("id").eq("id", vendorId).limit(1),
   ])
 
@@ -124,6 +129,14 @@ async function savePurchaseOrder(
     return {
       error: null,
       fieldErrors: { projectId: "Choose a project." },
+    }
+  }
+
+  const projectValue = toNumber(projectLookup.data?.[0]?.total_value ?? null)
+  if (!operational && projectValue > 0 && (totalValue ?? 0) > projectValue) {
+    return {
+      error: null,
+      fieldErrors: { totalValue: `A purchase order can't exceed the project value (${formatMoney(projectValue)}).` },
     }
   }
 
@@ -168,7 +181,7 @@ async function savePurchaseOrder(
   const { data, error } = id
     ? await supabase
         .from("vendor_purchase_orders")
-        .update(values)
+        .update(withVersion(values, input.version))
         .eq("id", id)
         .select("id")
     : await supabase

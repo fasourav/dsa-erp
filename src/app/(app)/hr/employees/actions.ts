@@ -1,11 +1,13 @@
 "use server"
 
+import { titleCaseName } from "@/lib/format"
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { roundMoney } from "@/lib/payroll-month"
-import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
 import { phoneErrorForStored, toE164FromStored } from "@/lib/phone"
 import { employeeLeaveSchema, firstIssue } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
@@ -13,6 +15,7 @@ import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless, getAccess } from "@/lib/permissions"
 
 export type EmployeeInput = {
+  version?: string
   fullName: string
   departmentId: string
   designation: string
@@ -110,7 +113,7 @@ async function saveEmployee(
   id: string | null,
   input: EmployeeInput,
 ): Promise<EmployeeResult> {
-  const fullName = input.fullName.trim()
+  const fullName = titleCaseName(input.fullName)
   const designation = input.designation.trim()
   const monthlySalary = parseProjectValue(input.monthlySalary)
   const allowance = parseProjectValue(input.allowance.trim() || "0")
@@ -141,6 +144,8 @@ async function saveEmployee(
 
   if (!isIsoDate(joiningDate)) {
     fieldErrors.joiningDate = "Enter a joining date."
+  } else if (isFutureIsoDate(joiningDate)) {
+    fieldErrors.joiningDate = "Joining date can't be in the future."
   }
 
   if (leaveDate && !isIsoDate(leaveDate)) {
@@ -194,7 +199,7 @@ async function saveEmployee(
   const { data, error } = id
     ? await supabase
         .from("employees")
-        .update(keepPay ? details : values)
+        .update(withVersion(keepPay ? details : values, input.version))
         .eq("id", id)
         .select("id")
     : await supabase.from("employees").insert(values).select("id")
