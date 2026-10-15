@@ -87,10 +87,12 @@ export function VendorInvoiceFormDialog({
       ? "Status does not match recorded payments. Choose Void to set this payment aside."
       : null)
 
-  const statusItems = paymentStatuses.map((value) => ({
-    value,
-    label: paymentStatusLabel(value),
-  }))
+  const statusItems = paymentStatuses
+    .filter((value) => invoiceId !== null || value !== "void")
+    .map((value) => ({
+      value,
+      label: paymentStatusLabel(value),
+    }))
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
@@ -140,7 +142,7 @@ export function VendorInvoiceFormDialog({
         savedToast()
         onOpenChange(false)
       } catch {
-        setFormError("Could not save this payment.")
+        setFormError("Could not save this bill.")
       }
     })
   }
@@ -153,9 +155,7 @@ export function VendorInvoiceFormDialog({
         showCloseButton={!pending}
       >
         <DialogHeader>
-          <DialogTitle>
-            {invoiceId ? "Edit Vendor Payment" : "Add Vendor Payment"}
-          </DialogTitle>
+          <DialogTitle>{invoiceId ? "Edit Bill" : "Add Bill"}</DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {invoiceId ? (
@@ -241,7 +241,7 @@ export function VendorInvoiceFormDialog({
             Cancel
           </DialogClose>
           <Button type="button" disabled={pending} onClick={handleSubmit}>
-            {pending ? "Saving…" : invoiceId ? "Save Changes" : "Save Payment"}
+            {pending ? "Saving…" : invoiceId ? "Save Changes" : "Save Bill"}
           </Button>
         </DialogFooter>
       </DialogContent>

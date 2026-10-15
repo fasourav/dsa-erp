@@ -3,11 +3,14 @@
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
-import { FileText, MoreHorizontal, Pencil, Trash2, Wallet } from "lucide-react"
+import { Ban, FileText, MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition, type ReactNode } from "react"
 
-import { deleteVendorInvoice } from "@/app/(app)/purchase-orders/[id]/actions"
+import {
+  deleteVendorInvoice,
+  voidVendorInvoice,
+} from "@/app/(app)/purchase-orders/[id]/actions"
 import { RecordVendorPaymentDialog } from "@/app/(app)/purchase-orders/[id]/record-vendor-payment-dialog"
 import { VendorInvoiceFormDialog } from "@/app/(app)/purchase-orders/[id]/vendor-invoice-form-dialog"
 import { VendorPaymentsDialog } from "@/app/(app)/purchase-orders/[id]/vendor-payments-dialog"
@@ -88,6 +91,10 @@ export function VendorInvoicesPanel({
   )
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
+  const [voidOpen, setVoidOpen] = useState(false)
+  const [pendingVoid, setPendingVoid] = useState<VendorInvoiceRow | null>(null)
+  const [voidError, setVoidError] = useState<string | null>(null)
+  const [voiding, startVoid] = useTransition()
 
   const sorted = useMemo(
     () => sortVendorInvoices(invoices, sort),
@@ -122,6 +129,28 @@ export function VendorInvoicesPanel({
         setDeleteError(null)
       } catch {
         setDeleteError("Could not delete this payment.")
+      }
+    })
+  }
+
+  function confirmVoid() {
+    if (!pendingVoid) {
+      return
+    }
+
+    const id = pendingVoid.id
+    startVoid(async () => {
+      try {
+        const result = await voidVendorInvoice(id)
+        if (result.error) {
+          setVoidError(result.error)
+          return
+        }
+
+        setVoidOpen(false)
+        setVoidError(null)
+      } catch {
+        setVoidError("Could not void this bill.")
       }
     })
   }
@@ -176,6 +205,17 @@ export function VendorInvoicesPanel({
               >
                 <FileText aria-hidden="true" data-icon="inline-start" />
                 Create Work Order
+              </Button>
+            ) : null}
+            {canAdd ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!purchaseOrder}
+                onClick={() => openForm(null)}
+              >
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Add Bill
               </Button>
             ) : null}
             {canAdd ? (
@@ -291,20 +331,20 @@ export function VendorInvoicesPanel({
         }}
         visibility={{}}
         error={error}
-        emptyMessage="No Vendor Payments For This Purchase Order."
+        emptyMessage="No Bills Yet."
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
-          "payment",
-          "payments",
+          "bill",
+          "bills",
         )}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Vendor Payments pagination"
         mobileItem={(invoice) => ({
-          title: invoice.description || "Payment",
+          title: invoice.description || "Bill",
           subtitle: invoice.issuedOn ? formatIsoDate(invoice.issuedOn) : "—",
           value: <Money value={invoice.amount} />,
           meta: <StatusBadge status={invoice.status} />,
@@ -320,7 +360,7 @@ export function VendorInvoicesPanel({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label={`Actions for payment issued ${invoice.issuedOn || "on an unknown date"}`}
+                  aria-label={`Actions for bill issued ${invoice.issuedOn || "on an unknown date"}`}
                 />
               }
             >
@@ -340,7 +380,19 @@ export function VendorInvoicesPanel({
                 <Wallet aria-hidden="true" />
                 Payments
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {canEdit && invoice.status !== "void" ? (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setVoidError(null)
+                    setPendingVoid(invoice)
+                    setVoidOpen(true)
+                  }}
+                >
+                  <Ban aria-hidden="true" />
+                  Void Bill
+                </DropdownMenuItem>
+              ) : null}
+              {canDelete ? <DropdownMenuSeparator /> : null}
               {canDelete ? (<DropdownMenuItem
                 variant="destructive"
                 onClick={() => {
@@ -404,8 +456,34 @@ export function VendorInvoicesPanel({
         confirmKey={pendingDelete?.id}
         onConfirm={confirmDelete}
       />
+      <DeleteConfirmDialog
+        open={voidOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen || voiding) {
+            return
+          }
+
+          setVoidOpen(false)
+          setVoidError(null)
+        }}
+        title="Void Bill"
+        description={voidBillMessage(pendingVoid?.description)}
+        error={voidError}
+        pending={voiding}
+        confirmKey={pendingVoid?.id}
+        onConfirm={confirmVoid}
+      />
     </div>
   )
+}
+
+function voidBillMessage(name?: string | null): string {
+  const label = name?.replace(/\s+/g, " ").trim()
+  if (!label) {
+    return "Voiding this bill removes it from accounts payable. Recorded payments stay for audit."
+  }
+
+  return `Voiding ${label} removes it from accounts payable. Recorded payments stay for audit.`
 }
 
 function Kpi({

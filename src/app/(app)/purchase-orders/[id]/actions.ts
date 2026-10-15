@@ -149,6 +149,56 @@ export async function deleteVendorInvoice(id: string): Promise<DeleteResult> {
   return { error: null }
 }
 
+export async function voidVendorInvoice(id: string): Promise<DeleteResult> {
+  const denied = await denyUnless("vendor_payments", "edit")
+  if (denied) return { error: denied }
+  if (!isUuid(id)) {
+    return { error: "That bill could not be found." }
+  }
+
+  const auth = await authorizedClient()
+  if (auth.error || !auth.supabase) {
+    return { error: auth.error }
+  }
+
+  const existing = await auth.supabase
+    .from("vendor_invoices")
+    .select("id, status, purchase_order_id")
+    .eq("id", id)
+    .limit(1)
+
+  if (existing.error) {
+    return { error: "Could not void this bill." }
+  }
+
+  const row = existing.data?.[0]
+  if (!row || !isPaymentStatus(row.status)) {
+    return { error: "That bill could not be found." }
+  }
+
+  if (row.status === "void") {
+    return { error: "This bill is already void." }
+  }
+
+  const updated = await auth.supabase
+    .from("vendor_invoices")
+    .update({ status: "void" satisfies PaymentStatus })
+    .eq("id", id)
+    .neq("status", "void")
+    .select("id, purchase_order_id")
+
+  if (updated.error) {
+    return { error: "Could not void this bill." }
+  }
+
+  if (!updated.data || updated.data.length === 0) {
+    return { error: "This bill is already void." }
+  }
+
+  revalidateVendorMoney(updated.data[0]?.purchase_order_id ?? row.purchase_order_id)
+  return { error: null }
+}
+
 export async function addVendorPayment(
   vendorInvoiceId: string,
   input: VendorPaymentInput,
