@@ -90,7 +90,7 @@ function DialogContent({
             "group/dialog outline-none",
             variant === "drawer"
               ? "relative flex h-full max-h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-sheet glass-sheet px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom sm:max-w-xl md:ml-auto md:rounded-dialog md:bg-surface-strong md:p-6 md:text-sm md:glass-float md:data-open:slide-in-from-right md:data-open:slide-in-from-bottom-0 md:data-closed:slide-out-to-right md:data-closed:slide-out-to-bottom-0"
-              : "relative flex max-h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-y-auto overscroll-contain rounded-sheet glass-sheet px-4 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom data-[layout=nav]:grid data-[layout=nav]:grid-cols-[auto_minmax(0,1fr)_auto] data-[layout=nav]:grid-rows-[auto_auto_minmax(0,1fr)] data-[layout=nav]:items-center data-[layout=nav]:gap-x-2 sm:max-w-sm md:gap-4 md:rounded-dialog md:bg-dialog md:p-6 md:text-sm md:duration-200 md:ease-out md:glass-float md:data-open:fade-in-0 md:data-open:zoom-in-95 md:data-open:slide-in-from-bottom-2 md:data-closed:fade-out-0 md:data-closed:zoom-out-95 md:data-closed:slide-out-to-bottom-2 md:data-[layout=nav]:flex md:data-[layout=nav]:items-stretch",
+              : "relative flex max-h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-y-auto overscroll-contain rounded-sheet glass-sheet px-4 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] text-callout text-popover-foreground duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom has-[[data-slot=dialog-body]]:overflow-hidden data-[layout=nav]:grid data-[layout=nav]:grid-cols-[auto_minmax(0,1fr)_auto] data-[layout=nav]:grid-rows-[auto_auto_minmax(0,1fr)] data-[layout=nav]:items-center data-[layout=nav]:gap-x-2 sm:max-w-sm md:gap-4 md:rounded-dialog md:bg-dialog md:p-6 md:text-sm md:duration-200 md:ease-out md:glass-float md:data-open:fade-in-0 md:data-open:zoom-in-95 md:data-open:slide-in-from-bottom-2 md:data-closed:fade-out-0 md:data-closed:zoom-out-95 md:data-closed:slide-out-to-bottom-2 md:data-[layout=nav]:flex md:data-[layout=nav]:items-stretch",
             className
           )}
           {...props}
@@ -135,7 +135,7 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-body"
       className={cn(
-        "no-scrollbar -mx-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain scroll-py-2 px-1 py-1 group-data-[layout=nav]/dialog:col-span-3 group-data-[layout=nav]/dialog:row-start-3 group-data-[layout=nav]/dialog:self-stretch group-data-[variant=drawer]/dialog:flex-1 group-data-[variant=drawer]/dialog:py-4",
+        "no-scrollbar relative -mx-1 min-h-0 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-contain scroll-py-2 px-1 py-1 [-webkit-overflow-scrolling:touch] *:shrink-0 group-data-[layout=nav]/dialog:col-span-3 group-data-[layout=nav]/dialog:row-start-3 group-data-[layout=nav]/dialog:self-stretch group-data-[variant=drawer]/dialog:flex-1 group-data-[variant=drawer]/dialog:py-4",
         className
       )}
       {...props}
@@ -148,7 +148,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-header"
       className={cn(
-        "flex shrink-0 flex-col gap-1.5 pt-2.5 pr-12 group-data-[variant=drawer]/dialog:flex-row group-data-[variant=drawer]/dialog:items-start group-data-[variant=drawer]/dialog:justify-between group-data-[variant=drawer]/dialog:gap-3 group-data-[variant=drawer]/dialog:pt-0 group-data-[variant=drawer]/dialog:pr-14 group-data-[layout=nav]/dialog:col-start-2 group-data-[layout=nav]/dialog:row-start-2 group-data-[layout=nav]/dialog:pt-0 group-data-[layout=nav]/dialog:pr-0 group-data-[layout=nav]/dialog:text-center md:pt-0 md:pr-12 md:group-data-[variant=drawer]/dialog:pr-14 md:group-data-[layout=nav]/dialog:pr-12 md:group-data-[layout=nav]/dialog:text-left",
+        "flex shrink-0 flex-col gap-1.5 pt-2.5 pr-12 group-data-[variant=drawer]/dialog:flex-row group-data-[variant=drawer]/dialog:items-start group-data-[variant=drawer]/dialog:justify-between group-data-[variant=drawer]/dialog:gap-3 group-data-[variant=drawer]/dialog:pt-0 group-data-[variant=drawer]/dialog:pr-14 group-data-[layout=nav]/dialog:col-start-2 group-data-[layout=nav]/dialog:row-start-2 group-data-[layout=nav]/dialog:min-w-0 group-data-[layout=nav]/dialog:pt-0 group-data-[layout=nav]/dialog:pr-0 group-data-[layout=nav]/dialog:text-center md:pt-0 md:pr-12 md:group-data-[variant=drawer]/dialog:pr-14 md:group-data-[layout=nav]/dialog:pr-12 md:group-data-[layout=nav]/dialog:text-left",
         className
       )}
       {...props}
@@ -188,7 +188,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "min-w-0 font-heading text-panel-title leading-tight font-bold tracking-[-0.02em] group-data-[layout=nav]/dialog:truncate md:text-dialog-title",
+        "min-w-0 font-heading text-panel-title leading-tight font-bold tracking-[-0.02em] group-data-[layout=nav]/dialog:text-balance group-data-[layout=nav]/dialog:wrap-break-word md:text-dialog-title md:group-data-[layout=nav]/dialog:text-wrap",
         className
       )}
       {...props}
@@ -215,6 +215,12 @@ function DialogDescription({
 // The list page scrolls inside <main>, so the dialog's document lock does not
 // hold it. Pin that scroller while the popup is open, and size the popup to the
 // visual viewport so the keyboard and browser chrome cannot push it off screen.
+//
+// iOS Safari will not scroll a sheet whose height is only `max-height: 100%`.
+// Give the popup a definite pixel height when the form is clearly taller than
+// the visual viewport, and cap DialogBody so it — not the page — takes the pan.
+// Phone nav keeps Cancel / title / Save on one grid row, but the children stay
+// in source order so desktop tab order is header, fields, then actions.
 function lockDialogScroll(node: HTMLDivElement) {
   const main = document.querySelector("main")
   const lockedMain = main?.scrollTop ?? 0
@@ -233,6 +239,8 @@ function lockDialogScroll(node: HTMLDivElement) {
 
   let pinning = false
   let active = true
+  let touchX = 0
+  let touchY = 0
   const pinBackground = () => {
     if (pinning) return
     pinning = true
@@ -250,6 +258,7 @@ function lockDialogScroll(node: HTMLDivElement) {
     if (!visualViewport) return
     node.style.top = `${visualViewport.offsetTop}px`
     node.style.height = `${visualViewport.height}px`
+    fitDialogSheet(node)
   }
 
   const onViewportResize = () => {
@@ -277,21 +286,112 @@ function lockDialogScroll(node: HTMLDivElement) {
     })
   }
 
+  const onTouchStart = (event: TouchEvent) => {
+    const touch = event.touches[0]
+    if (!touch) return
+    touchX = touch.clientX
+    touchY = touch.clientY
+  }
+
+  // Keep a pan inside the sheet. Once it would chain into the pinned page,
+  // cancel it — otherwise iOS resets the gesture and the form feels frozen.
+  const onTouchMove = (event: TouchEvent) => {
+    if (event.touches.length !== 1) return
+    const touch = event.touches[0]
+    if (!touch) return
+    const dx = touch.clientX - touchX
+    const dy = touch.clientY - touchY
+    if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+    const target = event.target
+    if (!(target instanceof Element)) {
+      event.preventDefault()
+      return
+    }
+    const scroller = closestSheetScroller(target, node)
+    if (!scroller || Math.abs(dy) < Math.abs(dx)) {
+      if (!scroller) event.preventDefault()
+      return
+    }
+    const atTop = scroller.scrollTop <= 0
+    const atBottom =
+      scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
+    if ((dy > 0 && atTop) || (dy < 0 && atBottom)) {
+      event.preventDefault()
+    }
+  }
+
   applyViewportBox()
+  const fitFrame = requestAnimationFrame(() => {
+    if (!active) return
+    applyViewportBox()
+  })
   const visualViewport = window.visualViewport
   visualViewport?.addEventListener("resize", onViewportResize)
   visualViewport?.addEventListener("scroll", onViewportScroll)
   main?.addEventListener("scroll", pinBackground)
   window.addEventListener("scroll", pinBackground)
   document.addEventListener("focusin", onFocusIn)
+  node.addEventListener("touchstart", onTouchStart, { passive: true })
+  node.addEventListener("touchmove", onTouchMove, { passive: false })
+  const popup = node.querySelector("[data-slot='dialog-content']")
+  let fitQueued = false
+  let fitAgain = false
+  const queueFit = () => {
+    if (!active) return
+    if (fitQueued) {
+      fitAgain = true
+      return
+    }
+    fitQueued = true
+    requestAnimationFrame(() => {
+      fitQueued = false
+      if (!active) return
+      fitDialogSheet(node)
+      if (!fitAgain) return
+      fitAgain = false
+      queueFit()
+    })
+  }
+  const sheetObserver =
+    popup instanceof HTMLElement ? new ResizeObserver(queueFit) : null
+  // The body's box stays at the locked max-height, so it does not resize when
+  // the form gets shorter. Watch the field stack itself, and again if React
+  // swaps that stack.
+  const watchContent = () => {
+    if (!(popup instanceof HTMLElement) || !sheetObserver) return
+    sheetObserver.disconnect()
+    sheetObserver.observe(popup)
+    const body = popup.querySelector("[data-slot='dialog-body']")
+    if (!(body instanceof HTMLElement)) return
+    sheetObserver.observe(body)
+    for (const child of body.children) {
+      if (child instanceof HTMLElement) sheetObserver.observe(child)
+    }
+  }
+  const contentObserver =
+    popup instanceof HTMLElement
+      ? new MutationObserver(() => {
+          watchContent()
+          queueFit()
+        })
+      : null
+  watchContent()
+  if (popup instanceof HTMLElement) {
+    contentObserver?.observe(popup, { childList: true, subtree: true })
+  }
 
   return () => {
     active = false
+    cancelAnimationFrame(fitFrame)
+    sheetObserver?.disconnect()
+    contentObserver?.disconnect()
     visualViewport?.removeEventListener("resize", onViewportResize)
     visualViewport?.removeEventListener("scroll", onViewportScroll)
     main?.removeEventListener("scroll", pinBackground)
     window.removeEventListener("scroll", pinBackground)
     document.removeEventListener("focusin", onFocusIn)
+    node.removeEventListener("touchstart", onTouchStart)
+    node.removeEventListener("touchmove", onTouchMove)
     if (main) {
       main.style.overflow = previousOverflow
       main.style.overscrollBehavior = previousOverscroll
@@ -301,7 +401,160 @@ function lockDialogScroll(node: HTMLDivElement) {
     }
     node.style.top = ""
     node.style.height = ""
+    clearDialogSheetFit(node)
   }
+}
+
+function closestSheetScroller(target: Element, root: HTMLElement) {
+  let current: Element | null = target
+  while (current && current !== root) {
+    if (current instanceof HTMLElement) {
+      const overflowY = getComputedStyle(current).overflowY
+      if (
+        (overflowY === "auto" || overflowY === "scroll") &&
+        current.scrollHeight > current.clientHeight + 1
+      ) {
+        return current
+      }
+    }
+    current = current.parentElement
+  }
+  return null
+}
+
+// Lock only once the form is clearly taller than the sheet. Unlock only once
+// it is clearly shorter. The gap stops a near-viewport form from locking,
+// clearing, and locking again inside one ResizeObserver turn.
+const SHEET_LOCK_OVERFLOW = 16
+const SHEET_UNLOCK_SLACK = 48
+
+function fitDialogSheet(viewport: HTMLElement) {
+  const popup = viewport.querySelector("[data-slot='dialog-content']")
+  if (!(popup instanceof HTMLElement) || viewport.clientHeight < 1) return
+
+  const viewportStyles = getComputedStyle(viewport)
+  const available = Math.max(
+    0,
+    Math.floor(
+      viewport.clientHeight -
+        (Number.parseFloat(viewportStyles.paddingTop) || 0) -
+        (Number.parseFloat(viewportStyles.paddingBottom) || 0),
+    ),
+  )
+  const nextMaxHeight = `${available}px`
+  if (popup.style.maxHeight !== nextMaxHeight) popup.style.maxHeight = nextMaxHeight
+
+  const body = popup.querySelector("[data-slot='dialog-body']")
+  const natural = sheetNaturalHeight(popup, body)
+  const locked = popup.style.height !== ""
+
+  if (locked && natural + SHEET_UNLOCK_SLACK < available) {
+    popup.style.height = ""
+    if (body instanceof HTMLElement) body.style.maxHeight = ""
+    return
+  }
+
+  if (!locked && natural <= available + SHEET_LOCK_OVERFLOW) return
+
+  // Already scrolling still needs a rewrite: the keyboard changes `available`
+  // and the focused field has to stay inside the new sheet.
+  writeSheetPx(popup, "height", available)
+  if (!(body instanceof HTMLElement)) return
+  writeSheetPx(body, "maxHeight", dialogBodyRoom(popup, body))
+}
+
+function writeSheetPx(
+  element: HTMLElement,
+  property: "height" | "maxHeight",
+  px: number,
+) {
+  const next = Math.max(0, Math.floor(px))
+  const current = Number.parseFloat(element.style[property])
+  if (Number.isFinite(current) && Math.abs(current - next) <= 1) return
+  element.style[property] = `${next}px`
+}
+
+// Space under the header and above a footer that sits below the fields.
+// Phone nav keeps the actions in the header row, so they are not in this gap.
+function dialogBodyRoom(popup: HTMLElement, body: HTMLElement) {
+  const popupStyles = getComputedStyle(popup)
+  const padBottom = Number.parseFloat(popupStyles.paddingBottom) || 0
+  const gap = Number.parseFloat(popupStyles.rowGap) || 0
+  let room = popup.clientHeight - body.offsetTop - padBottom
+  const footer = popup.querySelector("[data-slot='dialog-footer']")
+  if (
+    footer instanceof HTMLElement &&
+    getComputedStyle(footer).display !== "contents" &&
+    footer.offsetTop >= body.offsetTop
+  ) {
+    room = Math.min(room, footer.offsetTop - body.offsetTop - gap)
+  }
+  return Math.max(0, Math.floor(room))
+}
+
+// Uncapped form height. A locked body is stretched to the sheet, so its
+// scrollHeight matches that box and cannot be used to decide an unlock.
+// The field stack's own border box stays the real content height.
+function sheetNaturalHeight(popup: HTMLElement, body: Element | null) {
+  if (!(body instanceof HTMLElement)) return sheetContentBottom(popup)
+
+  const popupStyles = getComputedStyle(popup)
+  const padBottom = Number.parseFloat(popupStyles.paddingBottom) || 0
+  const bodyStyles = getComputedStyle(body)
+  const bodyPadBottom = Number.parseFloat(bodyStyles.paddingBottom) || 0
+  let natural = body.offsetTop + inFlowBottom(body) + bodyPadBottom + padBottom
+  const footer = popup.querySelector("[data-slot='dialog-footer']")
+  if (
+    footer instanceof HTMLElement &&
+    getComputedStyle(footer).display !== "contents" &&
+    footer.offsetTop >= body.offsetTop
+  ) {
+    const gap =
+      Number.parseFloat(popupStyles.rowGap) ||
+      Number.parseFloat(popupStyles.gap) ||
+      0
+    natural += footer.offsetHeight + gap
+  }
+  return natural
+}
+
+function inFlowBottom(element: HTMLElement) {
+  let bottom = 0
+  for (const child of element.children) {
+    if (!(child instanceof HTMLElement)) continue
+    const style = getComputedStyle(child)
+    if (
+      style.display === "none" ||
+      style.display === "contents" ||
+      style.position === "absolute" ||
+      style.position === "fixed"
+    ) {
+      continue
+    }
+    bottom = Math.max(bottom, child.offsetTop + child.offsetHeight)
+  }
+  return bottom
+}
+
+function sheetContentBottom(popup: HTMLElement) {
+  const padBottom = Number.parseFloat(getComputedStyle(popup).paddingBottom) || 0
+  let bottom = 0
+  for (const child of popup.children) {
+    if (!(child instanceof HTMLElement)) continue
+    const style = getComputedStyle(child)
+    if (style.display === "none" || style.position === "absolute") continue
+    bottom = Math.max(bottom, child.offsetTop + child.offsetHeight)
+  }
+  return bottom + padBottom
+}
+
+function clearDialogSheetFit(viewport: HTMLElement) {
+  const popup = viewport.querySelector("[data-slot='dialog-content']")
+  if (!(popup instanceof HTMLElement)) return
+  popup.style.maxHeight = ""
+  popup.style.height = ""
+  const body = popup.querySelector("[data-slot='dialog-body']")
+  if (body instanceof HTMLElement) body.style.maxHeight = ""
 }
 
 function revealDialogField(target: EventTarget | null) {
