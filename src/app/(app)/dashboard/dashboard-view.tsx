@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { type ReactNode } from "react"
 import {
@@ -43,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { OverBudgetProject } from "@/lib/project-budget-model"
 import {
   formatDelta,
   formatExactBdt,
@@ -59,10 +61,12 @@ export function DashboardView({
   model,
   error,
   limited = false,
+  overBudget = [],
 }: {
   model: DashboardModel | null
   error: string | null
   limited?: boolean
+  overBudget?: readonly OverBudgetProject[]
 }) {
   if (limited) {
     return <LimitedDashboard />
@@ -79,7 +83,7 @@ export function DashboardView({
     )
   }
 
-  return <DashboardSections model={model} />
+  return <DashboardSections model={model} overBudget={overBudget} />
 }
 
 function LimitedDashboard() {
@@ -99,7 +103,13 @@ function LimitedDashboard() {
   )
 }
 
-function DashboardSections({ model }: { model: DashboardModel }) {
+function DashboardSections({
+  model,
+  overBudget,
+}: {
+  model: DashboardModel
+  overBudget: readonly OverBudgetProject[]
+}) {
   const showFinancials = useAccess().showFinancials
   const router = useRouter()
   if (!showFinancials) {
@@ -241,6 +251,8 @@ function DashboardSections({ model }: { model: DashboardModel }) {
           <CompactMetric label="Withdrawal" value={snapshot.withdrawal} wide />
         </div>
       </section>
+
+      <OverBudgetCard projects={overBudget} />
 
       <section
         aria-labelledby="performance-title"
@@ -499,6 +511,38 @@ function DashboardChrome({
       }
       actions={children}
     />
+  )
+}
+
+function OverBudgetCard({ projects }: { projects: readonly OverBudgetProject[] }) {
+  return (
+    <Card className="min-w-0 gap-0 p-4 md:px-6 md:py-5.5">
+      <div className="mb-3">
+        <h2 className="text-panel-title font-bold md:font-strong">Projects Over Budget</h2>
+      </div>
+      {projects.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No Projects Are Over Budget.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {projects.map((project) => (
+            <li key={project.id} className="flex min-w-0 items-center justify-between gap-3">
+              <Link
+                href={`/projects/${project.id}`}
+                className="min-w-0 truncate text-ui font-semibold underline-offset-4 hover:underline"
+              >
+                {project.name}
+              </Link>
+              <span className="shrink-0 text-right">
+                <span className="block text-caption text-muted-foreground">Over Planned</span>
+                <span className="text-destructive">
+                  <Money value={project.overAmount} />
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   )
 }
 

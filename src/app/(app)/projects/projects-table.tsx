@@ -16,6 +16,7 @@ import {
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
+import { BudgetStatusBadge } from "@/app/(app)/projects/budget-status-badge"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { deleteProject } from "@/app/(app)/projects/actions"
 import { ProjectFormDialog } from "@/app/(app)/projects/project-form-dialog"
@@ -287,7 +288,12 @@ export function ProjectsTable({
               {project.name || "—"}
             </Link>
           ),
-          value: <StatusBadge status={project.status} />,
+          value: (
+            <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
+              <StatusBadge status={project.status} />
+              {project.budgetStatus ? <BudgetStatusBadge status={project.budgetStatus} /> : null}
+            </span>
+          ),
           subtitle: [
             project.location,
             project.phase,
@@ -397,7 +403,12 @@ function CellValue({
         <span className="text-muted-foreground">—</span>
       )
     case "status":
-      return <StatusBadge status={project.status} />
+      return (
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          <StatusBadge status={project.status} />
+          {project.budgetStatus ? <BudgetStatusBadge status={project.budgetStatus} /> : null}
+        </span>
+      )
     case "phase":
       return project.phase ? (
         <Badge variant="neutral">{project.phase}</Badge>

@@ -1,4 +1,8 @@
 import { formatDayMonYear } from "@/lib/format"
+import {
+  budgetStatusLabel,
+  type ProjectBudgetReportLine,
+} from "@/lib/project-budget-model"
 import type {
   AgingReport,
   BuiltReport,
@@ -254,5 +258,47 @@ export function buildReport(
         tables: taxTables(report.tax),
         notes: ["Tax payments recorded in the selected period, grouped by project name."],
       }
+    case "project-budget":
+      return null
+  }
+}
+
+export function buildProjectBudgetReport(
+  title: string,
+  lines: readonly ProjectBudgetReportLine[],
+): BuiltReport {
+  return {
+    title,
+    periodLabel: "Current Position",
+    landscape: true,
+    tables: [
+      {
+        title,
+        columns: [
+          { header: "Project", kind: "text" },
+          { header: "Category", kind: "text" },
+          { header: "Planned", kind: "money" },
+          { header: "Committed", kind: "money" },
+          { header: "Actual", kind: "money" },
+          { header: "Remaining", kind: "money" },
+          { header: "Status", kind: "text" },
+        ],
+        rows: lines.map((line) => ({
+          cells: [
+            line.project,
+            line.category,
+            line.planned,
+            line.committed,
+            line.actual,
+            line.remaining,
+            budgetStatusLabel(line.status),
+          ],
+          emphasis: line.emphasis,
+        })),
+      },
+    ],
+    notes: [
+      "Actual is the sum of vendor bills on the project's purchase orders and operational expenses tagged to that project. A bill or expense whose name does not match a project expense category is Uncategorised. Committed is purchase order value that is not yet billed. Remaining is planned minus actual. Near Budget means actual is at least 90% of planned. Over Budget means actual is above planned. Saving a bill is not blocked.",
+    ],
   }
 }

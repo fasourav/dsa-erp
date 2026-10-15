@@ -61,6 +61,10 @@ const constraintMessages: Record<string, { message: string; field?: string }> = 
     message: "A budget for this department and month already exists.",
     field: "departmentId",
   },
+  project_budget_lines_project_category_key: {
+    message: "This project already has a budget line for that category.",
+    field: "categoryId",
+  },
   payroll_runs_period_year_period_month_key: {
     message: "Salaries for this month are already paid.",
     field: "month",

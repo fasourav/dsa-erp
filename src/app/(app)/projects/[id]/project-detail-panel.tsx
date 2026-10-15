@@ -4,9 +4,11 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 import { ProjectSummarySection } from "@/app/(app)/projects/[id]/project-summary-section"
+import { BudgetStatusBadge } from "@/app/(app)/projects/budget-status-badge"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
+import type { ProjectBudgetSnapshot } from "@/lib/project-budget-model"
 import type { BacklogEntry, ProjectDetail, ProjectOverview } from "@/lib/project-detail"
 import type { ProjectProgressData } from "@/lib/project-progress"
 
@@ -16,12 +18,20 @@ export function ProjectDetailPanel({
   backlog,
   progress,
   progressError,
+  budget,
+  canAddBudget,
+  canEditBudget,
+  canDeleteBudget,
 }: {
   project: ProjectDetail
   overview: ProjectOverview
   backlog: BacklogEntry | null
   progress: ProjectProgressData | null
   progressError: string | null
+  budget: ProjectBudgetSnapshot
+  canAddBudget: boolean
+  canEditBudget: boolean
+  canDeleteBudget: boolean
 }) {
   const meta = [project.projectType, project.location].filter(Boolean).join(" · ")
 
@@ -45,6 +55,7 @@ export function ProjectDetailPanel({
             <span className="inline-flex flex-wrap items-center gap-2.5">
               <span>{project.name}</span>
               <StatusBadge status={project.status} />
+              {budget.status ? <BudgetStatusBadge status={budget.status} /> : null}
             </span>
           }
           description={meta || undefined}
@@ -57,6 +68,10 @@ export function ProjectDetailPanel({
         backlog={backlog}
         progress={progress}
         progressError={progressError}
+        budget={budget}
+        canAddBudget={canAddBudget}
+        canEditBudget={canEditBudget}
+        canDeleteBudget={canDeleteBudget}
       />
     </div>
   )

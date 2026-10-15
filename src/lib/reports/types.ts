@@ -87,6 +87,7 @@ export type ReportSlug =
   | "ar-aging"
   | "ap-aging"
   | "project-profitability"
+  | "project-budget"
   | "tax"
 
 export type ExportKind = "text" | "money" | "integer"

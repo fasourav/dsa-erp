@@ -577,6 +577,7 @@ export type Database = {
       }
       company_settings: {
         Row: {
+          block_bills_over_budget: boolean
           fiscal_year_start_month: number
           id: boolean
           launch_date: string
@@ -585,6 +586,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          block_bills_over_budget?: boolean
           fiscal_year_start_month?: number
           id?: boolean
           launch_date?: string
@@ -593,6 +595,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          block_bills_over_budget?: boolean
           fiscal_year_start_month?: number
           id?: boolean
           launch_date?: string
@@ -1759,6 +1762,51 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      project_budget_lines: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          notes: string
+          planned_amount: number
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          notes?: string
+          planned_amount?: number
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          notes?: string
+          planned_amount?: number
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_budget_lines_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "project_expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_budget_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -3070,6 +3118,17 @@ export type Database = {
           project_value: number | null
           recovery_plan: string | null
           total_paid: number | null
+        }
+        Relationships: []
+      }
+      project_budget_actual: {
+        Row: {
+          actual_amount: number | null
+          category_id: string | null
+          category_name: string | null
+          committed_amount: number | null
+          project_id: string | null
+          project_name: string | null
         }
         Relationships: []
       }

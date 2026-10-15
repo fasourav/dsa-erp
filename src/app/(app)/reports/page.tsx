@@ -7,6 +7,7 @@ import {
   FileBarChart,
   FileSpreadsheet,
   FolderKanban,
+  Gauge,
   Scale,
   TrendingUp,
   Wallet,
@@ -33,6 +34,7 @@ const reportIcons: Record<ReportSlug, LucideIcon> = {
   "ar-aging": ArrowDownLeft,
   "ap-aging": ArrowUpRight,
   "project-profitability": FolderKanban,
+  "project-budget": Gauge,
   tax: Calculator,
 }
 

@@ -38,6 +38,11 @@ export const reportDefinitions: Array<{
     detail: "Revenue, project expense, tax, and gross profit by project.",
   },
   {
+    slug: "project-budget",
+    title: "Project Budget",
+    detail: "Planned, committed, actual, and remaining amounts by project and category.",
+  },
+  {
     slug: "tax",
     title: "Tax Summary",
     detail: "VAT and tax payments in the period.",

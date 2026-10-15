@@ -9,6 +9,7 @@ import {
   WeeklyChart,
   expenseSliceStyle,
 } from "@/app/(app)/dashboard/dashboard-charts"
+import { BudgetTab } from "@/app/(app)/projects/[id]/budget-tab"
 import { DataList, type DataListMobileItem } from "@/components/data-list"
 import { Money } from "@/components/money"
 import { RecordAttachments } from "@/components/record-attachments"
@@ -25,6 +26,7 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import type { ProjectBudgetSnapshot } from "@/lib/project-budget-model"
 import type {
   BacklogEntry,
   OpenInvoice,
@@ -72,12 +74,20 @@ export function ProjectSummarySection({
   backlog,
   progress,
   progressError,
+  budget,
+  canAddBudget,
+  canEditBudget,
+  canDeleteBudget,
 }: {
   project: ProjectDetail
   overview: ProjectOverview
   backlog: BacklogEntry | null
   progress: ProjectProgressData | null
   progressError: string | null
+  budget: ProjectBudgetSnapshot
+  canAddBudget: boolean
+  canEditBudget: boolean
+  canDeleteBudget: boolean
 }) {
   const slices = expenseSliceStyle.flatMap((style) => {
     const amount =
@@ -118,6 +128,7 @@ export function ProjectSummarySection({
         <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="budget">Budget</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
@@ -188,6 +199,17 @@ export function ProjectSummarySection({
             projectId={project.id}
             progress={progress}
             error={progressError}
+          />
+        </TabsContent>
+
+        <TabsContent keepMounted value="budget">
+          <BudgetTab
+            projectId={project.id}
+            budget={budget}
+            categories={budget.categories}
+            canAdd={canAddBudget}
+            canEdit={canEditBudget}
+            canDelete={canDeleteBudget}
           />
         </TabsContent>
 
