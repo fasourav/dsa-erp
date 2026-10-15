@@ -176,6 +176,8 @@ export function ProjectsTable({
                 { header: "Date", kind: "text" },
                 { header: "Status", kind: "text" },
                 { header: "Phase", kind: "text" },
+                { header: "% Complete", kind: "text" },
+                { header: "Overdue Milestones", kind: "text" },
                 { header: "Project Value", kind: "money" },
                 { header: "Total Paid", kind: "money" },
                 { header: "Total Due", kind: "money" },
@@ -190,6 +192,8 @@ export function ProjectsTable({
                 formatProjectDate(project.startedOn),
                 statusLabel(project.status),
                 project.phase || "—",
+                `${project.progressPercent}%`,
+                project.overdueMilestones > 0 ? String(project.overdueMilestones) : "",
                 showFinancials ? project.totalValue : "Hidden",
                 showFinancials ? project.totalPaid : "Hidden",
                 showFinancials ? project.totalDue : "Hidden",
@@ -284,7 +288,14 @@ export function ProjectsTable({
             </Link>
           ),
           value: <StatusBadge status={project.status} />,
-          subtitle: [project.location, project.phase].filter(Boolean).join(" · "),
+          subtitle: [
+            project.location,
+            project.phase,
+            `${project.progressPercent}%`,
+            project.overdueMilestones > 0 ? "Overdue" : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
           meta: <Money value={project.totalValue} />,
         })}
         renderCell={(project, columnId) => (
@@ -351,18 +362,27 @@ function CellValue({
   switch (columnId) {
     case "name":
       return (
-        <Button
-          type="button"
-          variant="link"
-          nativeButton={false}
-          render={<Link href={`/projects/${project.id}`} />}
-          className={cn(
-            "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
-            !project.name && "text-muted-foreground",
-          )}
-        >
-          {project.name || "—"}
-        </Button>
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="link"
+            nativeButton={false}
+            render={<Link href={`/projects/${project.id}`} />}
+            className={cn(
+              "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
+              !project.name && "text-muted-foreground",
+            )}
+          >
+            {project.name || "—"}
+          </Button>
+          {project.overdueMilestones > 0 ? (
+            <Badge variant="destructive">
+              {project.overdueMilestones === 1
+                ? "Overdue"
+                : `${project.overdueMilestones} Overdue`}
+            </Badge>
+          ) : null}
+        </span>
       )
     case "location":
       return project.location ? (
@@ -384,6 +404,8 @@ function CellValue({
       ) : (
         <span className="text-muted-foreground">—</span>
       )
+    case "progressPercent":
+      return <span className="tabular-nums">{project.progressPercent}%</span>
     case "totalValue":
       return <Money value={project.totalValue} />
     case "totalPaid":

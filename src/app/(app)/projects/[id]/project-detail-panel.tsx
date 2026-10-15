@@ -8,15 +8,20 @@ import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import type { BacklogEntry, ProjectDetail, ProjectOverview } from "@/lib/project-detail"
+import type { ProjectProgressData } from "@/lib/project-progress"
 
 export function ProjectDetailPanel({
   project,
   overview,
   backlog,
+  progress,
+  progressError,
 }: {
   project: ProjectDetail
   overview: ProjectOverview
   backlog: BacklogEntry | null
+  progress: ProjectProgressData | null
+  progressError: string | null
 }) {
   const meta = [project.projectType, project.location].filter(Boolean).join(" · ")
 
@@ -50,6 +55,8 @@ export function ProjectDetailPanel({
         project={project}
         overview={overview}
         backlog={backlog}
+        progress={progress}
+        progressError={progressError}
       />
     </div>
   )

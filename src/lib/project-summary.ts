@@ -28,6 +28,8 @@ export type ProjectRow = {
   expenseDue: number
   grossProfit: number
   details: string
+  progressPercent: number
+  overdueMilestones: number
 }
 
 export type ClientOption = {
@@ -47,6 +49,7 @@ export type ColumnId =
   | "expenseTotal"
   | "expenseDue"
   | "grossProfit"
+  | "progressPercent"
 
 export type OptionalColumnId = Exclude<ColumnId, "name" | "status" | "phase">
 
@@ -106,6 +109,13 @@ export const dataColumns: readonly DataColumn[] = [
     format: "text",
   },
   {
+    id: "progressPercent",
+    label: "% Complete",
+    align: "right",
+    locked: false,
+    format: "text",
+  },
+  {
     id: "totalValue",
     label: "Total Value",
     align: "right",
@@ -158,6 +168,7 @@ const defaultVisibility: ColumnVisibility = {
   expenseTotal: true,
   expenseDue: true,
   grossProfit: true,
+  progressPercent: true,
 }
 
 
@@ -275,6 +286,8 @@ function compareProjects(a: ProjectRow, b: ProjectRow, key: ColumnId): number {
       return a.expenseDue - b.expenseDue
     case "grossProfit":
       return a.grossProfit - b.grossProfit
+    case "progressPercent":
+      return a.progressPercent - b.progressPercent
   }
 }
 
