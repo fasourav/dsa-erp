@@ -33,6 +33,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The Supabase Auth Site URL for this project is `http://localhost:3000`.
 
+## Continuous integration
+
+Pull requests and pushes to `main` run lint, TypeScript, and a production build. The workflow is `.github/workflows/ci.yml`; results show under the Actions tab. The build uses placeholder `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SITE_URL` values, and an empty `SUPABASE_SERVICE_ROLE_KEY`, so it does not need repository secrets.
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
 Unauthenticated visits are sent to `/login`. After a successful email and password sign-in, the app opens `/dashboard`, which shows the signed-in email. Sign out from the header.
 
 ## Route protection
