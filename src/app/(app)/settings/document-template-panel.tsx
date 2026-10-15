@@ -46,6 +46,8 @@ import {
   type DocumentTemplateLine,
   type DocumentTemplateMilestone,
 } from "@/lib/document-templates"
+import { toast } from "sonner"
+
 import { savedToast } from "@/lib/saved"
 import type { DocumentTemplateInput } from "@/lib/schemas"
 
@@ -125,7 +127,8 @@ export function DocumentTemplatePanel({
                           templates.filter((item) => item.kind === template.kind).map((item) => item.name),
                         ),
                       )
-                      if (!result.error) savedToast("Template duplicated.")
+                      if (result.error) toast.error(result.error)
+                      else savedToast("Template duplicated.")
                     })
                   }
                 >

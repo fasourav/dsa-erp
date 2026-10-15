@@ -108,7 +108,9 @@ end;
 $$;
 
 revoke all on function private.document_template_payload_ok(jsonb, jsonb)
-  from public, anon, authenticated;
+  from public, anon;
+-- The table check constraint calls this as the writing role, so authenticated needs execute.
+grant execute on function private.document_template_payload_ok(jsonb, jsonb) to authenticated;
 
 create table public.document_templates (
   id uuid primary key default gen_random_uuid(),
@@ -123,12 +125,15 @@ create table public.document_templates (
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint document_templates_kind_name_key unique (kind, name),
   constraint document_templates_project_type_check
     check (project_type is null or btrim(project_type) <> ''),
   constraint document_templates_payload_check
     check (private.document_template_payload_ok(lines, milestones))
 );
+
+-- Names are unique per kind ignoring case and surrounding spaces.
+create unique index document_templates_kind_name_key
+  on public.document_templates (kind, lower(btrim(name)));
 
 comment on table public.document_templates is
   'Copied onto quotations and work orders. Issued documents keep their own text, lines, and milestones.';

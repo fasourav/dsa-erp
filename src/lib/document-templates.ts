@@ -118,15 +118,16 @@ export function joinedTerms(termsText: string, paymentTerms: string): string {
 }
 
 export function nextCopyName(name: string, existing: readonly string[]): string {
-  const base = `${name.trim()} Copy`.slice(0, 120)
-  if (!existing.some((item) => item.toLowerCase() === base.toLowerCase())) return base
+  const taken = new Set(existing.map((item) => item.trim().toLowerCase()))
+  // Shorten the original name, never the suffix, so a long name still gets a unique copy name.
+  const withSuffix = (suffix: string) => `${name.trim().slice(0, 120 - suffix.length).trimEnd()}${suffix}`
+  const first = withSuffix(" Copy")
+  if (!taken.has(first.toLowerCase())) return first
   for (let index = 2; index < 100; index += 1) {
-    const candidate = `${base} ${index}`.slice(0, 120)
-    if (!existing.some((item) => item.toLowerCase() === candidate.toLowerCase())) {
-      return candidate
-    }
+    const candidate = withSuffix(` Copy ${index}`)
+    if (!taken.has(candidate.toLowerCase())) return candidate
   }
-  return `${base} ${Date.now()}`.slice(0, 120)
+  return withSuffix(` Copy ${Date.now()}`)
 }
 
 function text(entry: { [key: string]: Json | undefined }, key: string): string {
