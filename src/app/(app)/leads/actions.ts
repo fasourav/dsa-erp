@@ -1,7 +1,7 @@
 "use server"
 
 import { titleCaseName } from "@/lib/format"
-import { withVersion } from "@/lib/record-version"
+import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { dhakaToday } from "@/lib/dashboard-metrics"
@@ -281,12 +281,15 @@ async function saveLead(
   }
 
   const { data, error } = id
-    ? await supabase.from("leads").update(withVersion(values, input.version)).eq("id", id).select("id")
+    ? await eqVersion(
+        supabase.from("leads").update(withVersion(values, input.version)).eq("id", id),
+        input.version,
+      ).select("id")
     : await supabase.from("leads").insert(values).select("id")
 
-  if (error) return { error: friendlyDbError(error, "Could not save this lead.") }
+  if (error) return { error: staleWriteMessage(error) ?? friendlyDbError(error, "Could not save this lead.") }
   if (!data || data.length === 0)
-    return { error: "That lead could not be found." }
+    return { error: missedUpdateMessage(id ? input.version : undefined, "That lead could not be found.") }
 
   revalidatePath("/leads")
   if (source || currentStage) {

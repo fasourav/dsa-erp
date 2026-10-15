@@ -1,7 +1,7 @@
 "use server"
 
 import { titleCaseName } from "@/lib/format"
-import { withVersion } from "@/lib/record-version"
+import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
@@ -200,10 +200,16 @@ async function saveVendor(
   }
 
   const { data, error } = id
-    ? await supabase.from("vendors").update(withVersion(values, input.version)).eq("id", id).select("id")
+    ? await eqVersion(
+        supabase.from("vendors").update(withVersion(values, input.version)).eq("id", id),
+        input.version,
+      ).select("id")
     : await supabase.from("vendors").insert(values).select("id")
 
   if (error) {
+    const stale = staleWriteMessage(error)
+    if (stale) return { error: stale }
+
     if (isUniqueViolation(error)) {
       return {
         error: null,
@@ -215,7 +221,7 @@ async function saveVendor(
   }
 
   if (!data || data.length === 0) {
-    return { error: "That vendor could not be found." }
+    return { error: missedUpdateMessage(id ? input.version : undefined, "That vendor could not be found.") }
   }
 
   revalidateVendorSurfaces()

@@ -9,7 +9,7 @@ import { requireModule } from "@/lib/permissions"
 export const metadata = { title: "New Quotation" }
 
 export default async function NewQuotationPage() {
-  await requireModule("quotations")
+  await requireModule("quotations", "add")
   const [catalog, loaded, margins, origin, templateList] = await Promise.all([
     loadDocumentCatalog(),
     loadQuotationDraft(null),

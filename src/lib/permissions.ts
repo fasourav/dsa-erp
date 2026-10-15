@@ -3,7 +3,6 @@ import { redirect } from "next/navigation"
 
 import {
   allows,
-  homePath,
   type AccessSnapshot,
   type ModuleKey,
   type PermissionAction,
@@ -16,13 +15,8 @@ export const getAccess = cache(async (): Promise<AccessSnapshot | null> => {
 
   if (authError || !auth.user) return null
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role, status, show_financials")
-    .eq("id", auth.user.id)
-    .maybeSingle()
-
-  if (profileError || !profile) return null
+  const profile = await loadProfile(supabase, auth.user.id)
+  if (!profile) return null
 
   const [{ data: grants }, { data: modules }] = await Promise.all([
     supabase
@@ -43,6 +37,9 @@ export const getAccess = cache(async (): Promise<AccessSnapshot | null> => {
     status,
     showFinancials: profile.show_financials,
     isOwner: profile.role === "owner" && status === "active",
+    displayName: profile.display_name?.trim() || profile.email?.trim() || "User",
+    email: profile.email ?? "",
+    designation: profile.designation?.trim() || null,
     ownersOnly: (modules ?? []).filter((row) => row.owners_only).map((row) => row.key),
     grants: Object.fromEntries(
       (grants ?? []).map((row) => [
@@ -75,14 +72,48 @@ export async function denyUnlessOwner(): Promise<string | null> {
   return null
 }
 
-export async function requireModule(module: ModuleKey) {
+export async function requireModule(module: ModuleKey, action: PermissionAction = "view") {
   const access = await getAccess()
   if (!access || access.status === "deactivated") redirect("/login")
-  if (!allows(access, module, "view")) redirect(homePath(access))
+  if (!allows(access, module, action)) redirect("/no-access")
 }
 
 export async function requireOwner() {
   const access = await getAccess()
   if (!access || access.status === "deactivated") redirect("/login")
-  if (!access.isOwner) redirect(homePath(access))
+  if (!access.isOwner) redirect("/no-access")
+}
+
+type ProfileRow = {
+  role: string
+  status: string
+  show_financials: boolean
+  display_name: string | null
+  email: string | null
+  designation: string | null
+}
+
+/** One profile read for access and the shell identity. Retries without designation if that column is absent. */
+async function loadProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<ProfileRow | null> {
+  const rich = await supabase
+    .from("profiles")
+    .select("role, status, show_financials, display_name, email, designation")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (rich.error && /designation/i.test(rich.error.message)) {
+    const basic = await supabase
+      .from("profiles")
+      .select("role, status, show_financials, display_name, email")
+      .eq("id", userId)
+      .maybeSingle()
+    if (basic.error || !basic.data) return null
+    return { ...basic.data, designation: null }
+  }
+
+  if (rich.error || !rich.data) return null
+  return rich.data
 }

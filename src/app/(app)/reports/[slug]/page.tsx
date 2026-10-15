@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ReportView } from "@/app/(app)/reports/report-view"
 import { ReportFilters } from "@/app/(app)/reports/report-filters"
 import { PageHeader } from "@/components/page-header"
-import { canOpenReports, canSeeReport, homePath } from "@/lib/access"
+import { canOpenReports, canSeeReport } from "@/lib/access"
 import { loadProjectBudgetReport } from "@/lib/project-budget"
 import { isReportSlug, reportBySlug } from "@/lib/reports/catalog"
 import { loadFinancialReport, reportLaunchDate } from "@/lib/reports/load"
@@ -36,7 +36,7 @@ export default async function ReportPage({
   ])
   if (!isReportSlug(slug)) notFound()
   if (!access || access.status === "deactivated") redirect("/login")
-  if (!canOpenReports(access) || !canSeeReport(access, slug)) redirect(homePath(access))
+  if (!canOpenReports(access) || !canSeeReport(access, slug)) redirect("/no-access")
 
   const launch = await reportLaunchDate()
   const today = officeToday()
