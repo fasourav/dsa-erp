@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, Noto_Sans_Bengali } from "next/font/google"
 import localFont from "next/font/local"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 
 import { ServiceWorker } from "@/components/service-worker"
 import { Toaster } from "@/components/ui/sonner"
@@ -80,6 +80,7 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const theme = await currentTheme()
+  const nonce = (await headers()).get("x-nonce") ?? undefined
   const preference = await currentThemePreference()
 
   return (
@@ -97,7 +98,7 @@ export default async function RootLayout({
       )}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: systemThemeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: systemThemeScript }} />
       </head>
       <body className="flex min-h-full flex-col">
         {children}
