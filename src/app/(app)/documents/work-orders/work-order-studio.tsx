@@ -74,7 +74,9 @@ export function WorkOrderStudio({
       ? withPurchaseOrder(draft, purchaseOrders.find((item) => item.id === draft.purchaseOrderId))
       : draft,
   )
-  const linked = Boolean(form.purchaseOrderId)
+  // The PO link as last saved. Once saved with a PO, the link can switch but never be cleared.
+  const [savedPurchaseOrderId, setSavedPurchaseOrderId] = useState(() => (draft.id ? draft.purchaseOrderId : ""))
+  const linked = Boolean(form.purchaseOrderId || savedPurchaseOrderId)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("work_orders", form.id ? "edit" : "add")
@@ -128,6 +130,7 @@ export function WorkOrderStudio({
             setError(result.error ?? "Could not save this work order.")
             return
           }
+          setSavedPurchaseOrderId(form.purchaseOrderId)
           setForm((current) => ({
             ...current,
             id: result.id ?? current.id,
@@ -148,7 +151,7 @@ export function WorkOrderStudio({
         options={purchaseOrders.map((item) => ({ value: item.id, label: item.label }))}
         onChange={(purchaseOrderId) => {
           // A work order is the printable form of its PO: it can switch PO but never silently lose it.
-          if (!purchaseOrderId && (!form.id || draft.purchaseOrderId)) {
+          if (!purchaseOrderId && (!form.id || savedPurchaseOrderId)) {
             setError("Choose a purchase order. A work order can't be saved without one.")
             return
           }
