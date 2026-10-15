@@ -190,7 +190,7 @@ export function ProjectsTable({
                 formatProjectDate(project.startedOn),
                 statusLabel(project.status),
                 project.phase || "—",
-                project.totalValue,
+                showFinancials ? project.totalValue : "Hidden",
                 showFinancials ? project.totalPaid : "Hidden",
                 showFinancials ? project.totalDue : "Hidden",
                 showFinancials ? project.expenseTotal : "Hidden",

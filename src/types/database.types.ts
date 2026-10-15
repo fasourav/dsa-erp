@@ -3251,6 +3251,17 @@ export type Database = {
         }[]
       }
       set_own_display_name: { Args: { next_name: string }; Returns: undefined }
+      save_business_document: {
+        Args: {
+          p_fields: Json
+          p_id?: string
+          p_kind: string
+          p_lines: Json
+          p_milestones: Json
+          p_version?: string
+        }
+        Returns: Json
+      }
       financial_report: {
         Args: { p_from: string; p_to: string }
         Returns: Json

@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -45,6 +46,7 @@ import { statusLabel } from "@/lib/project-summary"
 import {
   isIsoDate,
   isProjectStatus,
+  amountError,
   parseProjectValue,
   todayIsoDate,
 } from "@/lib/project-validation"
@@ -70,6 +72,7 @@ export function ProjectFormDialog({
   projectPhases: CatalogOption[]
 }) {
   const projectId = project?.id ?? null
+  const version = useRecordVersion("projects", projectId, open)
   const [name, setName] = useState(project?.name ?? "")
   const [clientId, setClientId] = useState(project?.clientId ?? "")
   const [location, setLocation] = useState(project?.location ?? "")
@@ -112,7 +115,7 @@ export function ProjectFormDialog({
     serverErrors.totalValue ??
     (attempted && parseProjectValue(totalValue) === null
       ? totalValue.trim()
-        ? "Enter a project value of 0 or more."
+        ? amountError(totalValue, "project value")
         : "Enter a project value."
       : null)
 
@@ -155,7 +158,7 @@ export function ProjectFormDialog({
     startSubmit(async () => {
       try {
         const result = projectId
-          ? await updateProject(projectId, input)
+          ? await updateProject(projectId, { ...input, version })
           : await addProject(input)
 
         if (result.fieldErrors) {

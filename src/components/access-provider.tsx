@@ -28,6 +28,12 @@ export function useAccess(): AccessSnapshot {
   return access
 }
 
+/** False only for signed-in non-owners with Show Financial Figures off. */
+export function useSeesMoney(): boolean {
+  const access = useContext(AccessContext)
+  return !access || access.isOwner || access.showFinancials
+}
+
 export function useCan(module: string, action: PermissionAction): boolean {
   return allows(useAccess(), module, action)
 }

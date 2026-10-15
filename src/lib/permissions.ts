@@ -63,14 +63,14 @@ export async function denyUnless(
   action: PermissionAction,
 ): Promise<string | null> {
   const access = await getAccess()
-  if (!access || access.status === "deactivated") return "You must be signed in."
+  if (!access || access.status === "deactivated") return "Your session has expired. Sign in again."
   if (!allows(access, module, action)) return "You do not have permission to do that."
   return null
 }
 
 export async function denyUnlessOwner(): Promise<string | null> {
   const access = await getAccess()
-  if (!access || access.status === "deactivated") return "You must be signed in."
+  if (!access || access.status === "deactivated") return "Your session has expired. Sign in again."
   if (!access.isOwner) return "Only owners can do that."
   return null
 }

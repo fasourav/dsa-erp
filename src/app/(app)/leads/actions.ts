@@ -1,5 +1,7 @@
 "use server"
 
+import { titleCaseName } from "@/lib/format"
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { dhakaToday } from "@/lib/dashboard-metrics"
@@ -7,12 +9,13 @@ import { isUuid } from "@/lib/ids"
 import { toE164FromStored } from "@/lib/phone"
 import { firstIssue, leadContactSchema } from "@/lib/schemas"
 import { nextSortOrder } from "@/lib/lookup-catalogs"
-import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { isIsoDate, amountError, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import { friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 
 export type LeadInput = {
+  version?: string
   leadName: string
   addedOn: string
   kind: string
@@ -35,6 +38,7 @@ export type LeadFieldErrors = {
   status?: string
   email?: string
   phone?: string
+  estimatedValue?: string
 }
 
 export type LeadResult = {
@@ -199,7 +203,7 @@ async function saveLead(
   id: string | null,
   input: LeadInput,
 ): Promise<LeadResult> {
-  const leadName = input.leadName.trim()
+  const leadName = titleCaseName(input.leadName)
   const addedOn = input.addedOn.trim()
   const kind = input.kind.trim()
   const phone = toE164FromStored(input.phone)
@@ -216,7 +220,10 @@ async function saveLead(
 
   if (!leadName) fieldErrors.leadName = "Enter the lead name."
   if (!isIsoDate(addedOn)) fieldErrors.addedOn = "Enter the lead add date."
+  else if (isFutureIsoDate(addedOn)) fieldErrors.addedOn = "Lead add date can't be in the future."
   if (!validKinds.includes(kind)) fieldErrors.kind = "Choose Person or Company."
+  const valueIssue = amountError(input.estimatedValue, "estimated value")
+  if (valueIssue) fieldErrors.estimatedValue = valueIssue
 
   const contact = leadContactSchema.safeParse({ email, phone, addedOn })
   if (!contact.success) {
@@ -274,7 +281,7 @@ async function saveLead(
   }
 
   const { data, error } = id
-    ? await supabase.from("leads").update(values).eq("id", id).select("id")
+    ? await supabase.from("leads").update(withVersion(values, input.version)).eq("id", id).select("id")
     : await supabase.from("leads").insert(values).select("id")
 
   if (error) return { error: friendlyDbError(error, "Could not save this lead.") }

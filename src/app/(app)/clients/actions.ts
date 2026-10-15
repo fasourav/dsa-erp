@@ -1,5 +1,7 @@
 "use server"
 
+import { titleCaseName } from "@/lib/format"
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import type { ClientKind } from "@/lib/client-summary"
@@ -18,6 +20,7 @@ export type DeleteClientResult = {
 }
 
 export type ClientFormInput = {
+  version?: string
   kind: ClientKind
   name: string
   email: string
@@ -68,7 +71,7 @@ async function saveClient(
     return { error: "Choose Individual or Company." }
   }
 
-  const name = input.name.trim()
+  const name = titleCaseName(input.name)
   const email = input.email.trim()
   const phone = toE164FromStored(input.phone)
   const address = input.address.trim()
@@ -144,7 +147,7 @@ async function saveClient(
   }
 
   const { data, error } = id
-    ? await supabase.from("clients").update(values).eq("id", id).select("id")
+    ? await supabase.from("clients").update(withVersion(values, input.version)).eq("id", id).select("id")
     : await supabase.from("clients").insert(values).select("id")
 
   if (error) {

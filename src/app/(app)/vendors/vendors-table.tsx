@@ -2,7 +2,7 @@
 
 import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { useCan } from "@/components/access-provider"
+import { useCan, useSeesMoney } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
@@ -49,6 +49,7 @@ export function VendorsTable({
   initialQuery?: string
 }) {
   const canAdd = useCan("vendors", "add")
+  const seesMoney = useSeesMoney()
 
   const [sort, setSort] = useState<SortState>({
     key: "displayName",
@@ -156,9 +157,9 @@ export function VendorsTable({
                 rows: filtered.map((vendor) => [
                   vendor.displayName,
                   [formatPhoneDisplay(vendor.phone ?? ""), vendor.email].map((value) => value?.trim()).filter(Boolean).join(" · ") || "—",
-                  vendor.totalProjectValue,
-                  vendor.totalPaid,
-                  vendor.totalDue,
+                  seesMoney ? vendor.totalProjectValue : "Hidden",
+                  seesMoney ? vendor.totalPaid : "Hidden",
+                  seesMoney ? vendor.totalDue : "Hidden",
                 ]),
               }}
             />

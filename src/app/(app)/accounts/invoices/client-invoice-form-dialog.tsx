@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -53,6 +54,7 @@ export function ClientInvoiceFormDialog({
   defaultProjectId: string | null
 }) {
   const invoiceId = invoice?.id ?? null
+  const version = useRecordVersion("client_invoices", invoiceId, open)
   const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn || todayIsoDate())
   const [projectId, setProjectId] = useState(
     invoice?.projectId ?? defaultProjectId ?? "",
@@ -114,7 +116,7 @@ export function ClientInvoiceFormDialog({
     startSubmit(async () => {
       try {
         const result = invoiceId
-          ? await updateClientInvoice(invoiceId, input)
+          ? await updateClientInvoice(invoiceId, { ...input, version })
           : await addClientInvoice(input)
 
         if (result.fieldErrors) {

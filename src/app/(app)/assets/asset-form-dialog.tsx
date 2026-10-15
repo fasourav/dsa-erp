@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -43,6 +44,7 @@ export function AssetFormDialog({
   categories: readonly AssetCategoryOption[]
 }) {
   const assetId = asset?.id ?? null
+  const version = useRecordVersion("assets", assetId, open)
   const [name, setName] = useState(asset?.name ?? "")
   const [categoryId, setCategoryId] = useState(asset?.categoryId ?? "")
   const [purchaseDate, setPurchaseDate] = useState(asset?.purchaseDate ?? "")
@@ -102,7 +104,7 @@ export function AssetFormDialog({
     startSubmit(async () => {
       try {
         const result = assetId
-          ? await updateAsset(assetId, input)
+          ? await updateAsset(assetId, { ...input, version })
           : await addAsset(input)
 
         if (result.fieldErrors) {

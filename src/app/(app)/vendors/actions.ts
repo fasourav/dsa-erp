@@ -1,5 +1,7 @@
 "use server"
 
+import { titleCaseName } from "@/lib/format"
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
@@ -29,6 +31,7 @@ export type DeleteVendorResult = {
 }
 
 export type VendorFormInput = {
+  version?: string
   kind: VendorKind
   name: string
   vendorField: string
@@ -121,7 +124,7 @@ async function saveVendor(
     }
   }
 
-  const name = input.name.trim()
+  const name = titleCaseName(input.name)
   const vendorField = input.vendorField.trim()
   const email = input.email.trim()
   const phone = toE164FromStored(input.phone)
@@ -197,7 +200,7 @@ async function saveVendor(
   }
 
   const { data, error } = id
-    ? await supabase.from("vendors").update(values).eq("id", id).select("id")
+    ? await supabase.from("vendors").update(withVersion(values, input.version)).eq("id", id).select("id")
     : await supabase.from("vendors").insert(values).select("id")
 
   if (error) {

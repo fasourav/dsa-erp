@@ -97,6 +97,7 @@ export function WorkOrderStudio({
             id: result.id ?? current.id,
             documentNo: result.documentNo ?? current.documentNo,
             verifyToken: result.verifyToken ?? current.verifyToken,
+            version: result.version ?? current.version,
           }))
           if (!form.id) router.replace(`/documents/work-orders/${result.id}`)
         })

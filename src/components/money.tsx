@@ -1,3 +1,6 @@
+"use client"
+
+import { useSeesMoney } from "@/components/access-provider"
 import { formatMoney } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -12,6 +15,8 @@ export function Money({
   size?: "default" | "kpi"
   className?: string
 }) {
+  const seesMoney = useSeesMoney()
+  if (!seesMoney) return <span className={cn("text-muted-foreground", className)}>Hidden</span>
   const text = formatMoney(value)
   const signIndex = text.indexOf("৳")
   const sign = text.slice(0, signIndex)

@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -68,6 +69,7 @@ export function ExpenseFormDialog({
   bankAccounts: readonly BankAccountChoice[]
 }) {
   const expenseId = expense?.id ?? null
+  const version = useRecordVersion("operational_expenses", expenseId, open)
   const [expenseDate, setExpenseDate] = useState(
     expense?.expenseDate || todayIsoDate(),
   )
@@ -168,7 +170,7 @@ export function ExpenseFormDialog({
     startSubmit(async () => {
       try {
         const result = expenseId
-          ? await updateOperationalExpense(expenseId, input)
+          ? await updateOperationalExpense(expenseId, { ...input, version })
           : await addOperationalExpense(input)
 
         if (result.fieldErrors) {

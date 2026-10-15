@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -37,7 +38,7 @@ import {
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
-import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
+import { amountError, isIsoDate, todayIsoDate } from "@/lib/project-validation"
 
 export function LeadFormDialog({
   open,
@@ -51,6 +52,7 @@ export function LeadFormDialog({
   lookups: LeadLookups
 }) {
   const leadId = lead?.id ?? null
+  const version = useRecordVersion("leads", leadId, open)
   const defaultStatus = lookups.statuses[0]?.code ?? "open"
   const [leadName, setLeadName] = useState(lead?.leadName ?? "")
   const [addedOn, setAddedOn] = useState(lead?.addedOn || todayIsoDate())
@@ -84,6 +86,8 @@ export function LeadFormDialog({
     (attempted && !isIsoDate(addedOn) ? "Enter the lead add date." : null)
   const kindError =
     attempted && !kind ? "Choose a lead type." : fieldErrors.kind
+  const valueError =
+    fieldErrors.estimatedValue ?? (attempted ? amountError(estimatedValue, "estimated value") : null)
 
   const typeItems = lookups.leadTypes.map((item) => ({
     value: item.code,
@@ -125,7 +129,7 @@ export function LeadFormDialog({
     setFormError(null)
     setFieldErrors({})
 
-    if (!leadName.trim() || !kind || !isIsoDate(addedOn)) return
+    if (!leadName.trim() || !kind || !isIsoDate(addedOn) || amountError(estimatedValue, "estimated value")) return
 
     const input = {
       leadName: leadName.trim(),
@@ -146,7 +150,7 @@ export function LeadFormDialog({
     startSubmit(async () => {
       try {
         const result = leadId
-          ? await updateLead(leadId, input)
+          ? await updateLead(leadId, { ...input, version })
           : await addLead(input)
 
         if (result.fieldErrors) {
@@ -316,6 +320,7 @@ export function LeadFormDialog({
                 disabled={pending}
                 onChange={(e) => setEstimatedValue(e.target.value)}
               />
+              {valueError ? <FieldError>{valueError}</FieldError> : null}
             </Field>
             <Field span="half">
               <div className="flex items-center justify-between gap-2">

@@ -54,6 +54,7 @@ export function PayableTable({
     <div className="flex flex-col gap-3.5">
       <PageHeader
         title="Accounts Payable"
+        description="Purchase order balances still to pay. Reports and the dashboard count billed amounts only."
         className="mb-0 md:mb-2"
         actions={
           <ListExport

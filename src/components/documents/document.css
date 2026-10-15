@@ -250,7 +250,8 @@
 .doc-facts dt {
   margin: 0;
   font-size: 7.5pt;
-  color: var(--muted-foreground);
+  /* A touch darker than muted so 10px labels pass 4.5:1 on the tinted card. */
+  color: color-mix(in oklab, var(--muted-foreground) 88%, var(--foreground));
 }
 
 .doc-facts dd {

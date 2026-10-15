@@ -1,5 +1,6 @@
 "use server"
 
+import { withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
@@ -28,6 +29,7 @@ import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 export type VendorInvoiceInput = {
+  version?: string
   issuedOn: string
   amount: string
   status: string
@@ -232,6 +234,8 @@ export async function recordPurchaseOrderPayment(
 
     if (!isIsoDate(issuedOn)) {
       fieldErrors.invoiceIssuedOn = "Enter an issue date."
+    } else if (isFutureIsoDate(issuedOn)) {
+      fieldErrors.invoiceIssuedOn = "Issue date can't be in the future."
     }
 
     if (dueOn && !isIsoDate(dueOn)) {
@@ -384,6 +388,8 @@ async function saveVendorInvoice(
 
   if (!isIsoDate(issuedOn)) {
     fieldErrors.issuedOn = "Enter an issued date."
+  } else if (isFutureIsoDate(issuedOn)) {
+    fieldErrors.issuedOn = "Issued date can't be in the future."
   }
 
   if (amount === null) {
@@ -478,7 +484,7 @@ async function saveVendorInvoice(
   const { data, error } = id
     ? await supabase
         .from("vendor_invoices")
-        .update(values)
+        .update(withVersion(values, input.version))
         .eq("id", id)
         .select("id")
     : await supabase.from("vendor_invoices").insert(values).select("id")

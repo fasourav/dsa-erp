@@ -111,6 +111,7 @@ export type PurchaseOrderDraft = {
 
 export type QuotationDraft = {
   id: string | null
+  version?: string
   documentNo: string
   verifyToken: string
   issuedOn: string
@@ -131,6 +132,7 @@ export type QuotationDraft = {
 
 export type WorkOrderDraft = {
   id: string | null
+  version?: string
   documentNo: string
   verifyToken: string
   issuedOn: string
@@ -802,6 +804,7 @@ export async function loadQuotationDraft(id: string | null): Promise<{
       id: row.id,
       documentNo: row.document_no,
       verifyToken: row.verify_token,
+      version: row.updated_at,
       issuedOn: dateInputValue(row.issued_on),
       validUntil: row.valid_until ? dateInputValue(row.valid_until) : "",
       status: row.status,
@@ -898,6 +901,7 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
       id: row.id,
       documentNo: row.document_no,
       verifyToken: row.verify_token,
+      version: row.updated_at,
       issuedOn: dateInputValue(row.issued_on),
       status: row.status,
       vendorId: row.vendor_id,

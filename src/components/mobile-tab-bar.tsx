@@ -46,6 +46,7 @@ export function MobileTabBar() {
           return (
             <Link
               key={href}
+              prefetch={false}
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(

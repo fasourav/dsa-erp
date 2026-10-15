@@ -2,7 +2,7 @@
 
 import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { useCan } from "@/components/access-provider"
+import { useCan, useSeesMoney } from "@/components/access-provider"
 
 import { FileText, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
@@ -63,6 +63,7 @@ export function PurchaseOrdersTable({
   error: string | null
 }) {
   const canAdd = useCan("purchase_orders", "add")
+  const seesMoney = useSeesMoney()
 
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
@@ -198,9 +199,9 @@ export function PurchaseOrdersTable({
                   order.projectName,
                   order.vendorName,
                   order.workType,
-                  order.totalValue,
-                  order.totalPaid,
-                  order.totalPending,
+                  seesMoney ? order.totalValue : "Hidden",
+                  seesMoney ? order.totalPaid : "Hidden",
+                  seesMoney ? order.totalPending : "Hidden",
                 ]),
               }}
             />

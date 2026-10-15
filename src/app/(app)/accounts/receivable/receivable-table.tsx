@@ -66,6 +66,7 @@ export function ReceivableTable({
     <div className="flex flex-col gap-3.5">
       <PageHeader
         title="Accounts Receivable"
+        description="Open invoice balances today. Reports show the balance on the chosen date."
         className="mb-0 md:mb-2"
         actions={
           <>

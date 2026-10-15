@@ -1,5 +1,6 @@
 "use client"
 
+import { useRecordVersion } from "@/lib/use-record-version"
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
@@ -55,6 +56,7 @@ export function VendorInvoiceFormDialog({
   invoice: VendorInvoiceRow | null
 }) {
   const invoiceId = invoice?.id ?? null
+  const version = useRecordVersion("vendor_invoices", invoiceId, open)
   const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn || todayIsoDate())
   const [amount, setAmount] = useState(invoice ? String(invoice.amount) : "")
   const [status, setStatus] = useState(invoice?.status ?? "unpaid")
@@ -122,7 +124,7 @@ export function VendorInvoiceFormDialog({
     startSubmit(async () => {
       try {
         const result = invoiceId
-          ? await updateVendorInvoice(invoiceId, input)
+          ? await updateVendorInvoice(invoiceId, { ...input, version })
           : await addVendorInvoice(purchaseOrderId, input)
 
         if (result.fieldErrors) {

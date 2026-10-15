@@ -95,7 +95,11 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/verify/") ||
     pathname.startsWith("/api/cron/")
 
-  if (!isAuthenticated && !isOpenPath) {
+  // Server actions check the session themselves and answer with a clear
+  // "session expired" message; a redirect would surface as a generic failure.
+  const isServerAction = request.method === "POST" && request.headers.has("next-action")
+
+  if (!isAuthenticated && !isOpenPath && !isServerAction) {
     return applyCsp(redirectWithSession(request, supabaseResponse, "/login"))
   }
 

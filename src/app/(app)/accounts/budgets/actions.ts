@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
-import { parseProjectValue } from "@/lib/project-validation"
+import { amountError, parseProjectValue } from "@/lib/project-validation"
 import { budgetYear } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
@@ -92,7 +92,8 @@ async function saveBudget(
   if (!Number.isFinite(month) || month < 1 || month > 12)
     fieldErrors.periodMonth = "Enter a valid month."
   if (allocatedBudget === null || allocatedBudget < 0)
-    fieldErrors.allocatedBudget = "Enter a budget amount."
+    fieldErrors.allocatedBudget =
+      amountError(input.allocatedBudget, "budget amount") ?? "Enter a budget amount."
 
   if (Object.keys(fieldErrors).length > 0) {
     return { error: null, fieldErrors }
