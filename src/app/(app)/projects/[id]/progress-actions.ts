@@ -15,7 +15,7 @@ import {
 } from "@/lib/project-progress"
 import { businessTodayIsoDate } from "@/lib/project-validation"
 import type { PermissionAction } from "@/lib/access"
-import { denyUnless } from "@/lib/permissions"
+import { denyUnless, getAccess } from "@/lib/permissions"
 import { firstIssue } from "@/lib/schemas"
 import { createClient } from "@/lib/supabase/server"
 
@@ -363,6 +363,11 @@ export async function importWorkOrderMilestones(
   if (denied) return { error: denied }
   if (!idPattern.test(projectId)) return { error: "That project could not be found." }
 
+  const access = await getAccess()
+  if (!access || !(access.isOwner || access.showFinancials)) {
+    return { error: "You need financial access to import milestone amounts." }
+  }
+
   const supabase = await createClient()
   const orders = await supabase
     .from("work_orders")
@@ -373,6 +378,9 @@ export async function importWorkOrderMilestones(
   }
   if ((orders.data ?? []).length === 0) {
     return { error: "This project has no work orders." }
+  }
+  if ((orders.data ?? []).some((order) => order.total === null || order.total === undefined)) {
+    return { error: "Could not read work order totals for this project." }
   }
 
   const totals = new Map((orders.data ?? []).map((order) => [order.id, order.total]))
@@ -440,7 +448,12 @@ export async function loadProjectMilestoneLimits(projectId: string): Promise<{
   if (!idPattern.test(projectId)) return empty
   const supabase = await createClient()
   const bounds = await projectBounds(supabase, projectId)
-  return bounds ?? empty
+  if (!bounds) return empty
+  const access = await getAccess()
+  if (!access || !(access.isOwner || access.showFinancials)) {
+    return { startedOn: bounds.startedOn, totalValue: null }
+  }
+  return bounds
 }
 
 async function projectBounds(

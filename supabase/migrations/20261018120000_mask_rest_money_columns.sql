@@ -92,7 +92,8 @@ begin
       work_type = new.work_type,
       total_value = case
         when private.session_sees_money() then new.total_value
-        else row.total_value
+        when new.total_value is null then row.total_value
+        else new.total_value
       end,
       notes = new.notes,
       updated_at = new.updated_at
@@ -167,7 +168,11 @@ begin
       subject = new.subject,
       introduction = new.introduction,
       terms = new.terms,
-      total = case when private.session_sees_money() then new.total else row.total end,
+      total = case
+        when private.session_sees_money() then new.total
+        when new.total is null then row.total
+        else new.total
+      end,
       prepared_by = new.prepared_by,
       authorized_by = new.authorized_by,
       verify_token = new.verify_token,
@@ -231,7 +236,11 @@ begin
       due_on = new.due_on,
       done_on = new.done_on,
       percent_of_value = new.percent_of_value,
-      amount = case when private.session_sees_money() then new.amount else row.amount end,
+      amount = case
+        when private.session_sees_money() then new.amount
+        when new.amount is null then row.amount
+        else new.amount
+      end,
       updated_at = new.updated_at
     where row.id = old.id
     returning * into stored;
@@ -283,7 +292,8 @@ begin
       category_id = new.category_id,
       planned_amount = case
         when private.session_sees_money() then new.planned_amount
-        else row.planned_amount
+        when new.planned_amount is null then row.planned_amount
+        else new.planned_amount
       end,
       notes = new.notes,
       updated_at = new.updated_at

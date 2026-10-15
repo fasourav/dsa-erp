@@ -253,7 +253,7 @@ export async function loadProjectBudgetReport(): Promise<
         committed: totals.committed,
         actual: totals.actual,
         remaining: totals.remaining,
-        status: projectBudgetStatus(assembled) ?? "ok",
+        status: projectBudgetStatus(assembled) ?? (sum(assembled.map((l) => l.planned)) <= 0 && sum(assembled.map((l) => l.actual)) > 0 ? "unplanned" : "ok"),
         emphasis: "subtotal",
       })
     }
@@ -275,7 +275,7 @@ export async function loadProjectBudgetReport(): Promise<
         committed: totals.committed,
         actual: totals.actual,
         remaining: totals.remaining,
-        status: projectBudgetStatus(body) ?? "ok",
+        status: projectBudgetStatus(body) ?? (sum(body.map((l) => l.planned)) <= 0 && sum(body.map((l) => l.actual)) > 0 ? "unplanned" : "ok"),
         emphasis: "total",
       })
     }
@@ -368,7 +368,7 @@ function assembleLines(
       notes: entry.notes,
       status:
         entry.lineId === null && entry.planned <= 0
-          ? "ok"
+          ? "unplanned"
           : lineBudgetStatus(entry.planned, entry.actual),
       sortOrder: entry.sortOrder,
     }))

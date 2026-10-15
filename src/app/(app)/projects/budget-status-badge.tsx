@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { budgetStatusLabel, type BudgetStatus } from "@/lib/project-budget-model"
 
 export function BudgetStatusBadge({ status }: { status: BudgetStatus }) {
-  if (status === "ok") return null
+  if (status === "ok" || status === "unplanned") return null
 
   return (
     <Badge variant={status === "over" ? "destructive" : "warning"}>

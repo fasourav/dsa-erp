@@ -284,10 +284,7 @@ function LineCell({
 
 function lineStatus(line: BudgetLineView, hidden: boolean) {
   if (hidden) return null
-  if (line.lineId === null && line.planned <= 0) {
-    return <span className="text-muted-foreground">Unplanned</span>
-  }
-  if (line.status === "ok") {
+  if (line.status === "ok" || line.status === "unplanned") {
     return <span className="text-muted-foreground">{budgetStatusLabel(line.status)}</span>
   }
   return <BudgetStatusBadge status={line.status} />
@@ -360,7 +357,7 @@ function sortValue(line: BudgetLineView, key: ColumnId): string | number {
     case "remaining":
       return line.remaining
     case "status":
-      return line.lineId === null && line.planned <= 0 ? "Unplanned" : budgetStatusLabel(line.status)
+      return budgetStatusLabel(line.status)
   }
 }
 

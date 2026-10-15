@@ -1,4 +1,4 @@
-export type BudgetStatus = "ok" | "warning" | "over"
+export type BudgetStatus = "ok" | "warning" | "over" | "unplanned"
 
 export type BudgetCategory = {
   id: string
@@ -56,6 +56,7 @@ export type ProjectBudgetReportLine = {
 export function budgetStatusLabel(status: BudgetStatus): string {
   if (status === "over") return "Over Budget"
   if (status === "warning") return "Near Budget"
+  if (status === "unplanned") return "Unplanned"
   return "On Budget"
 }
 
