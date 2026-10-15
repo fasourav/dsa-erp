@@ -1,10 +1,11 @@
 "use client"
 
-import { useMemo, useState, useSyncExternalStore } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
-import { filterRows, ListSearch, rowText } from "@/components/list-search"
+import { ListSearch } from "@/components/list-search"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,14 +28,12 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDayMonYear } from "@/lib/format"
 import {
-  paginateRows,
   rangeLabel,
   toggleSort,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
 
-const ACTIVITY_PAGE_SIZE = 50
 
 export type ActivityChange = {
   label: string
@@ -67,75 +66,108 @@ const columns: readonly ListColumn<ColumnId>[] = [
 
 type ActionTab = "all" | "creates" | "edits" | "deletes"
 
-export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
-  const [query, setQuery] = useState("")
-  const [module, setModule] = useState("all")
-  const [user, setUser] = useState("all")
-  const [from, setFrom] = useState("")
-  const [to, setTo] = useState("")
-  const [actionTab, setActionTab] = useState<ActionTab>("all")
+export type ActivityFilters = {
+  q: string
+  module: string
+  user: string
+  from: string
+  to: string
+  action: string
+}
+
+type Option = { value: string; label: string }
+
+export function ActivityLog({
+  rows,
+  total,
+  page,
+  pageSize,
+  filters,
+  moduleOptions,
+  userOptions,
+}: {
+  rows: ActivityRow[]
+  total: number
+  page: number
+  pageSize: number
+  filters: ActivityFilters
+  moduleOptions: Option[]
+  userOptions: Option[]
+}) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const [pending, startTransition] = useTransition()
+  const [query, setQuery] = useState(filters.q)
   const [sort, setSort] = useState<SortState<ColumnId>>({
     key: "when",
     direction: "desc",
   })
-  const [page, setPage] = useState(1)
   const [diff, setDiff] = useState<ActivityRow | null>(null)
+  const actionTab: ActionTab =
+    filters.action === "creates" || filters.action === "edits" || filters.action === "deletes"
+      ? filters.action
+      : "all"
 
-  const moduleOptions = useMemo(() => {
-    const labels = new Map<string, string>()
-    for (const row of rows) labels.set(row.module, row.moduleLabel)
-    return [...labels.entries()]
-      .map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label))
-  }, [rows])
+  // Filters live in the URL so the server returns one page (50 rows) at a time.
+  const navigate = (patch: Partial<ActivityFilters> & { page?: number }) => {
+    const next = { ...filters, ...patch }
+    const params = new URLSearchParams()
+    if (next.q) params.set("q", next.q)
+    if (next.module !== "all") params.set("module", next.module)
+    if (next.user !== "all") params.set("user", next.user)
+    if (next.from) params.set("from", next.from)
+    if (next.to) params.set("to", next.to)
+    if (next.action !== "all") params.set("action", next.action)
+    const target = patch.page ?? 1
+    if (target > 1) params.set("page", String(target))
+    const search = params.toString()
+    startTransition(() => router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false }))
+  }
+  const navigateRef = useRef(navigate)
+  useEffect(() => {
+    navigateRef.current = navigate
+  })
 
-  const userOptions = useMemo(() => {
-    return [...new Set(rows.map((row) => row.who))].sort((a, b) => a.localeCompare(b))
-  }, [rows])
+  useEffect(() => {
+    if (query.trim() === filters.q) return
+    const timer = setTimeout(() => navigateRef.current({ q: query.trim() }), 350)
+    return () => clearTimeout(timer)
+  }, [query, filters.q])
 
-  const filtered = filterRows(rows, query, (row) =>
-    rowText({
-      when: row.when,
-      who: row.who,
-      what: row.what,
-      action: row.action,
-      module: row.moduleLabel,
-      record: row.record,
-      changes: row.changes.map((change) => `${change.label} ${change.before} ${change.after}`).join(" "),
-    }),
-  )
-    .filter((row) => {
-      if (module !== "all" && row.module !== module) return false
-      if (user !== "all" && row.who !== user) return false
-      if (from && row.whenIso < from) return false
-      if (to && row.whenIso > to) return false
-      return matchesAction(row.action, actionTab)
-    })
-    .slice()
-    .sort((left, right) => {
-      let cmp = 0
-      switch (sort.key) {
-        case "when":
-          cmp = left.createdAt.localeCompare(right.createdAt)
-          break
-        case "who":
-          cmp = left.who.localeCompare(right.who, "en", { sensitivity: "base" })
-          break
-        case "action":
-          cmp = left.what.localeCompare(right.what, "en", { sensitivity: "base" })
-          break
-        case "record":
-          cmp = left.record.localeCompare(right.record, "en", { sensitivity: "base" })
-          break
-      }
-      return sort.direction === "asc" ? cmp : -cmp
-    })
+  // Newest first comes from the server; other column sorts reorder the current page.
+  const sorted = rows.slice().sort((left, right) => {
+    let cmp = 0
+    switch (sort.key) {
+      case "when":
+        cmp = left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)
+        break
+      case "who":
+        cmp = left.who.localeCompare(right.who, "en", { sensitivity: "base" })
+        break
+      case "action":
+        cmp = left.what.localeCompare(right.what, "en", { sensitivity: "base" })
+        break
+      case "record":
+        cmp = left.record.localeCompare(right.record, "en", { sensitivity: "base" })
+        break
+    }
+    return sort.direction === "asc" ? cmp : -cmp
+  })
 
-  const pageResult = paginateRows(filtered, page, ACTIVITY_PAGE_SIZE)
-  const emptyMessage = rows.length === 0 ? "No Activity Yet." : "No Matching Activity."
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = total === 0 ? 0 : rangeStart + rows.length - 1
+  const hasFilters =
+    Boolean(filters.q) ||
+    filters.module !== "all" ||
+    filters.user !== "all" ||
+    Boolean(filters.from) ||
+    Boolean(filters.to) ||
+    filters.action !== "all"
+  const emptyMessage = hasFilters ? "No Matching Activity." : "No Activity Yet."
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-3.5" aria-busy={pending}>
       <PageHeader
         eyebrow="Admin"
         title="Activity Log"
@@ -151,7 +183,7 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
                 { header: "What", kind: "text" },
                 { header: "Module", kind: "text" },
               ],
-              rows: filtered.map((row) => [row.when, row.who, row.what, row.moduleLabel]),
+              rows: sorted.map((row) => [row.when, row.who, row.what, row.moduleLabel]),
             }}
           />
         }
@@ -160,42 +192,29 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          setPage(1)
         }}
         placeholder="Search activity"
       />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <FilterSelect
           label="Module"
-          value={module}
-          onChange={(value) => {
-            setModule(value)
-            setPage(1)
-          }}
+          value={filters.module}
+          onChange={(value) => navigate({ module: value })}
           options={[{ value: "all", label: "All Modules" }, ...moduleOptions]}
         />
         <FilterSelect
           label="User"
-          value={user}
-          onChange={(value) => {
-            setUser(value)
-            setPage(1)
-          }}
-          options={[
-            { value: "all", label: "All Users" },
-            ...userOptions.map((name) => ({ value: name, label: name })),
-          ]}
+          value={filters.user}
+          onChange={(value) => navigate({ user: value })}
+          options={[{ value: "all", label: "All Users" }, ...userOptions]}
         />
         <div className="flex flex-col gap-2">
           <Label htmlFor="activity-from">From</Label>
           <Input
             id="activity-from"
             type="date"
-            value={from}
-            onChange={(event) => {
-              setFrom(event.target.value)
-              setPage(1)
-            }}
+            value={filters.from}
+            onChange={(event) => navigate({ from: event.target.value })}
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -203,11 +222,8 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
           <Input
             id="activity-to"
             type="date"
-            value={to}
-            onChange={(event) => {
-              setTo(event.target.value)
-              setPage(1)
-            }}
+            value={filters.to}
+            onChange={(event) => navigate({ to: event.target.value })}
           />
         </div>
       </div>
@@ -215,8 +231,7 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
         value={actionTab}
         onValueChange={(value) => {
           if (value === "all" || value === "creates" || value === "edits" || value === "deletes") {
-            setActionTab(value)
-            setPage(1)
+            navigate({ action: value })
           }
         }}
       >
@@ -229,26 +244,25 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
       </Tabs>
       <DataList
         columns={columns}
-        rows={pageResult.rows}
+        rows={sorted}
         rowKey={(row) => row.id}
         sort={sort}
         onSort={(key) => {
           setSort((current) => toggleSort(current, key))
-          setPage(1)
         }}
         visibility={{}}
         error={null}
         emptyMessage={emptyMessage}
         rangeText={rangeLabel(
-          pageResult.rangeStart,
-          pageResult.rangeEnd,
-          pageResult.total,
+          rangeStart,
+          rangeEnd,
+          total,
           "event",
           "events",
         )}
-        currentPage={pageResult.currentPage}
-        pageCount={pageResult.pageCount}
-        onPageChange={setPage}
+        currentPage={page}
+        pageCount={pageCount}
+        onPageChange={(next) => navigate({ page: next })}
         pagingLabel="Activity pagination"
         mobileItem={(row) => ({
           title: row.what,
@@ -322,14 +336,6 @@ export function ActivityLog({ rows }: { rows: ActivityRow[] }) {
       </Dialog>
     </div>
   )
-}
-
-function matchesAction(action: string, tab: ActionTab) {
-  if (tab === "all") return true
-  if (tab === "creates") return action === "insert"
-  if (tab === "edits") return action === "update"
-  if (tab === "deletes") return action === "delete"
-  return true
 }
 
 function FilterSelect({
