@@ -621,6 +621,8 @@ function sortMilestones(
 ) {
   const direction = sort.direction === "asc" ? 1 : -1
   return [...milestones].sort((left, right) => {
+    // Undated milestones always go last, whichever way the due date is sorted.
+    if (sort.key === "dueOn" && !left.dueOn !== !right.dueOn) return left.dueOn ? -1 : 1
     const primary = compareMilestone(left, right, sort.key) * direction
     if (primary !== 0) return primary
     return left.label.localeCompare(right.label, "en", { sensitivity: "base" })

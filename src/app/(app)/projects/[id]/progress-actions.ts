@@ -394,7 +394,11 @@ export async function importWorkOrderMilestones(
   })
 
   if (rows.length === 0) {
-    return { error: "Work order milestones are already imported." }
+    return {
+      error: (milestones.data ?? []).length
+        ? "Work order milestones are already imported."
+        : "This project's work orders have no milestones to import.",
+    }
   }
 
   const { error } = await supabase.from("project_milestones").insert(rows)
