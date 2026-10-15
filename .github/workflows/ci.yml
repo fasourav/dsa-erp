@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# Drop a superseded run on the same ref so a new push does not queue behind it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, and build
+    runs-on: ubuntu-latest
+    # Next.js 16 requires Node >= 20.9. This repo has no engines field;
+    # @types/node resolves to 20.x, so CI uses the Node 20 line.
+    env:
+      # Placeholders only. `next build` inlines NEXT_PUBLIC_* at compile time.
+      # These are not real credentials and are not used to call Supabase.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-public-anon-placeholder
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      # Left empty on purpose. The cron route treats a missing service role as unconfigured.
+      SUPABASE_SERVICE_ROLE_KEY: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
