@@ -354,16 +354,37 @@ function lockDialogScroll(node: HTMLDivElement) {
   }
   const sheetObserver =
     popup instanceof HTMLElement ? new ResizeObserver(queueFit) : null
-  if (popup instanceof HTMLElement) {
-    sheetObserver?.observe(popup)
+  // The body's box stays at the locked max-height, so it does not resize when
+  // the form gets shorter. Watch the field stack itself, and again if React
+  // swaps that stack.
+  const watchContent = () => {
+    if (!(popup instanceof HTMLElement) || !sheetObserver) return
+    sheetObserver.disconnect()
+    sheetObserver.observe(popup)
     const body = popup.querySelector("[data-slot='dialog-body']")
-    if (body instanceof HTMLElement) sheetObserver?.observe(body)
+    if (!(body instanceof HTMLElement)) return
+    sheetObserver.observe(body)
+    for (const child of body.children) {
+      if (child instanceof HTMLElement) sheetObserver.observe(child)
+    }
+  }
+  const contentObserver =
+    popup instanceof HTMLElement
+      ? new MutationObserver(() => {
+          watchContent()
+          queueFit()
+        })
+      : null
+  watchContent()
+  if (popup instanceof HTMLElement) {
+    contentObserver?.observe(popup, { childList: true, subtree: true })
   }
 
   return () => {
     active = false
     cancelAnimationFrame(fitFrame)
     sheetObserver?.disconnect()
+    contentObserver?.disconnect()
     visualViewport?.removeEventListener("resize", onViewportResize)
     visualViewport?.removeEventListener("scroll", onViewportScroll)
     main?.removeEventListener("scroll", pinBackground)
@@ -471,14 +492,17 @@ function dialogBodyRoom(popup: HTMLElement, body: HTMLElement) {
   return Math.max(0, Math.floor(room))
 }
 
-// Uncapped form height. DialogBody's scrollHeight stays the full field stack
-// after a max-height lock, so a capped sheet does not look short and unlock.
+// Uncapped form height. A locked body is stretched to the sheet, so its
+// scrollHeight matches that box and cannot be used to decide an unlock.
+// The field stack's own border box stays the real content height.
 function sheetNaturalHeight(popup: HTMLElement, body: Element | null) {
   if (!(body instanceof HTMLElement)) return sheetContentBottom(popup)
 
   const popupStyles = getComputedStyle(popup)
   const padBottom = Number.parseFloat(popupStyles.paddingBottom) || 0
-  let natural = body.offsetTop + body.scrollHeight + padBottom
+  const bodyStyles = getComputedStyle(body)
+  const bodyPadBottom = Number.parseFloat(bodyStyles.paddingBottom) || 0
+  let natural = body.offsetTop + inFlowBottom(body) + bodyPadBottom + padBottom
   const footer = popup.querySelector("[data-slot='dialog-footer']")
   if (
     footer instanceof HTMLElement &&
@@ -492,6 +516,24 @@ function sheetNaturalHeight(popup: HTMLElement, body: Element | null) {
     natural += footer.offsetHeight + gap
   }
   return natural
+}
+
+function inFlowBottom(element: HTMLElement) {
+  let bottom = 0
+  for (const child of element.children) {
+    if (!(child instanceof HTMLElement)) continue
+    const style = getComputedStyle(child)
+    if (
+      style.display === "none" ||
+      style.display === "contents" ||
+      style.position === "absolute" ||
+      style.position === "fixed"
+    ) {
+      continue
+    }
+    bottom = Math.max(bottom, child.offsetTop + child.offsetHeight)
+  }
+  return bottom
 }
 
 function sheetContentBottom(popup: HTMLElement) {
