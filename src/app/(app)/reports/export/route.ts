@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 
 import { canSeeReport } from "@/lib/access"
+import { loadProjectBudgetReport } from "@/lib/project-budget"
 import { isReportSlug, reportBySlug } from "@/lib/reports/catalog"
 import { loadFinancialReport, reportLaunchDate } from "@/lib/reports/load"
 import { buildReportPdf } from "@/lib/reports/pdf"
 import { clampPeriod, officeToday } from "@/lib/reports/period"
-import { buildReport } from "@/lib/reports/tables"
+import { buildProjectBudgetReport, buildReport } from "@/lib/reports/tables"
 import { buildReportWorkbook, safeFilename } from "@/lib/reports/workbook"
 import { getAccess } from "@/lib/permissions"
 
@@ -23,6 +24,32 @@ export async function GET(request: Request) {
   }
   if (!canSeeReport(access, slug)) {
     return NextResponse.json({ error: "You do not have access to this report." }, { status: 403 })
+  }
+
+  if (slug === "project-budget") {
+    const loaded = await loadProjectBudgetReport()
+    if (loaded.status === "missing") {
+      return NextResponse.json(
+        { error: "Project budgets are not installed on this database yet." },
+        { status: 503 },
+      )
+    }
+    if (loaded.status !== "ok") {
+      return NextResponse.json({ error: "Could not calculate this report." }, { status: 403 })
+    }
+    const built = buildProjectBudgetReport(reportBySlug(slug).title, loaded.lines)
+    const bytes = format === "pdf" ? await buildReportPdf(built) : await buildReportWorkbook(built)
+    const filename = `${safeFilename(slug)}.${format === "pdf" ? "pdf" : "xlsx"}`
+    return new NextResponse(Buffer.from(bytes), {
+      headers: {
+        "Content-Type":
+          format === "pdf"
+            ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "no-store",
+      },
+    })
   }
 
   const launch = await reportLaunchDate()

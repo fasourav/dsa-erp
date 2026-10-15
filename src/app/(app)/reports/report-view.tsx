@@ -40,6 +40,7 @@ export function ReportView({
   today,
   from,
   to,
+  showFilters = true,
 }: {
   report: BuiltReport
   pdfHref: string
@@ -48,6 +49,7 @@ export function ReportView({
   today: string
   from: string
   to: string
+  showFilters?: boolean
 }) {
   const figures = summaryFigures(report)
   const listed = report.tables.filter((table) => !isBucketSummary(table))
@@ -73,7 +75,7 @@ export function ReportView({
           </>
         }
       />
-      <ReportFilters launch={launch} today={today} from={from} to={to} />
+      {showFilters ? <ReportFilters launch={launch} today={today} from={from} to={to} /> : null}
       {figures.length > 0 ? (
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
           {figures.map((figure) => (

@@ -19,6 +19,7 @@ export const moduleKeys = [
   "banking",
   "vat_tax",
   "budgets",
+  "project_budgets",
   "assets",
   "employees",
   "payroll",
@@ -120,6 +121,7 @@ export type ReportNavSlug =
   | "ar-aging"
   | "ap-aging"
   | "project-profitability"
+  | "project-budget"
   | "tax"
 
 export function canSeeReport(access: AccessSnapshot, slug: ReportNavSlug): boolean {
@@ -158,6 +160,11 @@ export function canSeeReport(access: AccessSnapshot, slug: ReportNavSlug): boole
         allows(access, "projects", "view") &&
         allows(access, "clients", "view")
       )
+    case "project-budget":
+      return (
+        allows(access, "project_budgets", "view") ||
+        allows(access, "projects", "view")
+      )
     case "tax":
       return allows(access, "vat_tax", "view")
   }
@@ -172,6 +179,7 @@ export function canOpenReports(access: AccessSnapshot): boolean {
     "ar-aging",
     "ap-aging",
     "project-profitability",
+    "project-budget",
     "tax",
   ]
   return slugs.some((slug) => canSeeReport(access, slug))

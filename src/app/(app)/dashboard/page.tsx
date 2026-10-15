@@ -4,6 +4,7 @@ import { DashboardView } from "@/app/(app)/dashboard/dashboard-view"
 import { hasFullDashboardAccess } from "@/lib/access"
 import { getCurrentUser } from "@/lib/auth"
 import { getDashboard } from "@/lib/dashboard-data"
+import { getProjectsOverBudget } from "@/lib/project-budget"
 import { dhakaToday, parseDashboardYear } from "@/lib/dashboard-metrics"
 import { getAccess, requireModule } from "@/lib/permissions"
 
@@ -32,7 +33,10 @@ export default async function DashboardPage({
   const requested = Array.isArray(params.year) ? params.year[0] : params.year
   const currentYear = Number(dhakaToday(new Date()).slice(0, 4))
   const scopeYear = parseDashboardYear(requested, currentYear)
-  const { model, error } = await getDashboard(scopeYear)
+  const [{ model, error }, overBudget] = await Promise.all([
+    getDashboard(scopeYear),
+    getProjectsOverBudget(),
+  ])
 
-  return <DashboardView model={model} error={error} />
+  return <DashboardView model={model} error={error} overBudget={overBudget} />
 }

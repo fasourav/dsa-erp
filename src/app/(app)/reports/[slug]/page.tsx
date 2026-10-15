@@ -5,10 +5,11 @@ import { ReportView } from "@/app/(app)/reports/report-view"
 import { ReportFilters } from "@/app/(app)/reports/report-filters"
 import { PageHeader } from "@/components/page-header"
 import { canOpenReports, canSeeReport, homePath } from "@/lib/access"
+import { loadProjectBudgetReport } from "@/lib/project-budget"
 import { isReportSlug, reportBySlug } from "@/lib/reports/catalog"
 import { loadFinancialReport, reportLaunchDate } from "@/lib/reports/load"
 import { clampPeriod, currentReportPeriod, officeToday } from "@/lib/reports/period"
-import { buildReport } from "@/lib/reports/tables"
+import { buildProjectBudgetReport, buildReport } from "@/lib/reports/tables"
 import { getAccess } from "@/lib/permissions"
 
 export async function generateMetadata({
@@ -42,6 +43,36 @@ export default async function ReportPage({
   const fallback = currentReportPeriod(launch, today)
   const period = clampPeriod(query.from ?? fallback.from, query.to ?? fallback.to, launch, today)
   const definition = reportBySlug(slug)
+  if (slug === "project-budget") {
+    const loaded = await loadProjectBudgetReport()
+    const exportQuery = new URLSearchParams({ report: slug })
+    return (
+      <div className="flex w-full min-w-0 flex-col gap-3.5">
+        {loaded.status === "ok" ? (
+          <ReportView
+            report={buildProjectBudgetReport(definition.title, loaded.lines)}
+            launch={launch}
+            today={today}
+            from={period.from}
+            to={period.to}
+            showFilters={false}
+            pdfHref={`/reports/export?${exportQuery.toString()}&format=pdf`}
+            excelHref={`/reports/export?${exportQuery.toString()}&format=xlsx`}
+          />
+        ) : (
+          <>
+            <PageHeader eyebrow="Reports" title={definition.title} />
+            <p role="alert" className="text-sm text-destructive">
+              {loaded.status === "missing"
+                ? "Project budgets are not installed on this database yet. Apply the budget migration, then reload."
+                : "Could not calculate this report."}
+            </p>
+          </>
+        )}
+      </div>
+    )
+  }
+
   const loaded = await loadFinancialReport(period.from, period.to)
   const exportQuery = new URLSearchParams({
     report: slug,

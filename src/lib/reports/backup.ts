@@ -28,6 +28,7 @@ const tables: BackupTable[] = [
   { name: "lead_statuses", sheet: "lead_statuses", order: ["id"] },
   { name: "lead_types", sheet: "lead_types", order: ["id"] },
   { name: "projects", sheet: "projects", order: ["id"] },
+  { name: "project_budget_lines", sheet: "project_budget_lines", order: ["id"] },
   { name: "project_types", sheet: "project_types", order: ["id"] },
   { name: "project_phases", sheet: "project_phases", order: ["id"] },
   { name: "project_expense_categories", sheet: "project_expense_categories", order: ["id"] },

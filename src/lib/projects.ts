@@ -1,4 +1,5 @@
 import { toNumber } from "@/lib/format"
+import { budgetStatusByProject } from "@/lib/project-budget"
 import {
   clientDisplayName,
   type CatalogOption,
@@ -22,7 +23,7 @@ export async function getProjects(): Promise<{
   const supabase = await createClient()
 
   try {
-    const [projectRows, financialRows, clientRows, typeRows, phaseRows, overdue] =
+    const [projectRows, financialRows, clientRows, typeRows, phaseRows, overdue, budgetStatuses] =
       await Promise.all([
       fetchPages((from, to) =>
         supabase
@@ -66,6 +67,7 @@ export async function getProjects(): Promise<{
           .range(from, to),
       ),
       overdueCountsByProject(),
+      budgetStatusByProject(),
     ])
 
     const clientsById = new Map(clientRows.map((row) => [row.id, row]))
@@ -100,6 +102,7 @@ export async function getProjects(): Promise<{
         details: row.details ?? "",
         progressPercent: toNumber(row.progress_percent),
         overdueMilestones: overdue.get(row.id) ?? 0,
+        budgetStatus: budgetStatuses.get(row.id) ?? null,
       } satisfies ProjectRow
     })
 
