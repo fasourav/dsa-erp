@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Download, Share2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Printer, Share2 } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
@@ -145,9 +145,14 @@ export function DocumentWorkspace({
                 {copied ? "Link Copied" : "Share"}
               </Button>
             ) : null}
-            <Button type="button" variant="outline" onClick={() => window.print()}>
-              <Download aria-hidden="true" data-icon="inline-start" />
-              Download PDF
+            <Button
+              type="button"
+              variant="outline"
+              aria-label="Print / Save As PDF"
+              onClick={() => window.print()}
+            >
+              <Printer aria-hidden="true" data-icon="inline-start" />
+              Print / Save As PDF
             </Button>
             {canSaveAsTemplate ? (
               <Button

@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
+import { useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react"
 
 import { BudgetStatusBadge } from "@/app/(app)/projects/budget-status-badge"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -92,6 +93,7 @@ export function ProjectsTable({
   const [pendingDelete, setPendingDelete] = useState<ProjectRow | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
+  const deleteLocked = useRef(false)
 
   const sorted = useMemo(
     () => sortProjects(projects, sort),
@@ -138,23 +140,31 @@ export function ProjectsTable({
   }
 
   function confirmDelete() {
-    if (!pendingDelete) {
+    if (!pendingDelete || deleteLocked.current) {
       return
     }
 
     const id = pendingDelete.id
+    deleteLocked.current = true
     startDelete(async () => {
       try {
         const result = await deleteProject(id)
         if (result.error) {
           setDeleteError(result.error)
+          setDeleteOpen(true)
+          toast.error(result.error)
           return
         }
 
         setDeleteOpen(false)
         setDeleteError(null)
       } catch {
-        setDeleteError("Could not delete this project.")
+        const message = "Could not delete this project."
+        setDeleteError(message)
+        setDeleteOpen(true)
+        toast.error(message)
+      } finally {
+        deleteLocked.current = false
       }
     })
   }
@@ -328,7 +338,7 @@ export function ProjectsTable({
       <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={(open) => {
-          if (open || deleting) {
+          if (open || deleting || deleteLocked.current) {
             return
           }
 

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 
 import { friendlyDbError } from "@/lib/db-errors"
 import {
+  doneOnBeforeStartError,
+  milestoneAmountError,
   parseAmount,
   parseWeight,
   projectMilestoneSchema,
@@ -63,6 +65,10 @@ export async function saveProjectStage(
       : parsed.data.doneOn || null
 
   const supabase = await createClient()
+  const bounds = await projectBounds(supabase, projectId)
+  if (!bounds) return { error: "That project could not be found." }
+  const doneError = doneOnBeforeStartError(doneOn ?? "", bounds.startedOn)
+  if (doneError) return { error: null, fieldErrors: { doneOn: doneError } }
   const row = {
     name: parsed.data.name,
     weight,
@@ -254,8 +260,21 @@ export async function saveProjectMilestone(
   const percent = parsed.data.percentOfValue
     ? parseWeight(parsed.data.percentOfValue)
     : null
-  const amount = parsed.data.amount ? parseAmount(parsed.data.amount) : null
   const supabase = await createClient()
+  const bounds = await projectBounds(supabase, projectId)
+  if (!bounds) return { error: "That project could not be found." }
+  const amountMessage = milestoneAmountError(parsed.data.amount, bounds.totalValue)
+  const doneError = doneOnBeforeStartError(parsed.data.doneOn, bounds.startedOn)
+  if (amountMessage || doneError) {
+    return {
+      error: null,
+      fieldErrors: {
+        amount: amountMessage ?? undefined,
+        doneOn: doneError ?? undefined,
+      },
+    }
+  }
+  const amount = parsed.data.amount ? parseAmount(parsed.data.amount) : null
   const row = {
     label: parsed.data.label,
     stage_id: stageId || null,
@@ -297,6 +316,12 @@ export async function setMilestoneDone(
   }
 
   const supabase = await createClient()
+  if (done) {
+    const bounds = await projectBounds(supabase, projectId)
+    if (!bounds) return { error: "That project could not be found." }
+    const doneError = doneOnBeforeStartError(businessTodayIsoDate(), bounds.startedOn)
+    if (doneError) return { error: doneError }
+  }
   const { error } = await supabase
     .from("project_milestones")
     .update({
@@ -405,6 +430,35 @@ export async function importWorkOrderMilestones(
   if (error) return { error: progressError(error) }
   refreshProject(projectId)
   return { error: null }
+}
+
+export async function loadProjectMilestoneLimits(projectId: string): Promise<{
+  startedOn: string | null
+  totalValue: number | null
+}> {
+  const empty = { startedOn: null, totalValue: null }
+  if (!idPattern.test(projectId)) return empty
+  const supabase = await createClient()
+  const bounds = await projectBounds(supabase, projectId)
+  return bounds ?? empty
+}
+
+async function projectBounds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  projectId: string,
+): Promise<{ startedOn: string | null; totalValue: number | null } | null> {
+  const project = await supabase
+    .from("projects")
+    .select("started_on, total_value")
+    .eq("id", projectId)
+    .maybeSingle()
+  if (project.error || !project.data) return null
+  const raw = project.data.total_value
+  const totalValue = raw === null || raw === undefined ? null : Number(raw)
+  return {
+    startedOn: project.data.started_on,
+    totalValue: totalValue !== null && Number.isFinite(totalValue) ? totalValue : null,
+  }
 }
 
 async function denyUnlessEither(action: PermissionAction): Promise<string | null> {

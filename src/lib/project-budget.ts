@@ -96,7 +96,7 @@ export async function getProjectBudget(projectId: string): Promise<ProjectBudget
     const lines = assembleLines(lineRows, actualRows, categoryList)
     const totals = totalLines(lines)
     return {
-      lines,
+      lines: hidden ? lines.map((line) => ({ ...line, status: "ok" as const })) : lines,
       categories: categoryList,
       totals,
       status: hidden ? null : projectBudgetStatus(lines),
@@ -366,7 +366,10 @@ function assembleLines(
       actual: entry.actual,
       remaining: roundMoney(entry.planned - entry.actual),
       notes: entry.notes,
-      status: lineBudgetStatus(entry.planned, entry.actual),
+      status:
+        entry.lineId === null && entry.planned <= 0
+          ? "ok"
+          : lineBudgetStatus(entry.planned, entry.actual),
       sortOrder: entry.sortOrder,
     }))
     .sort(

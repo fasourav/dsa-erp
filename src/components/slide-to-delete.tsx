@@ -229,7 +229,8 @@ export function SlideToDelete({
               }
               commitRatio(dragOrigin.current.ratio + delta / travelOf(track))
             }}
-            onPointerUp={() => {
+            onPointerUp={(event) => {
+              event.stopPropagation()
               if (!dragging.current) {
                 return
               }

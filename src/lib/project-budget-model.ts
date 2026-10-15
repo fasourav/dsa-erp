@@ -71,11 +71,11 @@ export function projectBudgetStatus(
   lines: readonly { planned: number; actual: number }[],
 ): BudgetStatus | null {
   if (lines.length === 0) return null
-  // Project status follows totals only. A line with no plan (for example
-  // Uncategorised actual) can still show Over on that row without putting the
-  // whole project on the Over Budget list when remaining is still positive.
+  const planned = sum(lines.map((line) => line.planned))
+  // No planned budget: uncategorised spend alone is not Over Budget.
+  if (cents(planned) <= 0) return null
   return lineBudgetStatus(
-    sum(lines.map((line) => line.planned)),
+    planned,
     sum(lines.map((line) => line.actual)),
   )
 }
