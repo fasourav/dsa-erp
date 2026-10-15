@@ -5,6 +5,9 @@ import { reportCompanyName } from "@/lib/reports/catalog"
 import { guardSheetText, loadExcel } from "@/lib/reports/workbook"
 import { createClient } from "@/lib/supabase/server"
 
+const sensitiveKeys =
+  /^(token|invite_token|hashed_password|encrypted_password|raw_app_meta_data|raw_user_meta_data|confirmation_token|recovery_token|email_change_token|email_change_token_new|phone_change_token|reauthentication_token|otp|secret)$/i
+
 type BackupTable = {
   name: string
   // Read from this relation instead when the base table has column-level revokes.
@@ -62,6 +65,7 @@ const tables: BackupTable[] = [
   { name: "work_order_milestones", sheet: "work_order_milestones", order: ["id"] },
   { name: "issued_documents", sheet: "issued_documents", order: ["id"] },
   { name: "activity_log", sheet: "activity_log", order: ["created_at", "id"] },
+  { name: "backup_runs", sheet: "backup_runs", order: ["ran_at", "id"] },
 ]
 
 type Query = {
@@ -76,26 +80,43 @@ type Query = {
   }>
 }
 
+export type BackupQueryClient = {
+  from: (table: string) => Query
+  rpc: (
+    fn: string,
+    args: { p_kind: string },
+  ) => PromiseLike<{ error: { message?: string; code?: string } | null }>
+}
+
 export type BackupResult =
   | { status: "ok"; bytes: Uint8Array; filename: string; contentType: string }
   | { status: "missing" }
   | { status: "error" }
 
-export async function buildBackup(kind: "excel" | "json"): Promise<BackupResult> {
-  const supabase = await createClient()
-  const loose = supabase as unknown as { from: (table: string) => Query }
+export async function buildBackup(
+  kind: "excel" | "json",
+  options?: {
+    client?: BackupQueryClient
+    recordActivity?: boolean
+    useBaseTables?: boolean
+  },
+): Promise<BackupResult> {
+  const supabase = options?.client ?? (await createClient())
+  const loose = supabase as unknown as BackupQueryClient
   const loaded: Array<{ table: BackupTable; rows: Record<string, unknown>[] }> = []
+  const recordActivity = options?.recordActivity !== false
 
   for (const table of tables) {
     try {
       const rows = await fetchAllPages((from, to) => {
-        let query = loose.from(table.source ?? table.name).select("*")
+        const relation = options?.useBaseTables ? table.name : (table.source ?? table.name)
+        let query = loose.from(relation).select("*")
         for (const column of table.order) {
           query = query.order(column, { ascending: true })
         }
         return query.range(from, to)
       }, `${table.name} is larger than a single backup can hold.`)
-      loaded.push({ table, rows })
+      loaded.push({ table, rows: rows.map(stripSensitive) })
     } catch (error) {
       if (isMissingTable(error)) continue
       return { status: "error" }
@@ -103,7 +124,19 @@ export async function buildBackup(kind: "excel" | "json"): Promise<BackupResult>
   }
 
   const bytes = kind === "excel" ? await workbook(loaded) : jsonZip(loaded)
-  const recorded = await supabase.rpc("record_backup", { p_kind: kind })
+  if (!recordActivity) {
+    return {
+      status: "ok",
+      bytes,
+      filename: kind === "excel" ? "dsa-erp-backup.xlsx" : "dsa-erp-backup.zip",
+      contentType:
+        kind === "excel"
+          ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          : "application/zip",
+    }
+  }
+
+  const recorded = await loose.rpc("record_backup", { p_kind: kind })
   if (recorded.error) {
     if (/could not find the function|PGRST202/i.test(recorded.error.message ?? "") || recorded.error.code === "PGRST202") {
       return { status: "missing" }
@@ -179,6 +212,15 @@ function cellValue(value: unknown): string | number | boolean | null {
   if (typeof value === "boolean") return value
   if (typeof value === "string") return guardSheetText(value)
   return guardSheetText(JSON.stringify(value))
+}
+
+function stripSensitive(row: Record<string, unknown>): Record<string, unknown> {
+  const next: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(row)) {
+    if (sensitiveKeys.test(key)) continue
+    next[key] = value
+  }
+  return next
 }
 
 function isMissingTable(error: unknown): boolean {
