@@ -26,6 +26,7 @@ export function ModulesGrid() {
             <li key={item.href} className="min-w-0">
               <Link
                 href={item.href}
+                prefetch={false}
                 className="flex h-full min-h-26 flex-col justify-between rounded-2xl px-3 pt-3.5 pb-3 glass-panel transition-transform active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-32 md:rounded-card md:p-4.5"
               >
                 <span className="flex size-10 items-center justify-center rounded-lg bg-primary-tint text-primary-text">
