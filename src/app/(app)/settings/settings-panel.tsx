@@ -43,7 +43,7 @@ import type { PrintMargins } from "@/lib/documents/drafts"
 import { formatDayMonYear } from "@/lib/format"
 import { fiscalMonthOptions } from "@/lib/fiscal-year"
 import {
-  catalogSingularTitle
+  catalogSingularTitle,
   nextSortOrder,
   type CatalogItem,
   type CatalogList,
