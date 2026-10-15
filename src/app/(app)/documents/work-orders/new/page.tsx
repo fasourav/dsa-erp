@@ -2,6 +2,7 @@ import { WorkOrderStudio } from "@/app/(app)/documents/work-orders/work-order-st
 import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
+import { listActiveDocumentTemplates } from "@/lib/document-templates-data"
 import { loadDocumentCatalog, loadPurchaseOrderChoices, loadWorkOrderDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
@@ -14,11 +15,12 @@ export default async function NewWorkOrderPage({
 }) {
   await requireModule("work_orders")
   const { po } = await searchParams
-  const [catalog, loaded, margins, origin] = await Promise.all([
+  const [catalog, loaded, margins, origin, templateList] = await Promise.all([
     loadDocumentCatalog(),
     loadWorkOrderDraft(null),
     getPrintMargins(),
     requestOrigin(),
+    listActiveDocumentTemplates("work_order"),
   ])
   const purchaseOrders = await loadPurchaseOrderChoices(catalog)
 
@@ -46,6 +48,7 @@ export default async function NewWorkOrderPage({
       purchaseOrders={purchaseOrders}
       origin={origin}
       margins={margins}
+      templates={templateList.templates}
     />
   )
 }

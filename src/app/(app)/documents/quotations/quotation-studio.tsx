@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
 import { saveQuotation } from "@/app/(app)/documents/actions"
+import { saveDocumentAsTemplate } from "@/app/(app)/settings/document-template-actions"
 import { useCan } from "@/components/access-provider"
 import {
   AreaField,
@@ -27,6 +28,15 @@ import {
 } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentQuotation } from "@/lib/documents/present"
+import {
+  draftLinesFromTemplate,
+  draftMilestonesFromTemplate,
+  joinedTerms,
+  templateLinesFromDraft,
+  templateMilestonesFromDraft,
+  type DocumentTemplate,
+} from "@/lib/document-templates"
+import { savedToast } from "@/lib/saved"
 
 export function QuotationStudio({
   draft,
@@ -35,6 +45,7 @@ export function QuotationStudio({
   employees,
   origin,
   margins,
+  templates,
 }: {
   draft: QuotationDraft
   clients: NamedOption[]
@@ -42,12 +53,16 @@ export function QuotationStudio({
   employees: EmployeeChoice[]
   origin: string
   margins: PrintMargins
+  templates: DocumentTemplate[]
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("quotations", form.id ? "edit" : "add")
+  const canStartFromTemplate = useCan("quotations", "add")
+  const canManageTemplates = useCan("document_templates", "add")
+  const canSaveAsTemplate = Boolean(form.id) && canManageTemplates
   const client = clients.find((item) => item.id === form.clientId)
   const clientProjects = projects.filter((project) => project.clientId === form.clientId)
   const project = clientProjects.find((item) => item.id === form.projectId)
@@ -83,6 +98,39 @@ export function QuotationStudio({
       pending={pending}
       error={error}
       files={{ parentType: "quotation", parentId: form.id }}
+      templateNames={templates.map((item) => item.name)}
+      canStartFromTemplate={canStartFromTemplate}
+      onPickTemplate={(name) => {
+        const template = templates.find((item) => item.name === name)
+        if (!template) return
+        setForm((current) => ({
+          ...current,
+          subject: template.scopeText,
+          terms: joinedTerms(template.termsText, template.paymentTerms),
+          lines: draftLinesFromTemplate(template.lines),
+          milestones: draftMilestonesFromTemplate(template.milestones),
+        }))
+      }}
+      canSaveAsTemplate={canSaveAsTemplate}
+      onSaveAsTemplate={async (name) => {
+        const result = await saveDocumentAsTemplate({
+          kind: "quotation",
+          name,
+          payload: {
+            scopeText: form.subject,
+            termsText: form.terms,
+            paymentTerms: "",
+            lines: templateLinesFromDraft(form.lines),
+            milestones: templateMilestonesFromDraft(form.milestones),
+          },
+        })
+        if (result.fieldErrors?.name) return result.fieldErrors.name
+        if (result.fieldErrors?.lines) return result.fieldErrors.lines
+        if (result.fieldErrors?.milestones) return result.fieldErrors.milestones
+        if (result.error) return result.error
+        savedToast("Saved As Template.")
+        return null
+      }}
       onSave={() => {
         setError(null)
         startSave(async () => {

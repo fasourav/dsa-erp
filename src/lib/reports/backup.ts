@@ -53,6 +53,7 @@ const tables: BackupTable[] = [
   { name: "employees", source: "employees_readable", sheet: "employees", order: ["id"] },
   { name: "payroll_runs", sheet: "payroll_runs", order: ["id"] },
   { name: "payroll_lines", sheet: "payroll_lines", order: ["id"] },
+  { name: "document_templates", sheet: "document_templates", order: ["id"] },
   { name: "quotations", sheet: "quotations", order: ["id"] },
   { name: "quotation_lines", sheet: "quotation_lines", order: ["id"] },
   { name: "quotation_milestones", sheet: "quotation_milestones", order: ["id"] },

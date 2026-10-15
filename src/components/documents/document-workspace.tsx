@@ -5,11 +5,24 @@ import Image from "next/image"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
 import { DocumentSheet } from "@/components/documents/document-sheet"
+import { NameCombobox } from "@/components/name-combobox"
 import { RecordAttachments } from "@/components/record-attachments"
 import type { AttachmentParent } from "@/lib/attachments"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
 import type { PrintDocument } from "@/lib/documents/present"
@@ -34,6 +47,11 @@ export function DocumentWorkspace({
   error,
   onSave,
   files,
+  templateNames,
+  canStartFromTemplate = false,
+  onPickTemplate,
+  canSaveAsTemplate = false,
+  onSaveAsTemplate,
   children,
 }: {
   title: string
@@ -47,12 +65,22 @@ export function DocumentWorkspace({
   error: string | null
   onSave: () => void
   files?: { parentType: AttachmentParent; parentId: string | null }
+  templateNames?: readonly string[]
+  canStartFromTemplate?: boolean
+  onPickTemplate?: (name: string) => void
+  canSaveAsTemplate?: boolean
+  onSaveAsTemplate?: (name: string) => Promise<string | null>
   children: ReactNode
 }) {
   const top = clampPrintMargin(margins.topMm, 32)
   const bottom = clampPrintMargin(margins.bottomMm, 28)
   const [pane, setPane] = useState<"edit" | "preview">("edit")
   const [copied, setCopied] = useState(false)
+  const [templateName, setTemplateName] = useState("")
+  const [saveAsOpen, setSaveAsOpen] = useState(false)
+  const [saveAsName, setSaveAsName] = useState("")
+  const [saveAsError, setSaveAsError] = useState<string | null>(null)
+  const [savingTemplate, setSavingTemplate] = useState(false)
 
   useEffect(() => {
     if (!copied) return
@@ -121,6 +149,20 @@ export function DocumentWorkspace({
               <Download aria-hidden="true" data-icon="inline-start" />
               Download PDF
             </Button>
+            {canSaveAsTemplate ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending || savingTemplate}
+                onClick={() => {
+                  setSaveAsName("")
+                  setSaveAsError(null)
+                  setSaveAsOpen(true)
+                }}
+              >
+                Save As Template
+              </Button>
+            ) : null}
             {canSave ? (
               <Button type="button" disabled={pending} onClick={onSave}>
                 {pending ? "Saving…" : "Save"}
@@ -147,6 +189,22 @@ export function DocumentWorkspace({
       <div className="grid min-w-0 grid-cols-1 items-start gap-4 print:hidden md:grid-cols-2 md:gap-6">
         <Card className={cn("min-w-0", pane === "preview" && "hidden md:flex")}>
           <CardContent className="flex flex-col gap-4">
+            {canStartFromTemplate && templateNames && onPickTemplate ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="start-from-template">Start From Template</Label>
+                <NameCombobox
+                  id="start-from-template"
+                  value={templateName}
+                  names={templateNames}
+                  disabled={!canSave || pending}
+                  placeholder="Choose A Template"
+                  onValueChange={(name) => {
+                    setTemplateName(name)
+                    if (templateNames.includes(name)) onPickTemplate(name)
+                  }}
+                />
+              </div>
+            ) : null}
             {children}
             {files?.parentId ? (
               <RecordAttachments parentType={files.parentType} parentId={files.parentId} />
@@ -160,6 +218,57 @@ export function DocumentWorkspace({
       <div className="hidden print:block">
         <DocumentSheet document={preview} />
       </div>
+      {canSaveAsTemplate && onSaveAsTemplate ? (
+        <Dialog open={saveAsOpen} onOpenChange={setSaveAsOpen}>
+          <DialogContent className="overflow-hidden sm:max-w-lg print:hidden!" mobileLayout="nav">
+            <DialogHeader>
+              <DialogTitle>Save As Template</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <FieldGroup layout="inset">
+                <Field data-invalid={Boolean(saveAsError) || undefined}>
+                  <FieldLabel htmlFor="save-as-template-name">Name</FieldLabel>
+                  <Input
+                    id="save-as-template-name"
+                    value={saveAsName}
+                    maxLength={120}
+                    autoComplete="off"
+                    autoCapitalize="words"
+                    enterKeyHint="done"
+                    disabled={savingTemplate}
+                    aria-invalid={Boolean(saveAsError)}
+                    onChange={(event) => setSaveAsName(event.target.value)}
+                  />
+                  {saveAsError ? <FieldError>{saveAsError}</FieldError> : null}
+                </Field>
+              </FieldGroup>
+            </DialogBody>
+            <DialogFooter>
+              <DialogClose render={<Button type="button" variant="outline" disabled={savingTemplate} />}>
+                Cancel
+              </DialogClose>
+              <Button
+                type="button"
+                disabled={savingTemplate}
+                onClick={() => {
+                  setSaveAsError(null)
+                  setSavingTemplate(true)
+                  void onSaveAsTemplate(saveAsName).then((error) => {
+                    setSavingTemplate(false)
+                    if (error) {
+                      setSaveAsError(error)
+                      return
+                    }
+                    setSaveAsOpen(false)
+                  })
+                }}
+              >
+                {savingTemplate ? "Saving…" : "Save Template"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   )
 }

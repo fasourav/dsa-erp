@@ -61,6 +61,14 @@ const constraintMessages: Record<string, { message: string; field?: string }> = 
     message: "A budget for this department and month already exists.",
     field: "departmentId",
   },
+  document_templates_kind_name_key: {
+    message: "A template with this name already exists for that document kind.",
+    field: "name",
+  },
+  document_templates_payload_check: {
+    message: "Lines need a description, unit, quantity, and rate. Milestone percents must total 100.",
+    field: "milestones",
+  },
   project_budget_lines_project_category_key: {
     message: "This project already has a budget line for that category.",
     field: "categoryId",
