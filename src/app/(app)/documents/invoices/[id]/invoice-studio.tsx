@@ -1,8 +1,9 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 
-import { saveInvoicePrint } from "@/app/(app)/documents/actions"
+import { saveInvoicePrint, trashSavedDocument } from "@/app/(app)/documents/actions"
 import { useCan } from "@/components/access-provider"
 import { DocumentWorkspace } from "@/components/documents/document-workspace"
 import {
@@ -16,6 +17,7 @@ import { roleFor, type EmployeeChoice, type PrintMargins } from "@/lib/documents
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentInvoice } from "@/lib/documents/present"
 import { Money } from "@/components/money"
+import { savedToast } from "@/lib/saved"
 import type { InvoiceDraft } from "@/lib/documents/queries"
 
 export function InvoiceStudio({
@@ -29,6 +31,7 @@ export function InvoiceStudio({
   origin: string
   margins: PrintMargins
 }) {
+  const router = useRouter()
   const [form, setForm] = useState(draft)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
@@ -50,8 +53,11 @@ export function InvoiceStudio({
         deductions: form.deductions,
         terms: form.terms,
         paymentNote: form.paymentNote,
+        subtitle: form.subtitle,
         preparedBy: form.preparedBy,
         preparedByRole: roleFor(employees, form.preparedBy),
+        checkedBy: form.checkedBy,
+        checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
       }),
@@ -65,6 +71,15 @@ export function InvoiceStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
+      canTrash={form.exists}
+      trashName={form.documentNo || "This invoice"}
+      onTrash={async () => {
+        const result = await trashSavedDocument({ kind: "invoice", id: form.id })
+        if (result.error) return result.error
+        savedToast("Moved To Trash.")
+        router.push("/documents/invoices")
+        return null
+      }}
       pending={pending}
       error={error}
       files={{ parentType: "client_invoice", parentId: form.id }}
@@ -87,6 +102,13 @@ export function InvoiceStudio({
     >
       <ReadOnlyField label="Customer Name" value={form.customerName} />
       <ReadOnlyField label="Project Name" value={form.projectName} />
+      <TextField
+        id="subtitle"
+        label="Subtitle"
+        value={form.subtitle}
+        disabled={!canSave}
+        onChange={(subtitle) => setForm({ ...form, subtitle })}
+      />
       <TextField
         id="bill-to-name"
         label="Bill To Name"
@@ -164,6 +186,14 @@ export function InvoiceStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(preparedBy) => setForm({ ...form, preparedBy })}
+      />
+      <EmployeeField
+        id="checked-by"
+        label="Checked By"
+        value={form.checkedBy}
+        employees={employees}
+        disabled={!canSave}
+        onChange={(checkedBy) => setForm({ ...form, checkedBy })}
       />
       <EmployeeField
         id="authorized-by"

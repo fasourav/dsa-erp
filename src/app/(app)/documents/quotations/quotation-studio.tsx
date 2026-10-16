@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
-import { saveQuotation } from "@/app/(app)/documents/actions"
+import { saveQuotation, trashSavedDocument } from "@/app/(app)/documents/actions"
 import { saveDocumentAsTemplate } from "@/app/(app)/settings/document-template-actions"
 import { useCan } from "@/components/access-provider"
 import {
@@ -82,8 +82,11 @@ export function QuotationStudio({
         milestones: form.milestones,
         terms: form.terms,
         exclusions: form.exclusions,
+        subtitle: form.subtitle,
         preparedBy: form.preparedBy,
         preparedByRole: roleFor(employees, form.preparedBy),
+        checkedBy: form.checkedBy,
+        checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
       })
@@ -95,6 +98,16 @@ export function QuotationStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
+      canTrash={Boolean(form.id)}
+      trashName={form.documentNo || "This quotation"}
+      onTrash={async () => {
+        if (!form.id) return "Save the quotation before deleting it."
+        const result = await trashSavedDocument({ kind: "quotation", id: form.id })
+        if (result.error) return result.error
+        savedToast("Moved To Trash.")
+        router.push("/documents/quotations")
+        return null
+      }}
       pending={pending}
       error={error}
       files={{ parentType: "quotation", parentId: form.id }}
@@ -194,6 +207,13 @@ export function QuotationStudio({
         onChange={(status) => setForm({ ...form, status })}
       />
       <TextField
+        id="subtitle"
+        label="Subtitle"
+        value={form.subtitle}
+        disabled={!canSave}
+        onChange={(subtitle) => setForm({ ...form, subtitle })}
+      />
+      <TextField
         id="area"
         label="Area"
         value={form.area}
@@ -245,6 +265,14 @@ export function QuotationStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(preparedBy) => setForm({ ...form, preparedBy })}
+      />
+      <EmployeeField
+        id="checked-by"
+        label="Checked By"
+        value={form.checkedBy}
+        employees={employees}
+        disabled={!canSave}
+        onChange={(checkedBy) => setForm({ ...form, checkedBy })}
       />
       <EmployeeField
         id="authorized-by"

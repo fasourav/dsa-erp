@@ -1,5 +1,18 @@
 export const documentCompanyName = "DynamicSpace Architects & Engineers"
 
+export const defaultSubtitles = {
+  quotation: "Estimate & Financial Proposal",
+  workOrder: "Vendor / Service Provider",
+  purchaseOrder: "Materials Procurement",
+  invoice: "Final Bill",
+  receipt: "Payment Acknowledgement",
+} as const
+
+export function printedSubtitle(value: string, fallback: string): string {
+  const trimmed = value.trim()
+  return trimmed || fallback
+}
+
 export const DEFAULT_PRINT_MARGIN_TOP_MM = 32
 export const DEFAULT_PRINT_MARGIN_BOTTOM_MM = 28
 

@@ -12,12 +12,23 @@ import {
   type MilestoneInput,
 } from "@/lib/documents/drafts"
 import { grandTotal, priceLines } from "@/lib/documents/present"
+import {
+  collisionNumber,
+  invoiceNumber,
+  nextQuotationVersion,
+  orderNumber,
+  quotationNumber,
+  receiptNumber,
+} from "@/lib/documents/numbers"
 import { allows, type ModuleKey } from "@/lib/access"
 import { isUuid } from "@/lib/ids"
 import { getAccess } from "@/lib/permissions"
 import { isIsoDate } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import type { Json } from "@/types/database.types"
+
+type DocumentClient = Awaited<ReturnType<typeof createClient>>
+export type TrashKind = "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order"
 
 export type DocumentSaveResult = {
   error: string | null
@@ -36,10 +47,63 @@ function newWorkOrderHasPrice(lines: LineInput[]): boolean {
   return lines.some((line) => line.item.trim() && Number(line.unitPrice) > 0)
 }
 
-function newDocumentNo(prefix: string, issuedOn: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(issuedOn)
-  const stamp = match ? `${match[3]}${match[2]}${match[1]}` : "00000000"
-  return `${prefix}/DSAE/${randomBytes(2).toString("hex").toUpperCase()}/${stamp}`
+function partyLabel(company: string | null | undefined, person: string | null | undefined): string {
+  return company?.trim() || person?.trim() || ""
+}
+
+async function numberTaken(supabase: DocumentClient, value: string): Promise<boolean> {
+  const [quotations, orders, issued] = await Promise.all([
+    supabase.from("quotations").select("id").eq("document_no", value).limit(1),
+    supabase.from("work_orders").select("id").eq("document_no", value).limit(1),
+    supabase.from("issued_documents").select("id").eq("document_no", value).limit(1),
+  ])
+  return Boolean(quotations.data?.length || orders.data?.length || issued.data?.length)
+}
+
+async function clientProjectNames(
+  supabase: DocumentClient,
+  clientId: string,
+  projectId: string | null,
+): Promise<{ client: string; project: string }> {
+  const [client, project] = await Promise.all([
+    supabase.from("clients").select("company_name, person_name").eq("id", clientId).maybeSingle(),
+    projectId
+      ? supabase.from("projects").select("name").eq("id", projectId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+  return {
+    client: partyLabel(client.data?.company_name, client.data?.person_name),
+    project: project.data?.name?.trim() ?? "",
+  }
+}
+
+async function vendorProjectNames(
+  supabase: DocumentClient,
+  vendorId: string,
+  projectId: string | null,
+): Promise<{ vendor: string; project: string }> {
+  const [vendor, project] = await Promise.all([
+    supabase.from("vendors").select("company_name, person_name").eq("id", vendorId).maybeSingle(),
+    projectId
+      ? supabase.from("projects").select("name").eq("id", projectId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+  return {
+    vendor: partyLabel(vendor.data?.company_name, vendor.data?.person_name),
+    project: project.data?.name?.trim() ?? "",
+  }
+}
+
+async function quotationVersionFor(
+  supabase: DocumentClient,
+  clientId: string,
+  projectId: string | null,
+): Promise<number> {
+  const query = supabase.from("quotations").select("document_no").eq("client_id", clientId)
+  const { data } = projectId
+    ? await query.eq("project_id", projectId)
+    : await query.is("project_id", null)
+  return nextQuotationVersion((data ?? []).map((row) => row.document_no))
 }
 
 function writeError(error: { message?: string; code?: string } | null, fallback: string): string | null {
@@ -86,7 +150,9 @@ export async function saveInvoicePrint(input: {
   aitPercent: string
   terms: string
   paymentNote: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
   authorizedBy: string
   lines: LineInput[]
 }): Promise<DocumentSaveResult> {
@@ -104,6 +170,7 @@ export async function saveInvoicePrint(input: {
     .from("issued_documents")
     .select("id, document_no, verify_token")
     .eq("client_invoice_id", input.invoiceId)
+    .is("deleted_at", null)
     .maybeSingle()
   if (existing.error) return { error: writeError(existing.error, "Could not save this invoice.") }
   const denied = await guardWrite("client_invoices", Boolean(existing.data))
@@ -111,7 +178,7 @@ export async function saveInvoicePrint(input: {
 
   const invoice = await supabase
     .from("client_invoices")
-    .select("id, issued_on, status")
+    .select("id, issued_on, status, client_id, project_id")
     .eq("id", input.invoiceId)
     .maybeSingle()
   if (invoice.error || !invoice.data || invoice.data.status === "void") {
@@ -127,7 +194,9 @@ export async function saveInvoicePrint(input: {
     aitPercent: String(ait),
     terms: clip(input.terms, 2000),
     paymentNote: clip(input.paymentNote, 1000),
+    subtitle: clip(input.subtitle, 160),
     preparedBy: clip(input.preparedBy, 120),
+    checkedBy: clip(input.checkedBy, 120),
     authorizedBy: clip(input.authorizedBy, 120),
     lines: linesToJson(input.lines),
   }
@@ -155,8 +224,11 @@ export async function saveInvoicePrint(input: {
     }
   }
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const documentNo = newDocumentNo("INV", issuedOn.slice(0, 10))
+  const names = await clientProjectNames(supabase, invoice.data.client_id, invoice.data.project_id)
+  const base = invoiceNumber(issuedOn.slice(0, 10), names.client, names.project)
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    const documentNo = collisionNumber(base, attempt)
+    if (await numberTaken(supabase, documentNo)) continue
     const verifyToken = newToken()
     const { error } = await supabase.from("issued_documents").insert({
       kind: "invoice",
@@ -190,7 +262,9 @@ export async function saveReceiptPrint(input: {
   transferMode: string
   creditedTo: string
   notes: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
 }): Promise<DocumentSaveResult> {
   if (!isUuid(input.paymentId)) return { error: "That payment could not be found." }
   if (!input.description.trim()) return { error: "Enter what this receipt is for." }
@@ -200,6 +274,7 @@ export async function saveReceiptPrint(input: {
     .from("issued_documents")
     .select("id, document_no, verify_token")
     .eq("client_payment_id", input.paymentId)
+    .is("deleted_at", null)
     .maybeSingle()
   if (existing.error) return { error: writeError(existing.error, "Could not save this receipt.") }
   const denied = await guardWrite("client_invoices", Boolean(existing.data))
@@ -207,7 +282,7 @@ export async function saveReceiptPrint(input: {
 
   const payment = await supabase
     .from("client_payments")
-    .select("id, paid_on, amount")
+    .select("id, paid_on, amount, client_invoice_id")
     .eq("id", input.paymentId)
     .maybeSingle()
   if (payment.error || !payment.data) return { error: "That payment could not be found." }
@@ -222,7 +297,9 @@ export async function saveReceiptPrint(input: {
     transferMode: clip(input.transferMode, 80),
     creditedTo: clip(input.creditedTo, 160),
     notes: clip(input.notes, 1000),
+    subtitle: clip(input.subtitle, 160),
     preparedBy: clip(input.preparedBy, 120),
+    checkedBy: clip(input.checkedBy, 120),
   }
   const issuedOn = payment.data.paid_on
   const total = Number(payment.data.amount)
@@ -249,8 +326,20 @@ export async function saveReceiptPrint(input: {
     }
   }
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const documentNo = newDocumentNo("MR", issuedOn.slice(0, 10))
+  const bill = await supabase
+    .from("client_invoices")
+    .select("client_id, project_id")
+    .eq("id", payment.data.client_invoice_id)
+    .maybeSingle()
+  const names = await clientProjectNames(
+    supabase,
+    bill.data?.client_id ?? "",
+    bill.data?.project_id ?? null,
+  )
+  const base = receiptNumber(issuedOn.slice(0, 10), names.client, names.project)
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    const documentNo = collisionNumber(base, attempt)
+    if (await numberTaken(supabase, documentNo)) continue
     const verifyToken = newToken()
     const { error } = await supabase.from("issued_documents").insert({
       kind: "receipt",
@@ -281,6 +370,7 @@ export async function savePurchaseOrderPrint(input: {
   lines: LineInput[]
   carrying: string
   terms: string
+  subtitle: string
   preparedBy: string
   checkedBy: string
   authorizedBy: string
@@ -297,6 +387,7 @@ export async function savePurchaseOrderPrint(input: {
     .from("issued_documents")
     .select("id, document_no, verify_token")
     .eq("purchase_order_id", input.purchaseOrderId)
+    .is("deleted_at", null)
     .maybeSingle()
   if (existing.error) return { error: writeError(existing.error, "Could not save this purchase order.") }
   const denied = await guardWrite("purchase_orders", Boolean(existing.data))
@@ -304,7 +395,7 @@ export async function savePurchaseOrderPrint(input: {
 
   const order = await supabase
     .from("vendor_purchase_orders")
-    .select("id, issued_on")
+    .select("id, issued_on, vendor_id, project_id")
     .eq("id", input.purchaseOrderId)
     .maybeSingle()
   if (order.error || !order.data) return { error: "That purchase order could not be found." }
@@ -317,6 +408,7 @@ export async function savePurchaseOrderPrint(input: {
     deliveryOn: clip(input.deliveryOn, 10),
     carrying: String(carrying),
     terms: clip(input.terms, 2000),
+    subtitle: clip(input.subtitle, 160),
     preparedBy: clip(input.preparedBy, 120),
     checkedBy: clip(input.checkedBy, 120),
     authorizedBy: clip(input.authorizedBy, 120),
@@ -345,8 +437,11 @@ export async function savePurchaseOrderPrint(input: {
     }
   }
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const documentNo = newDocumentNo("PO", order.data.issued_on.slice(0, 10))
+  const names = await vendorProjectNames(supabase, order.data.vendor_id, order.data.project_id)
+  const base = orderNumber(order.data.issued_on.slice(0, 10), names.vendor, names.project)
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    const documentNo = collisionNumber(base, attempt)
+    if (await numberTaken(supabase, documentNo)) continue
     const verifyToken = newToken()
     const { error } = await supabase.from("issued_documents").insert({
       kind: "purchase_order",
@@ -374,16 +469,18 @@ async function saveDocumentAtomically(
   kind: "quotation" | "work_order",
   input: { id: string | null; version?: string; issuedOn: string; lines: LineInput[]; milestones: MilestoneInput[] },
   fields: Record<string, unknown>,
-  prefix: string,
+  base: string,
   fallback: string,
 ): Promise<DocumentSaveResult> {
   const supabase = await createClient()
   const lines = storedLines(input.lines)
   const milestones = storedMilestones(input.milestones)
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    const documentNo = collisionNumber(base, attempt)
+    if (!input.id && (await numberTaken(supabase, documentNo))) continue
     const payload = input.id
       ? fields
-      : { ...fields, document_no: newDocumentNo(prefix, input.issuedOn), verify_token: newToken() }
+      : { ...fields, document_no: documentNo, verify_token: newToken() }
     const { data, error } = await supabase.rpc("save_business_document", {
       p_kind: kind,
       p_id: input.id ?? undefined,
@@ -423,7 +520,9 @@ export async function saveQuotation(input: {
   terms: string
   exclusions: string
   aitPercent: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
   authorizedBy: string
   lines: LineInput[]
   milestones: MilestoneInput[]
@@ -474,11 +573,16 @@ export async function saveQuotation(input: {
     exclusions: clip(input.exclusions, 2000),
     ait_percent: ait,
     total,
+    subtitle: clip(input.subtitle, 160),
     prepared_by: clip(input.preparedBy, 120),
+    checked_by: clip(input.checkedBy, 120),
     authorized_by: clip(input.authorizedBy, 120),
   }
 
-  const saved = await saveDocumentAtomically("quotation", input, fields, "QTN", "Could not save this quotation.")
+  const names = await clientProjectNames(supabase, input.clientId, input.projectId || null)
+  const version = await quotationVersionFor(supabase, input.clientId, input.projectId || null)
+  const base = quotationNumber(input.issuedOn, names.client, names.project, version)
+  const saved = await saveDocumentAtomically("quotation", input, fields, base, "Could not save this quotation.")
   if (saved.error || !saved.id) return saved
   const id = saved.id
   revalidatePath("/documents/quotations")
@@ -500,7 +604,9 @@ export async function saveWorkOrder(input: {
   subject: string
   introduction: string
   terms: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
   authorizedBy: string
   lines: LineInput[]
   milestones: MilestoneInput[]
@@ -572,11 +678,15 @@ export async function saveWorkOrder(input: {
     introduction: clip(input.introduction, 2000),
     terms: clip(input.terms, 4000),
     total,
+    subtitle: clip(input.subtitle, 160),
     prepared_by: clip(input.preparedBy, 120),
+    checked_by: clip(input.checkedBy, 120),
     authorized_by: clip(input.authorizedBy, 120),
   }
 
-  const saved = await saveDocumentAtomically("work_order", input, fields, "WO", "Could not save this work order.")
+  const names = await vendorProjectNames(supabase, vendorId, projectId || null)
+  const base = orderNumber(input.issuedOn, names.vendor, names.project)
+  const saved = await saveDocumentAtomically("work_order", input, fields, base, "Could not save this work order.")
   if (saved.error || !saved.id) return saved
   const id = saved.id
   revalidatePath("/documents/work-orders")
@@ -586,4 +696,146 @@ export async function saveWorkOrder(input: {
     revalidatePath(`/purchase-orders/${previousPurchaseOrderId}`)
   }
   return saved
+}
+
+function revalidateDocument(kind: TrashKind) {
+  revalidatePath("/documents")
+  revalidatePath("/documents/trash")
+  if (kind === "quotation") revalidatePath("/documents/quotations")
+  if (kind === "work_order") revalidatePath("/documents/work-orders")
+  if (kind === "invoice") revalidatePath("/documents/invoices")
+  if (kind === "receipt") revalidatePath("/documents/receipts")
+  if (kind === "purchase_order") revalidatePath("/documents/purchase-orders")
+}
+
+async function requireOwner(): Promise<{ userId: string } | { error: string }> {
+  const access = await getAccess()
+  if (!access || access.status === "deactivated") return { error: "Your session has expired. Sign in again." }
+  if (!access.isOwner) return { error: "Only owners can do that." }
+  return { userId: access.userId }
+}
+
+export async function trashSavedDocument(input: {
+  kind: TrashKind
+  id: string
+}): Promise<{ error: string | null }> {
+  if (!isUuid(input.id)) return { error: "That document could not be found." }
+  const owner = await requireOwner()
+  if ("error" in owner) return { error: owner.error }
+  const supabase = await createClient()
+  const patch = { deleted_at: new Date().toISOString(), deleted_by: owner.userId }
+  const result = await applyTrash(supabase, input.kind, input.id, "trash", patch)
+  if (result.error) return result
+  revalidateDocument(input.kind)
+  return { error: null }
+}
+
+export async function restoreSavedDocument(input: {
+  kind: TrashKind
+  id: string
+}): Promise<{ error: string | null }> {
+  if (!isUuid(input.id)) return { error: "That document could not be found." }
+  const owner = await requireOwner()
+  if ("error" in owner) return { error: owner.error }
+  const supabase = await createClient()
+  const result = await applyTrash(supabase, input.kind, input.id, "restore", {
+    deleted_at: null,
+    deleted_by: null,
+  })
+  if (result.error) return result
+  revalidateDocument(input.kind)
+  return { error: null }
+}
+
+export async function deleteSavedDocumentForever(input: {
+  kind: TrashKind
+  id: string
+}): Promise<{ error: string | null }> {
+  if (!isUuid(input.id)) return { error: "That document could not be found." }
+  const owner = await requireOwner()
+  if ("error" in owner) return { error: owner.error }
+  const supabase = await createClient()
+  const result = await applyTrash(supabase, input.kind, input.id, "delete", null)
+  if (result.error) return result
+  revalidateDocument(input.kind)
+  return { error: null }
+}
+
+async function applyTrash(
+  supabase: DocumentClient,
+  kind: TrashKind,
+  id: string,
+  mode: "trash" | "restore" | "delete",
+  patch: { deleted_at: string | null; deleted_by: string | null } | null,
+): Promise<{ error: string | null }> {
+  const missing = "That document could not be found."
+  if (kind === "quotation" || kind === "work_order") {
+    const table = kind === "quotation" ? "quotations" : "work_orders"
+    if (mode === "delete") {
+      const { data, error } = await supabase
+        .from(table)
+        .delete()
+        .eq("id", id)
+        .not("deleted_at", "is", null)
+        .select("id")
+      if (error) return { error: writeError(error, "Could not delete this document.") }
+      if (!data?.length) return { error: missing }
+      return { error: null }
+    }
+    const query = supabase
+      .from(table)
+      .update(patch ?? { deleted_at: null, deleted_by: null })
+      .eq("id", id)
+    const filtered = mode === "trash" ? query.is("deleted_at", null) : query.not("deleted_at", "is", null)
+    const { data, error } = await filtered.select("id")
+    if (error?.code === "23505" && mode === "restore") {
+      return { error: "A newer saved document already uses that record. Delete it before restoring this one." }
+    }
+    if (error) {
+      return {
+        error: writeError(
+          error,
+          mode === "restore" ? "Could not restore this document." : "Could not move this document to Trash.",
+        ),
+      }
+    }
+    if (!data?.length) return { error: missing }
+    return { error: null }
+  }
+
+  const column =
+    kind === "invoice" ? "client_invoice_id" : kind === "receipt" ? "client_payment_id" : "purchase_order_id"
+  const issuedKind = kind === "invoice" ? "invoice" : kind === "receipt" ? "receipt" : "purchase_order"
+  if (mode === "delete") {
+    const { data, error } = await supabase
+      .from("issued_documents")
+      .delete()
+      .eq(column, id)
+      .eq("kind", issuedKind)
+      .not("deleted_at", "is", null)
+      .select("id")
+    if (error) return { error: writeError(error, "Could not delete this document.") }
+    if (!data?.length) return { error: missing }
+    return { error: null }
+  }
+  const query = supabase
+    .from("issued_documents")
+    .update(patch ?? { deleted_at: null, deleted_by: null })
+    .eq(column, id)
+    .eq("kind", issuedKind)
+  const filtered = mode === "trash" ? query.is("deleted_at", null) : query.not("deleted_at", "is", null)
+  const { data, error } = await filtered.select("id")
+  if (error?.code === "23505" && mode === "restore") {
+    return { error: "A newer saved document already uses that record. Delete it before restoring this one." }
+  }
+  if (error) {
+    return {
+      error: writeError(
+        error,
+        mode === "restore" ? "Could not restore this document." : "Could not move this document to Trash.",
+      ),
+    }
+  }
+  if (!data?.length) return { error: missing }
+  return { error: null }
 }

@@ -1,6 +1,8 @@
 import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
+  defaultSubtitles,
   documentCompanyName,
+  printedSubtitle,
   type LineInput,
   type MilestoneInput,
 } from "@/lib/documents/drafts"
@@ -122,8 +124,11 @@ export function presentQuotation(input: {
   milestones: MilestoneInput[]
   terms: string
   exclusions: string
+  subtitle: string
   preparedBy: string
   preparedByRole: string
+  checkedBy: string
+  checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
 }): PrintDocument {
@@ -146,7 +151,7 @@ export function presentQuotation(input: {
 
   return {
     kicker: "Quotation",
-    title: "Estimate & Financial Proposal",
+    title: printedSubtitle(input.subtitle, defaultSubtitles.quotation),
     numberLabel: "Quotation No.",
     documentNo: input.documentNo || "Assigned when saved",
     issuedOn: formatIsoDate(input.issuedOn),
@@ -181,6 +186,11 @@ export function presentQuotation(input: {
         detail: input.preparedByRole,
       },
       {
+        label: "Checked By",
+        name: input.checkedBy,
+        detail: input.checkedByRole,
+      },
+      {
         label: "Authorized Signature",
         name: input.authorizedBy,
         detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
@@ -209,8 +219,11 @@ export function presentWorkOrder(input: {
   lines: LineInput[]
   milestones: MilestoneInput[]
   terms: string
+  subtitle: string
   preparedBy: string
   preparedByRole: string
+  checkedBy: string
+  checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
 }): PrintDocument {
@@ -225,7 +238,7 @@ export function presentWorkOrder(input: {
 
   return {
     kicker: "Work Order",
-    title: "Vendor / Service Provider",
+    title: printedSubtitle(input.subtitle, defaultSubtitles.workOrder),
     numberLabel: "Ref",
     documentNo: input.documentNo || "Assigned when saved",
     issuedOn: formatIsoDate(input.issuedOn),
@@ -269,6 +282,11 @@ export function presentWorkOrder(input: {
         detail: input.preparedByRole,
       },
       {
+        label: "Checked By",
+        name: input.checkedBy,
+        detail: input.checkedByRole,
+      },
+      {
         label: "Authorized Signature",
         name: input.authorizedBy,
         detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
@@ -297,8 +315,11 @@ export function presentInvoice(input: {
   deductions: Array<{ label: string; paidOn: string; amount: number }>
   terms: string
   paymentNote: string
+  subtitle: string
   preparedBy: string
   preparedByRole: string
+  checkedBy: string
+  checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
 }): PrintDocument {
@@ -328,7 +349,7 @@ export function presentInvoice(input: {
 
   return {
     kicker: "Bill Invoice",
-    title: "Final Bill",
+    title: printedSubtitle(input.subtitle, defaultSubtitles.invoice),
     numberLabel: "Invoice No.",
     documentNo: input.documentNo || "Assigned when saved",
     issuedOn: formatIsoDate(input.issuedOn),
@@ -358,6 +379,7 @@ export function presentInvoice(input: {
     notes: input.paymentNote.trim(),
     signatures: [
       { label: "Prepared By", name: input.preparedBy, detail: input.preparedByRole },
+      { label: "Checked By", name: input.checkedBy, detail: input.checkedByRole },
       {
         label: "Authorized Signature",
         name: input.authorizedBy,
@@ -388,12 +410,15 @@ export function presentReceipt(input: {
   transferMode: string
   creditedTo: string
   notes: string
+  subtitle: string
   preparedBy: string
   preparedByRole: string
+  checkedBy: string
+  checkedByRole: string
 }): PrintDocument {
   return {
     kicker: "Money Receipt",
-    title: "Payment Acknowledgement",
+    title: printedSubtitle(input.subtitle, defaultSubtitles.receipt),
     numberLabel: "Receipt No.",
     documentNo: input.documentNo || "Assigned when saved",
     issuedOn: formatIsoDate(input.issuedOn),
@@ -442,7 +467,8 @@ export function presentReceipt(input: {
       .filter(Boolean)
       .join("\n"),
     signatures: [
-      { label: "Received By", name: input.preparedBy, detail: input.preparedByRole },
+      { label: "Prepared By", name: input.preparedBy, detail: input.preparedByRole },
+      { label: "Checked By", name: input.checkedBy, detail: input.checkedByRole },
       {
         label: "Authorized Signature",
         name: "",
@@ -465,6 +491,7 @@ export function presentPurchaseOrder(input: {
   lines: LineInput[]
   carrying: string
   terms: string
+  subtitle: string
   preparedBy: string
   preparedByRole: string
   checkedBy: string
@@ -483,7 +510,7 @@ export function presentPurchaseOrder(input: {
 
   return {
     kicker: "Purchase Order",
-    title: "Materials Procurement",
+    title: printedSubtitle(input.subtitle, defaultSubtitles.purchaseOrder),
     numberLabel: "PO No.",
     documentNo: input.documentNo || "Assigned when saved",
     issuedOn: formatIsoDate(input.issuedOn),

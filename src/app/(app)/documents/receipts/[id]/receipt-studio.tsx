@@ -1,8 +1,9 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 
-import { saveReceiptPrint } from "@/app/(app)/documents/actions"
+import { saveReceiptPrint, trashSavedDocument } from "@/app/(app)/documents/actions"
 import { useCan } from "@/components/access-provider"
 import {
   AreaField,
@@ -16,6 +17,7 @@ import { roleFor, type EmployeeChoice, type PrintMargins } from "@/lib/documents
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentReceipt } from "@/lib/documents/present"
 import { Money } from "@/components/money"
+import { savedToast } from "@/lib/saved"
 import type { ReceiptDraft } from "@/lib/documents/queries"
 
 export function ReceiptStudio({
@@ -31,6 +33,7 @@ export function ReceiptStudio({
   origin: string
   margins: PrintMargins
 }) {
+  const router = useRouter()
   const [form, setForm] = useState(draft)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
@@ -54,8 +57,11 @@ export function ReceiptStudio({
         transferMode: form.transferMode,
         creditedTo: form.creditedTo,
         notes: form.notes,
+        subtitle: form.subtitle,
         preparedBy: form.preparedBy,
         preparedByRole: roleFor(employees, form.preparedBy),
+        checkedBy: form.checkedBy,
+        checkedByRole: roleFor(employees, form.checkedBy),
       }),
     [employees, form, origin],
   )
@@ -67,6 +73,15 @@ export function ReceiptStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
+      canTrash={form.exists}
+      trashName={form.documentNo || "This receipt"}
+      onTrash={async () => {
+        const result = await trashSavedDocument({ kind: "receipt", id: form.id })
+        if (result.error) return result.error
+        savedToast("Moved To Trash.")
+        router.push("/documents/receipts")
+        return null
+      }}
       pending={pending}
       error={error}
       files={{ parentType: "client_payment", parentId: form.id }}
@@ -88,6 +103,13 @@ export function ReceiptStudio({
       }}
     >
       <ReadOnlyField label="Customer Name" value={form.customerName} />
+      <TextField
+        id="subtitle"
+        label="Subtitle"
+        value={form.subtitle}
+        disabled={!canSave}
+        onChange={(subtitle) => setForm({ ...form, subtitle })}
+      />
       <ReadOnlyField label="Amount" value={<Money value={form.amount} />} />
       <ReadOnlyField label="Bank Name" value={form.bankName} />
       <TextField
@@ -156,11 +178,19 @@ export function ReceiptStudio({
       />
       <EmployeeField
         id="prepared-by"
-        label="Received By"
+        label="Prepared By"
         value={form.preparedBy}
         employees={employees}
         disabled={!canSave}
         onChange={(preparedBy) => setForm({ ...form, preparedBy })}
+      />
+      <EmployeeField
+        id="checked-by"
+        label="Checked By"
+        value={form.checkedBy}
+        employees={employees}
+        disabled={!canSave}
+        onChange={(checkedBy) => setForm({ ...form, checkedBy })}
       />
     </DocumentWorkspace>
   )

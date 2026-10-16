@@ -1,9 +1,12 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Printer, Share2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Printer, Share2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
+import { toast } from "sonner"
 
+import { useAccess } from "@/components/access-provider"
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { DocumentSheet } from "@/components/documents/document-sheet"
 import { NameCombobox } from "@/components/name-combobox"
 import { RecordAttachments } from "@/components/record-attachments"
@@ -24,7 +27,9 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { deliverPdf, pdfFilename, readBrandPng } from "@/lib/documents/deliver-pdf"
 import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
+import { buildDocumentPdf } from "@/lib/documents/pdf"
 import type { PrintDocument } from "@/lib/documents/present"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +48,9 @@ export function DocumentWorkspace({
   preview,
   canSave,
   canShare = true,
+  canTrash = false,
+  trashName,
+  onTrash,
   pending,
   error,
   onSave,
@@ -61,6 +69,9 @@ export function DocumentWorkspace({
   canSave: boolean
   /** Hide Share for read-only viewers of documents that require edit rights to share. */
   canShare?: boolean
+  canTrash?: boolean
+  trashName?: string
+  onTrash?: () => Promise<string | null>
   pending: boolean
   error: string | null
   onSave: () => void
@@ -74,6 +85,7 @@ export function DocumentWorkspace({
 }) {
   const top = clampPrintMargin(margins.topMm, 32)
   const bottom = clampPrintMargin(margins.bottomMm, 28)
+  const access = useAccess()
   const [pane, setPane] = useState<"edit" | "preview">("edit")
   const [copied, setCopied] = useState(false)
   const [templateName, setTemplateName] = useState("")
@@ -81,6 +93,11 @@ export function DocumentWorkspace({
   const [saveAsName, setSaveAsName] = useState("")
   const [saveAsError, setSaveAsError] = useState<string | null>(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
+  const [pdfKind, setPdfKind] = useState<"print" | "letterhead" | null>(null)
+  const [trashOpen, setTrashOpen] = useState(false)
+  const [trashError, setTrashError] = useState<string | null>(null)
+  const [trashPending, setTrashPending] = useState(false)
+  const showTrash = canTrash && access.isOwner && Boolean(onTrash)
 
   useEffect(() => {
     if (!copied) return
@@ -112,6 +129,38 @@ export function DocumentWorkspace({
       window.removeEventListener("afterprint", afterPrint)
     }
   }, [top, bottom])
+
+  function openPdf(letterhead: boolean) {
+    const popup = window.open("about:blank", "_blank")
+    setPdfKind(letterhead ? "letterhead" : "print")
+    void createPdf(letterhead, popup)
+  }
+
+  async function createPdf(letterhead: boolean, popup: Window | null) {
+    try {
+      const [watermark, logo] = letterhead
+        ? await Promise.all([readBrandPng("/brand/mark-olive.png"), readBrandPng("/brand/mark-white.png")])
+        : [undefined, undefined]
+      const bytes = await buildDocumentPdf({
+        document: preview,
+        topMm: top,
+        bottomMm: bottom,
+        letterhead,
+        watermark,
+        logo,
+      })
+      await deliverPdf(
+        bytes,
+        pdfFilename(preview.documentNo, preview.kicker, letterhead),
+        popup,
+      )
+    } catch {
+      if (popup && !popup.closed) popup.close()
+      toast.error("Could not create the PDF.")
+    } finally {
+      setPdfKind(null)
+    }
+  }
 
   async function shareDocument() {
     const url = window.location.href
@@ -148,12 +197,37 @@ export function DocumentWorkspace({
             <Button
               type="button"
               variant="outline"
-              aria-label="Print / Save As PDF"
-              onClick={() => window.print()}
+              disabled={pdfKind !== null}
+              aria-label="Printable PDF"
+              onClick={() => openPdf(false)}
             >
               <Printer aria-hidden="true" data-icon="inline-start" />
-              Print / Save As PDF
+              {pdfKind === "print" ? "Creating…" : "Printable PDF"}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pdfKind !== null}
+              aria-label="Downloadable PDF"
+              onClick={() => openPdf(true)}
+            >
+              <Download aria-hidden="true" data-icon="inline-start" />
+              {pdfKind === "letterhead" ? "Creating…" : "Downloadable PDF"}
+            </Button>
+            {showTrash ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending || trashPending}
+                onClick={() => {
+                  setTrashError(null)
+                  setTrashOpen(true)
+                }}
+              >
+                <Trash2 aria-hidden="true" data-icon="inline-start" />
+                Delete
+              </Button>
+            ) : null}
             {canSaveAsTemplate ? (
               <Button
                 type="button"
@@ -223,6 +297,35 @@ export function DocumentWorkspace({
       <div className="hidden print:block">
         <DocumentSheet document={preview} />
       </div>
+      {showTrash && onTrash ? (
+        <DeleteConfirmDialog
+          open={trashOpen}
+          onOpenChange={(open) => {
+            if (!trashPending) setTrashOpen(open)
+          }}
+          title="Move To Trash"
+          description={
+            trashName
+              ? `${trashName} will move to Trash. You can restore it later.`
+              : "This document will move to Trash. You can restore it later."
+          }
+          error={trashError}
+          pending={trashPending}
+          confirmKey={trashOpen ? trashName ?? "trash" : undefined}
+          onConfirm={() => {
+            setTrashError(null)
+            setTrashPending(true)
+            void onTrash().then((message) => {
+              setTrashPending(false)
+              if (message) {
+                setTrashError(message)
+                return
+              }
+              setTrashOpen(false)
+            })
+          }}
+        />
+      ) : null}
       {canSaveAsTemplate && onSaveAsTemplate ? (
         <Dialog open={saveAsOpen} onOpenChange={setSaveAsOpen}>
           <DialogContent className="overflow-hidden sm:max-w-lg print:hidden!" mobileLayout="nav">
@@ -351,6 +454,8 @@ function PreviewStage({
 
   const width = scale == null ? undefined : paper.width * scale
   const height = scale == null ? undefined : paper.height * scale
+  const lastSlice = slices[slices.length - 1] ?? slice
+  const drop = Math.max(0, bodyHeight - (lastSlice.end - lastSlice.start))
 
   return (
     <aside aria-label="Live preview" className="flex min-w-0 flex-col gap-3 md:sticky md:top-0">
@@ -373,11 +478,14 @@ function PreviewStage({
                 top: `${top}mm`,
                 left: `${sideMm}mm`,
                 right: `${sideMm}mm`,
-                height: Math.max(0, slice.end - slice.start),
+                height: Math.max(0, slice.end - slice.start) + (current === slices.length - 1 ? drop : 0),
               }}
             >
               <div style={{ transform: `translateY(${-slice.start}px)` }}>
-                <DocumentSheet document={preview} />
+                <DocumentSheet
+                  document={preview}
+                  signatureDrop={current === slices.length - 1 ? drop : 0}
+                />
               </div>
             </div>
             <div
