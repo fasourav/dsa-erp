@@ -698,6 +698,9 @@ export async function saveWorkOrder(input: {
   return saved
 }
 
+const duplicatePrintMessage =
+  "A newer saved document already uses that record. Delete it before restoring this one."
+
 function revalidateDocument(kind: TrashKind) {
   revalidatePath("/documents")
   revalidatePath("/documents/trash")
@@ -789,7 +792,7 @@ async function applyTrash(
     const filtered = mode === "trash" ? query.is("deleted_at", null) : query.not("deleted_at", "is", null)
     const { data, error } = await filtered.select("id")
     if (error?.code === "23505" && mode === "restore") {
-      return { error: "A newer saved document already uses that record. Delete it before restoring this one." }
+      return { error: duplicatePrintMessage }
     }
     if (error) {
       return {
@@ -810,7 +813,7 @@ async function applyTrash(
     const { data, error } = await supabase
       .from("issued_documents")
       .delete()
-      .eq(column, id)
+      .eq("id", id)
       .eq("kind", issuedKind)
       .not("deleted_at", "is", null)
       .select("id")
@@ -818,15 +821,27 @@ async function applyTrash(
     if (!data?.length) return { error: missing }
     return { error: null }
   }
-  const query = supabase
-    .from("issued_documents")
-    .update(patch ?? { deleted_at: null, deleted_by: null })
-    .eq(column, id)
-    .eq("kind", issuedKind)
-  const filtered = mode === "trash" ? query.is("deleted_at", null) : query.not("deleted_at", "is", null)
-  const { data, error } = await filtered.select("id")
+  if (mode === "restore") {
+    const blocked = await activePrintBlocksRestore(supabase, id, issuedKind, column)
+    if (blocked) return { error: blocked }
+  }
+  const query =
+    mode === "trash"
+      ? supabase
+          .from("issued_documents")
+          .update(patch ?? { deleted_at: null, deleted_by: null })
+          .eq(column, id)
+          .eq("kind", issuedKind)
+          .is("deleted_at", null)
+      : supabase
+          .from("issued_documents")
+          .update(patch ?? { deleted_at: null, deleted_by: null })
+          .eq("id", id)
+          .eq("kind", issuedKind)
+          .not("deleted_at", "is", null)
+  const { data, error } = await query.select("id")
   if (error?.code === "23505" && mode === "restore") {
-    return { error: "A newer saved document already uses that record. Delete it before restoring this one." }
+    return { error: duplicatePrintMessage }
   }
   if (error) {
     return {
@@ -838,4 +853,31 @@ async function applyTrash(
   }
   if (!data?.length) return { error: missing }
   return { error: null }
+}
+
+async function activePrintBlocksRestore(
+  supabase: DocumentClient,
+  id: string,
+  issuedKind: "invoice" | "receipt" | "purchase_order",
+  column: "client_invoice_id" | "client_payment_id" | "purchase_order_id",
+): Promise<string | null> {
+  const { data: row, error } = await supabase
+    .from("issued_documents")
+    .select("id, client_invoice_id, client_payment_id, purchase_order_id")
+    .eq("id", id)
+    .eq("kind", issuedKind)
+    .not("deleted_at", "is", null)
+    .maybeSingle()
+  if (error || !row) return null
+  const parentId = row[column]
+  if (!parentId) return null
+  const { data: live, error: liveError } = await supabase
+    .from("issued_documents")
+    .select("id")
+    .eq("kind", issuedKind)
+    .eq(column, parentId)
+    .is("deleted_at", null)
+    .limit(1)
+  if (liveError || !live?.length) return null
+  return duplicatePrintMessage
 }

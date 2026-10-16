@@ -1034,7 +1034,7 @@ export async function listTrashedDocuments(): Promise<{
       .not("deleted_at", "is", null),
     supabase
       .from("issued_documents")
-      .select("kind, document_no, issued_on, deleted_at, client_invoice_id, client_payment_id, purchase_order_id")
+      .select("id, kind, document_no, issued_on, deleted_at")
       .not("deleted_at", "is", null),
   ])
   const error = quotations.error ?? orders.error ?? issued.error
@@ -1058,20 +1058,13 @@ export async function listTrashedDocuments(): Promise<{
       deletedAt: row.deleted_at ?? "",
     })),
     ...(issued.data ?? []).flatMap((row) => {
-      const id =
-        row.kind === "invoice"
-          ? row.client_invoice_id
-          : row.kind === "receipt"
-            ? row.client_payment_id
-            : row.purchase_order_id
-      if (!id) return []
       const kind: TrashedDocument["kind"] =
         row.kind === "invoice" ? "invoice" : row.kind === "receipt" ? "receipt" : "purchase_order"
       const kindLabel =
         kind === "invoice" ? "Invoice" : kind === "receipt" ? "Money Receipt" : "Purchase Order"
       return [
         {
-          id,
+          id: row.id,
           kind,
           kindLabel,
           documentNo: row.document_no,

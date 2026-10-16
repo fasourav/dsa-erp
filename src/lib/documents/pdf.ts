@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib"
 import QRCode from "qrcode"
 
+import { LETTERHEAD_FOOTER_MM } from "@/lib/documents/drafts"
 import type { PrintDocument } from "@/lib/documents/present"
 
 const mm = (value: number) => (value * 72) / 25.4
@@ -36,7 +37,8 @@ export async function buildDocumentPdf(input: DocumentPdfInput): Promise<Uint8Ar
   const logo = input.logo ? await embedPng(pdf, input.logo) : null
   const top = mm(clampMargin(input.topMm))
   const bottom = mm(clampMargin(input.bottomMm))
-  const contentBottom = bottom + mm(6)
+  const signLine = signatureLineY(bottom)
+  const contentBottom = signLine + mm(18)
   const width = pageWidth - side * 2
 
   const addPage = () => {
@@ -67,10 +69,10 @@ export async function buildDocumentPdf(input: DocumentPdfInput): Promise<Uint8Ar
   }
   drawTotals(cursor, input.document, regular, bold, width, ensure)
   drawProse(cursor, input.document, regular, bold, width, ensure)
-  if (cursor.y < bottom + mm(48)) {
+  if (cursor.y < contentBottom) {
     cursor.page = addPage()
   }
-  drawSignatures(cursor.page, input.document, regular, bold, bottom)
+  drawSignatures(cursor.page, input.document, regular, bold, signLine)
   return pdf.save()
 }
 
@@ -349,7 +351,22 @@ function drawHeader(
   y: number,
   width: number,
 ): number {
-  const height = 58
+  const pad = 8
+  const qrSize = document.verifyUrl ? mm(16) : 0
+  const qrGap = document.verifyUrl ? 8 : 0
+  const qrX = side + width - pad - qrSize
+  const textX = side + pad
+  const textWidth = Math.max(40, qrX - qrGap - textX)
+  const number = fitLines(
+    `${pdfText(document.numberLabel)} ${pdfText(document.documentNo)}`.trim(),
+    regular,
+    textWidth,
+  )
+  const title = clipLine(pdfText(document.title), bold, 13, textWidth)
+  const date = fitLines(`Date ${pdfText(document.issuedOn)}`, regular, textWidth)
+  const numberBlock = number.lines.length * (number.size + 3)
+  const dateBlock = date.lines.length * (date.size + 3)
+  const height = Math.max(58, pad + 12 + 18 + numberBlock + dateBlock + pad, qrSize + pad * 2)
   page.drawRectangle({
     x: side,
     y: y - height,
@@ -360,36 +377,36 @@ function drawHeader(
     borderWidth: 0.6,
   })
   page.drawText(pdfText(document.kicker).toUpperCase(), {
-    x: side + 8,
+    x: textX,
     y: y - 16,
     size: 8,
     font: bold,
     color: band,
   })
-  page.drawText(clipLine(pdfText(document.title), bold, 13, width - 150), {
-    x: side + 8,
+  page.drawText(title, {
+    x: textX,
     y: y - 34,
     size: 13,
     font: bold,
     color: ink,
   })
-  const metaX = side + width - 138
-  page.drawText(clipLine(`${pdfText(document.numberLabel)} ${pdfText(document.documentNo)}`, regular, 8, 128), {
-    x: metaX,
-    y: y - 16,
-    size: 8,
-    font: regular,
-    color: ink,
-  })
-  page.drawText(clipLine(`Date ${pdfText(document.issuedOn)}`, regular, 8, 128), {
-    x: metaX,
-    y: y - 28,
-    size: 8,
-    font: regular,
-    color: ink,
-  })
-  if (document.verifyUrl) drawQr(page, document.verifyUrl, side + width - 36, y - height + 6)
+  let metaY = y - 48
+  for (const line of number.lines) {
+    page.drawText(line, { x: textX, y: metaY, size: number.size, font: regular, color: ink })
+    metaY -= number.size + 3
+  }
+  for (const line of date.lines) {
+    page.drawText(line, { x: textX, y: metaY, size: date.size, font: regular, color: muted })
+    metaY -= date.size + 3
+  }
+  if (document.verifyUrl) drawQr(page, document.verifyUrl, qrX, y - pad - qrSize)
   return y - height
+}
+
+function signatureLineY(bottom: number): number {
+  const textBelowLine = mm(14)
+  const aboveArtwork = mm(LETTERHEAD_FOOTER_MM + 4) + textBelowLine
+  return Math.max(aboveArtwork, bottom + textBelowLine)
 }
 
 function drawSignatures(
@@ -397,14 +414,13 @@ function drawSignatures(
   document: PrintDocument,
   regular: PDFFont,
   bold: PDFFont,
-  bottom: number,
+  lineY: number,
 ) {
   const signs = document.signatures.slice(0, 4)
   if (signs.length === 0) return
   const width = pageWidth - side * 2
   const gap = 8
   const col = (width - gap * (signs.length - 1)) / signs.length
-  const lineY = bottom + mm(24)
   signs.forEach((signature, index) => {
     const x = side + index * (col + gap)
     page.drawLine({
@@ -501,6 +517,50 @@ function drawQr(page: PDFPage, url: string, x: number, y: number) {
       })
     }
   }
+}
+
+function fitLines(
+  text: string,
+  font: PDFFont,
+  maxWidth: number,
+): { size: number; lines: string[] } {
+  const sizes = [8, 7.5, 7, 6.5, 6]
+  for (const size of sizes) {
+    const lines = wrapToWidth(text, font, size, maxWidth)
+    if (lines.length <= 3 && lines.every((line) => font.widthOfTextAtSize(line, size) <= maxWidth + 0.2)) {
+      return { size, lines }
+    }
+  }
+  return { size: 6, lines: wrapToWidth(text, font, 6, maxWidth) }
+}
+
+function wrapToWidth(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) return [text || ""]
+  const chunks = text.split(/(?<=[/-])/).filter(Boolean)
+  const lines: string[] = []
+  let current = ""
+  const pushPiece = (piece: string) => {
+    let rest = piece
+    while (rest && font.widthOfTextAtSize(rest, size) > maxWidth) {
+      let count = rest.length
+      while (count > 1 && font.widthOfTextAtSize(rest.slice(0, count), size) > maxWidth) count -= 1
+      lines.push(rest.slice(0, count))
+      rest = rest.slice(count)
+    }
+    current = rest
+  }
+  for (const chunk of chunks) {
+    const next = current + chunk
+    if (font.widthOfTextAtSize(next, size) <= maxWidth) {
+      current = next
+      continue
+    }
+    if (current) lines.push(current)
+    current = ""
+    pushPiece(chunk)
+  }
+  if (current) lines.push(current)
+  return lines.length > 0 ? lines : [text]
 }
 
 function wrap(words: string[], font: PDFFont, size: number, maxWidth: number): string[] {
