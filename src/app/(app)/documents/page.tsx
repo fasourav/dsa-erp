@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Banknote, ClipboardList, FileText, Receipt, ScrollText, type LucideIcon } from "lucide-react"
+import { Banknote, ClipboardList, FileText, Receipt, ScrollText, Trash2, type LucideIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent } from "@/components/ui/card"
@@ -59,6 +59,24 @@ export default async function DocumentsPage() {
             </Link>
           )
         })}
+        {access.isOwner ? (
+          <Link
+            href="/documents/trash"
+            className="block rounded-card focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <Card className="h-full gap-3 transition-colors hover:bg-fill">
+              <CardContent className="flex flex-col gap-3">
+                <span className="flex size-9 items-center justify-center rounded-tile bg-chart-5 text-on-color tile-sheen">
+                  <Trash2 aria-hidden="true" className="size-4" />
+                </span>
+                <span className="text-panel-title">Trash</span>
+                <span className="text-label text-muted-foreground">
+                  Restore a document or delete it forever.
+                </span>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : null}
       </div>
     </div>
   )

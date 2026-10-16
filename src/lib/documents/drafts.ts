@@ -1,7 +1,29 @@
 export const documentCompanyName = "DynamicSpace Architects & Engineers"
 
+export const defaultSubtitles = {
+  quotation: "Estimate & Financial Proposal",
+  workOrder: "Vendor / Service Provider",
+  purchaseOrder: "Materials Procurement",
+  invoice: "Final Bill",
+  receipt: "Payment Acknowledgement",
+} as const
+
+export function printedSubtitle(value: string, fallback: string): string {
+  const trimmed = value.trim()
+  return trimmed || fallback
+}
+
 export const DEFAULT_PRINT_MARGIN_TOP_MM = 32
 export const DEFAULT_PRINT_MARGIN_BOTTOM_MM = 28
+
+/** Top of the letterhead footer artwork, including the raised logo block. */
+export const LETTERHEAD_FOOTER_MM = 46
+const LETTERHEAD_FOOTER_GAP_MM = 4
+
+/** Content, including the signature row, stays above the footer artwork. */
+export function contentFloorMm(bottomMm: number): number {
+  return Math.max(bottomMm, LETTERHEAD_FOOTER_MM + LETTERHEAD_FOOTER_GAP_MM)
+}
 
 export type PrintMargins = {
   topMm: number

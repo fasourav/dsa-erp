@@ -1,7 +1,13 @@
 import { VerifyQr } from "@/components/documents/verify-qr"
 import type { PrintDocument } from "@/lib/documents/present"
 
-export function DocumentSheet({ document }: { document: PrintDocument }) {
+export function DocumentSheet({
+  document,
+  signatureDrop = 0,
+}: {
+  document: PrintDocument
+  signatureDrop?: number
+}) {
   const rows = document.lines.map((line, index) => ({
     line,
     index,
@@ -147,6 +153,7 @@ export function DocumentSheet({ document }: { document: PrintDocument }) {
           </section>
         ) : null}
 
+        {signatureDrop > 0 ? <div aria-hidden="true" style={{ height: signatureDrop }} /> : null}
         <section className="doc-signs">
           {document.signatures.map((signature) => (
             <div key={signature.label} className="doc-sign">

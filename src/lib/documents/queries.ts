@@ -14,6 +14,7 @@ import {
 } from "@/lib/documents/body"
 import {
   blankLine,
+  defaultSubtitles,
   partyDetail,
   type EmployeeChoice,
   type LineInput,
@@ -61,7 +62,9 @@ export type InvoiceDraft = {
   aitPercent: string
   terms: string
   paymentNote: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
   authorizedBy: string
   lines: LineInput[]
   deductions: MoneyDeduction[]
@@ -86,7 +89,9 @@ export type ReceiptDraft = {
   transferMode: string
   creditedTo: string
   notes: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
 }
 
 export type PurchaseOrderDraft = {
@@ -104,6 +109,7 @@ export type PurchaseOrderDraft = {
   lines: LineInput[]
   carrying: string
   terms: string
+  subtitle: string
   preparedBy: string
   checkedBy: string
   authorizedBy: string
@@ -124,7 +130,9 @@ export type QuotationDraft = {
   terms: string
   exclusions: string
   aitPercent: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
   authorizedBy: string
   lines: LineInput[]
   milestones: MilestoneInput[]
@@ -146,7 +154,9 @@ export type WorkOrderDraft = {
   subject: string
   introduction: string
   terms: string
+  subtitle: string
   preparedBy: string
+  checkedBy: string
   authorizedBy: string
   lines: LineInput[]
   milestones: MilestoneInput[]
@@ -360,7 +370,8 @@ export async function listInvoiceDocuments(): Promise<{
       supabase
         .from("issued_documents")
         .select("client_invoice_id, document_no")
-        .eq("kind", "invoice"),
+        .eq("kind", "invoice")
+        .is("deleted_at", null),
     ])
 
     const printError = storageError(prints.error)
@@ -415,6 +426,7 @@ export async function loadInvoiceDraft(id: string): Promise<{
       .from("issued_documents")
       .select("document_no, verify_token, body, issued_on")
       .eq("client_invoice_id", id)
+      .is("deleted_at", null)
       .maybeSingle(),
   ])
 
@@ -452,7 +464,9 @@ export async function loadInvoiceDraft(id: string): Promise<{
       aitPercent: readText(printResult.data?.body, "aitPercent"),
       terms: readText(printResult.data?.body, "terms"),
       paymentNote: readText(printResult.data?.body, "paymentNote"),
+      subtitle: readText(printResult.data?.body, "subtitle") || defaultSubtitles.invoice,
       preparedBy: readText(printResult.data?.body, "preparedBy"),
+      checkedBy: readText(printResult.data?.body, "checkedBy"),
       authorizedBy: readText(printResult.data?.body, "authorizedBy"),
       lines:
         savedLines.length > 0
@@ -504,7 +518,8 @@ export async function listReceiptDocuments(): Promise<{
       supabase
         .from("issued_documents")
         .select("client_payment_id, document_no")
-        .eq("kind", "receipt"),
+        .eq("kind", "receipt")
+        .is("deleted_at", null),
     ])
     const invoiceClients = new Map(invoices.map((row) => [row.id, row.client_id]))
     const clientNames = new Map(
@@ -565,11 +580,14 @@ export async function loadReceiptDraft(id: string): Promise<{
       .from("issued_documents")
       .select("document_no, verify_token, body")
       .eq("client_payment_id", id)
+      .is("deleted_at", null)
       .maybeSingle(),
     supabase
       .from("issued_documents")
       .select("document_no")
       .eq("client_invoice_id", payment.client_invoice_id)
+      .eq("kind", "invoice")
+      .is("deleted_at", null)
       .maybeSingle(),
   ])
 
@@ -600,7 +618,9 @@ export async function loadReceiptDraft(id: string): Promise<{
       creditedTo:
         readText(body, "creditedTo") || accountResult.data?.account_holder_name?.trim() || accountResult.data?.name?.trim() || "",
       notes: readText(body, "notes") || payment.notes?.trim() || "",
+      subtitle: readText(body, "subtitle") || defaultSubtitles.receipt,
       preparedBy: readText(body, "preparedBy"),
+      checkedBy: readText(body, "checkedBy"),
     },
     error: storageError(printResult.error),
   }
@@ -634,7 +654,8 @@ export async function listPurchaseOrderDocuments(): Promise<{
       supabase
         .from("issued_documents")
         .select("purchase_order_id, document_no")
-        .eq("kind", "purchase_order"),
+        .eq("kind", "purchase_order")
+        .is("deleted_at", null),
     ])
     const vendorNames = new Map(
       vendors.flatMap((row) =>
@@ -684,6 +705,7 @@ export async function loadPurchaseOrderDraft(id: string): Promise<{
     .from("issued_documents")
     .select("document_no, verify_token, body")
     .eq("purchase_order_id", id)
+    .is("deleted_at", null)
     .maybeSingle()
   const vendor = catalog.vendors.find((item) => item.id === order.vendor_id)
   const project = catalog.projects.find((item) => item.id === order.project_id)
@@ -705,6 +727,7 @@ export async function loadPurchaseOrderDraft(id: string): Promise<{
       deliveryOn: readText(body, "deliveryOn"),
       carrying: readText(body, "carrying"),
       terms: readText(body, "terms") || order.notes?.trim() || "",
+      subtitle: readText(body, "subtitle") || defaultSubtitles.purchaseOrder,
       preparedBy: readText(body, "preparedBy"),
       checkedBy: readText(body, "checkedBy"),
       authorizedBy: readText(body, "authorizedBy"),
@@ -734,6 +757,7 @@ export async function listQuotations(): Promise<{
   const { data, error } = await supabase
     .from("quotations")
     .select("id, document_no, issued_on, client_id, total, status")
+    .is("deleted_at", null)
     .order("issued_on", { ascending: false })
   const missing = storageError(error)
   if (error) return { items: [], error: missing }
@@ -771,7 +795,9 @@ export async function loadQuotationDraft(id: string | null): Promise<{
         terms: "",
         exclusions: "",
         aitPercent: "",
+        subtitle: defaultSubtitles.quotation,
         preparedBy: "",
+        checkedBy: "",
         authorizedBy: "",
         lines: [blankLine()],
         milestones: [],
@@ -782,7 +808,7 @@ export async function loadQuotationDraft(id: string | null): Promise<{
 
   if (!isUuid(id)) return { draft: null, error: "That quotation could not be found." }
   const supabase = await createClient()
-  const quotation = await supabase.from("quotations").select("*").eq("id", id).maybeSingle()
+  const quotation = await supabase.from("quotations").select("*").eq("id", id).is("deleted_at", null).maybeSingle()
   if (quotation.error) return { draft: null, error: storageError(quotation.error) }
   if (!quotation.data) return { draft: null, error: "That quotation could not be found." }
 
@@ -816,7 +842,9 @@ export async function loadQuotationDraft(id: string | null): Promise<{
       terms: row.terms,
       exclusions: row.exclusions,
       aitPercent: String(row.ait_percent),
+      subtitle: row.subtitle?.trim() || defaultSubtitles.quotation,
       preparedBy: row.prepared_by,
+      checkedBy: row.checked_by,
       authorizedBy: row.authorized_by,
       lines: (lines.data ?? []).map(rowToLine),
       milestones: (milestones.data ?? []).map(rowToMilestone),
@@ -833,6 +861,7 @@ export async function listWorkOrders(): Promise<{
   const { data, error } = await supabase
     .from("work_orders")
     .select("id, document_no, issued_on, vendor_id, total, status")
+    .is("deleted_at", null)
     .order("issued_on", { ascending: false })
   if (error) return { items: [], error: storageError(error) }
   const catalog = await loadDocumentCatalog()
@@ -870,7 +899,9 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
         subject: "",
         introduction: "",
         terms: "",
+        subtitle: defaultSubtitles.workOrder,
         preparedBy: "",
+        checkedBy: "",
         authorizedBy: "",
         lines: [blankLine()],
         milestones: [],
@@ -881,7 +912,7 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
 
   if (!isUuid(id)) return { draft: null, error: "That work order could not be found." }
   const supabase = await createClient()
-  const order = await supabase.from("work_orders").select("*").eq("id", id).maybeSingle()
+  const order = await supabase.from("work_orders").select("*").eq("id", id).is("deleted_at", null).maybeSingle()
   if (order.error) return { draft: null, error: storageError(order.error) }
   if (!order.data) return { draft: null, error: "That work order could not be found." }
 
@@ -915,7 +946,9 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
       subject: row.subject,
       introduction: row.introduction,
       terms: row.terms,
+      subtitle: row.subtitle?.trim() || defaultSubtitles.workOrder,
       preparedBy: row.prepared_by,
+      checkedBy: row.checked_by,
       authorizedBy: row.authorized_by,
       lines: (lines.data ?? []).map(rowToLine),
       milestones: (milestones.data ?? []).map(rowToMilestone),
@@ -970,8 +1003,86 @@ export async function workOrderForPurchaseOrder(purchaseOrderId: string): Promis
     .from("work_orders")
     .select("id")
     .eq("purchase_order_id", purchaseOrderId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(1)
   if (error) return null
   return data?.[0]?.id ?? null
+}
+
+export type TrashedDocument = {
+  id: string
+  kind: "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order"
+  kindLabel: string
+  documentNo: string
+  detail: string
+}
+
+export async function listTrashedDocuments(): Promise<{
+  items: TrashedDocument[]
+  error: string | null
+}> {
+  const supabase = await createClient()
+  const [quotations, orders, issued] = await Promise.all([
+    supabase
+      .from("quotations")
+      .select("id, document_no, issued_on, deleted_at")
+      .not("deleted_at", "is", null),
+    supabase
+      .from("work_orders")
+      .select("id, document_no, issued_on, deleted_at")
+      .not("deleted_at", "is", null),
+    supabase
+      .from("issued_documents")
+      .select("id, kind, document_no, issued_on, deleted_at")
+      .not("deleted_at", "is", null),
+  ])
+  const error = quotations.error ?? orders.error ?? issued.error
+  if (error) return { items: [], error: storageError(error) }
+
+  const items: Array<TrashedDocument & { deletedAt: string }> = [
+    ...(quotations.data ?? []).map((row) => ({
+      id: row.id,
+      kind: "quotation" as const,
+      kindLabel: "Quotation",
+      documentNo: row.document_no,
+      detail: formatIsoDate(dateInputValue(row.issued_on)),
+      deletedAt: row.deleted_at ?? "",
+    })),
+    ...(orders.data ?? []).map((row) => ({
+      id: row.id,
+      kind: "work_order" as const,
+      kindLabel: "Work Order",
+      documentNo: row.document_no,
+      detail: formatIsoDate(dateInputValue(row.issued_on)),
+      deletedAt: row.deleted_at ?? "",
+    })),
+    ...(issued.data ?? []).flatMap((row) => {
+      const kind: TrashedDocument["kind"] =
+        row.kind === "invoice" ? "invoice" : row.kind === "receipt" ? "receipt" : "purchase_order"
+      const kindLabel =
+        kind === "invoice" ? "Invoice" : kind === "receipt" ? "Money Receipt" : "Purchase Order"
+      return [
+        {
+          id: row.id,
+          kind,
+          kindLabel,
+          documentNo: row.document_no,
+          detail: formatIsoDate(dateInputValue(row.issued_on)),
+          deletedAt: row.deleted_at ?? "",
+        },
+      ]
+    }),
+  ]
+  items.sort((left, right) => right.deletedAt.localeCompare(left.deletedAt))
+  return {
+    items: items.map((item) => ({
+      id: item.id,
+      kind: item.kind,
+      kindLabel: item.kindLabel,
+      documentNo: item.documentNo,
+      detail: item.detail,
+    })),
+    error: null,
+  }
 }

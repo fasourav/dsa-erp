@@ -638,10 +638,13 @@ export type Database = {
           client_invoice_id: string | null
           client_payment_id: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           document_no: string
           id: string
           issued_on: string
           kind: string
+          old_number: string | null
           purchase_order_id: string | null
           status: string
           total: number
@@ -653,10 +656,13 @@ export type Database = {
           client_invoice_id?: string | null
           client_payment_id?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           document_no: string
           id?: string
           issued_on: string
           kind: string
+          old_number?: string | null
           purchase_order_id?: string | null
           status: string
           total: number
@@ -668,10 +674,13 @@ export type Database = {
           client_invoice_id?: string | null
           client_payment_id?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           document_no?: string
           id?: string
           issued_on?: string
           kind?: string
+          old_number?: string | null
           purchase_order_id?: string | null
           status?: string
           total?: number
@@ -745,16 +754,21 @@ export type Database = {
           ait_percent: number
           area: string
           authorized_by: string
+          checked_by: string
           client_id: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           document_no: string
           exclusions: string
           id: string
           issued_on: string
+          old_number: string | null
           prepared_by: string
           project_id: string | null
           status: string
           subject: string
+          subtitle: string
           terms: string
           total: number
           updated_at: string
@@ -765,16 +779,21 @@ export type Database = {
           ait_percent?: number
           area?: string
           authorized_by?: string
+          checked_by?: string
           client_id: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           document_no: string
           exclusions?: string
           id?: string
           issued_on: string
+          old_number?: string | null
           prepared_by?: string
           project_id?: string | null
           status?: string
           subject?: string
+          subtitle?: string
           terms?: string
           total?: number
           updated_at?: string
@@ -785,16 +804,21 @@ export type Database = {
           ait_percent?: number
           area?: string
           authorized_by?: string
+          checked_by?: string
           client_id?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           document_no?: string
           exclusions?: string
           id?: string
           issued_on?: string
+          old_number?: string | null
           prepared_by?: string
           project_id?: string | null
           status?: string
           subject?: string
+          subtitle?: string
           terms?: string
           total?: number
           updated_at?: string
@@ -866,17 +890,22 @@ export type Database = {
       work_orders: {
         Row: {
           authorized_by: string
+          checked_by: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           document_no: string
           id: string
           introduction: string
           issued_on: string
+          old_number: string | null
           prepared_by: string
           project_id: string | null
-          purchase_order_id: string | null
           proposal_on: string | null
+          purchase_order_id: string | null
           status: string
           subject: string
+          subtitle: string
           terms: string
           total: number
           updated_at: string
@@ -887,17 +916,22 @@ export type Database = {
         }
         Insert: {
           authorized_by?: string
+          checked_by?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           document_no: string
           id?: string
           introduction?: string
           issued_on: string
+          old_number?: string | null
           prepared_by?: string
           project_id?: string | null
-          purchase_order_id?: string | null
           proposal_on?: string | null
+          purchase_order_id?: string | null
           status?: string
           subject?: string
+          subtitle?: string
           terms?: string
           total?: number
           updated_at?: string
@@ -908,17 +942,22 @@ export type Database = {
         }
         Update: {
           authorized_by?: string
+          checked_by?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           document_no?: string
           id?: string
           introduction?: string
           issued_on?: string
+          old_number?: string | null
           prepared_by?: string
           project_id?: string | null
-          purchase_order_id?: string | null
           proposal_on?: string | null
+          purchase_order_id?: string | null
           status?: string
           subject?: string
+          subtitle?: string
           terms?: string
           total?: number
           updated_at?: string

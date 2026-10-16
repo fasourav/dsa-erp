@@ -1,8 +1,9 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 
-import { savePurchaseOrderPrint } from "@/app/(app)/documents/actions"
+import { savePurchaseOrderPrint, trashSavedDocument } from "@/app/(app)/documents/actions"
 import { useCan } from "@/components/access-provider"
 import {
   AreaField,
@@ -15,6 +16,7 @@ import { DocumentWorkspace } from "@/components/documents/document-workspace"
 import { roleFor, type EmployeeChoice, type PrintMargins } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentPurchaseOrder } from "@/lib/documents/present"
+import { savedToast } from "@/lib/saved"
 import type { PurchaseOrderDraft } from "@/lib/documents/queries"
 
 export function PurchaseOrderStudio({
@@ -28,6 +30,7 @@ export function PurchaseOrderStudio({
   origin: string
   margins: PrintMargins
 }) {
+  const router = useRouter()
   const [form, setForm] = useState(draft)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
@@ -47,6 +50,7 @@ export function PurchaseOrderStudio({
         lines: form.lines,
         carrying: form.carrying,
         terms: form.terms,
+        subtitle: form.subtitle,
         preparedBy: form.preparedBy,
         preparedByRole: roleFor(employees, form.preparedBy),
         checkedBy: form.checkedBy,
@@ -64,6 +68,15 @@ export function PurchaseOrderStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
+      canTrash={form.exists}
+      trashName={form.documentNo || "This purchase order"}
+      onTrash={async () => {
+        const result = await trashSavedDocument({ kind: "purchase_order", id: form.id })
+        if (result.error) return result.error
+        savedToast("Moved To Trash.")
+        router.push("/documents/purchase-orders")
+        return null
+      }}
       pending={pending}
       error={error}
       files={{ parentType: "purchase_order", parentId: form.id }}
@@ -89,6 +102,13 @@ export function PurchaseOrderStudio({
     >
       <ReadOnlyField label="Vendor Name" value={form.vendorName} />
       <ReadOnlyField label="Project Name" value={form.projectName} />
+      <TextField
+        id="subtitle"
+        label="Subtitle"
+        value={form.subtitle}
+        disabled={!canSave}
+        onChange={(subtitle) => setForm({ ...form, subtitle })}
+      />
       <AreaField
         id="vendor-detail"
         label="Vendor Address"

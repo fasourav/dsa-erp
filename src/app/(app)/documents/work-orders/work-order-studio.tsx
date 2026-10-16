@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
-import { saveWorkOrder } from "@/app/(app)/documents/actions"
+import { saveWorkOrder, trashSavedDocument } from "@/app/(app)/documents/actions"
 import { saveDocumentAsTemplate } from "@/app/(app)/settings/document-template-actions"
 import { useCan } from "@/components/access-provider"
 import {
@@ -115,8 +115,11 @@ export function WorkOrderStudio({
         lines: form.lines,
         milestones: form.milestones,
         terms: form.terms,
+        subtitle: form.subtitle,
         preparedBy: form.preparedBy,
         preparedByRole: roleFor(employees, form.preparedBy),
+        checkedBy: form.checkedBy,
+        checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
       }),
@@ -131,6 +134,16 @@ export function WorkOrderStudio({
       preview={preview}
       canSave={canSave}
       canShare={canSave}
+      canTrash={Boolean(form.id)}
+      trashName={form.documentNo || "This work order"}
+      onTrash={async () => {
+        if (!form.id) return "Save the work order before deleting it."
+        const result = await trashSavedDocument({ kind: "work_order", id: form.id })
+        if (result.error) return result.error
+        savedToast("Moved To Trash.")
+        router.push("/documents/work-orders")
+        return null
+      }}
       pending={pending}
       error={error}
       files={{ parentType: "work_order", parentId: form.id }}
@@ -273,6 +286,13 @@ export function WorkOrderStudio({
           onChange={(workEnd) => setForm({ ...form, workEnd })}
         />
       </div>
+      <TextField
+        id="subtitle"
+        label="Subtitle"
+        value={form.subtitle}
+        disabled={!canSave}
+        onChange={(subtitle) => setForm({ ...form, subtitle })}
+      />
       <ChoiceField
         id="status"
         label="Status"
@@ -319,6 +339,14 @@ export function WorkOrderStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(preparedBy) => setForm({ ...form, preparedBy })}
+      />
+      <EmployeeField
+        id="checked-by"
+        label="Checked By"
+        value={form.checkedBy}
+        employees={employees}
+        disabled={!canSave}
+        onChange={(checkedBy) => setForm({ ...form, checkedBy })}
       />
       <EmployeeField
         id="authorized-by"

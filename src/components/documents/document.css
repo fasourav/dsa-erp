@@ -338,8 +338,9 @@
 
 .doc-signs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(36mm, 1fr));
   gap: var(--doc-gap);
+  margin-top: 18mm;
 }
 
 .doc-sign {
