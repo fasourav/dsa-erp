@@ -33,9 +33,16 @@ yarn-error.log*
 # local env files — commit .env.local.example, never a real .env.local
 .env
 .env*.local
+.env*.bak
 
 # vercel
 .vercel
+
+# supabase cli temp
+supabase/.temp/
+
+# local worker logs
+.worker-start*.log
 
 # typescript
 *.tsbuildinfo
