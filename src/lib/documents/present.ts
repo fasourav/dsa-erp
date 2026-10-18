@@ -2,7 +2,9 @@ import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   defaultSubtitles,
   documentCompanyName,
+  isSignatureEnabled,
   printedSubtitle,
+  signatureName,
   type LineInput,
   type MilestoneInput,
 } from "@/lib/documents/drafts"
@@ -180,21 +182,7 @@ export function presentQuotation(input: {
     exclusions: input.exclusions.trim(),
     notes: "",
     signatures: [
-      {
-        label: "Prepared By",
-        name: input.preparedBy,
-        detail: input.preparedByRole,
-      },
-      {
-        label: "Checked By",
-        name: input.checkedBy,
-        detail: input.checkedByRole,
-      },
-      {
-        label: "Authorized Signature",
-        name: input.authorizedBy,
-        detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
-      },
+      ...optionalStaffSignatures(input),
       {
         label: "Accepted By (Client)",
         name: input.clientName,
@@ -276,21 +264,7 @@ export function presentWorkOrder(input: {
     exclusions: "",
     notes: "",
     signatures: [
-      {
-        label: "Prepared By",
-        name: input.preparedBy,
-        detail: input.preparedByRole,
-      },
-      {
-        label: "Checked By",
-        name: input.checkedBy,
-        detail: input.checkedByRole,
-      },
-      {
-        label: "Authorized Signature",
-        name: input.authorizedBy,
-        detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
-      },
+      ...optionalStaffSignatures(input),
       {
         label: "Accepted By (Vendor)",
         name: input.vendorName,
@@ -378,13 +352,7 @@ export function presentInvoice(input: {
     exclusions: "",
     notes: input.paymentNote.trim(),
     signatures: [
-      { label: "Prepared By", name: input.preparedBy, detail: input.preparedByRole },
-      { label: "Checked By", name: input.checkedBy, detail: input.checkedByRole },
-      {
-        label: "Authorized Signature",
-        name: input.authorizedBy,
-        detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
-      },
+      ...optionalStaffSignatures(input),
       {
         label: "Received By",
         name: "",
@@ -415,6 +383,8 @@ export function presentReceipt(input: {
   preparedByRole: string
   checkedBy: string
   checkedByRole: string
+  authorizedBy?: string
+  authorizedByRole?: string
 }): PrintDocument {
   return {
     kicker: "Money Receipt",
@@ -466,15 +436,14 @@ export function presentReceipt(input: {
     ]
       .filter(Boolean)
       .join("\n"),
-    signatures: [
-      { label: "Prepared By", name: input.preparedBy, detail: input.preparedByRole },
-      { label: "Checked By", name: input.checkedBy, detail: input.checkedByRole },
-      {
-        label: "Authorized Signature",
-        name: "",
-        detail: documentCompanyName,
-      },
-    ],
+    signatures: optionalStaffSignatures({
+      preparedBy: input.preparedBy,
+      preparedByRole: input.preparedByRole,
+      checkedBy: input.checkedBy,
+      checkedByRole: input.checkedByRole,
+      authorizedBy: input.authorizedBy ?? "",
+      authorizedByRole: input.authorizedByRole ?? "",
+    }),
   }
 }
 
@@ -539,16 +508,41 @@ export function presentPurchaseOrder(input: {
     terms: input.terms.trim(),
     exclusions: "",
     notes: "",
-    signatures: [
-      { label: "Prepared By", name: input.preparedBy, detail: input.preparedByRole },
-      { label: "Checked By", name: input.checkedBy, detail: input.checkedByRole },
-      {
-        label: "Authorized Signature",
-        name: input.authorizedBy,
-        detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
-      },
-    ],
+    signatures: optionalStaffSignatures(input),
   }
+}
+
+function optionalStaffSignatures(input: {
+  preparedBy: string
+  preparedByRole: string
+  checkedBy: string
+  checkedByRole: string
+  authorizedBy: string
+  authorizedByRole: string
+}): PrintDocument["signatures"] {
+  const rows: PrintDocument["signatures"] = []
+  if (isSignatureEnabled(input.preparedBy)) {
+    rows.push({
+      label: "Prepared By",
+      name: signatureName(input.preparedBy),
+      detail: input.preparedByRole,
+    })
+  }
+  if (isSignatureEnabled(input.checkedBy)) {
+    rows.push({
+      label: "Checked By",
+      name: signatureName(input.checkedBy),
+      detail: input.checkedByRole,
+    })
+  }
+  if (isSignatureEnabled(input.authorizedBy)) {
+    rows.push({
+      label: "Authorized Signature",
+      name: signatureName(input.authorizedBy),
+      detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
+    })
+  }
+  return rows
 }
 
 export function grandTotal(lines: LineInput[], aitPercent: string, extra = 0): number {

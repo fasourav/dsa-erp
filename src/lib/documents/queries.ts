@@ -92,6 +92,7 @@ export type ReceiptDraft = {
   subtitle: string
   preparedBy: string
   checkedBy: string
+  authorizedBy: string
 }
 
 export type PurchaseOrderDraft = {
@@ -194,74 +195,102 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
   }
 
   try {
-    const [clientRows, summaryRows, projectRows, vendorRows, vendorSummaryRows, employeeRows, methodRows] =
-      await Promise.all([
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("clients")
-              .select("id, person_name, company_name, address, phone, email")
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Client list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("client_summaries")
-              .select("client_id, display_name")
-              .order("client_id", { ascending: true })
-              .range(from, to),
-          "Client list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("projects")
-              .select("id, name, client_id, location")
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Project list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("vendors")
-              .select("id, person_name, company_name, address, phone, email")
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Vendor list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("vendor_summaries")
-              .select("vendor_id, display_name")
-              .order("vendor_id", { ascending: true })
-              .range(from, to),
-          "Vendor list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("employees")
-              .select("full_name, designation, is_active")
-              .eq("is_active", true)
-              .order("full_name", { ascending: true })
-              .range(from, to),
-          "Employee list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("payment_methods")
-              .select("name, sort_order")
-              .order("sort_order", { ascending: true })
-              .order("name", { ascending: true })
-              .range(from, to),
-          "Payment method list is larger than expected.",
-        ),
-      ])
+    const [
+      clientRows,
+      summaryRows,
+      projectRows,
+      vendorRows,
+      vendorSummaryRows,
+      employeeRows,
+      profileRows,
+      roleTemplateRows,
+      methodRows,
+    ] = await Promise.all([
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("clients")
+            .select("id, person_name, company_name, address, phone, email")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Client list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("client_summaries")
+            .select("client_id, display_name")
+            .order("client_id", { ascending: true })
+            .range(from, to),
+        "Client list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("projects")
+            .select("id, name, client_id, location")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Project list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("vendors")
+            .select("id, person_name, company_name, address, phone, email")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Vendor list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("vendor_summaries")
+            .select("vendor_id, display_name")
+            .order("vendor_id", { ascending: true })
+            .range(from, to),
+        "Vendor list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("employees_readable")
+            .select("full_name, designation, department, is_active")
+            .eq("is_active", true)
+            .order("full_name", { ascending: true })
+            .range(from, to),
+        "Employee list is larger than expected.",
+      ).catch(() => []),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("profiles")
+            .select("display_name, designation, role, status")
+            .eq("status", "active")
+            .order("display_name", { ascending: true })
+            .range(from, to),
+        "Profile list is larger than expected.",
+      ).catch(() => []),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("role_templates")
+            .select("key, label")
+            .order("key", { ascending: true })
+            .range(from, to),
+        "Role list is larger than expected.",
+      ).catch(() => []),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("payment_methods")
+            .select("name, sort_order")
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true })
+            .range(from, to),
+        "Payment method list is larger than expected.",
+      ).catch(() => []),
+    ])
 
     const clientNames = new Map(
       summaryRows.flatMap((row) =>
@@ -319,11 +348,43 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
       }))
       .sort((left, right) => left.name.localeCompare(right.name, "en", { sensitivity: "base" }))
 
-    const employees = employeeRows.flatMap((row) => {
+    const roleLabels = new Map<string, string>([
+      ["owner", "Owner"],
+      ["admin", "Admin"],
+      ["manager", "Manager"],
+      ["accountant", "Accountant"],
+      ["viewer", "Viewer"],
+    ])
+    for (const row of roleTemplateRows) {
+      const key = row.key?.trim()
+      const label = row.label?.trim()
+      if (key && label) roleLabels.set(key, label)
+    }
+
+    const employeeByKey = new Map<string, EmployeeChoice>()
+    for (const row of employeeRows) {
       const name = row.full_name?.trim() ?? ""
-      if (!name) return []
-      return [{ name, designation: row.designation?.trim() ?? "" }]
-    })
+      if (!name) continue
+      const designation = row.designation?.trim() || row.department?.trim() || ""
+      employeeByKey.set(name.toLowerCase(), { name, designation })
+    }
+    for (const row of profileRows) {
+      const name = row.display_name?.trim() ?? ""
+      if (!name) continue
+      const key = name.toLowerCase()
+      const roleKey = row.role?.trim() ?? ""
+      const roleTitle = roleLabels.get(roleKey) || roleKey
+      const designation = row.designation?.trim() || roleTitle
+      const existing = employeeByKey.get(key)
+      if (!existing) {
+        employeeByKey.set(key, { name, designation })
+      } else if (!existing.designation && designation) {
+        employeeByKey.set(key, { ...existing, designation })
+      }
+    }
+    const employees = Array.from(employeeByKey.values()).sort((left, right) =>
+      left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+    )
 
     return {
       clients,
@@ -369,17 +430,21 @@ export async function listInvoiceDocuments(): Promise<{
       ),
       supabase
         .from("issued_documents")
-        .select("client_invoice_id, document_no")
-        .eq("kind", "invoice")
-        .is("deleted_at", null),
+        .select("client_invoice_id, document_no, deleted_at")
+        .eq("kind", "invoice"),
     ])
 
     const printError = storageError(prints.error)
-    const numbers = new Map(
-      (prints.data ?? []).flatMap((row) =>
-        row.client_invoice_id ? [[row.client_invoice_id, row.document_no] as const] : [],
-      ),
-    )
+    const numbers = new Map<string, string>()
+    const trashedIds = new Set<string>()
+    for (const row of prints.data ?? []) {
+      if (!row.client_invoice_id) continue
+      if (row.deleted_at) {
+        trashedIds.add(row.client_invoice_id)
+      } else {
+        numbers.set(row.client_invoice_id, row.document_no)
+      }
+    }
     const clientNames = new Map(
       clients.flatMap((row) =>
         row.client_id ? [[row.client_id, row.display_name?.trim() || "—"] as const] : [],
@@ -389,7 +454,7 @@ export async function listInvoiceDocuments(): Promise<{
 
     return {
       items: invoices
-        .filter((row) => row.status !== "void")
+        .filter((row) => row.status !== "void" && (!trashedIds.has(row.id) || numbers.has(row.id)))
         .map((row) => ({
           id: row.id,
           title: clientNames.get(row.client_id) || "—",
@@ -517,9 +582,8 @@ export async function listReceiptDocuments(): Promise<{
       ),
       supabase
         .from("issued_documents")
-        .select("client_payment_id, document_no")
-        .eq("kind", "receipt")
-        .is("deleted_at", null),
+        .select("client_payment_id, document_no, deleted_at")
+        .eq("kind", "receipt"),
     ])
     const invoiceClients = new Map(invoices.map((row) => [row.id, row.client_id]))
     const clientNames = new Map(
@@ -527,19 +591,26 @@ export async function listReceiptDocuments(): Promise<{
         row.client_id ? [[row.client_id, row.display_name?.trim() || "—"] as const] : [],
       ),
     )
-    const numbers = new Map(
-      (prints.data ?? []).flatMap((row) =>
-        row.client_payment_id ? [[row.client_payment_id, row.document_no] as const] : [],
-      ),
-    )
+    const numbers = new Map<string, string>()
+    const trashedIds = new Set<string>()
+    for (const row of prints.data ?? []) {
+      if (!row.client_payment_id) continue
+      if (row.deleted_at) {
+        trashedIds.add(row.client_payment_id)
+      } else {
+        numbers.set(row.client_payment_id, row.document_no)
+      }
+    }
 
     return {
-      items: payments.map((row) => ({
-        id: row.id,
-        title: clientNames.get(invoiceClients.get(row.client_invoice_id) ?? "") || "—",
-        detail: `${formatIsoDate(dateInputValue(row.paid_on))} · ${row.method?.trim() || "Payment"} · ${formatMoney(toNumber(row.amount))}`,
-        documentNo: numbers.get(row.id) ?? "",
-      })),
+      items: payments
+        .filter((row) => !trashedIds.has(row.id) || numbers.has(row.id))
+        .map((row) => ({
+          id: row.id,
+          title: clientNames.get(invoiceClients.get(row.client_invoice_id) ?? "") || "—",
+          detail: `${formatIsoDate(dateInputValue(row.paid_on))} · ${row.method?.trim() || "Payment"} · ${formatMoney(toNumber(row.amount))}`,
+          documentNo: numbers.get(row.id) ?? "",
+        })),
       error: storageError(prints.error),
     }
   } catch {
@@ -621,6 +692,7 @@ export async function loadReceiptDraft(id: string): Promise<{
       subtitle: readText(body, "subtitle") || defaultSubtitles.receipt,
       preparedBy: readText(body, "preparedBy"),
       checkedBy: readText(body, "checkedBy"),
+      authorizedBy: readText(body, "authorizedBy"),
     },
     error: storageError(printResult.error),
   }
@@ -653,9 +725,8 @@ export async function listPurchaseOrderDocuments(): Promise<{
       ),
       supabase
         .from("issued_documents")
-        .select("purchase_order_id, document_no")
-        .eq("kind", "purchase_order")
-        .is("deleted_at", null),
+        .select("purchase_order_id, document_no, deleted_at")
+        .eq("kind", "purchase_order"),
     ])
     const vendorNames = new Map(
       vendors.flatMap((row) =>
@@ -663,19 +734,26 @@ export async function listPurchaseOrderDocuments(): Promise<{
       ),
     )
     const projectNames = new Map(projects.map((row) => [row.id, row.name?.trim() || "—"]))
-    const numbers = new Map(
-      (prints.data ?? []).flatMap((row) =>
-        row.purchase_order_id ? [[row.purchase_order_id, row.document_no] as const] : [],
-      ),
-    )
+    const numbers = new Map<string, string>()
+    const trashedIds = new Set<string>()
+    for (const row of prints.data ?? []) {
+      if (!row.purchase_order_id) continue
+      if (row.deleted_at) {
+        trashedIds.add(row.purchase_order_id)
+      } else {
+        numbers.set(row.purchase_order_id, row.document_no)
+      }
+    }
 
     return {
-      items: orders.map((row) => ({
-        id: row.id,
-        title: vendorNames.get(row.vendor_id) || "—",
-        detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${row.project_id ? projectNames.get(row.project_id) || "—" : "—"} · ${formatMoney(toNumber(row.total_value))}`,
-        documentNo: numbers.get(row.id) ?? "",
-      })),
+      items: orders
+        .filter((row) => !trashedIds.has(row.id) || numbers.has(row.id))
+        .map((row) => ({
+          id: row.id,
+          title: vendorNames.get(row.vendor_id) || "—",
+          detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${row.project_id ? projectNames.get(row.project_id) || "—" : "—"} · ${formatMoney(toNumber(row.total_value))}`,
+          documentNo: numbers.get(row.id) ?? "",
+        })),
       error: storageError(prints.error),
     }
   } catch {
@@ -1034,8 +1112,9 @@ export async function listTrashedDocuments(): Promise<{
       .not("deleted_at", "is", null),
     supabase
       .from("issued_documents")
-      .select("id, kind, document_no, issued_on, deleted_at")
-      .not("deleted_at", "is", null),
+      .select("id, kind, document_no, issued_on, deleted_at, status")
+      .not("deleted_at", "is", null)
+      .neq("status", "deleted"),
   ])
   const error = quotations.error ?? orders.error ?? issued.error
   if (error) return { items: [], error: storageError(error) }

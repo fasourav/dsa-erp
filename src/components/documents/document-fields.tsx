@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -17,6 +18,9 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   blankLine,
   blankMilestone,
+  isSignatureEnabled,
+  SIGNATURE_OFF,
+  signatureName,
   type EmployeeChoice,
   type LineInput,
   type MilestoneInput,
@@ -142,24 +146,52 @@ export function EmployeeField({
   onChange: (value: string) => void
   disabled?: boolean
 }) {
+  const enabled = isSignatureEnabled(value)
+  const current = signatureName(value)
   const names = new Set(employees.map((employee) => employee.name))
   const options = [
     { value: "none", label: "—" },
-    ...(value && !names.has(value) ? [{ value, label: value }] : []),
+    ...(current && !names.has(current) ? [{ value: current, label: current }] : []),
     ...employees.map((employee) => ({
       value: employee.name,
       label: employee.designation ? `${employee.name} · ${employee.designation}` : employee.name,
     })),
   ]
+  const selected = current || "none"
+
   return (
-    <ChoiceField
-      id={id}
-      label={label}
-      value={value || "none"}
-      options={options}
-      disabled={disabled}
-      onChange={(next) => onChange(next === "none" ? "" : next)}
-    />
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id={`${id}-enabled`}
+          checked={enabled}
+          disabled={disabled}
+          onCheckedChange={(checked) => onChange(checked ? "" : SIGNATURE_OFF)}
+        />
+        <Label htmlFor={`${id}-enabled`} className="cursor-pointer">
+          {label}
+        </Label>
+      </div>
+      {enabled ? (
+        <Select
+          items={options}
+          value={selected}
+          disabled={disabled || options.length === 0}
+          onValueChange={(next) => onChange(!next || next === "none" ? "" : next)}
+        >
+          <SelectTrigger id={id} className="w-full" aria-label={label}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
+    </div>
   )
 }
 

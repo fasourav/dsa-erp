@@ -265,6 +265,7 @@ export async function saveReceiptPrint(input: {
   subtitle: string
   preparedBy: string
   checkedBy: string
+  authorizedBy?: string
 }): Promise<DocumentSaveResult> {
   if (!isUuid(input.paymentId)) return { error: "That payment could not be found." }
   if (!input.description.trim()) return { error: "Enter what this receipt is for." }
@@ -300,6 +301,7 @@ export async function saveReceiptPrint(input: {
     subtitle: clip(input.subtitle, 160),
     preparedBy: clip(input.preparedBy, 120),
     checkedBy: clip(input.checkedBy, 120),
+    authorizedBy: clip(input.authorizedBy ?? "", 120),
   }
   const issuedOn = payment.data.paid_on
   const total = Number(payment.data.amount)
@@ -812,7 +814,7 @@ async function applyTrash(
   if (mode === "delete") {
     const { data, error } = await supabase
       .from("issued_documents")
-      .delete()
+      .update({ status: "deleted" })
       .eq("id", id)
       .eq("kind", issuedKind)
       .not("deleted_at", "is", null)
@@ -824,35 +826,164 @@ async function applyTrash(
   if (mode === "restore") {
     const blocked = await activePrintBlocksRestore(supabase, id, issuedKind, column)
     if (blocked) return { error: blocked }
-  }
-  const query =
-    mode === "trash"
-      ? supabase
-          .from("issued_documents")
-          .update(patch ?? { deleted_at: null, deleted_by: null })
-          .eq(column, id)
-          .eq("kind", issuedKind)
-          .is("deleted_at", null)
-      : supabase
-          .from("issued_documents")
-          .update(patch ?? { deleted_at: null, deleted_by: null })
-          .eq("id", id)
-          .eq("kind", issuedKind)
-          .not("deleted_at", "is", null)
-  const { data, error } = await query.select("id")
-  if (error?.code === "23505" && mode === "restore") {
-    return { error: duplicatePrintMessage }
-  }
-  if (error) {
-    return {
-      error: writeError(
-        error,
-        mode === "restore" ? "Could not restore this document." : "Could not move this document to Trash.",
-      ),
+    const { data: trashedRow, error: trashedError } = await supabase
+      .from("issued_documents")
+      .select("id, status")
+      .eq("id", id)
+      .eq("kind", issuedKind)
+      .not("deleted_at", "is", null)
+      .maybeSingle()
+    if (trashedError) return { error: writeError(trashedError, "Could not restore this document.") }
+    if (!trashedRow) return { error: missing }
+    if (trashedRow.status === "draft") {
+      const { error: delError } = await supabase
+        .from("issued_documents")
+        .delete()
+        .eq("id", id)
+        .eq("kind", issuedKind)
+        .not("deleted_at", "is", null)
+      if (delError) return { error: writeError(delError, "Could not restore this document.") }
+      return { error: null }
     }
+    const { data, error } = await supabase
+      .from("issued_documents")
+      .update(patch ?? { deleted_at: null, deleted_by: null })
+      .eq("id", id)
+      .eq("kind", issuedKind)
+      .not("deleted_at", "is", null)
+      .select("id")
+    if (error?.code === "23505") return { error: duplicatePrintMessage }
+    if (error) return { error: writeError(error, "Could not restore this document.") }
+    if (!data?.length) return { error: missing }
+    return { error: null }
   }
-  if (!data?.length) return { error: missing }
-  return { error: null }
+
+  const { data, error } = await supabase
+    .from("issued_documents")
+    .update(patch ?? { deleted_at: null, deleted_by: null })
+    .eq(column, id)
+    .eq("kind", issuedKind)
+    .is("deleted_at", null)
+    .select("id")
+  if (error) {
+    return { error: writeError(error, "Could not move this document to Trash.") }
+  }
+  if (data?.length) return { error: null }
+
+  return trashUnprintedDocument(supabase, issuedKind, column, id, patch)
+}
+
+async function trashUnprintedDocument(
+  supabase: DocumentClient,
+  issuedKind: "invoice" | "receipt" | "purchase_order",
+  column: "client_invoice_id" | "client_payment_id" | "purchase_order_id",
+  parentId: string,
+  patch: { deleted_at: string | null; deleted_by: string | null } | null,
+): Promise<{ error: string | null }> {
+  const missing = "That document could not be found."
+  if (!patch?.deleted_at) return { error: missing }
+
+  const existingTrashed = await supabase
+    .from("issued_documents")
+    .select("id")
+    .eq(column, parentId)
+    .eq("kind", issuedKind)
+    .not("deleted_at", "is", null)
+    .limit(1)
+  if (existingTrashed.data?.[0]?.id) {
+    const { error } = await supabase
+      .from("issued_documents")
+      .update({ ...patch, status: "draft" })
+      .eq("id", existingTrashed.data[0].id)
+    if (error) return { error: writeError(error, "Could not move this document to Trash.") }
+    return { error: null }
+  }
+
+  let issuedOn = ""
+  let total = 0
+  let base = ""
+
+  if (issuedKind === "purchase_order") {
+    const order = await supabase
+      .from("vendor_purchase_orders")
+      .select("id, issued_on, total_value, vendor_id, project_id")
+      .eq("id", parentId)
+      .maybeSingle()
+    if (order.error || !order.data) return { error: missing }
+    issuedOn = order.data.issued_on
+    total = Math.max(0, Number(order.data.total_value) || 0)
+    const names = await vendorProjectNames(supabase, order.data.vendor_id, order.data.project_id)
+    base = orderNumber(issuedOn.slice(0, 10), names.vendor, names.project)
+  } else if (issuedKind === "invoice") {
+    const invoice = await supabase
+      .from("client_invoices")
+      .select("id, issued_on, amount, status, client_id, project_id")
+      .eq("id", parentId)
+      .maybeSingle()
+    if (invoice.error || !invoice.data || invoice.data.status === "void") return { error: missing }
+    issuedOn = invoice.data.issued_on
+    total = Math.max(0, Number(invoice.data.amount) || 0)
+    const names = await clientProjectNames(supabase, invoice.data.client_id, invoice.data.project_id)
+    base = invoiceNumber(issuedOn.slice(0, 10), names.client, names.project)
+  } else {
+    const payment = await supabase
+      .from("client_payments")
+      .select("id, paid_on, amount, client_invoice_id")
+      .eq("id", parentId)
+      .maybeSingle()
+    if (payment.error || !payment.data) return { error: missing }
+    issuedOn = payment.data.paid_on
+    total = Math.max(0, Number(payment.data.amount) || 0)
+    const bill = await supabase
+      .from("client_invoices")
+      .select("client_id, project_id")
+      .eq("id", payment.data.client_invoice_id)
+      .maybeSingle()
+    const names = await clientProjectNames(
+      supabase,
+      bill.data?.client_id ?? "",
+      bill.data?.project_id ?? null,
+    )
+    base = receiptNumber(issuedOn.slice(0, 10), names.client, names.project)
+  }
+
+  for (let attempt = 1; attempt <= 16; attempt += 1) {
+    const documentNo =
+      attempt <= 8
+        ? collisionNumber(base, attempt)
+        : `${base}-${randomBytes(2).toString("hex").toUpperCase()}`
+    if (await numberTaken(supabase, documentNo)) continue
+    const { data: inserted, error: insertError } = await supabase
+      .from("issued_documents")
+      .insert({
+        kind: issuedKind,
+        client_invoice_id: column === "client_invoice_id" ? parentId : null,
+        client_payment_id: column === "client_payment_id" ? parentId : null,
+        purchase_order_id: column === "purchase_order_id" ? parentId : null,
+        document_no: documentNo,
+        issued_on: issuedOn,
+        total,
+        status: "draft",
+        verify_token: newToken(),
+        body: {},
+      })
+      .select("id")
+      .single()
+    if (insertError) {
+      if (insertError.code === "23505") continue
+      return { error: writeError(insertError, "Could not move this document to Trash.") }
+    }
+    const { error: trashError } = await supabase
+      .from("issued_documents")
+      .update(patch)
+      .eq("id", inserted.id)
+    if (trashError) {
+      return { error: writeError(trashError, "Could not move this document to Trash.") }
+    }
+    return { error: null }
+  }
+
+  return { error: "Could not move this document to Trash." }
 }
 
 async function activePrintBlocksRestore(

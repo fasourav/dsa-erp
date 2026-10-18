@@ -18,11 +18,22 @@ export const DEFAULT_PRINT_MARGIN_BOTTOM_MM = 28
 
 /** Top of the letterhead footer artwork, including the raised logo block. */
 export const LETTERHEAD_FOOTER_MM = 46
-const LETTERHEAD_FOOTER_GAP_MM = 4
+const LETTERHEAD_FOOTER_GAP_MM = 12
 
-/** Content, including the signature row, stays above the footer artwork. */
+/** Content, including the signature row, stays above the footer artwork while respecting bottomMm adjustments. */
 export function contentFloorMm(bottomMm: number): number {
-  return Math.max(bottomMm, LETTERHEAD_FOOTER_MM + LETTERHEAD_FOOTER_GAP_MM)
+  const offset = clampPrintMargin(bottomMm, DEFAULT_PRINT_MARGIN_BOTTOM_MM) - DEFAULT_PRINT_MARGIN_BOTTOM_MM
+  return Math.max(0, LETTERHEAD_FOOTER_MM + LETTERHEAD_FOOTER_GAP_MM + offset)
+}
+
+export const SIGNATURE_OFF = "__off__"
+
+export function isSignatureEnabled(value: string): boolean {
+  return value !== SIGNATURE_OFF
+}
+
+export function signatureName(value: string): string {
+  return value === SIGNATURE_OFF ? "" : value
 }
 
 export type PrintMargins = {
@@ -139,7 +150,12 @@ export function isWorkOrderStatus(value: string): value is WorkOrderStatus {
 }
 
 export function roleFor(employees: EmployeeChoice[], name: string): string {
-  return employees.find((employee) => employee.name === name)?.designation ?? ""
+  const clean = signatureName(name).trim()
+  if (!clean) return ""
+  const exact = employees.find((employee) => employee.name === clean)
+  if (exact) return exact.designation
+  const lower = clean.toLowerCase()
+  return employees.find((employee) => employee.name.trim().toLowerCase() === lower)?.designation ?? ""
 }
 
 export function customerDisplayName(

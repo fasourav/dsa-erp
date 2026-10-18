@@ -344,8 +344,8 @@
 }
 
 .doc-sign {
-  min-height: 28mm;
-  padding-top: 16mm;
+  min-height: 16mm;
+  padding-top: 6pt;
   border-top: 1px solid var(--border);
 }
 

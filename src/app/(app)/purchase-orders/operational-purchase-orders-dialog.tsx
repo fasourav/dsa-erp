@@ -192,7 +192,11 @@ export function OperationalPurchaseOrdersDialog({
                 value: <Money value={order.totalValue} />,
                 meta: (
                   <StatusBadge
-                    status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
+                    status={paymentBalanceStatus(
+                      order.totalPaid,
+                      order.totalPending,
+                      order.totalValue,
+                    )}
                   />
                 ),
               })}
@@ -285,7 +289,11 @@ function OperationalCell({
             {order.vendorName || "—"}
           </span>
           <StatusBadge
-            status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
+            status={paymentBalanceStatus(
+              order.totalPaid,
+              order.totalPending,
+              order.totalValue,
+            )}
           />
         </div>
       )

@@ -153,16 +153,20 @@ export function DocumentSheet({
           </section>
         ) : null}
 
-        {signatureDrop > 0 ? <div aria-hidden="true" style={{ height: signatureDrop }} /> : null}
-        <section className="doc-signs">
-          {document.signatures.map((signature) => (
-            <div key={signature.label} className="doc-sign">
-              <p className="doc-kicker">{signature.label}</p>
-              {signature.name ? <p>{signature.name}</p> : null}
-              {signature.detail ? <p className="role">{signature.detail}</p> : null}
-            </div>
-          ))}
-        </section>
+        {document.signatures.length > 0 ? (
+          <section
+            className="doc-signs"
+            style={signatureDrop > 0 ? { marginTop: `calc(18mm + ${signatureDrop}px)` } : undefined}
+          >
+            {document.signatures.map((signature) => (
+              <div key={signature.label} className="doc-sign">
+                <p className="doc-kicker">{signature.label}</p>
+                {signature.name ? <p>{signature.name}</p> : null}
+                {signature.detail ? <p className="role">{signature.detail}</p> : null}
+              </div>
+            ))}
+          </section>
+        ) : null}
       </div>
     </article>
   )

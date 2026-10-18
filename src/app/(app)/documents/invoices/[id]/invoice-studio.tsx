@@ -71,7 +71,7 @@ export function InvoiceStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
-      canTrash={form.exists}
+      canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This invoice"}
       onTrash={async () => {
         const result = await trashSavedDocument({ kind: "invoice", id: form.id })
