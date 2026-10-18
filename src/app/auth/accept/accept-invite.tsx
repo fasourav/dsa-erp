@@ -99,7 +99,7 @@ export function AcceptInvite() {
       {inviteError}
     </p>
   ) : (
-    <p className="text-center text-sm leading-relaxed text-login-ink-muted" aria-live="polite">
+    <p className="text-center text-sm leading-relaxed text-muted-foreground" aria-live="polite">
       Signing you in from your invite.
     </p>
   )
