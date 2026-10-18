@@ -395,7 +395,7 @@ function DashboardSections({
 
         <Panel title="Expense Summary">
           <ExpenseDonut slices={slices}>
-            <Money value={snapshot.totalExpense} className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
+            <Money value={snapshot.totalExpense} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
             <span className="text-micro text-muted-foreground md:text-xs">Total Expense</span>
           </ExpenseDonut>
           <div className="mt-4 flex flex-col">
