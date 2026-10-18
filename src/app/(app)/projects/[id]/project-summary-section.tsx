@@ -162,15 +162,16 @@ export function ProjectSummarySection({
               <CardContent className="flex h-full flex-col gap-4">
                 {slices.length > 0 ? (
                   <>
-                    <div className="relative">
-                      <ExpenseDonut slices={slices} />
-                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                        <p className="text-stat">
-                          <Money value={expenseTotal} />
-                        </p>
-                        <p className="text-caption text-muted-foreground">Total Expense</p>
-                      </div>
-                    </div>
+                    <ExpenseDonut slices={slices}>
+                      <Money
+                        value={expenseTotal}
+                        size="kpi"
+                        className="text-callout font-bold tracking-[-0.02em] md:text-panel-title"
+                      />
+                      <span className="text-micro text-muted-foreground md:text-xs">
+                        Total Expense
+                      </span>
+                    </ExpenseDonut>
                     <div className="flex flex-col">
                       {slices.map((slice) => (
                         <div
