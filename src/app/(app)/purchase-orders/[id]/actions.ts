@@ -432,7 +432,7 @@ async function saveVendorInvoice(
 ): Promise<VendorInvoiceResult> {
   const issuedOn = input.issuedOn.trim()
   const description = input.description.trim()
-  const amount = parseProjectValue(input.amount)
+  const amount = parsePositiveAmount(input.amount)
   const status = input.status.trim()
   const fieldErrors: VendorInvoiceFieldErrors = {}
 
@@ -444,7 +444,7 @@ async function saveVendorInvoice(
 
   if (amount === null) {
     fieldErrors.amount = input.amount.trim()
-      ? "Enter an amount of 0 or more."
+      ? "Enter an amount greater than 0."
       : "Enter an amount."
   }
 
@@ -488,7 +488,7 @@ async function saveVendorInvoice(
 
   const order = await supabase
     .from("vendor_purchase_orders")
-    .select("id")
+    .select("id, total_value")
     .eq("id", orderId)
     .limit(1)
 
@@ -500,8 +500,12 @@ async function saveVendorInvoice(
     return { error: "That purchase order could not be found." }
   }
 
-  const paid = id ? await paidForInvoice(supabase, id, null) : 0
-  if (paid === null) {
+  const totalValue = Number(order.data[0].total_value ?? 0)
+  const [paid, usage] = await Promise.all([
+    id ? paidForInvoice(supabase, id, null) : Promise.resolve(0),
+    purchaseOrderUsage(supabase, orderId, id, null),
+  ])
+  if (paid === null || usage === null) {
     return { error: "Could not save this payment." }
   }
 
@@ -510,6 +514,18 @@ async function saveVendorInvoice(
       error: null,
       fieldErrors: {
         amount: `Amount can't be less than ${formatMoney(paid)} already paid.`,
+      },
+    }
+  }
+
+  if (
+    status !== "void" &&
+    moneyCents(sumAmounts([usage.committed, amount])) > moneyCents(totalValue)
+  ) {
+    return {
+      error: null,
+      fieldErrors: {
+        amount: "Bills for this purchase order cannot exceed the purchase order value.",
       },
     }
   }
@@ -549,7 +565,7 @@ async function saveVendorInvoice(
     if (error.code === "23514") {
       return {
         error: null,
-        fieldErrors: { amount: "Enter an amount of 0 or more." },
+        fieldErrors: { amount: "Enter an amount greater than 0." },
       }
     }
 
@@ -642,15 +658,16 @@ async function saveVendorPayment(
 
   const order = await supabase
     .from("vendor_purchase_orders")
-    .select("issued_on")
+    .select("issued_on, total_value")
     .eq("id", invoiceRow.purchase_order_id)
     .limit(1)
 
-  if (order.error) {
+  if (order.error || !order.data || order.data.length === 0) {
     return { error: "Could not save this payment." }
   }
 
-  const issuedOn = order.data?.[0]?.issued_on
+  const issuedOn = order.data[0]?.issued_on
+  const orderTotalValue = Number(order.data[0]?.total_value ?? 0)
   if (issuedOn && paidOn < issuedOn) {
     return {
       error: null,
@@ -660,13 +677,20 @@ async function saveVendorPayment(
     }
   }
 
-  const alreadyPaid = await paidForInvoice(supabase, invoiceId, id)
-  if (alreadyPaid === null) {
+  const [alreadyPaid, usage] = await Promise.all([
+    paidForInvoice(supabase, invoiceId, id),
+    purchaseOrderUsage(supabase, invoiceRow.purchase_order_id, null, id),
+  ])
+  if (alreadyPaid === null || usage === null) {
     return { error: "Could not save this payment." }
   }
 
   const nextPaid = sumAmounts([alreadyPaid, amount])
-  if (moneyCents(nextPaid) > moneyCents(invoiceRow.amount)) {
+  const nextPoPaid = sumAmounts([usage.totalPaid, amount])
+  if (
+    moneyCents(nextPaid) > moneyCents(invoiceRow.amount) ||
+    moneyCents(nextPoPaid) > moneyCents(orderTotalValue)
+  ) {
     return {
       error: null,
       fieldErrors: {
@@ -805,6 +829,14 @@ async function findOrPlanVendorInvoice(
   }
 
   const amountCents = moneyCents(amount)
+  const totalPaid = sumAmounts(payments.data.map((row) => Number(row.amount)))
+  const pendingCents = Math.max(0, moneyCents(totalValue) - moneyCents(totalPaid))
+  if (amountCents > pendingCents) {
+    return {
+      fieldErrors: { amount: "Payment is more than the amount still due." },
+    }
+  }
+
   for (const invoice of invoices.data) {
     if (invoice.status === "void") {
       continue
@@ -817,9 +849,17 @@ async function findOrPlanVendorInvoice(
     }
   }
 
-  const totalPaid = sumAmounts(payments.data.map((row) => Number(row.amount)))
-  const pendingCents = Math.max(0, moneyCents(totalValue) - moneyCents(totalPaid))
-  if (amountCents > pendingCents) {
+  let committed = 0
+  for (const invoice of invoices.data) {
+    if (invoice.status === "void") {
+      committed = sumAmounts([committed, paidByInvoice.get(invoice.id) ?? 0])
+    } else {
+      committed = sumAmounts([committed, Number(invoice.amount)])
+    }
+  }
+
+  const unbilledCents = Math.max(0, moneyCents(totalValue) - moneyCents(committed))
+  if (amountCents > unbilledCents) {
     return {
       fieldErrors: { amount: "Payment is more than the amount still due." },
     }
@@ -838,6 +878,30 @@ async function payAgainstNewInvoice(
     payment: VendorPaymentInput
   },
 ): Promise<RecordVendorPaymentResult> {
+  const [order, usage] = await Promise.all([
+    supabase
+      .from("vendor_purchase_orders")
+      .select("total_value")
+      .eq("id", purchaseOrderId)
+      .limit(1),
+    purchaseOrderUsage(supabase, purchaseOrderId, null, null),
+  ])
+
+  if (order.error || !order.data?.[0] || usage === null) {
+    return { error: "Could not save this payment." }
+  }
+
+  const totalValue = Number(order.data[0].total_value ?? 0)
+  if (moneyCents(sumAmounts([usage.committed, input.amount])) > moneyCents(totalValue)) {
+    return {
+      error: null,
+      fieldErrors: {
+        invoiceAmount: "Bills for this purchase order cannot exceed the purchase order value.",
+        amount: "Payment is more than the amount still due.",
+      },
+    }
+  }
+
   const created = await supabase
     .from("vendor_invoices")
     .insert({
@@ -930,6 +994,59 @@ async function paidForInvoice(
       row.id === exceptPaymentId ? [] : [Number(row.amount)],
     ),
   )
+}
+
+async function purchaseOrderUsage(
+  supabase: SupabaseClient,
+  purchaseOrderId: string,
+  exceptInvoiceId: string | null,
+  exceptPaymentId: string | null,
+): Promise<{ committed: number; totalPaid: number } | null> {
+  const invoices = await supabase
+    .from("vendor_invoices")
+    .select("id, amount, status")
+    .eq("purchase_order_id", purchaseOrderId)
+
+  if (invoices.error || !invoices.data) {
+    return null
+  }
+
+  const invoiceIds = invoices.data.map((row) => row.id)
+  const payments =
+    invoiceIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("vendor_payments")
+          .select("id, vendor_invoice_id, amount")
+          .in("vendor_invoice_id", invoiceIds)
+
+  if (payments.error || !payments.data) {
+    return null
+  }
+
+  const paidByInvoice = new Map<string, number>()
+  let totalPaid = 0
+  for (const row of payments.data) {
+    if (row.id === exceptPaymentId) continue
+    const amt = Number(row.amount)
+    totalPaid = sumAmounts([totalPaid, amt])
+    paidByInvoice.set(
+      row.vendor_invoice_id,
+      sumAmounts([paidByInvoice.get(row.vendor_invoice_id) ?? 0, amt]),
+    )
+  }
+
+  let committed = 0
+  for (const row of invoices.data) {
+    if (row.id === exceptInvoiceId) continue
+    if (row.status === "void") {
+      committed = sumAmounts([committed, paidByInvoice.get(row.id) ?? 0])
+    } else {
+      committed = sumAmounts([committed, Number(row.amount)])
+    }
+  }
+
+  return { committed, totalPaid }
 }
 
 async function authorizedClient(): Promise<{

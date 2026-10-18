@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import Link from "next/link"
-import { ChevronDown, Ellipsis, Files, LogOut, UserRound } from "lucide-react"
+import { ChevronDown, Ellipsis, FileBarChart, Files, LogOut, UserRound } from "lucide-react"
 
 import { signOut } from "@/app/auth/actions"
 import { useAccess } from "@/components/access-provider"
@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { canOpenDocuments } from "@/lib/access"
+import { canOpenDocuments, canOpenReports } from "@/lib/access"
 import {
   accountInitials,
   accountSubtitle,
@@ -140,6 +140,12 @@ export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
             <DropdownMenuItem render={<Link href="/documents" />}>
               <Files aria-hidden="true" />
               Documents
+            </DropdownMenuItem>
+          ) : null}
+          {canOpenReports(access) ? (
+            <DropdownMenuItem render={<Link href="/reports" />}>
+              <FileBarChart aria-hidden="true" />
+              Reports
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem render={<Link href="/profile" />}>

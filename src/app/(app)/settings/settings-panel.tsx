@@ -15,7 +15,6 @@ import { BankAccountFormDialog } from "@/app/(app)/accounts/bank/bank-account-fo
 import { deleteCatalogItem } from "@/app/(app)/settings/actions"
 import { CatalogFormDialog } from "@/app/(app)/settings/catalog-form-dialog"
 import { DocumentTemplatePanel } from "@/app/(app)/settings/document-template-panel"
-import { StageTemplatePanel } from "@/app/(app)/settings/stage-template-panel"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
@@ -50,7 +49,6 @@ import {
   type CatalogList,
 } from "@/lib/lookup-catalogs"
 import type { DocumentTemplate } from "@/lib/document-templates"
-import type { StageTemplate } from "@/lib/project-progress"
 import { savedToast } from "@/lib/saved"
 
 type LastBackupStatus = {
@@ -63,12 +61,10 @@ type ActiveView =
   | { kind: "home" }
   | { kind: "catalog"; key: CatalogList["key"] }
   | { kind: "bank" }
-  | { kind: "stages" }
   | { kind: "documents" }
 
 export function SettingsPanel({
   catalogs,
-  stageTemplates,
   documentTemplates,
   bankAccounts,
   fiscalYearStartMonth,
@@ -78,7 +74,6 @@ export function SettingsPanel({
   error,
 }: {
   catalogs: CatalogList[]
-  stageTemplates: StageTemplate[]
   documentTemplates: DocumentTemplate[]
   bankAccounts: BankAccountRow[]
   fiscalYearStartMonth: number
@@ -416,24 +411,6 @@ export function SettingsPanel({
           ))}
           <button
             type="button"
-            onClick={() => setView({ kind: "stages" })}
-            className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left md:px-5 md:py-4.5"
-          >
-            <span className="flex items-start justify-between gap-3">
-              <span className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-fill text-muted-foreground">
-                <ListTree className="size-4.5" aria-hidden="true" />
-              </span>
-              <Badge variant="outline" className="tabular-nums">
-                {itemCountLabel(stageTemplates.length)}
-              </Badge>
-            </span>
-            <span className="mt-auto pt-4.5 text-row font-strong">Project Stages</span>
-            <span className="mt-0.5 text-caption text-muted-foreground">
-              Default Stages For New Progress Lists
-            </span>
-          </button>
-          <button
-            type="button"
             onClick={() => setView({ kind: "documents" })}
             className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left md:px-5 md:py-4.5"
           >
@@ -469,13 +446,6 @@ export function SettingsPanel({
             </span>
           </button>
         </div>
-      ) : null}
-
-      {view.kind === "stages" ? (
-        <StageTemplatePanel
-          templates={stageTemplates}
-          onBack={() => setView({ kind: "home" })}
-        />
       ) : null}
 
       {view.kind === "documents" ? (

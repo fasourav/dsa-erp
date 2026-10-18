@@ -263,7 +263,7 @@ export function VendorPaymentsDialog({
                 {canAdd ? (
                 <Button
                   type="button"
-                  disabled={!invoice || invoice.status === "void"}
+                  disabled={!invoice || invoice.status === "void" || invoice.balance <= 0}
                   onClick={() => openForm(null)}
                 >
                   <Plus aria-hidden="true" data-icon="inline-start" />

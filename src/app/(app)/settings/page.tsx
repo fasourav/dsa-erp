@@ -1,6 +1,5 @@
 import { getLastBackupStatus, getLookupCatalogs } from "@/app/(app)/settings/queries"
 import { listDocumentTemplates } from "@/lib/document-templates-data"
-import { getStageTemplates } from "@/lib/project-progress-data"
 import { SettingsPanel } from "@/app/(app)/settings/settings-panel"
 import { getSettingsBankAccounts } from "@/lib/bank-accounts"
 import { getFiscalYearStartMonth, getLaunchDate, getPrintMargins } from "@/lib/company-settings"
@@ -16,7 +15,6 @@ export default async function SettingsPage() {
     fiscalYearStartMonth,
     launchDate,
     printMargins,
-    stageTemplates,
     documentTemplates,
     lastBackup,
   ] = await Promise.all([
@@ -25,7 +23,6 @@ export default async function SettingsPage() {
     getFiscalYearStartMonth(),
     getLaunchDate(),
     getPrintMargins(),
-    getStageTemplates(),
     listDocumentTemplates(),
     getLastBackupStatus(),
   ])
@@ -33,14 +30,13 @@ export default async function SettingsPage() {
   return (
     <SettingsPanel
       catalogs={catalogs}
-      stageTemplates={stageTemplates.templates}
       documentTemplates={documentTemplates.templates}
       bankAccounts={bankAccounts.accounts}
       fiscalYearStartMonth={fiscalYearStartMonth}
       launchDate={launchDate}
       printMargins={printMargins}
       lastBackup={lastBackup}
-      error={error ?? bankAccounts.error ?? stageTemplates.error ?? documentTemplates.error}
+      error={error ?? bankAccounts.error ?? documentTemplates.error}
     />
   )
 }

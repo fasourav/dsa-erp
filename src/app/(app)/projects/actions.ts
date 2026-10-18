@@ -4,6 +4,7 @@ import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, mentions } from "@/lib/db-errors"
+import { phaseProgressPercent } from "@/lib/project-progress"
 import type { ProjectStatus } from "@/lib/project-summary"
 import { denyUnless } from "@/lib/permissions"
 import { firstIssue, projectValueSchema } from "@/lib/schemas"
@@ -170,13 +171,21 @@ async function saveProject(
     return { error: null, fieldErrors: catalogErrors }
   }
 
-  const { data: clientMatches, error: clientLookupError } = await supabase
-    .from("clients")
-    .select("id")
-    .eq("id", clientId)
-    .limit(1)
+  const [{ data: clientMatches, error: clientLookupError }, { data: phaseRows, error: phasesError }] =
+    await Promise.all([
+      supabase
+        .from("clients")
+        .select("id")
+        .eq("id", clientId)
+        .limit(1),
+      supabase
+        .from("project_phases")
+        .select("name, sort_order")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+    ])
 
-  if (clientLookupError) {
+  if (clientLookupError || phasesError) {
     return { error: "Could not save this project." }
   }
 
@@ -187,6 +196,8 @@ async function saveProject(
     }
   }
 
+  const progressPercent = phaseProgressPercent(phase, phaseRows ?? [])
+
   const values = {
     name,
     client_id: clientId,
@@ -195,6 +206,7 @@ async function saveProject(
     project_type: projectType || null,
     status,
     current_phase: phase || null,
+    progress_percent: progressPercent,
     total_value: totalValue ?? 0,
     details: details || null,
   }
