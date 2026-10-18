@@ -187,7 +187,7 @@ export function ProjectsTable({
                 { header: "Date", kind: "text" },
                 { header: "Status", kind: "text" },
                 { header: "Phase", kind: "text" },
-                { header: "% Complete", kind: "text" },
+                { header: "Progress", kind: "text" },
                 { header: "Overdue Milestones", kind: "text" },
                 { header: "Project Value", kind: "money" },
                 { header: "Total Paid", kind: "money" },
@@ -378,19 +378,16 @@ function CellValue({
   switch (columnId) {
     case "name":
       return (
-        <span className="inline-flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="link"
-            nativeButton={false}
-            render={<Link href={`/projects/${project.id}`} />}
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Link
+            href={`/projects/${project.id}`}
             className={cn(
-              "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
+              "rounded-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
               !project.name && "text-muted-foreground",
             )}
           >
             {project.name || "—"}
-          </Button>
+          </Link>
           {project.overdueMilestones > 0 ? (
             <Badge variant="destructive">
               {project.overdueMilestones === 1
@@ -402,7 +399,7 @@ function CellValue({
       )
     case "location":
       return project.location ? (
-        <span>{project.location}</span>
+        <span className="block">{project.location}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -425,8 +422,29 @@ function CellValue({
       ) : (
         <span className="text-muted-foreground">—</span>
       )
-    case "progressPercent":
-      return <span className="tabular-nums">{project.progressPercent}%</span>
+    case "progressPercent": {
+      const percent = Math.min(100, Math.max(0, project.progressPercent))
+      return (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(percent)}
+            aria-label="Project progress"
+            className="h-2 w-10 shrink-0 overflow-hidden rounded-full bg-fill-strong"
+          >
+            <span
+              className="block h-full rounded-full bg-primary"
+              style={{ width: `${percent}%` }}
+            />
+          </span>
+          <span className="text-caption font-semibold tabular-nums">
+            {project.progressPercent}%
+          </span>
+        </span>
+      )
+    }
     case "totalValue":
       return <Money value={project.totalValue} />
     case "totalPaid":

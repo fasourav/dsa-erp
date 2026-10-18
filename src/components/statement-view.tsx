@@ -142,7 +142,7 @@ function Figure({ label, amount }: { label: string; amount: number }) {
   return (
     <Card className="min-w-0 gap-0 px-4 py-4 md:px-5 md:py-4">
       <p className="truncate text-label text-muted-foreground">{label}</p>
-      <p className={cn("mt-1.5 truncate text-kpi", amount < 0 && "text-destructive")}>
+      <p className={cn("mt-1.5 truncate text-metric md:text-kpi", amount < 0 && "text-destructive")}>
         <Money value={amount} size="kpi" />
       </p>
     </Card>

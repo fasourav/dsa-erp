@@ -35,7 +35,7 @@ const buttonVariants = cva(
       },
     },
     compoundVariants: [
-      { variant: "link", size: ["default", "sm", "xs", "lg"], className: "h-auto px-0 md:px-0" },
+      { variant: "link", size: ["default", "sm", "xs", "lg"], className: "h-auto px-0 md:h-auto md:px-0" },
     ],
     defaultVariants: {
       variant: "default",

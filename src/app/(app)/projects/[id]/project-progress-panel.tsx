@@ -94,7 +94,7 @@ export function ProjectProgressPanel({
     <div className="flex flex-col gap-4 md:gap-5">
       <div className="flex flex-col gap-3 rounded-card glass-panel px-4 py-4 md:px-6 md:py-5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-label text-muted-foreground">% Complete</p>
+          <p className="text-label text-muted-foreground">Progress</p>
           <p className="text-ui font-semibold tabular-nums">{formatPercent(percent)}</p>
         </div>
         <div

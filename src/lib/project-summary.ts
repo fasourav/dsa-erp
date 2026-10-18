@@ -111,8 +111,8 @@ export const dataColumns: readonly DataColumn[] = [
   },
   {
     id: "progressPercent",
-    label: "% Complete",
-    align: "right",
+    label: "Progress",
+    align: "left",
     locked: false,
     format: "text",
   },
