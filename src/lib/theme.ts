@@ -26,5 +26,7 @@ export function themeCookie(theme: ThemePreference): string {
   return `${THEME_COOKIE}=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`
 }
 
-// Runs in <head> before paint: resolves "system" and follows OS changes.
-export const systemThemeScript = `(function(){var d=document.documentElement,m=window.matchMedia("(prefers-color-scheme: dark)"),c=${JSON.stringify(themeColors)};function a(){if(d.dataset.themePreference!=="system")return;var t=m.matches?"dark":"light";d.classList.toggle("dark",t==="dark");d.style.colorScheme=t;document.querySelectorAll('meta[name="theme-color"]').forEach(function(e){e.setAttribute("content",c[t])})}a();m.addEventListener("change",a)})()`
+// Runs in <head> before paint: resolves "system", follows OS changes, and
+// activates the standalone PWA launch splash before first paint so the
+// underlying login or dashboard screen never flashes.
+export const systemThemeScript = `(function(){var d=document.documentElement,m=window.matchMedia("(prefers-color-scheme: dark)"),c=${JSON.stringify(themeColors)};function a(){if(d.dataset.themePreference!=="system")return;var t=m.matches?"dark":"light";d.classList.toggle("dark",t==="dark");d.style.colorScheme=t;document.querySelectorAll('meta[name="theme-color"]').forEach(function(e){e.setAttribute("content",c[t])})}a();m.addEventListener("change",a);try{if(!sessionStorage.getItem("dsa-pwa-splash-shown")&&(window.matchMedia("(display-mode: standalone)").matches||navigator.standalone)){d.dataset.pwaSplash="active"}}catch(e){}})()`
