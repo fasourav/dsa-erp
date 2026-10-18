@@ -102,8 +102,8 @@ export default async function RootLayout({
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: systemThemeScript }} />
       </head>
       <body className="flex min-h-full flex-col">
-        {children}
         <PwaSplash />
+        {children}
         <Toaster />
         <ServiceWorker />
       </body>
