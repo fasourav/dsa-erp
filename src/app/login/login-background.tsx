@@ -2,25 +2,15 @@
 
 import { Component, useEffect, useState, type ComponentType, type ReactNode } from "react"
 
-type OrbProps = {
-  colors?: string[]
-  hue?: number
-  backgroundColor?: string
-  size?: number
-  glow?: number
-  bleed?: number
-  wobble?: number
-  highlight?: number
-  trail?: number
-  tiltX?: number
-  tiltY?: number
+type BeamsProps = {
+  color?: string
+  beamWidth?: number
+  rotation?: number
   speed?: number
-  hoverIntensity?: number
-  rotateOnHover?: boolean
-  forceHoverState?: boolean
-  followCursor?: boolean
-  clickPulse?: boolean
-  intro?: boolean
+  glow?: number
+  fillLight?: number
+  mouseInteraction?: boolean
+  lightMode?: boolean
 }
 
 type BoundaryProps = {
@@ -31,13 +21,7 @@ type BoundaryState = {
   failed: boolean
 }
 
-const PAINTS = [
-  "var(--primary)",
-  "color-mix(in srgb, var(--primary) 62%, var(--on-color))",
-  "color-mix(in srgb, var(--primary) 24%, var(--login-button-ink))",
-] as const
-
-class OrbBoundary extends Component<BoundaryProps, BoundaryState> {
+class BeamsBoundary extends Component<BoundaryProps, BoundaryState> {
   state: BoundaryState = { failed: false }
 
   static getDerivedStateFromError(): BoundaryState {
@@ -45,7 +29,7 @@ class OrbBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 
   componentDidCatch(error: unknown) {
-    console.error("Orb unavailable", error)
+    console.error("Beams unavailable", error)
   }
 
   render() {
@@ -63,25 +47,30 @@ function readPaint(paint: string): string {
   return color
 }
 
-function readPalette() {
+function readBeamsTheme() {
+  const isDark = document.documentElement.classList.contains("dark")
   return {
-    colors: PAINTS.map((paint) => readPaint(paint)),
-    backgroundColor: readPaint("var(--login-button-ink)"),
+    lightMode: !isDark,
+    color: readPaint(
+      isDark
+        ? "color-mix(in srgb, var(--primary) 55%, var(--primary-foreground))"
+        : "var(--primary)",
+    ),
   }
 }
 
 export function LoginBackground() {
-  const [Orb, setOrb] = useState<ComponentType<OrbProps> | null>(null)
-  const [palette, setPalette] = useState<ReturnType<typeof readPalette> | null>(null)
+  const [Beams, setBeams] = useState<ComponentType<BeamsProps> | null>(null)
+  const [theme, setTheme] = useState<ReturnType<typeof readBeamsTheme> | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    void import("@/components/Orb")
+    void import("@/components/Beams")
       .then((mod) => {
-        if (!cancelled) setOrb(() => mod.default as ComponentType<OrbProps>)
+        if (!cancelled) setBeams(() => mod.default as ComponentType<BeamsProps>)
       })
       .catch((error: unknown) => {
-        console.error("Orb unavailable", error)
+        console.error("Beams unavailable", error)
       })
     return () => {
       cancelled = true
@@ -90,39 +79,29 @@ export function LoginBackground() {
 
   useEffect(() => {
     const root = document.documentElement
-    const update = () => setPalette(readPalette())
+    const update = () => setTheme(readBeamsTheme())
     update()
     const observer = new MutationObserver(update)
     observer.observe(root, { attributes: true, attributeFilter: ["class"] })
     return () => observer.disconnect()
   }, [])
 
-  if (!Orb || !palette) return null
+  if (!Beams || !theme) return null
 
   return (
-    <OrbBoundary>
+    <BeamsBoundary>
       <div className="h-full w-full">
-        <Orb
-          colors={palette.colors}
-          hue={0}
-          backgroundColor={palette.backgroundColor}
-          size={0.96}
-          glow={1.9}
-          bleed={1}
-          wobble={1}
-          highlight={1.2}
-          trail={1}
-          tiltX={0}
-          tiltY={0}
+        <Beams
+          color={theme.color}
+          beamWidth={140}
+          rotation={20}
           speed={1}
-          hoverIntensity={1}
-          rotateOnHover
-          forceHoverState
-          followCursor
-          clickPulse
-          intro
+          glow={0.85}
+          fillLight={0.2}
+          mouseInteraction={false}
+          lightMode={theme.lightMode}
         />
       </div>
-    </OrbBoundary>
+    </BeamsBoundary>
   )
 }

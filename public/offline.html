@@ -67,18 +67,18 @@
     -webkit-backdrop-filter: saturate(180%) blur(30px);
     backdrop-filter: saturate(180%) blur(30px);
   }
-  .orb {
-    width: 88px;
-    height: 88px;
-    margin: 0 auto 18px;
-    border-radius: 50%;
+  .badge-wrap {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at 50% 38%, #6e9a3e 0%, #45632d 45%, #1e2e13 100%);
-    box-shadow: 0 0 0 10px var(--ring), 0 18px 40px -16px rgba(30, 46, 19, 0.6);
+    margin: 0 auto 18px;
   }
-  .orb img { height: 44px; }
+  .badge-wrap img { height: 76px; width: auto; }
+  .badge-dark { display: none; }
+  @media (prefers-color-scheme: dark) {
+    .badge-light { display: none; }
+    .badge-dark { display: block; }
+  }
   h1 { margin: 0; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: -0.025em; }
   p { margin: 8px 6px 22px; color: var(--fg2); font-size: 14.5px; }
   a {
@@ -100,7 +100,10 @@
 </head>
 <body>
   <main class="card">
-    <div class="orb"><img src="/brand/mark-white.png" alt=""></div>
+    <div class="badge-wrap">
+      <img class="badge-light" src="/brand/badge-icon-light.svg" alt="DynamicSpace Architects &amp; Engineers">
+      <img class="badge-dark" src="/brand/badge-icon-dark.svg" alt="DynamicSpace Architects &amp; Engineers">
+    </div>
     <h1>You're offline</h1>
     <p>DSA ERP needs a connection to load your data. Check your network and try again.</p>
     <a href="">Try again</a>

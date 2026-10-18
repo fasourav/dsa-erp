@@ -76,7 +76,7 @@ export function LoginForm({ notice }: { notice?: string }) {
                 size="icon-sm"
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 aria-pressed={showPassword}
-                className="text-login-field-icon hover:bg-login-field hover:text-login-ink"
+                className="text-muted-foreground hover:bg-fill hover:text-foreground"
                 onClick={() => setShowPassword((current) => !current)}
               >
                 {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}

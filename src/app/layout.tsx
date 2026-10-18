@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_Bengali } from "next/font/google"
 import localFont from "next/font/local"
 import { cookies, headers } from "next/headers"
 
+import { PwaSplash } from "@/components/pwa-splash"
 import { ServiceWorker } from "@/components/service-worker"
 import { Toaster } from "@/components/ui/sonner"
 import { APP_DESCRIPTION, APP_NAME, startupImages } from "@/lib/pwa"
@@ -102,6 +103,7 @@ export default async function RootLayout({
       </head>
       <body className="flex min-h-full flex-col">
         {children}
+        <PwaSplash />
         <Toaster />
         <ServiceWorker />
       </body>

@@ -8,6 +8,7 @@ import { useState, type ReactNode } from "react"
 import { AccountMenu, MobileMoreMenu } from "@/components/account-menu"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DocumentsMenu } from "@/components/documents-menu"
+import { DsaBadge } from "@/components/dsa-badge"
 import { GlobalSearch } from "@/components/global-search"
 import { MobileTabBar, useTabRoots } from "@/components/mobile-tab-bar"
 import { ShellHeaderProvider } from "@/components/shell-header"
@@ -51,7 +52,15 @@ export function AppShell({
           className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain scroll-smooth pt-safe pb-tabbar print:h-auto print:overflow-visible print:p-0 md:pt-0 md:pb-12"
         >
           <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mt-5.5 md:mb-2.5 md:h-10 md:pt-0 md:pr-10 md:pl-7">
-            {isTabRoot ? null : (
+            {isTabRoot ? (
+              <Link
+                href="/dashboard"
+                aria-label="Dashboard"
+                className="rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 md:hidden"
+              >
+                <DsaBadge variant="icon" className="h-8.5" />
+              </Link>
+            ) : (
               <Button
                 variant="outline"
                 size="icon"

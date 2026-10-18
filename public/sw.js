@@ -1,10 +1,19 @@
 // DSA ERP service worker.
 // Pages carry financial data, so HTML and API responses are never cached.
 // Only hashed build assets, brand images, and the offline page are stored.
-const VERSION = "atrium-v1"
+const VERSION = "atrium-v2"
 const STATIC_CACHE = `dsa-static-${VERSION}`
 const OFFLINE_URL = "/offline.html"
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/brand/mark-olive.png", "/brand/mark-white.png"]
+const PRECACHE = [
+  OFFLINE_URL,
+  "/icons/icon-192.png",
+  "/brand/badge-light.svg",
+  "/brand/badge-dark.svg",
+  "/brand/badge-icon-light.svg",
+  "/brand/badge-icon-dark.svg",
+  "/brand/mark-olive.png",
+  "/brand/mark-white.png",
+]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
