@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowLeft, FileText, Inbox, Landmark, ListTree, Plus } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 
 import {
@@ -50,6 +51,7 @@ import {
 } from "@/lib/lookup-catalogs"
 import type { DocumentTemplate } from "@/lib/document-templates"
 import type { StageTemplate } from "@/lib/project-progress"
+import { savedToast } from "@/lib/saved"
 
 type LastBackupStatus = {
   ranAtLabel: string
@@ -85,6 +87,7 @@ export function SettingsPanel({
   lastBackup: LastBackupStatus
   error: string | null
 }) {
+  const router = useRouter()
   const [view, setView] = useState<ActiveView>({ kind: "home" })
   const [formOpen, setFormOpen] = useState(false)
   const [formCatalog, setFormCatalog] = useState<CatalogList>(
@@ -368,8 +371,17 @@ export function SettingsPanel({
               onClick={() => {
                 setMarginError(null)
                 startMarginSave(async () => {
-                  const result = await updatePrintMargins(Number(marginTop), Number(marginBottom))
-                  if (result.error) setMarginError(result.error)
+                  const topVal = Math.round(Number(marginTop))
+                  const bottomVal = Math.round(Number(marginBottom))
+                  const result = await updatePrintMargins(topVal, bottomVal)
+                  if (result.error) {
+                    setMarginError(result.error)
+                    return
+                  }
+                  setMarginTop(String(topVal))
+                  setMarginBottom(String(bottomVal))
+                  savedToast("Print margins saved")
+                  router.refresh()
                 })
               }}
             >

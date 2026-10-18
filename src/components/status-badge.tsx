@@ -19,16 +19,17 @@ type StatusTone = keyof typeof toneVariant
 export function paymentBalanceStatus(
   paid: number,
   pending: number,
+  totalValue = 0,
 ): "paid" | "partial" | "unpaid" {
-  if (moneyCents(pending) <= 0) {
-    return "paid"
-  }
-
   if (moneyCents(paid) <= 0) {
     return "unpaid"
   }
 
-  return "partial"
+  if (moneyCents(pending) > 0 || moneyCents(paid) < moneyCents(totalValue)) {
+    return "partial"
+  }
+
+  return "paid"
 }
 
 export function StatusBadge({ status }: { status: string }) {

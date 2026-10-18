@@ -62,6 +62,8 @@ export function ReceiptStudio({
         preparedByRole: roleFor(employees, form.preparedBy),
         checkedBy: form.checkedBy,
         checkedByRole: roleFor(employees, form.checkedBy),
+        authorizedBy: form.authorizedBy,
+        authorizedByRole: roleFor(employees, form.authorizedBy),
       }),
     [employees, form, origin],
   )
@@ -73,7 +75,7 @@ export function ReceiptStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
-      canTrash={form.exists}
+      canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This receipt"}
       onTrash={async () => {
         const result = await trashSavedDocument({ kind: "receipt", id: form.id })
@@ -191,6 +193,14 @@ export function ReceiptStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(checkedBy) => setForm({ ...form, checkedBy })}
+      />
+      <EmployeeField
+        id="authorized-by"
+        label="Authorized By"
+        value={form.authorizedBy}
+        employees={employees}
+        disabled={!canSave}
+        onChange={(authorizedBy) => setForm({ ...form, authorizedBy })}
       />
     </DocumentWorkspace>
   )

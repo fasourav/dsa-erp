@@ -68,7 +68,7 @@ export function PurchaseOrderStudio({
       margins={margins}
       preview={preview}
       canSave={canSave}
-      canTrash={form.exists}
+      canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This purchase order"}
       onTrash={async () => {
         const result = await trashSavedDocument({ kind: "purchase_order", id: form.id })

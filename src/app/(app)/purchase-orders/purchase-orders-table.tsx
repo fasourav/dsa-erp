@@ -100,11 +100,13 @@ export function PurchaseOrdersTable({
   ]
   const filtered = useMemo(
     () =>
-      filterRows(sorted, query, rowText, listFilter, (order) => {
-        if (order.totalPaid <= 0) return "unpaid"
-        if (order.totalPending > 0) return "partial"
-        return "paid"
-      }),
+      filterRows(sorted, query, rowText, listFilter, (order) =>
+        paymentBalanceStatus(
+          order.totalPaid,
+          order.totalPending,
+          order.totalValue,
+        ),
+      ),
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(
@@ -282,7 +284,11 @@ export function PurchaseOrdersTable({
           value: <Money value={order.totalValue} />,
           meta: (
             <StatusBadge
-              status={paymentBalanceStatus(order.totalPaid, order.totalPending)}
+              status={paymentBalanceStatus(
+                order.totalPaid,
+                order.totalPending,
+                order.totalValue,
+              )}
             />
           ),
         })}
@@ -364,6 +370,13 @@ function CellValue({
           {order.workType ? (
             <Badge variant="outline">{order.workType}</Badge>
           ) : null}
+          <StatusBadge
+            status={paymentBalanceStatus(
+              order.totalPaid,
+              order.totalPending,
+              order.totalValue,
+            )}
+          />
         </div>
       )
     case "totalValue":

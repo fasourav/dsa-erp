@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib"
 import QRCode from "qrcode"
 
-import { LETTERHEAD_FOOTER_MM } from "@/lib/documents/drafts"
+import { contentFloorMm } from "@/lib/documents/drafts"
 import type { PrintDocument } from "@/lib/documents/present"
 
 const mm = (value: number) => (value * 72) / 25.4
@@ -36,8 +36,8 @@ export async function buildDocumentPdf(input: DocumentPdfInput): Promise<Uint8Ar
   const watermark = input.watermark ? await embedPng(pdf, input.watermark) : null
   const logo = input.logo ? await embedPng(pdf, input.logo) : null
   const top = mm(clampMargin(input.topMm))
-  const bottom = mm(clampMargin(input.bottomMm))
-  const signLine = signatureLineY(bottom)
+  const bottomMm = clampMargin(input.bottomMm)
+  const signLine = signatureLineY(bottomMm)
   const contentBottom = signLine + mm(18)
   const width = pageWidth - side * 2
 
@@ -403,10 +403,9 @@ function drawHeader(
   return y - height
 }
 
-function signatureLineY(bottom: number): number {
+function signatureLineY(bottomMm: number): number {
   const textBelowLine = mm(14)
-  const aboveArtwork = mm(LETTERHEAD_FOOTER_MM + 4) + textBelowLine
-  return Math.max(aboveArtwork, bottom + textBelowLine)
+  return mm(contentFloorMm(bottomMm)) + textBelowLine
 }
 
 function drawSignatures(

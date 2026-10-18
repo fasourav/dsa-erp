@@ -384,7 +384,7 @@ export async function updatePrintMargins(
   }
 
   revalidatePath("/settings")
-  revalidatePath("/documents")
+  revalidatePath("/documents", "layout")
   return { error: null }
 }
 

@@ -160,7 +160,11 @@ export function VendorInvoicesPanel({
       ? Math.min(100, (purchaseOrder.totalPaid / purchaseOrder.totalValue) * 100)
       : 0
   const paymentStatus = purchaseOrder
-    ? paymentBalanceStatus(purchaseOrder.totalPaid, purchaseOrder.totalPending)
+    ? paymentBalanceStatus(
+        purchaseOrder.totalPaid,
+        purchaseOrder.totalPending,
+        purchaseOrder.totalValue,
+      )
     : null
   const detailTitle = purchaseOrder
     ? purchaseOrder.projectId
