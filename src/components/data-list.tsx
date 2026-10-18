@@ -59,7 +59,11 @@ function insetClass(
   align: ColumnAlign,
   previous: ColumnAlign | null,
   next: ColumnAlign | null,
+  dense: boolean,
 ) {
+  if (dense) {
+    return "px-1.5 first:pl-3.5"
+  }
   return cn(
     "px-3",
     align === "right" && next && next !== "right" && "pr-6",
@@ -136,6 +140,7 @@ export function DataList<T, Id extends string>({
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
   )
+  const dense = visibleColumns.length >= 10
   const hasActions = renderActions !== undefined
   const pages = paginationItems(currentPage, pageCount)
 
@@ -247,7 +252,7 @@ export function DataList<T, Id extends string>({
                     className={cn(
                       "py-2 align-middle",
                       alignClass(column.align),
-                      insetClass(column.align, previous, next),
+                      insetClass(column.align, previous, next, dense),
                     )}
                   >
                     <Button
@@ -273,7 +278,12 @@ export function DataList<T, Id extends string>({
                 )
               })}
               {hasActions ? (
-                <TableHead className="sticky right-0 z-10 w-px bg-muted px-3 align-middle whitespace-nowrap last:pr-4">
+                <TableHead
+                  className={cn(
+                    "sticky right-0 z-10 w-px bg-muted align-middle whitespace-nowrap",
+                    dense ? "px-1 last:pr-2.5" : "px-3 last:pr-4",
+                  )}
+                >
                   <span className="sr-only">Actions</span>
                 </TableHead>
               ) : null}
@@ -292,16 +302,19 @@ export function DataList<T, Id extends string>({
                         key={column.id}
                         className={cn(
                           "align-middle",
-                          oneLine ? "whitespace-nowrap" : "whitespace-normal",
+                          oneLine ? "whitespace-nowrap" : "whitespace-normal wrap-break-word",
+                          dense && "text-caption",
                           alignClass(column.align),
-                          insetClass(column.align, previous, next),
+                          insetClass(column.align, previous, next, dense),
                           column.align !== "left" && "tabular-nums",
                         )}
                       >
                         <span
                           className={cn(
-                            "max-w-full items-start [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0",
-                            oneLine ? "inline-flex items-center" : "flex w-full min-w-0",
+                            "max-w-full [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0",
+                            oneLine
+                              ? "inline-flex items-center"
+                              : "block w-full min-w-0 leading-snug",
                           )}
                         >
                           {renderCell(row, column.id)}
@@ -310,7 +323,12 @@ export function DataList<T, Id extends string>({
                     )
                   })}
                   {hasActions ? (
-                    <TableCell className="sticky right-0 z-10 w-px bg-card px-3 py-2 align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint last:pr-4">
+                    <TableCell
+                      className={cn(
+                        "sticky right-0 z-10 w-px bg-card py-2 align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint",
+                        dense ? "px-1 last:pr-2.5" : "px-3 last:pr-4",
+                      )}
+                    >
                       <span className="inline-flex items-center">
                         {renderActions(row)}
                       </span>

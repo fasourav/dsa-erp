@@ -589,7 +589,7 @@ function Kpi({
     <Card className="min-w-0 gap-1">
       <CardContent className="flex min-w-0 flex-col gap-1">
         <p className="text-label text-muted-foreground">{label}</p>
-        <p className={cn("min-w-0 truncate text-kpi", className)}>
+        <p className={cn("min-w-0 truncate text-metric md:text-kpi", className)}>
           <Money value={value} size="kpi" />
         </p>
         {detail ? <p className="text-caption text-muted-foreground">{detail}</p> : null}

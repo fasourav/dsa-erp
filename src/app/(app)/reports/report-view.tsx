@@ -84,7 +84,7 @@ export function ReportView({
               className="min-w-0 gap-0 px-4 py-4 last:odd:col-span-2 md:px-5 md:py-4 md:last:odd:col-span-1"
             >
               <p className="truncate text-label text-muted-foreground">{figure.label}</p>
-              <p className={cn("mt-1.5 truncate text-kpi", figure.amount < 0 && "text-destructive")}>
+              <p className={cn("mt-1.5 truncate text-metric md:text-kpi", figure.amount < 0 && "text-destructive")}>
                 <Money value={figure.amount} size="kpi" />
               </p>
               {figure.detail ? (
