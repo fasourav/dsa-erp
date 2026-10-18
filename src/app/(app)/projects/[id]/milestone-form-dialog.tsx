@@ -25,17 +25,9 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   doneOnBeforeStartError,
   milestoneAmountError,
   type ProjectMilestone,
-  type ProjectStage,
 } from "@/lib/project-progress"
 import { savedToast } from "@/lib/saved"
 
@@ -44,16 +36,13 @@ export function MilestoneFormDialog({
   onOpenChange,
   projectId,
   milestone,
-  stages,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
   milestone: ProjectMilestone | null
-  stages: readonly ProjectStage[]
 }) {
   const [label, setLabel] = useState(milestone?.label ?? "")
-  const [stageId, setStageId] = useState(milestone?.stageId || "none")
   const [dueOn, setDueOn] = useState(milestone?.dueOn ?? "")
   const [doneOn, setDoneOn] = useState(milestone?.doneOn ?? "")
   const [percentOfValue, setPercentOfValue] = useState(
@@ -83,11 +72,6 @@ export function MilestoneFormDialog({
     }
   }, [open, projectId])
 
-  const stageItems = [
-    { value: "none", label: "No Stage" },
-    ...stages.map((stage) => ({ value: stage.id, label: stage.name })),
-  ]
-
   function handleSubmit() {
     setFormError(null)
     const nextErrors: ProgressFieldErrors = {}
@@ -103,7 +87,7 @@ export function MilestoneFormDialog({
     startSubmit(async () => {
       const result = await saveProjectMilestone(projectId, milestone?.id ?? null, {
         label,
-        stageId: stageId === "none" ? "" : stageId,
+        stageId: "",
         dueOn,
         doneOn,
         percentOfValue,
@@ -144,26 +128,6 @@ export function MilestoneFormDialog({
                 onChange={(event) => setLabel(event.target.value)}
               />
               {fieldErrors.label ? <FieldError>{fieldErrors.label}</FieldError> : null}
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="milestone-stage">Stage</FieldLabel>
-              <Select
-                items={stageItems}
-                value={stageId}
-                disabled={pending}
-                onValueChange={(value) => setStageId(value ?? "none")}
-              >
-                <SelectTrigger id="milestone-stage" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {stageItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </Field>
             <Field span="half" data-invalid={Boolean(fieldErrors.dueOn) || undefined}>
               <FieldLabel htmlFor="milestone-due-on">Due On</FieldLabel>

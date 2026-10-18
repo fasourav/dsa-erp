@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError } from "@/lib/db-errors"
+import { phaseProgressPercent } from "@/lib/project-progress"
 import { createClient } from "@/lib/supabase/server"
 import { denyUnlessOwner } from "@/lib/permissions"
 import {
@@ -107,6 +108,10 @@ export async function deleteCatalogItem(
     return { error: "That item could not be found." }
   }
 
+  if (catalog === "project_phases") {
+    await syncAllProjectPhaseProgress(supabase)
+  }
+
   revalidateCatalogs(catalog)
   return { error: null }
 }
@@ -209,8 +214,42 @@ async function saveCatalogItem(
     return { error: "That item could not be found." }
   }
 
+  if (input.catalog === "project_phases") {
+    await syncAllProjectPhaseProgress(supabase)
+  }
+
   revalidateCatalogs(input.catalog)
   return { error: null }
+}
+
+async function syncAllProjectPhaseProgress(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  const [phases, projects] = await Promise.all([
+    supabase
+      .from("project_phases")
+      .select("name, sort_order")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("projects")
+      .select("id, current_phase, progress_percent"),
+  ])
+
+  if (phases.error || projects.error || !phases.data || !projects.data) {
+    return
+  }
+
+  await Promise.all(
+    projects.data.map(async (project) => {
+      const nextPercent = phaseProgressPercent(project.current_phase, phases.data)
+      if (Number(project.progress_percent ?? 0) === nextPercent) return
+      await supabase
+        .from("projects")
+        .update({ progress_percent: nextPercent })
+        .eq("id", project.id)
+    }),
+  )
 }
 
 async function writeDepartment(

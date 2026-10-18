@@ -23,7 +23,7 @@ import {
   type BankAccountChoice,
 } from "@/lib/bank-account"
 import { Money } from "@/components/money"
-import { parsePositiveAmount } from "@/lib/payment-status"
+import { moneyCents, parsePositiveAmount, sumAmounts } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 import type { PurchaseOrderDetail } from "@/lib/vendor-invoice-summary"
 
@@ -40,8 +40,14 @@ export function RecordVendorPaymentDialog({
   paymentMethods: readonly string[]
   bankAccounts: readonly BankAccountChoice[]
 }) {
+  const maxPayable = Math.max(
+    0,
+    sumAmounts([purchaseOrder.totalValue, -purchaseOrder.totalPaid]),
+  )
   const initialAmount =
-    purchaseOrder.totalPending > 0 ? String(purchaseOrder.totalPending) : ""
+    purchaseOrder.totalPending > 0 && maxPayable > 0
+      ? String(Math.min(purchaseOrder.totalPending, maxPayable))
+      : ""
   const [paidOn, setPaidOn] = useState(todayIsoDate())
   const [amount, setAmount] = useState(initialAmount)
   const [method, setMethod] = useState("")
@@ -57,6 +63,8 @@ export function RecordVendorPaymentDialog({
   const [pending, startSubmit] = useTransition()
 
   const parsedAmount = parsePositiveAmount(amount)
+  const exceedsMax =
+    parsedAmount !== null && moneyCents(parsedAmount) > moneyCents(maxPayable)
   const dateError =
     serverErrors.paidOn ??
     (attempted && !isIsoDate(paidOn) ? "Enter a payment date." : null)
@@ -66,7 +74,9 @@ export function RecordVendorPaymentDialog({
       ? amount.trim()
         ? "Enter a payment greater than 0."
         : "Enter a payment amount."
-      : null)
+      : attempted && exceedsMax
+        ? "Payment is more than the amount still due."
+        : null)
   const accountError = serverErrors.bankAccountId ?? null
 
   function handleOpenChange(nextOpen: boolean) {
@@ -82,7 +92,7 @@ export function RecordVendorPaymentDialog({
     setServerErrors({})
     setFormError(null)
 
-    if (!isIsoDate(paidOn) || parsedAmount === null || !bankAccountId) {
+    if (!isIsoDate(paidOn) || parsedAmount === null || exceedsMax || !bankAccountId) {
       if (!bankAccountId) {
         setServerErrors({ bankAccountId: "Choose a bank account." })
       }

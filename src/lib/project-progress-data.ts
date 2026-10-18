@@ -1,48 +1,26 @@
 import { toNumber } from "@/lib/format"
 import {
-  isStageStatus,
+  phaseProgressSummary,
   type ProjectMilestone,
   type ProjectProgressData,
-  type ProjectStage,
-  type StageTemplate,
 } from "@/lib/project-progress"
 import { businessTodayIsoDate, dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
-
-export async function getStageTemplates(): Promise<{
-  templates: StageTemplate[]
-  error: string | null
-}> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("project_stage_templates")
-    .select("id, sort_order, name, weight")
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true })
-
-  if (error || !data) {
-    return { templates: [], error: "Could not load the stage template." }
-  }
-
-  return {
-    templates: data.map(toTemplate),
-    error: null,
-  }
-}
 
 export async function getProjectProgress(projectId: string): Promise<{
   progress: ProjectProgressData | null
   error: string | null
 }> {
   const supabase = await createClient()
-  const [project, stages, milestones, templates] = await Promise.all([
-    supabase.from("projects").select("progress_percent").eq("id", projectId).maybeSingle(),
+  const [project, phases, milestones] = await Promise.all([
     supabase
-      .from("project_stages")
-      .select(
-        "id, sort_order, name, weight, status, planned_start, planned_end, done_on, notes",
-      )
-      .eq("project_id", projectId)
+      .from("projects")
+      .select("current_phase, progress_percent")
+      .eq("id", projectId)
+      .maybeSingle(),
+    supabase
+      .from("project_phases")
+      .select("id, name, sort_order")
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
     supabase
@@ -53,22 +31,21 @@ export async function getProjectProgress(projectId: string): Promise<{
       .eq("project_id", projectId)
       .order("due_on", { ascending: true, nullsFirst: false })
       .order("label", { ascending: true }),
-    supabase
-      .from("project_stage_templates")
-      .select("id, sort_order, name, weight")
-      .order("sort_order", { ascending: true }),
   ])
 
-  if (project.error || stages.error || milestones.error || templates.error || !project.data) {
+  if (project.error || phases.error || milestones.error || !project.data) {
     return { progress: null, error: "Could not load project progress." }
   }
 
+  const summary = phaseProgressSummary(project.data.current_phase, phases.data ?? [])
+
   return {
     progress: {
-      progressPercent: toNumber(project.data.progress_percent),
-      stages: (stages.data ?? []).map(toStage),
+      progressPercent: summary.progressPercent,
+      currentPhase: summary.currentPhase,
+      phaseSerial: summary.phaseSerial,
+      totalPhases: summary.totalPhases,
       milestones: (milestones.data ?? []).map(toMilestone),
-      templates: (templates.data ?? []).map(toTemplate),
     },
     error: null,
   }
@@ -93,44 +70,6 @@ export async function overdueCountsByProject(): Promise<Map<string, number>> {
   }
 
   return counts
-}
-
-function toTemplate(row: {
-  id: string
-  sort_order: number
-  name: string
-  weight: number
-}): StageTemplate {
-  return {
-    id: row.id,
-    sortOrder: row.sort_order,
-    name: row.name.trim(),
-    weight: toNumber(row.weight),
-  }
-}
-
-function toStage(row: {
-  id: string
-  sort_order: number
-  name: string
-  weight: number
-  status: string
-  planned_start: string | null
-  planned_end: string | null
-  done_on: string | null
-  notes: string
-}): ProjectStage {
-  return {
-    id: row.id,
-    sortOrder: row.sort_order,
-    name: row.name.trim(),
-    weight: toNumber(row.weight),
-    status: isStageStatus(row.status) ? row.status : "Not Started",
-    plannedStart: dateInputValue(row.planned_start ?? ""),
-    plannedEnd: dateInputValue(row.planned_end ?? ""),
-    doneOn: dateInputValue(row.done_on ?? ""),
-    notes: row.notes ?? "",
-  }
 }
 
 function toMilestone(row: {

@@ -38,9 +38,78 @@ export type ProjectMilestone = {
 
 export type ProjectProgressData = {
   progressPercent: number
-  stages: ProjectStage[]
+  currentPhase: string
+  phaseSerial: number | null
+  totalPhases: number
   milestones: ProjectMilestone[]
-  templates: StageTemplate[]
+}
+
+export function phaseProgressSummary(
+  currentPhase: string | null | undefined,
+  phases: readonly { name: string; sort_order?: number; sortOrder?: number }[],
+): {
+  progressPercent: number
+  currentPhase: string
+  phaseSerial: number | null
+  totalPhases: number
+} {
+  const ordered = [...phases]
+    .filter((row) => Boolean(row.name?.trim()))
+    .sort((a, b) => {
+      const orderA = a.sort_order ?? a.sortOrder ?? 0
+      const orderB = b.sort_order ?? b.sortOrder ?? 0
+      if (orderA !== orderB) return orderA - orderB
+      return a.name.trim().localeCompare(b.name.trim(), "en", { sensitivity: "base" })
+    })
+
+  const unique: { name: string }[] = []
+  const seen = new Set<string>()
+  for (const row of ordered) {
+    const trimmed = row.name.trim()
+    const key = trimmed.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push({ name: trimmed })
+  }
+
+  const totalPhases = unique.length
+  const trimmedPhase = currentPhase?.trim() ?? ""
+  if (!trimmedPhase || totalPhases === 0) {
+    return {
+      progressPercent: 0,
+      currentPhase: trimmedPhase,
+      phaseSerial: null,
+      totalPhases,
+    }
+  }
+
+  const index = unique.findIndex(
+    (item) => item.name.toLowerCase() === trimmedPhase.toLowerCase(),
+  )
+  if (index < 0) {
+    return {
+      progressPercent: 0,
+      currentPhase: trimmedPhase,
+      phaseSerial: null,
+      totalPhases,
+    }
+  }
+
+  const phaseSerial = index + 1
+  const progressPercent = Math.round((phaseSerial / totalPhases) * 100)
+  return {
+    progressPercent,
+    currentPhase: unique[index].name,
+    phaseSerial,
+    totalPhases,
+  }
+}
+
+export function phaseProgressPercent(
+  currentPhase: string | null | undefined,
+  phases: readonly { name: string; sort_order?: number; sortOrder?: number }[],
+): number {
+  return phaseProgressSummary(currentPhase, phases).progressPercent
 }
 
 const optionalDate = z

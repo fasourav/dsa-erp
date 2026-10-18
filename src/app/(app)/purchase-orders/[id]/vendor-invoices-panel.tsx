@@ -39,6 +39,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
+import { moneyCents, sumAmounts } from "@/lib/payment-status"
 import {
   sortVendorInvoices,
   vendorInvoiceColumns,
@@ -155,6 +156,36 @@ export function VendorInvoicesPanel({
     })
   }
 
+  const committedValue = useMemo(
+    () =>
+      sumAmounts(
+        invoices.map((invoice) =>
+          invoice.status === "void" ? invoice.paid : invoice.amount,
+        ),
+      ),
+    [invoices],
+  )
+  const maxBillAmount = useMemo(() => {
+    if (!purchaseOrder) return 0
+    const otherCommitted = sumAmounts(
+      invoices
+        .filter((invoice) => invoice.id !== formInvoice?.id)
+        .map((invoice) =>
+          invoice.status === "void" ? invoice.paid : invoice.amount,
+        ),
+    )
+    return Math.max(0, sumAmounts([purchaseOrder.totalValue, -otherCommitted]))
+  }, [formInvoice?.id, invoices, purchaseOrder])
+  const canAddBill = Boolean(
+    purchaseOrder &&
+      moneyCents(committedValue) < moneyCents(purchaseOrder.totalValue) &&
+      moneyCents(purchaseOrder.totalPaid) < moneyCents(purchaseOrder.totalValue),
+  )
+  const canRecordPayment = Boolean(
+    purchaseOrder &&
+      moneyCents(purchaseOrder.totalPaid) < moneyCents(purchaseOrder.totalValue),
+  )
+
   const paidShare =
     purchaseOrder && purchaseOrder.totalValue > 0
       ? Math.min(100, (purchaseOrder.totalPaid / purchaseOrder.totalValue) * 100)
@@ -215,7 +246,7 @@ export function VendorInvoicesPanel({
               <Button
                 type="button"
                 variant="outline"
-                disabled={!purchaseOrder}
+                disabled={!canAddBill}
                 onClick={() => openForm(null)}
               >
                 <Plus aria-hidden="true" data-icon="inline-start" />
@@ -225,7 +256,7 @@ export function VendorInvoicesPanel({
             {canAdd ? (
               <Button
                 type="button"
-                disabled={!purchaseOrder}
+                disabled={!canRecordPayment}
                 onClick={() => {
                   setRecordSession((current) => current + 1)
                   setRecordOpen(true)
@@ -421,6 +452,7 @@ export function VendorInvoicesPanel({
             onOpenChange={setFormOpen}
             purchaseOrderId={purchaseOrder.id}
             invoice={formInvoice}
+            maxAmount={maxBillAmount}
           />
           <RecordVendorPaymentDialog
             key={recordSession}

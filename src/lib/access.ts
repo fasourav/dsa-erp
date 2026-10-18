@@ -59,7 +59,6 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", module: "dashboard" },
-  { href: "/reports", label: "Reports", reports: true },
   { href: "/leads", label: "Leads", module: "leads" },
   { href: "/clients", label: "Clients", module: "clients" },
   { href: "/projects", label: "Projects", module: "projects" },
@@ -221,5 +220,6 @@ export function homePath(access: AccessSnapshot): string {
   const match = navItems.find((item) => canSeeNav(access, item))
   if (match) return match.href
   if (canOpenDocuments(access)) return "/documents"
+  if (canOpenReports(access)) return "/reports"
   return "/no-access"
 }

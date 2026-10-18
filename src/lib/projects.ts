@@ -6,6 +6,7 @@ import {
   type ClientOption,
   type ProjectRow,
 } from "@/lib/project-summary"
+import { phaseProgressPercent } from "@/lib/project-progress"
 import { overdueCountsByProject } from "@/lib/project-progress-data"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -63,7 +64,7 @@ export async function getProjects(): Promise<{
           .from("project_phases")
           .select("id, name, sort_order")
           .order("sort_order", { ascending: true })
-          .order("id", { ascending: true })
+          .order("name", { ascending: true })
           .range(from, to),
       ),
       overdueCountsByProject(),
@@ -100,7 +101,7 @@ export async function getProjects(): Promise<{
         expenseDue: toNumber(financial?.expense_due),
         grossProfit: toNumber(financial?.gross_profit),
         details: row.details ?? "",
-        progressPercent: toNumber(row.progress_percent),
+        progressPercent: phaseProgressPercent(row.current_phase, phaseRows),
         overdueMilestones: overdue.get(row.id) ?? 0,
         budgetStatus: budgetStatuses.get(row.id) ?? null,
       } satisfies ProjectRow

@@ -11,6 +11,7 @@ import { DocumentsMenu } from "@/components/documents-menu"
 import { DsaBadge } from "@/components/dsa-badge"
 import { GlobalSearch } from "@/components/global-search"
 import { MobileTabBar, useTabRoots } from "@/components/mobile-tab-bar"
+import { ReportsMenu } from "@/components/reports-menu"
 import { ShellHeaderProvider } from "@/components/shell-header"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
@@ -19,11 +20,13 @@ import type { AccountIdentity } from "@/lib/account-identity"
 import { modulesHref } from "@/lib/nav-icons"
 import type { ThemePreference } from "@/lib/theme"
 
+const topBarRoots = new Set(["/documents", "/reports"])
+
 function backHref(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean)
   for (let length = segments.length - 1; length > 0; length -= 1) {
     const parent = `/${segments.slice(0, length).join("/")}`
-    if (navItems.some((item) => item.href === parent)) return parent
+    if (topBarRoots.has(parent) || navItems.some((item) => item.href === parent)) return parent
   }
   return modulesHref
 }
@@ -76,6 +79,7 @@ export function AppShell({
             <div className="flex items-center gap-2.5">
               <div className="hidden md:contents">
                 <DocumentsMenu />
+                <ReportsMenu />
               </div>
               <GlobalSearch />
               <div className="hidden md:contents">

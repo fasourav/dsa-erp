@@ -37,11 +37,13 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import {
   isPaymentStatus,
+  moneyCents,
+  parsePositiveAmount,
   paymentStatusLabel,
   paymentStatuses,
   statusMatchesPayments,
 } from "@/lib/payment-status"
-import { isIsoDate, parseProjectValue, todayIsoDate } from "@/lib/project-validation"
+import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 import type { VendorInvoiceRow } from "@/lib/vendor-invoice-summary"
 
 export function VendorInvoiceFormDialog({
@@ -49,11 +51,13 @@ export function VendorInvoiceFormDialog({
   onOpenChange,
   purchaseOrderId,
   invoice,
+  maxAmount,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   purchaseOrderId: string
   invoice: VendorInvoiceRow | null
+  maxAmount?: number
 }) {
   const invoiceId = invoice?.id ?? null
   const version = useRecordVersion("vendor_invoices", invoiceId, open)
@@ -66,8 +70,13 @@ export function VendorInvoiceFormDialog({
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
 
-  const parsedAmount = parseProjectValue(amount)
+  const parsedAmount = parsePositiveAmount(amount)
   const paid = invoice?.paid ?? 0
+  const exceedsMax =
+    status !== "void" &&
+    maxAmount !== undefined &&
+    parsedAmount !== null &&
+    moneyCents(parsedAmount) > moneyCents(maxAmount)
   const issuedError =
     serverErrors.issuedOn ??
     (attempted && !isIsoDate(issuedOn) ? "Enter an issued date." : null)
@@ -75,9 +84,11 @@ export function VendorInvoiceFormDialog({
     serverErrors.amount ??
     (attempted && parsedAmount === null
       ? amount.trim()
-        ? "Enter an amount of 0 or more."
+        ? "Enter an amount greater than 0."
         : "Enter an amount."
-      : null)
+      : attempted && exceedsMax
+        ? "Bills for this purchase order cannot exceed the purchase order value."
+        : null)
   const statusError =
     serverErrors.status ??
     (attempted &&
@@ -110,6 +121,7 @@ export function VendorInvoiceFormDialog({
     if (
       !isIsoDate(issuedOn) ||
       parsedAmount === null ||
+      exceedsMax ||
       !isPaymentStatus(status) ||
       !statusMatchesPayments(status, parsedAmount, paid)
     ) {
