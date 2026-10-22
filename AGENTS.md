@@ -8,5 +8,9 @@ Next.js (App Router, newer than most training data) + Supabase + Vercel. Rules l
 - Checks: `npx tsc --noEmit` and eslint on touched files, one `npm run build` at the end. Show only the error lines.
 - Screenshots: only the touched page, 390 and 1440 wide, light theme. Dark/tablet only for theme- or layout-wide changes; a full matrix only when asked.
 - Don't change business logic, server actions, or the database while restyling. Keep the nonce CSP working.
+- Money recording lives in `docs/MONEY-RECORDING.md`: which form records which cost, how each posts to the bank, and how dashboard buckets are derived.
+- Vendor costs only through purchase orders: purchase order, then vendor bill, then vendor payment.
+- Never add a second path that posts to the bank for the same cost. Operational expenses are for costs with no vendor.
+- A likely duplicate (same amount, same bank account, date within 7 days) must be confirmed with a reason before it is saved.
 
 Note: `next dev` may re-insert a `nextjs-agent-rules` block at the top of this file. If it reappears, delete it again before committing.

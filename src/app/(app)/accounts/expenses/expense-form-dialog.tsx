@@ -9,6 +9,7 @@ import {
   updateOperationalExpense,
   type ExpenseFieldErrors,
 } from "@/app/(app)/accounts/expenses/actions"
+import { DuplicateWarning } from "@/app/(app)/accounts/duplicate-warning"
 import { BankAccountField } from "@/components/bank-account-field"
 import { RecordAttachments } from "@/components/record-attachments"
 import { NameCombobox } from "@/components/name-combobox"
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -45,6 +47,8 @@ import type {
   NamedOption,
   OperationalExpenseRow,
 } from "@/lib/operational-expenses"
+import type { DuplicateMatch } from "@/lib/duplicate-outflow"
+import { formatRecordedAt } from "@/lib/recorded-at"
 import { isIsoDate, parseProjectValue, todayIsoDate } from "@/lib/project-validation"
 
 const noneValue = "__none__"
@@ -55,7 +59,6 @@ export function ExpenseFormDialog({
   expense,
   categories,
   departments,
-  vendors,
   paymentMethods,
   bankAccounts,
 }: {
@@ -64,7 +67,6 @@ export function ExpenseFormDialog({
   expense: OperationalExpenseRow | null
   categories: readonly string[]
   departments: readonly NamedOption[]
-  vendors: readonly NamedOption[]
   paymentMethods: readonly string[]
   bankAccounts: readonly BankAccountChoice[]
 }) {
@@ -76,7 +78,6 @@ export function ExpenseFormDialog({
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "")
   const [category, setCategory] = useState(expense?.category ?? "")
   const [departmentId, setDepartmentId] = useState(expense?.departmentId ?? "")
-  const [vendorId, setVendorId] = useState(expense?.vendorId ?? "")
   const [notes, setNotes] = useState(expense?.notes ?? "")
   const [paymentMethod, setPaymentMethod] = useState(expense?.paymentMethod ?? "")
   const [bankAccountId, setBankAccountId] = useState(
@@ -87,6 +88,9 @@ export function ExpenseFormDialog({
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<ExpenseFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([])
+  const [confirmNotDuplicate, setConfirmNotDuplicate] = useState(false)
+  const [duplicateReason, setDuplicateReason] = useState("")
   const [pending, startSubmit] = useTransition()
 
   const parsedAmount = parseProjectValue(amount)
@@ -114,13 +118,10 @@ export function ExpenseFormDialog({
       label: department.name || "—",
     })),
   ]
-  const vendorItems = [
-    { value: noneValue, label: "None" },
-    ...vendors.map((vendor) => ({
-      value: vendor.id,
-      label: vendor.name || "—",
-    })),
-  ]
+  function forgetDuplicate() {
+    setConfirmNotDuplicate(false)
+    setDuplicates([])
+  }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
@@ -160,11 +161,12 @@ export function ExpenseFormDialog({
       category,
       paymentMethod: paymentMethod.trim(),
       departmentId,
-      vendorId,
       notes: notes.trim(),
       bankAccountId,
       newAccountName: hasAccounts ? "" : accountName.trim(),
       newBankName: hasAccounts ? "" : bankName.trim(),
+      confirmNotDuplicate,
+      duplicateReason,
     }
 
     startSubmit(async () => {
@@ -173,6 +175,7 @@ export function ExpenseFormDialog({
           ? await updateOperationalExpense(expenseId, { ...input, version })
           : await addOperationalExpense(input)
 
+        setDuplicates(result.duplicates ?? [])
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
         }
@@ -180,7 +183,7 @@ export function ExpenseFormDialog({
         if (result.error) {
           setFormError(result.error)
         }
-        if (result.fieldErrors || result.error) return
+        if (result.fieldErrors || result.error || result.duplicates?.length) return
 
         savedToast()
         onOpenChange(false)
@@ -203,6 +206,11 @@ export function ExpenseFormDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
+          {expense ? (
+            <p className="text-label text-muted-foreground">
+              {expense.createdByName} · {formatRecordedAt(expense.createdAt)}
+            </p>
+          ) : null}
           {expenseId ? <RecordAttachments parentType="expense" parentId={expenseId} /> : null}
           <FieldGroup layout="inset">
             <Field span="half" data-invalid={Boolean(dateError) || undefined}>
@@ -214,7 +222,10 @@ export function ExpenseFormDialog({
                 value={expenseDate}
                 disabled={pending}
                 aria-invalid={Boolean(dateError)}
-                onChange={(event) => setExpenseDate(event.target.value)}
+                onChange={(event) => {
+                  setExpenseDate(event.target.value)
+                  forgetDuplicate()
+                }}
               />
               {dateError ? <FieldError>{dateError}</FieldError> : null}
             </Field>
@@ -228,7 +239,10 @@ export function ExpenseFormDialog({
                 value={amount}
                 disabled={pending}
                 aria-invalid={Boolean(amountError)}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => {
+                  setAmount(event.target.value)
+                  forgetDuplicate()
+                }}
               />
               {amountError ? <FieldError>{amountError}</FieldError> : null}
             </Field>
@@ -273,7 +287,10 @@ export function ExpenseFormDialog({
                 idPrefix="expense"
                 accounts={bankAccounts}
                 accountId={bankAccountId}
-                onAccountIdChange={setBankAccountId}
+                onAccountIdChange={(value) => {
+                  setBankAccountId(value)
+                  forgetDuplicate()
+                }}
                 accountName={accountName}
                 onAccountNameChange={setAccountName}
                 bankName={bankName}
@@ -282,10 +299,7 @@ export function ExpenseFormDialog({
                 error={accountError}
               />
             </div>
-            <Field
-              span="half"
-              data-invalid={Boolean(serverErrors.departmentId) || undefined}
-            >
+            <Field data-invalid={Boolean(serverErrors.departmentId) || undefined}>
               <FieldLabel htmlFor="expense-department">Department</FieldLabel>
               <Select
                 items={departmentItems}
@@ -314,33 +328,12 @@ export function ExpenseFormDialog({
                 <FieldError>{serverErrors.departmentId}</FieldError>
               ) : null}
             </Field>
-            <Field span="half" data-invalid={Boolean(serverErrors.vendorId) || undefined}>
-              <FieldLabel htmlFor="expense-vendor">Vendor</FieldLabel>
-              <Select
-                items={vendorItems}
-                value={vendorId || noneValue}
-                disabled={pending}
-                onValueChange={(value) =>
-                  setVendorId(!value || value === noneValue ? "" : value)
-                }
-              >
-                <SelectTrigger
-                  id="expense-vendor"
-                  className="w-full"
-                  aria-invalid={Boolean(serverErrors.vendorId)}
-                >
-                  <SelectValue placeholder="Select A Vendor" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {vendorItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {serverErrors.vendorId ? (
-                <FieldError>{serverErrors.vendorId}</FieldError>
+            <Field>
+              <FieldDescription>
+                Vendor costs go through Operational Purchase Orders, then a vendor bill and a vendor payment.
+              </FieldDescription>
+              {expense?.vendorName ? (
+                <p className="text-label">Recorded Vendor: {expense.vendorName}</p>
               ) : null}
             </Field>
             <Field>
@@ -355,6 +348,16 @@ export function ExpenseFormDialog({
               />
             </Field>
           </FieldGroup>
+          <DuplicateWarning
+            idPrefix="expense"
+            matches={duplicates}
+            confirmed={confirmNotDuplicate}
+            onConfirmedChange={setConfirmNotDuplicate}
+            reason={duplicateReason}
+            onReasonChange={setDuplicateReason}
+            reasonError={serverErrors.duplicateReason ?? null}
+            disabled={pending}
+          />
           {formError ? (
             <p role="alert" className="px-1 text-sm text-destructive md:px-0">
               {formError}

@@ -1343,6 +1343,7 @@ export type Database = {
           bank_account_id: string
           category: string
           created_at: string
+          created_by: string | null
           department_id: string | null
           expense_date: string
           id: string
@@ -1357,6 +1358,7 @@ export type Database = {
           bank_account_id: string
           category: string
           created_at?: string
+          created_by?: string | null
           department_id?: string | null
           expense_date?: string
           id?: string
@@ -1371,6 +1373,7 @@ export type Database = {
           bank_account_id?: string
           category?: string
           created_at?: string
+          created_by?: string | null
           department_id?: string | null
           expense_date?: string
           id?: string
@@ -2175,6 +2178,7 @@ export type Database = {
           amount: number
           bank_account_id: string
           created_at: string
+          created_by: string | null
           expense_category: string | null
           id: string
           method: string | null
@@ -2187,6 +2191,7 @@ export type Database = {
           amount: number
           bank_account_id: string
           created_at?: string
+          created_by?: string | null
           expense_category?: string | null
           id?: string
           method?: string | null
@@ -2199,6 +2204,7 @@ export type Database = {
           amount?: number
           bank_account_id?: string
           created_at?: string
+          created_by?: string | null
           expense_category?: string | null
           id?: string
           method?: string | null

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { formatRecordedAt } from "@/lib/recorded-at"
 import {
   paginateRows,
   rangeLabel,
@@ -44,7 +45,6 @@ export function ExpensesTable({
   expenses,
   categories,
   departments,
-  vendors,
   paymentMethods,
   bankAccounts,
   error,
@@ -52,7 +52,6 @@ export function ExpensesTable({
   expenses: OperationalExpenseRow[]
   categories: string[]
   departments: NamedOption[]
-  vendors: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
   error: string | null
@@ -183,8 +182,10 @@ export function ExpensesTable({
         mobileItem={(expense) => ({
           title: expense.category || "—",
           subtitle: [
+            expense.vendorName,
             expense.paymentMethod,
             expense.expenseDate ? formatIsoDate(expense.expenseDate) : "",
+            expense.createdByName,
           ]
             .filter(Boolean)
             .join(" · "),
@@ -235,7 +236,6 @@ export function ExpensesTable({
         expense={formExpense}
         categories={categories}
         departments={departments}
-        vendors={vendors}
         paymentMethods={paymentMethods}
         bankAccounts={bankAccounts}
       />
@@ -276,13 +276,23 @@ function Cell({
       )
     case "category":
       return (
-        <span
-          className={cn(
-            "text-ui font-semibold",
-            !expense.category && "text-muted-foreground",
-          )}
-        >
-          {expense.category || "—"}
+        <span className="flex min-w-0 flex-col">
+          <span
+            className={cn(
+              "text-ui font-semibold",
+              !expense.category && "text-muted-foreground",
+            )}
+          >
+            {expense.category || "—"}
+          </span>
+          <span className="text-label text-muted-foreground">
+            {expense.createdByName} · {formatRecordedAt(expense.createdAt)}
+          </span>
+          {expense.vendorName ? (
+            <span className="text-label text-muted-foreground">
+              Vendor {expense.vendorName}
+            </span>
+          ) : null}
         </span>
       )
     case "amount":

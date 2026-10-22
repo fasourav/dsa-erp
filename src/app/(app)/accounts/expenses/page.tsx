@@ -13,7 +13,6 @@ export default async function OperationalExpensesPage() {
       expenses={page.expenses}
       categories={page.categories}
       departments={page.departments}
-      vendors={page.vendors}
       paymentMethods={page.paymentMethods}
       bankAccounts={page.bankAccounts}
       error={page.error}

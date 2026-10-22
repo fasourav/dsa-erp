@@ -10,6 +10,7 @@ import {
   isPaymentStatus,
   sumAmounts,
 } from "@/lib/payment-status"
+import { creatorNames } from "@/lib/record-audit"
 import { createClient } from "@/lib/supabase/server"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 import type {
@@ -122,7 +123,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
               supabase
                 .from("vendor_payments")
                 .select(
-                  "id, vendor_invoice_id, paid_on, amount, method, reference, notes, expense_category, bank_account_id",
+                  "id, vendor_invoice_id, paid_on, amount, method, reference, notes, expense_category, bank_account_id, created_at, created_by",
                 )
                 .in("vendor_invoice_id", invoiceIds)
                 .order("id", { ascending: true })
@@ -131,8 +132,39 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
           )
 
     const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
+    const paymentIds = paymentRows.map((row) => row.id)
+    const [creators, bankLines] = await Promise.all([
+      creatorNames(
+        supabase,
+        "vendor_payments",
+        paymentRows.map((row) => ({ id: row.id, createdBy: row.created_by })),
+      ),
+      paymentIds.length === 0
+        ? Promise.resolve({ data: [], error: null })
+        : supabase
+            .from("bank_transactions_readable")
+            .select("vendor_payment_id, transaction_date, amount, bank_account_id")
+            .in("vendor_payment_id", paymentIds),
+    ])
+    const bankByPayment = new Map<
+      string,
+      { date: string; amount: number; account: string }
+    >()
+    if (!bankLines.error) {
+      for (const line of bankLines.data ?? []) {
+        if (!line.vendor_payment_id || !line.transaction_date) continue
+        bankByPayment.set(line.vendor_payment_id, {
+          date: dateInputValue(line.transaction_date),
+          amount: toNumber(line.amount),
+          account: line.bank_account_id
+            ? accountsById.get(line.bank_account_id) ?? ""
+            : "",
+        })
+      }
+    }
     const paymentsByInvoice = new Map<string, VendorPaymentRow[]>()
     for (const row of paymentRows) {
+      const bankLine = bankByPayment.get(row.id)
       const payment: VendorPaymentRow = {
         id: row.id,
         paidOn: dateInputValue(row.paid_on),
@@ -143,6 +175,15 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
         expenseCategory: row.expense_category?.trim() ?? "",
         bankAccountId: row.bank_account_id,
         bankAccountName: accountsById.get(row.bank_account_id) ?? "",
+        createdByName: creators.get(row.id) ?? "Unknown",
+        createdAt: row.created_at,
+        purchaseOrderId: order.id,
+        purchaseOrderIssuedOn: dateInputValue(order.issued_on),
+        billIssuedOn: "",
+        billAmount: 0,
+        bankLineDate: bankLine?.date ?? "",
+        bankLineAmount: bankLine?.amount ?? 0,
+        bankLineAccount: bankLine?.account ?? "",
       }
       const current = paymentsByInvoice.get(row.vendor_invoice_id) ?? []
       current.push(payment)
@@ -154,7 +195,11 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
         return []
       }
 
-      const payments = paymentsByInvoice.get(row.id) ?? []
+      const payments = (paymentsByInvoice.get(row.id) ?? []).map((payment) => ({
+        ...payment,
+        billIssuedOn: dateInputValue(row.issued_on),
+        billAmount: toNumber(row.amount),
+      }))
       const paid = sumAmounts(payments.map((payment) => payment.amount))
       const balance = openPayableForBill(toNumber(row.amount), paid, row.status)
 

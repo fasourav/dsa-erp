@@ -3,6 +3,7 @@
 import { savedToast } from "@/lib/saved"
 import { useState, useTransition } from "react"
 
+import { DuplicateWarning } from "@/app/(app)/accounts/duplicate-warning"
 import {
   recordPurchaseOrderPayment,
   type RecordVendorPaymentFieldErrors,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/bank-account"
 import { Money } from "@/components/money"
 import { moneyCents, parsePositiveAmount, sumAmounts } from "@/lib/payment-status"
+import type { DuplicateMatch } from "@/lib/duplicate-outflow"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 import type { PurchaseOrderDetail } from "@/lib/vendor-invoice-summary"
 
@@ -60,6 +62,9 @@ export function RecordVendorPaymentDialog({
     {},
   )
   const [formError, setFormError] = useState<string | null>(null)
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([])
+  const [confirmNotDuplicate, setConfirmNotDuplicate] = useState(false)
+  const [duplicateReason, setDuplicateReason] = useState("")
   const [pending, startSubmit] = useTransition()
 
   const parsedAmount = parsePositiveAmount(amount)
@@ -82,6 +87,12 @@ export function RecordVendorPaymentDialog({
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && pending) {
       return
+    }
+
+    if (!nextOpen) {
+      setDuplicates([])
+      setConfirmNotDuplicate(false)
+      setDuplicateReason("")
     }
 
     onOpenChange(nextOpen)
@@ -113,8 +124,11 @@ export function RecordVendorPaymentDialog({
           invoiceIssuedOn: "",
           invoiceDueOn: "",
           invoiceAmount: "",
+          confirmNotDuplicate,
+          duplicateReason,
         })
 
+        setDuplicates(result.duplicates ?? [])
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
         }
@@ -122,7 +136,7 @@ export function RecordVendorPaymentDialog({
         if (result.error) {
           setFormError(result.error)
         }
-        if (result.fieldErrors || result.error) return
+        if (result.fieldErrors || result.error || result.duplicates?.length) return
 
         savedToast()
         onOpenChange(false)
@@ -168,11 +182,23 @@ export function RecordVendorPaymentDialog({
           <RecordPaymentFields
             idPrefix="record-payment"
             amount={amount}
-            onAmountChange={setAmount}
+            onAmountChange={(value) => {
+              setAmount(value)
+              setConfirmNotDuplicate(false)
+              setDuplicates([])
+            }}
             date={paidOn}
-            onDateChange={setPaidOn}
+            onDateChange={(value) => {
+              setPaidOn(value)
+              setConfirmNotDuplicate(false)
+              setDuplicates([])
+            }}
             bankAccountId={bankAccountId}
-            onBankAccountIdChange={setBankAccountId}
+            onBankAccountIdChange={(value) => {
+              setBankAccountId(value)
+              setConfirmNotDuplicate(false)
+              setDuplicates([])
+            }}
             paymentMethod={method}
             onPaymentMethodChange={setMethod}
             notes={notes}
@@ -183,6 +209,16 @@ export function RecordVendorPaymentDialog({
             amountError={amountError}
             dateError={dateError}
             accountError={accountError}
+          />
+          <DuplicateWarning
+            idPrefix="record-payment"
+            matches={duplicates}
+            confirmed={confirmNotDuplicate}
+            onConfirmedChange={setConfirmNotDuplicate}
+            reason={duplicateReason}
+            onReasonChange={setDuplicateReason}
+            reasonError={serverErrors.duplicateReason ?? null}
+            disabled={pending}
           />
           {formError ? (
             <p role="alert" className="px-1 text-sm text-destructive md:px-0">

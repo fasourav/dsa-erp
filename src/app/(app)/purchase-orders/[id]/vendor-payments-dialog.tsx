@@ -4,7 +4,10 @@ import { savedToast } from "@/lib/saved"
 import { useCan } from "@/components/access-provider"
 
 import { Pencil, Plus, Trash2, Wallet } from "lucide-react"
+import Link from "next/link"
 import { useState, useTransition } from "react"
+
+import { DuplicateWarning } from "@/app/(app)/accounts/duplicate-warning"
 
 import {
   addVendorPayment,
@@ -41,7 +44,9 @@ import {
   defaultBankAccountId,
   type BankAccountChoice,
 } from "@/lib/bank-account"
+import type { DuplicateMatch } from "@/lib/duplicate-outflow"
 import { formatIsoDate } from "@/lib/format"
+import { formatRecordedAt } from "@/lib/recorded-at"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, todayIsoDate } from "@/lib/project-validation"
 import type {
@@ -234,6 +239,40 @@ export function VendorPaymentsDialog({
                           {row.notes ? (
                             <p className="text-label text-muted-foreground">{row.notes}</p>
                           ) : null}
+                          <p className="text-label text-muted-foreground">
+                            {row.createdByName} · {formatRecordedAt(row.createdAt)}
+                          </p>
+                          <p className="text-label text-muted-foreground">
+                            <Link
+                              href={`/purchase-orders/${row.purchaseOrderId}`}
+                              className="underline underline-offset-4"
+                            >
+                              Purchase Order
+                              {row.purchaseOrderIssuedOn
+                                ? ` · ${formatIsoDate(row.purchaseOrderIssuedOn)}`
+                                : ""}
+                            </Link>
+                            {" · "}
+                            Bill
+                            {row.billIssuedOn ? ` · ${formatIsoDate(row.billIssuedOn)}` : ""}
+                            {" · "}
+                            <Money value={row.billAmount} />
+                          </p>
+                          <p className="text-label text-muted-foreground">
+                            {row.bankLineDate ? (
+                              <Link
+                                href={`/accounts/bank?account=${row.bankAccountId}`}
+                                className="underline underline-offset-4"
+                              >
+                                Bank Line
+                                {row.bankLineAccount ? ` · ${row.bankLineAccount}` : ""}
+                                {` · ${formatIsoDate(row.bankLineDate)} · `}
+                                <Money value={row.bankLineAmount} />
+                              </Link>
+                            ) : (
+                              "Bank Line · Not Available"
+                            )}
+                          </p>
                           <RecordAttachments parentType="vendor_payment" parentId={row.id} collapsed />
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -344,6 +383,9 @@ function PaymentForm({
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<VendorPaymentFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([])
+  const [confirmNotDuplicate, setConfirmNotDuplicate] = useState(false)
+  const [duplicateReason, setDuplicateReason] = useState("")
   const [pending, startSubmit] = useTransition()
 
   const parsedAmount = parsePositiveAmount(amount)
@@ -381,6 +423,8 @@ function PaymentForm({
       bankAccountId,
       newAccountName: "",
       newBankName: "",
+      confirmNotDuplicate,
+      duplicateReason,
     }
 
     startSubmit(async () => {
@@ -389,6 +433,7 @@ function PaymentForm({
           ? await updateVendorPayment(payment.id, input)
           : await addVendorPayment(invoice.id, input)
 
+        setDuplicates(result.duplicates ?? [])
         if (result.fieldErrors) {
           setServerErrors(result.fieldErrors)
         }
@@ -396,7 +441,7 @@ function PaymentForm({
         if (result.error) {
           setFormError(result.error)
         }
-        if (result.fieldErrors || result.error) return
+        if (result.fieldErrors || result.error || result.duplicates?.length) return
 
         savedToast()
         onSaved()
@@ -409,6 +454,42 @@ function PaymentForm({
   return (
     <>
       <DialogBody className="flex flex-col gap-4">
+        {payment ? (
+          <div className="flex flex-col gap-1 text-label text-muted-foreground">
+            <p>
+              {payment.createdByName} · {formatRecordedAt(payment.createdAt)}
+            </p>
+            <p>
+              <Link
+                href={`/purchase-orders/${payment.purchaseOrderId}`}
+                className="underline underline-offset-4"
+              >
+                Purchase Order
+                {payment.purchaseOrderIssuedOn
+                  ? ` · ${formatIsoDate(payment.purchaseOrderIssuedOn)}`
+                  : ""}
+              </Link>
+              {" · Bill"}
+              {payment.billIssuedOn ? ` · ${formatIsoDate(payment.billIssuedOn)}` : ""}
+              {" · "}
+              <Money value={payment.billAmount} />
+            </p>
+            <p>
+              {payment.bankLineDate ? (
+                <Link
+                  href={`/accounts/bank?account=${payment.bankAccountId}`}
+                  className="underline underline-offset-4"
+                >
+                  Bank Line
+                  {payment.bankLineAccount ? ` · ${payment.bankLineAccount}` : ""}
+                  {` · ${formatIsoDate(payment.bankLineDate)}`}
+                </Link>
+              ) : (
+                "Bank Line · Not Available"
+              )}
+            </p>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-2">
           <Label htmlFor="vendor-payment-category">Expense Category</Label>
           <Select
@@ -432,11 +513,23 @@ function PaymentForm({
         <RecordPaymentFields
           idPrefix="vendor-payment"
           amount={amount}
-          onAmountChange={setAmount}
+          onAmountChange={(value) => {
+            setAmount(value)
+            setConfirmNotDuplicate(false)
+            setDuplicates([])
+          }}
           date={paidOn}
-          onDateChange={setPaidOn}
+          onDateChange={(value) => {
+            setPaidOn(value)
+            setConfirmNotDuplicate(false)
+            setDuplicates([])
+          }}
           bankAccountId={bankAccountId}
-          onBankAccountIdChange={setBankAccountId}
+          onBankAccountIdChange={(value) => {
+            setBankAccountId(value)
+            setConfirmNotDuplicate(false)
+            setDuplicates([])
+          }}
           paymentMethod={method}
           onPaymentMethodChange={setMethod}
           notes={notes}
@@ -447,6 +540,16 @@ function PaymentForm({
           amountError={amountError}
           dateError={dateError}
           accountError={accountError}
+        />
+        <DuplicateWarning
+          idPrefix="vendor-payment"
+          matches={duplicates}
+          confirmed={confirmNotDuplicate}
+          onConfirmedChange={setConfirmNotDuplicate}
+          reason={duplicateReason}
+          onReasonChange={setDuplicateReason}
+          reasonError={serverErrors.duplicateReason ?? null}
+          disabled={pending}
         />
         {formError ? (
           <p role="alert" className="px-1 text-sm text-destructive md:px-0">
