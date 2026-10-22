@@ -48,6 +48,7 @@ import {
   todayIsoDate,
 } from "@/lib/project-validation"
 import type {
+  ExpenseCategoryOption,
   ProjectOption,
   PurchaseOrderRow,
   VendorOption,
@@ -60,6 +61,7 @@ export function PurchaseOrderFormDialog({
   projects,
   vendors,
   workTypes,
+  expenseCategories,
   defaultProjectId,
   operational = false,
 }: {
@@ -69,6 +71,7 @@ export function PurchaseOrderFormDialog({
   projects: ProjectOption[]
   vendors: VendorOption[]
   workTypes: readonly string[]
+  expenseCategories: readonly ExpenseCategoryOption[]
   defaultProjectId: string | null
   operational?: boolean
 }) {
@@ -82,6 +85,9 @@ export function PurchaseOrderFormDialog({
     purchaseOrder?.issuedOn || todayIsoDate(),
   )
   const [workType, setWorkType] = useState(purchaseOrder?.workType ?? "")
+  const [expenseCategoryId, setExpenseCategoryId] = useState(
+    purchaseOrder?.expenseCategoryId ?? "",
+  )
   const [totalValue, setTotalValue] = useState(
     purchaseOrder ? String(purchaseOrder.totalValue) : "",
   )
@@ -93,6 +99,21 @@ export function PurchaseOrderFormDialog({
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
 
+  const categoryChoices =
+    expenseCategoryId &&
+    !expenseCategories.some((category) => category.id === expenseCategoryId)
+      ? [
+          ...expenseCategories,
+          {
+            id: expenseCategoryId,
+            name: purchaseOrder?.expenseCategoryName || "Saved Category",
+          },
+        ]
+      : expenseCategories
+  const categoryItems = categoryChoices.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }))
   const projectItems = projects.map((project) => ({
     value: project.id,
     label: project.name || "—",
@@ -111,6 +132,12 @@ export function PurchaseOrderFormDialog({
   const dateError =
     serverErrors.issuedOn ??
     (attempted && !isIsoDate(issuedOn) ? "Enter a date." : null)
+  const categoryError = operational
+    ? null
+    : (serverErrors.expenseCategoryId ??
+      (attempted && !purchaseOrderId && !expenseCategoryId
+        ? "Choose a project expense category."
+        : null))
   const valueError =
     serverErrors.totalValue ??
     (attempted && parseProjectValue(totalValue) === null
@@ -149,6 +176,7 @@ export function PurchaseOrderFormDialog({
     const parsedValue = parseProjectValue(totalValue)
     if (
       (!operational && !projectId) ||
+      (!operational && !purchaseOrderId && !expenseCategoryId) ||
       !vendorId ||
       !isIsoDate(issuedOn) ||
       parsedValue === null
@@ -161,6 +189,7 @@ export function PurchaseOrderFormDialog({
       vendorId,
       issuedOn,
       workType: workType.trim(),
+      expenseCategoryId: operational ? "" : expenseCategoryId,
       totalValue: totalValue.trim(),
       notes: notes.trim(),
     }
@@ -289,6 +318,36 @@ export function PurchaseOrderFormDialog({
               />
               {valueError ? <FieldError>{valueError}</FieldError> : null}
             </Field>
+
+            {operational ? null : (
+              <Field data-invalid={Boolean(categoryError) || undefined}>
+                <FieldLabel htmlFor="po-expense-category">
+                  Project Expense Category
+                </FieldLabel>
+                <Select
+                  items={categoryItems}
+                  value={expenseCategoryId || null}
+                  disabled={pending}
+                  onValueChange={(value) => setExpenseCategoryId(value ?? "")}
+                >
+                  <SelectTrigger
+                    id="po-expense-category"
+                    className="w-full"
+                    aria-invalid={Boolean(categoryError)}
+                  >
+                    <SelectValue placeholder="Select A Category" />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {categoryItems.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {categoryError ? <FieldError>{categoryError}</FieldError> : null}
+              </Field>
+            )}
 
             <Field>
               <FieldLabel htmlFor="po-work-type">Vendor Work Type</FieldLabel>

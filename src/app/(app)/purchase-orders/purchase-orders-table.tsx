@@ -16,7 +16,6 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
 import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -31,15 +30,18 @@ import {
   subscribeColumnVisibility,
   writeColumnVisibility,
 } from "@/lib/purchase-order-column-store"
+import { paymentStatusLabel } from "@/lib/payment-status"
 import type { ProjectFilter } from "@/lib/purchase-orders"
 import {
   dataColumns,
   formatPurchaseOrderDate,
   isOptionalColumn,
   paginatePurchaseOrders,
+  purchaseOrderDetailLine,
   purchaseOrderRangeLabel,
   sortPurchaseOrders,
   type ColumnId,
+  type ExpenseCategoryOption,
   type ProjectOption,
   type PurchaseOrderRow,
   type SortState,
@@ -52,6 +54,7 @@ export function PurchaseOrdersTable({
   projects,
   vendors,
   workTypes,
+  expenseCategories,
   projectFilter,
   error,
 }: {
@@ -59,6 +62,7 @@ export function PurchaseOrdersTable({
   projects: ProjectOption[]
   vendors: VendorOption[]
   workTypes: string[]
+  expenseCategories: ExpenseCategoryOption[]
   projectFilter: ProjectFilter | null
   error: string | null
 }) {
@@ -88,9 +92,13 @@ export function PurchaseOrdersTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
+  const projectOrders = useMemo(
+    () => orders.filter((order) => order.projectId != null),
+    [orders],
+  )
   const sorted = useMemo(
-    () => sortPurchaseOrders(orders, sort),
-    [orders, sort],
+    () => sortPurchaseOrders(projectOrders, sort),
+    [projectOrders, sort],
   )
   const filterOptions = [
     { value: "all", label: "All Statuses" },
@@ -192,6 +200,8 @@ export function PurchaseOrdersTable({
                   { header: "Project Name", kind: "text" },
                   { header: "Vendor Name", kind: "text" },
                   { header: "Work Type", kind: "text" },
+                  { header: "Expense Category", kind: "text" },
+                  { header: "Status", kind: "text" },
                   { header: "Purchase Order Value", kind: "money" },
                   { header: "Total Paid", kind: "money" },
                   { header: "Pending Due", kind: "money" },
@@ -201,6 +211,14 @@ export function PurchaseOrdersTable({
                   order.projectName,
                   order.vendorName,
                   order.workType,
+                  order.expenseCategoryName,
+                  paymentStatusLabel(
+                    paymentBalanceStatus(
+                      order.totalPaid,
+                      order.totalPending,
+                      order.totalValue,
+                    ),
+                  ),
                   seesMoney ? order.totalValue : "Hidden",
                   seesMoney ? order.totalPaid : "Hidden",
                   seesMoney ? order.totalPending : "Hidden",
@@ -225,6 +243,7 @@ export function PurchaseOrdersTable({
               orders={orders}
               vendors={vendors}
               workTypes={workTypes}
+              expenseCategories={expenseCategories}
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>
@@ -274,9 +293,10 @@ export function PurchaseOrdersTable({
         onPageChange={setPage}
         pagingLabel="Purchase orders pagination"
         mobileItem={(order) => ({
-          title: order.projectId == null ? "Operational" : order.projectName || "—",
+          title: order.vendorName || "—",
           subtitle: [
-            order.vendorName,
+            purchaseOrderDetailLine(order),
+            order.projectName,
             order.issuedOn ? formatPurchaseOrderDate(order.issuedOn) : "",
           ]
             .filter(Boolean)
@@ -308,6 +328,7 @@ export function PurchaseOrdersTable({
         projects={projects}
         vendors={vendors}
         workTypes={workTypes}
+        expenseCategories={expenseCategories}
         defaultProjectId={projectFilter?.id ?? null}
         operational={formOperational}
       />
@@ -356,28 +377,33 @@ function CellValue({
       ) : (
         <span className="text-muted-foreground">—</span>
       )
-    case "vendorName":
+    case "vendorName": {
+      const detail = purchaseOrderDetailLine(order)
       return (
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span
+        <div className="min-w-0">
+          <p
             className={cn(
-              "text-ui font-semibold",
+              "truncate text-ui font-semibold",
               !order.vendorName && "text-muted-foreground",
             )}
           >
             {order.vendorName || "—"}
-          </span>
-          {order.workType ? (
-            <Badge variant="outline">{order.workType}</Badge>
+          </p>
+          {detail ? (
+            <p className="truncate text-label text-muted-foreground">{detail}</p>
           ) : null}
-          <StatusBadge
-            status={paymentBalanceStatus(
-              order.totalPaid,
-              order.totalPending,
-              order.totalValue,
-            )}
-          />
         </div>
+      )
+    }
+    case "status":
+      return (
+        <StatusBadge
+          status={paymentBalanceStatus(
+            order.totalPaid,
+            order.totalPending,
+            order.totalValue,
+          )}
+        />
       )
     case "totalValue":
       return <Money value={order.totalValue} />

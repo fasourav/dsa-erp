@@ -36,6 +36,7 @@ export type PurchaseOrderDetail = {
   vendorId: string
   vendorName: string
   workType: string
+  expenseCategoryName: string
   totalValue: number
   totalPaid: number
   totalPending: number

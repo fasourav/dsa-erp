@@ -45,7 +45,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
     const orderResult = await supabase
       .from("vendor_purchase_orders")
       .select(
-        "id, issued_on, notes, project_id, vendor_id, work_type, total_value",
+        "id, issued_on, notes, project_id, vendor_id, work_type, total_value, expense_category_id",
       )
       .eq("id", purchaseOrderId)
       .limit(1)
@@ -100,7 +100,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
           (from, to) =>
             supabase
               .from("project_expense_categories")
-              .select("name, sort_order")
+              .select("id, name, sort_order")
               .order("sort_order", { ascending: true })
               .order("name", { ascending: true })
               .range(from, to),
@@ -184,6 +184,9 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
       vendorId: order.vendor_id,
       vendorName: vendorRows.data?.[0]?.display_name?.trim() ?? "",
       workType: order.work_type?.trim() ?? "",
+      expenseCategoryName:
+        categoryRows.find((row) => row.id === order.expense_category_id)?.name?.trim() ??
+        "",
       totalValue: toNumber(order.total_value),
       totalPaid: toNumber(balance?.total_paid),
       totalPending: sumOpenPayable(

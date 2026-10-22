@@ -472,6 +472,7 @@ export function VendorInvoicesPanel({
         partyName={purchaseOrder?.vendorName}
         paymentMethods={paymentMethods}
         expenseCategories={expenseCategories}
+        defaultExpenseCategory={purchaseOrder?.expenseCategoryName ?? ""}
         bankAccounts={bankAccounts}
       />
 

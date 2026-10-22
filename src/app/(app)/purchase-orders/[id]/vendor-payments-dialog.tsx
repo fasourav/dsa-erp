@@ -29,6 +29,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   defaultBankAccountId,
   type BankAccountChoice,
@@ -48,6 +56,7 @@ export function VendorPaymentsDialog({
   partyName,
   paymentMethods,
   expenseCategories,
+  defaultExpenseCategory,
   bankAccounts,
 }: {
   open: boolean
@@ -56,13 +65,13 @@ export function VendorPaymentsDialog({
   partyName?: string
   paymentMethods: readonly string[]
   expenseCategories: readonly string[]
+  defaultExpenseCategory: string
   bankAccounts: readonly BankAccountChoice[]
 }) {
   const canAdd = useCan("vendor_payments", "add")
   const canEdit = useCan("vendor_payments", "edit")
   const canDelete = useCan("vendor_payments", "delete")
 
-  void expenseCategories
   const [payment, setPayment] = useState<VendorPaymentRow | null>(null)
   const [editing, setEditing] = useState(false)
   const [formSession, setFormSession] = useState(0)
@@ -153,6 +162,8 @@ export function VendorPaymentsDialog({
               invoice={invoice}
               payment={payment}
               paymentMethods={paymentMethods}
+              expenseCategories={expenseCategories}
+              defaultExpenseCategory={defaultExpenseCategory}
               bankAccounts={bankAccounts}
               onCancel={() => setEditing(false)}
               onSaved={() => setEditing(false)}
@@ -300,6 +311,8 @@ function PaymentForm({
   invoice,
   payment,
   paymentMethods,
+  expenseCategories,
+  defaultExpenseCategory,
   bankAccounts,
   onCancel,
   onSaved,
@@ -307,6 +320,8 @@ function PaymentForm({
   invoice: VendorInvoiceRow
   payment: VendorPaymentRow | null
   paymentMethods: readonly string[]
+  expenseCategories: readonly string[]
+  defaultExpenseCategory: string
   bankAccounts: readonly BankAccountChoice[]
   onCancel: () => void
   onSaved: () => void
@@ -315,7 +330,13 @@ function PaymentForm({
   const [amount, setAmount] = useState(payment ? String(payment.amount) : "")
   const [method, setMethod] = useState(payment?.method ?? "")
   const reference = payment?.reference ?? ""
-  const expenseCategory = payment?.expenseCategory ?? ""
+  const [expenseCategory, setExpenseCategory] = useState(() =>
+    matchingCategory(
+      expenseCategories,
+      payment ? payment.expenseCategory : defaultExpenseCategory,
+    ),
+  )
+  const categoryItems = categoryChoices(expenseCategories, expenseCategory)
   const [notes, setNotes] = useState(payment?.notes ?? "")
   const [bankAccountId, setBankAccountId] = useState(
     defaultBankAccountId(bankAccounts, payment?.bankAccountId ?? ""),
@@ -388,6 +409,26 @@ function PaymentForm({
   return (
     <>
       <DialogBody className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="vendor-payment-category">Expense Category</Label>
+          <Select
+            items={categoryItems}
+            value={expenseCategory || null}
+            disabled={pending}
+            onValueChange={(value) => setExpenseCategory(value ?? "")}
+          >
+            <SelectTrigger id="vendor-payment-category" className="w-full">
+              <SelectValue placeholder="Select A Category" />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {categoryItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <RecordPaymentFields
           idPrefix="vendor-payment"
           amount={amount}
@@ -428,4 +469,26 @@ function PaymentForm({
       </DialogFooter>
     </>
   )
+}
+
+function matchingCategory(names: readonly string[], preferred: string): string {
+  const trimmed = preferred.trim()
+  if (!trimmed) return ""
+  return (
+    names.find(
+      (name) => name.localeCompare(trimmed, "en", { sensitivity: "base" }) === 0,
+    ) ?? trimmed
+  )
+}
+
+function categoryChoices(
+  names: readonly string[],
+  selected: string,
+): { value: string; label: string }[] {
+  const items = names.map((name) => ({ value: name, label: name }))
+  const trimmed = selected.trim()
+  if (trimmed && !items.some((item) => item.value === trimmed)) {
+    items.unshift({ value: trimmed, label: trimmed })
+  }
+  return items
 }

@@ -1,4 +1,4 @@
-import { classifyOperational, isMaterialWork } from "@/lib/dashboard-metrics"
+import { classifyOperational, isMaterialCost } from "@/lib/dashboard-metrics"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { openPayableByPurchaseOrder } from "@/lib/open-payable"
@@ -37,6 +37,7 @@ export type LinkedPO = {
   issuedOn: string
   totalValue: number
   workType: string
+  expenseCategory: string
 }
 
 export type LinkedInvoice = {
@@ -154,12 +155,12 @@ export async function getProjectDetail(projectId: string): Promise<{
       details: p.details ?? "",
     }
 
-    const [poRows, invRows, blRows, operationalRows, taxRows] = await Promise.all([
+    const [poRows, invRows, blRows, operationalRows, taxRows, categoryRows] = await Promise.all([
       fetchAllPages(
         (from, to) =>
           supabase
             .from("vendor_purchase_orders")
-            .select("id, vendor_id, issued_on, total_value, work_type")
+            .select("id, vendor_id, issued_on, total_value, work_type, expense_category_id")
             .eq("project_id", projectId)
             .order("issued_on", { ascending: false })
             .range(from, to),
@@ -200,6 +201,16 @@ export async function getProjectDetail(projectId: string): Promise<{
             .range(from, to),
         "VAT tax list is larger than expected.",
       ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("project_expense_categories")
+            .select("id, name")
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true })
+            .range(from, to),
+        "Expense category list is larger than expected.",
+      ),
     ])
 
     const vendorIds = [...new Set(poRows.map((po) => po.vendor_id))]
@@ -218,12 +229,18 @@ export async function getProjectDetail(projectId: string): Promise<{
       }
     }
 
+    const categoryNames = new Map(
+      categoryRows.map((row) => [row.id, row.name?.trim() ?? ""]),
+    )
     const purchaseOrders: LinkedPO[] = poRows.map((po) => ({
       id: po.id,
       vendorName: vendorMap.get(po.vendor_id) ?? "",
       issuedOn: dateInputValue(po.issued_on),
       totalValue: toNumber(po.total_value),
       workType: po.work_type ?? "",
+      expenseCategory: po.expense_category_id
+        ? (categoryNames.get(po.expense_category_id) ?? "")
+        : "",
     }))
 
     const invoices: LinkedInvoice[] = invRows.map((inv) => ({
@@ -426,15 +443,22 @@ function buildOverview(input: {
   const workByPo = new Map(
     input.purchaseOrders.map((po) => [po.id, po.workType]),
   )
+  const categoryByPo = new Map(
+    input.purchaseOrders.map((po) => [po.id, po.expenseCategory]),
+  )
   const poByVendorInvoice = new Map(
     input.vendorInvoices.map((row) => [row.id, row.purchase_order_id]),
   )
 
   for (const payment of input.vendorPayments) {
     const amount = toNumber(payment.amount)
-    const workType =
-      workByPo.get(poByVendorInvoice.get(payment.vendor_invoice_id) ?? "") ?? ""
-    addBucket(isMaterialWork(workType) ? "material" : "subcontractor", amount)
+    const purchaseOrderId = poByVendorInvoice.get(payment.vendor_invoice_id) ?? ""
+    addBucket(
+      isMaterialCost(categoryByPo.get(purchaseOrderId), workByPo.get(purchaseOrderId))
+        ? "material"
+        : "subcontractor",
+      amount,
+    )
     addMonth(payment.paid_on, "expense", amount)
   }
 

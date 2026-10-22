@@ -1,4 +1,5 @@
 import { formatIsoDate } from "@/lib/format"
+import { moneyCents } from "@/lib/payment-status"
 
 export const PAGE_SIZE = 10
 
@@ -14,6 +15,11 @@ export type VendorOption = {
   displayName: string
 }
 
+export type ExpenseCategoryOption = {
+  id: string
+  name: string
+}
+
 export type PurchaseOrderRow = {
   id: string
   issuedOn: string
@@ -22,6 +28,8 @@ export type PurchaseOrderRow = {
   vendorId: string
   vendorName: string
   workType: string
+  expenseCategoryId: string
+  expenseCategoryName: string
   totalValue: number
   totalPaid: number
   totalPending: number
@@ -32,13 +40,14 @@ export type ColumnId =
   | "issuedOn"
   | "projectName"
   | "vendorName"
+  | "status"
   | "totalValue"
   | "totalPaid"
   | "totalPending"
 
 export type OptionalColumnId = Exclude<
   ColumnId,
-  "issuedOn" | "projectName" | "vendorName"
+  "issuedOn" | "projectName" | "vendorName" | "status"
 >
 
 export type ColumnVisibility = Record<OptionalColumnId, boolean>
@@ -61,6 +70,7 @@ export const dataColumns: readonly DataColumn[] = [
   { id: "issuedOn", label: "Date", align: "left", locked: true },
   { id: "projectName", label: "Project Name", align: "left", locked: true },
   { id: "vendorName", label: "Vendor Name", align: "left", locked: true },
+  { id: "status", label: "Status", align: "left", locked: true },
   {
     id: "totalValue",
     label: "Purchase Order Value",
@@ -105,7 +115,25 @@ export function sanitizeColumnVisibility(value: unknown): ColumnVisibility {
 }
 
 export function isOptionalColumn(id: ColumnId): id is OptionalColumnId {
-  return id !== "issuedOn" && id !== "projectName" && id !== "vendorName"
+  return (
+    id !== "issuedOn" &&
+    id !== "projectName" &&
+    id !== "vendorName" &&
+    id !== "status"
+  )
+}
+
+export function purchaseOrderDetailLine(
+  order: Pick<PurchaseOrderRow, "workType" | "expenseCategoryName">,
+): string {
+  const name = order.workType.trim()
+  const category = order.expenseCategoryName.trim()
+  if (!name) return category
+  if (!category) return name
+  if (name.localeCompare(category, "en", { sensitivity: "base" }) === 0) {
+    return name
+  }
+  return `${name} · ${category}`
 }
 
 export function isColumnVisible(
@@ -160,6 +188,8 @@ function comparePurchaseOrders(
       return vendorSortKey(a).localeCompare(vendorSortKey(b), "en", {
         sensitivity: "base",
       })
+    case "status":
+      return paymentStatusRank(a) - paymentStatusRank(b)
     case "totalValue":
     case "totalPaid":
     case "totalPending":
@@ -168,7 +198,18 @@ function comparePurchaseOrders(
 }
 
 function vendorSortKey(order: PurchaseOrderRow): string {
-  return `${order.vendorName}\n${order.workType}`
+  return `${order.vendorName}\n${purchaseOrderDetailLine(order)}`
+}
+
+function paymentStatusRank(order: PurchaseOrderRow): number {
+  if (moneyCents(order.totalPaid) <= 0) return 0
+  if (
+    moneyCents(order.totalPending) > 0 ||
+    moneyCents(order.totalPaid) < moneyCents(order.totalValue)
+  ) {
+    return 1
+  }
+  return 2
 }
 
 export function paginatePurchaseOrders(

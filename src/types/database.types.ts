@@ -2227,6 +2227,7 @@ export type Database = {
       vendor_purchase_orders: {
         Row: {
           created_at: string
+          expense_category_id: string | null
           id: string
           issued_on: string
           notes: string | null
@@ -2238,6 +2239,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expense_category_id?: string | null
           id?: string
           issued_on?: string
           notes?: string | null
@@ -2249,6 +2251,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expense_category_id?: string | null
           id?: string
           issued_on?: string
           notes?: string | null
@@ -2313,6 +2316,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_purchase_orders_expense_category_id_fkey"
+            columns: ["expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "project_expense_categories"
             referencedColumns: ["id"]
           },
         ]
