@@ -50,6 +50,7 @@ import {
   formatExactBdt,
   formatRatio,
   formatShare,
+  HIGH_VALUE_PROJECT_MIN,
   weekTrend,
   type DashboardModel,
   type YearSnapshot,
@@ -61,11 +62,13 @@ export function DashboardView({
   error,
   limited = false,
   overBudget = [],
+  showAssets = false,
 }: {
   model: DashboardModel | null
   error: string | null
   limited?: boolean
   overBudget?: readonly OverBudgetProject[]
+  showAssets?: boolean
 }) {
   if (limited) {
     return <LimitedDashboard />
@@ -82,7 +85,7 @@ export function DashboardView({
     )
   }
 
-  return <DashboardSections model={model} overBudget={overBudget} />
+  return <DashboardSections model={model} overBudget={overBudget} showAssets={showAssets} />
 }
 
 function LimitedDashboard() {
@@ -105,9 +108,11 @@ function LimitedDashboard() {
 function DashboardSections({
   model,
   overBudget,
+  showAssets,
 }: {
   model: DashboardModel
   overBudget: readonly OverBudgetProject[]
+  showAssets: boolean
 }) {
   const showFinancials = useAccess().showFinancials
   const router = useRouter()
@@ -176,7 +181,7 @@ function DashboardSections({
             ))}
           </SelectContent>
         </Select>
-        <Button type="button" variant="outline" onClick={() => downloadDashboard(model, snapshot, showFinancials)}>
+        <Button type="button" variant="outline" onClick={() => downloadDashboard(model, snapshot, showFinancials, showAssets)}>
           <Download aria-hidden="true" data-icon="inline-start" />
           Export
         </Button>
@@ -265,8 +270,8 @@ function DashboardSections({
         </div>
         <div className="grid grid-cols-2 gap-2.5 md:gap-3 lg:grid-cols-4">
           <ProjectValueTile
-            highest={model.performance.highestProject}
-            lowest={model.performance.lowestProject}
+            high={model.performance.highValue}
+            low={model.performance.lowValue}
           />
           <MetricTile
             icon={Hammer}
@@ -317,7 +322,9 @@ function DashboardSections({
             value={
               <span className="inline-flex flex-wrap items-baseline gap-x-2">
                 <span>{model.performance.backlog}</span>
-                {model.performance.backlog > 0 ? (
+                {model.performance.backlogValue == null ? (
+                  <span className="text-sm font-semibold text-muted-foreground">—</span>
+                ) : model.performance.backlog > 0 ? (
                   <Money
                     value={model.performance.backlogValue}
                     className="text-sm font-semibold text-muted-foreground md:text-label"
@@ -327,16 +334,24 @@ function DashboardSections({
             }
             hint="Expense Exceeds Collection"
             wrap
-            className="lg:col-span-2"
+            className={showAssets ? "lg:col-span-2" : "col-span-2 lg:col-span-4"}
           />
-          <MetricTile
-            icon={Box}
-            color="bg-chart-5"
-            label="Asset Value"
-            value={<Money value={model.performance.assetValue} />}
-            hint="Current Value"
-            className="lg:col-span-2"
-          />
+          {showAssets ? (
+            <MetricTile
+              icon={Box}
+              color="bg-chart-5"
+              label="Asset Value"
+              value={
+                model.performance.assetValue == null ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  <Money value={model.performance.assetValue} />
+                )
+              }
+              hint={model.performance.assetValue == null ? "Unavailable" : "Current Value"}
+              className="lg:col-span-2"
+            />
+          ) : null}
         </div>
       </section>
 
@@ -697,43 +712,51 @@ function CompactMetric({
 }
 
 function ProjectValueTile({
-  highest,
-  lowest,
+  high,
+  low,
 }: {
-  highest: { name: string; value: number } | null
-  lowest: { name: string; value: number } | null
+  high: number | null
+  low: number | null
 }) {
   return (
     <div className="col-span-2 flex min-w-0 flex-col rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:flex-row md:items-start md:gap-3.5 md:rounded-tile md:bg-fill md:p-4 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100">
       <span className="mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] bg-chart-1 text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl">
         <Gem aria-hidden="true" className="size-4 md:size-4.5" />
       </span>
-      <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-        <ProjectExtreme label="Highest Value" project={highest} />
-        <ProjectExtreme label="Lowest Value" project={lowest} />
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:gap-4">
+        <ProjectCount
+          label="High Value"
+          count={high}
+          hint={`${formatExactBdt(HIGH_VALUE_PROJECT_MIN)} Or More`}
+        />
+        <ProjectCount
+          label="Low Value"
+          count={low}
+          hint={`Under ${formatExactBdt(HIGH_VALUE_PROJECT_MIN)}`}
+        />
       </div>
     </div>
   )
 }
 
-function ProjectExtreme({
+function ProjectCount({
   label,
-  project,
+  count,
+  hint,
 }: {
   label: string
-  project: { name: string; value: number } | null
+  count: number | null
+  hint: string
 }) {
   return (
     <div className="min-w-0">
       <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">
         {label}
       </p>
-      <p className="mt-0.5 truncate text-ui font-semibold">
-        {project?.name.trim() || "No Project"}
+      <p className="mt-0.5 text-metric tabular-nums">
+        {count == null ? <span className="text-muted-foreground">—</span> : count}
       </p>
-      <p className="mt-px text-metric tabular-nums">
-        {project ? <Money value={project.value} /> : <span className="text-muted-foreground">—</span>}
-      </p>
+      <p className="mt-px text-micro text-subtle-foreground md:text-xs">{hint}</p>
     </div>
   )
 }
@@ -888,6 +911,7 @@ function downloadDashboard(
   model: DashboardModel,
   snapshot: YearSnapshot,
   showFinancials: boolean,
+  showAssets: boolean,
 ) {
   const rows: (string | number)[][] = [
     ["Dashboard", "DSA ERP"],
@@ -927,13 +951,19 @@ function downloadDashboard(
     ["Project Lead Value", formatExactBdt(model.performance.leadValue)],
     ["Win Rate", model.performance.winRate],
     ["Collection Efficiency", model.performance.collectionEfficiency],
-    ["Highest Value Project", model.performance.highestProject?.name ?? ""],
-    ["Highest Value", formatExactBdt(model.performance.highestProject?.value ?? 0)],
-    ["Lowest Value Project", model.performance.lowestProject?.name ?? ""],
-    ["Lowest Value", formatExactBdt(model.performance.lowestProject?.value ?? 0)],
+    ["High-Value Projects", model.performance.highValue ?? "—"],
+    ["Low-Value Projects", model.performance.lowValue ?? "—"],
     ["Backlog Projects", model.performance.backlog],
-    ["Backlog Value", formatExactBdt(model.performance.backlogValue)],
-    ["Asset Value", formatExactBdt(model.performance.assetValue)],
+    [
+      "Backlog Value",
+      model.performance.backlogValue == null ? "—" : formatExactBdt(model.performance.backlogValue),
+    ],
+    ...(showAssets
+      ? [[
+          "Asset Value",
+          model.performance.assetValue == null ? "—" : formatExactBdt(model.performance.assetValue),
+        ] as (string | number)[]]
+      : []),
     ["Launch Date", model.tenure.launchDateLabel],
     ["In Operation", model.tenure.inOperation],
     ["Revenue Per Day", formatExactBdt(model.tenure.revenuePerDay)],

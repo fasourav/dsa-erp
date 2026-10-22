@@ -13,6 +13,7 @@ import { isIsoDate, amountError, parseProjectValue , isFutureIsoDate } from "@/l
 import { createClient } from "@/lib/supabase/server"
 import { friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
+import { revalidateSettings } from "@/lib/revalidate-settings"
 
 export type LeadInput = {
   version?: string
@@ -293,7 +294,10 @@ async function saveLead(
 
   revalidatePath("/leads")
   if (source || currentStage) {
-    revalidatePath("/settings")
+    revalidateSettings(
+      ...(source ? ["lead_sources"] : []),
+      ...(currentStage ? ["lead_stages"] : []),
+    )
   }
   return { error: null }
 }

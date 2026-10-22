@@ -9,12 +9,8 @@ import {
   normalizeLaunchDate,
 } from "@/lib/format"
 
+export const HIGH_VALUE_PROJECT_MIN = 50_000
 export const DASHBOARD_FIRST_YEAR = 2021
-
-export type NamedAmount = {
-  name: string
-  value: number
-}
 
 const LAKH = 100_000
 const CRORE = 10_000_000
@@ -177,10 +173,10 @@ export type DashboardModel = {
     winRate: number
     collectionEfficiency: number
     backlog: number
-    backlogValue: number
-    highestProject: NamedAmount | null
-    lowestProject: NamedAmount | null
-    assetValue: number
+    backlogValue: number | null
+    highValue: number | null
+    lowValue: number | null
+    assetValue: number | null
   }
   tenure: {
     launchDateLabel: string
@@ -274,32 +270,16 @@ export function forecastedProfitOf(receivables: number, payables: number): numbe
   return receivables - payables
 }
 
-export function projectExtremes(
-  projects: {
-    name: string
-    totalValue: number
-    year: number | null
-    startedOn: string
-  }[],
+export function projectValueCounts(
+  projects: { totalValue: number; year: number | null; startedOn: string }[],
   scopeYear: number | null,
-): { highest: NamedAmount | null; lowest: NamedAmount | null } {
+): { highValue: number; lowValue: number } {
   const scoped = projects.filter(
     (project) => scopeYear == null || projectYear(project) === scopeYear,
   )
-  if (scoped.length === 0) return { highest: null, lowest: null }
-
-  const ranked = [...scoped].sort(
-    (left, right) =>
-      left.totalValue - right.totalValue ||
-      left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
-  )
-  const lowest = ranked[0]
-  const highest = ranked[ranked.length - 1]
-  if (!lowest || !highest) return { highest: null, lowest: null }
-
   return {
-    lowest: { name: lowest.name, value: lowest.totalValue },
-    highest: { name: highest.name, value: highest.totalValue },
+    highValue: scoped.filter((project) => project.totalValue >= HIGH_VALUE_PROJECT_MIN).length,
+    lowValue: scoped.filter((project) => project.totalValue < HIGH_VALUE_PROJECT_MIN).length,
   }
 }
 
@@ -527,10 +507,9 @@ export function buildDashboard(
       collectionEfficiency: collectionEfficiencyOf(windowRevenue, receivables),
       // project_backlogs: spend already above collections, not a not-started phase.
       backlog: backlogCount,
-      backlogValue: 0,
-      highestProject: null,
-      lowestProject: null,
-      assetValue: 0,
+      backlogValue: null,
+      ...projectValueCounts(projects, scopeYear),
+      assetValue: null,
     },
     tenure: {
       launchDateLabel: formatDayMonYear(launch),

@@ -69,6 +69,7 @@ export type RecentClientPayment = {
   amount: number
   method: string
   vendorName: string
+  direction: "in" | "out"
 }
 
 export type OpenInvoice = LinkedInvoice & {
@@ -523,6 +524,7 @@ function buildOverview(input: {
         amount: toNumber(payment.amount),
         method: payment.method?.trim() ?? "",
         vendorName: "",
+        direction: "in" as const,
       })),
       ...input.vendorPayments.flatMap((payment) => {
         if (!payment.id) return []
@@ -536,6 +538,7 @@ function buildOverview(input: {
             vendorName:
               input.purchaseOrders.find((order) => order.id === purchaseOrderId)?.vendorName ??
               "",
+            direction: "out" as const,
           },
         ]
       }),

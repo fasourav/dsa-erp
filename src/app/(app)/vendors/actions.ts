@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
+import { revalidateSettings } from "@/lib/revalidate-settings"
 import {
   escapeLikePattern,
   isValidEmail,
@@ -271,7 +272,7 @@ async function ensureVendorWorkCategory(
 
 function revalidateVendorSurfaces() {
   revalidatePath("/vendors")
-  revalidatePath("/settings")
+  revalidateSettings("vendor_work_categories")
   revalidatePath("/purchase-orders")
 }
 

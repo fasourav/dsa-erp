@@ -10,12 +10,11 @@ import {
   presentAnnualCaption,
   presentTenure,
   presentWeekCaption,
-  projectExtremes,
+  projectValueCounts,
   scopedBacklogValue,
   type ChartPoint,
   type DashboardInput,
   type DashboardModel,
-  type NamedAmount,
   type WeekPoint,
   type YearSnapshot,
 } from "@/lib/dashboard-metrics"
@@ -24,6 +23,7 @@ import { createClient } from "@/lib/supabase/server"
 export async function getDashboard(
   scopeYear: number | null,
   now = new Date(),
+  includeAssets = false,
 ): Promise<{
   model: DashboardModel | null
   error: string | null
@@ -31,7 +31,7 @@ export async function getDashboard(
   try {
     const [scoped, details] = await Promise.all([
       loadDashboardScope(scopeYear, now),
-      loadPerformanceDetails(scopeYear),
+      loadPerformanceDetails(scopeYear, includeAssets),
     ])
     const base = scoped ?? buildDashboard(await loadDashboardRows(), now, scopeYear)
     return { model: withPerformance(base, details), error: null }
@@ -41,10 +41,10 @@ export async function getDashboard(
 }
 
 type PerformanceDetails = {
-  highestProject: NamedAmount | null
-  lowestProject: NamedAmount | null
-  backlogValue: number
-  assetValue: number
+  highValue: number | null
+  lowValue: number | null
+  backlogValue: number | null
+  assetValue: number | null
 }
 
 function withPerformance(model: DashboardModel, details: PerformanceDetails): DashboardModel {
@@ -55,30 +55,68 @@ function withPerformance(model: DashboardModel, details: PerformanceDetails): Da
     performance: {
       ...model.performance,
       collectionEfficiency: collectionEfficiencyOf(snapshot?.revenue ?? 0, model.receivables),
-      highestProject: details.highestProject,
-      lowestProject: details.lowestProject,
+      highValue: details.highValue ?? model.performance.highValue,
+      lowValue: details.lowValue ?? model.performance.lowValue,
       backlogValue: details.backlogValue,
       assetValue: details.assetValue,
     },
   }
 }
 
-async function loadPerformanceDetails(scopeYear: number | null): Promise<PerformanceDetails> {
-  const empty: PerformanceDetails = {
-    highestProject: null,
-    lowestProject: null,
-    backlogValue: 0,
-    assetValue: 0,
-  }
+async function loadPerformanceDetails(
+  scopeYear: number | null,
+  includeAssets: boolean,
+): Promise<PerformanceDetails> {
+  const [counts, backlogValue, assetValue] = await Promise.all([
+    loadProjectCounts(scopeYear),
+    loadBacklogValue(scopeYear),
+    includeAssets ? loadAssetTotal() : Promise.resolve<number | null>(null),
+  ])
 
+  return {
+    highValue: counts?.highValue ?? null,
+    lowValue: counts?.lowValue ?? null,
+    backlogValue,
+    assetValue,
+  }
+}
+
+async function loadProjectCounts(
+  scopeYear: number | null,
+): Promise<{ highValue: number; lowValue: number } | null> {
   try {
     const supabase = await createClient()
-    const [projectRows, backlogRows, assets] = await Promise.all([
+    const rows = await fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("projects")
+          .select("total_value, year, started_on")
+          .order("id", { ascending: true })
+          .range(from, to),
+      "Project list is larger than expected.",
+    )
+    return projectValueCounts(
+      rows.map((row) => ({
+        totalValue: toNumber(row.total_value),
+        year: row.year,
+        startedOn: row.started_on ?? "",
+      })),
+      scopeYear,
+    )
+  } catch {
+    return null
+  }
+}
+
+async function loadBacklogValue(scopeYear: number | null): Promise<number | null> {
+  try {
+    const supabase = await createClient()
+    const [projectRows, backlogRows] = await Promise.all([
       fetchAllPages(
         (from, to) =>
           supabase
             .from("projects")
-            .select("id, name, total_value, year, started_on")
+            .select("id, year, started_on")
             .order("id", { ascending: true })
             .range(from, to),
         "Project list is larger than expected.",
@@ -92,39 +130,27 @@ async function loadPerformanceDetails(scopeYear: number | null): Promise<Perform
             .range(from, to),
         "Backlog list is larger than expected.",
       ),
-      getAssets(),
     ])
-
-    const projects = projectRows.flatMap((row) => {
-      if (!row.id) return []
-      return [
-        {
-          id: row.id,
-          name: row.name?.trim() ?? "",
-          totalValue: toNumber(row.total_value),
-          year: row.year,
-          startedOn: row.started_on ?? "",
-        },
-      ]
-    })
-    const extremes = projectExtremes(projects, scopeYear)
-
-    return {
-      highestProject: extremes.highest,
-      lowestProject: extremes.lowest,
-      backlogValue: scopedBacklogValue(
-        projects,
-        backlogRows.flatMap((row) => {
-          if (!row.project_id) return []
-          return [{ projectId: row.project_id, amount: toNumber(row.backlog_amount) }]
-        }),
-        scopeYear,
-      ),
-      assetValue: sumAssetCurrentValue(assets.assets.map((asset) => asset.currentValue)),
-    }
+    return scopedBacklogValue(
+      projectRows.flatMap((row) => {
+        if (!row.id) return []
+        return [{ id: row.id, year: row.year, startedOn: row.started_on ?? "" }]
+      }),
+      backlogRows.flatMap((row) => {
+        if (!row.project_id) return []
+        return [{ projectId: row.project_id, amount: toNumber(row.backlog_amount) }]
+      }),
+      scopeYear,
+    )
   } catch {
-    return empty
+    return null
   }
+}
+
+async function loadAssetTotal(): Promise<number | null> {
+  const assets = await getAssets()
+  if (assets.error) return null
+  return sumAssetCurrentValue(assets.assets.map((asset) => asset.currentValue))
 }
 
 async function loadDashboardScope(
@@ -553,10 +579,10 @@ function modelFromScope(data: unknown, now: Date): DashboardModel {
       winRate: toNumber(asRecord(row.performance).win_rate),
       collectionEfficiency: toNumber(asRecord(row.performance).collection_efficiency),
       backlog: toNumber(asRecord(row.performance).backlog),
-      backlogValue: 0,
-      highestProject: null,
-      lowestProject: null,
-      assetValue: 0,
+      backlogValue: null,
+      highValue: null,
+      lowValue: null,
+      assetValue: null,
     },
     tenure: presentTenure({
       launch: text(asRecord(row.tenure).launch),

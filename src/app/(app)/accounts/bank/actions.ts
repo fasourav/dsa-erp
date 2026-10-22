@@ -13,6 +13,7 @@ import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-va
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless, denyUnlessOwner } from "@/lib/permissions"
+import { revalidateSettings } from "@/lib/revalidate-settings"
 
 export type BankAccountInput = {
   name: string
@@ -310,7 +311,7 @@ export async function updateFiscalYearStartMonth(
     return { error: "Could not save the fiscal year." }
   }
 
-  revalidatePath("/settings")
+  revalidateSettings("bank")
   revalidatePath("/accounts/bank")
   return { error: null }
 }
@@ -342,7 +343,7 @@ export async function updateLaunchDate(
     return { error: "Could not save the launch date." }
   }
 
-  revalidatePath("/settings")
+  revalidateSettings("company")
   revalidatePath("/dashboard")
   return { error: null }
 }
@@ -383,7 +384,7 @@ export async function updatePrintMargins(
     return { error: "Could not save the print margins." }
   }
 
-  revalidatePath("/settings")
+  revalidateSettings("company")
   revalidatePath("/documents", "layout")
   return { error: null }
 }
@@ -564,7 +565,7 @@ async function saveBankAccount(
 }
 
 function revalidateBankAccounts() {
-  revalidatePath("/settings")
+  revalidateSettings("bank")
   revalidatePath("/accounts/bank")
   revalidatePath("/accounts/invoices")
   revalidatePath("/accounts/expenses")

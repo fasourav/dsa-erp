@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError } from "@/lib/db-errors"
+import { revalidateSettings } from "@/lib/revalidate-settings"
 import {
   doneOnBeforeStartError,
   milestoneAmountError,
@@ -508,7 +509,7 @@ async function nextSortOrder(
 function refreshProject(projectId: string) {
   revalidatePath("/projects")
   revalidatePath(`/projects/${projectId}`)
-  revalidatePath("/settings")
+  revalidateSettings()
 }
 
 function progressError(error: { message?: string; code?: string }): string {

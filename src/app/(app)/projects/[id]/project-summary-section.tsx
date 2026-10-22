@@ -12,6 +12,7 @@ import {
 import { BudgetTab } from "@/app/(app)/projects/[id]/budget-tab"
 import { DataList, type DataListMobileItem } from "@/components/data-list"
 import { Money } from "@/components/money"
+import { Badge } from "@/components/ui/badge"
 import { RecordAttachments } from "@/components/record-attachments"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
@@ -40,12 +41,13 @@ import { formatPercent } from "@/lib/project-summary"
 import type { ProjectProgressData } from "@/lib/project-progress"
 import { cn } from "@/lib/utils"
 
-type PaymentColumn = "paidOn" | "vendorName" | "amount" | "method"
+type PaymentColumn = "paidOn" | "direction" | "vendorName" | "amount" | "method"
 type InvoiceColumn = "issuedOn" | "description" | "amount" | "paid" | "balance" | "status"
 type PurchaseColumn = "vendorName" | "issuedOn" | "workType" | "totalValue" | "paid" | "pending"
 
 const paymentColumns: readonly ListColumn<PaymentColumn>[] = [
   { id: "paidOn", label: "Date", align: "left", locked: true },
+  { id: "direction", label: "Type", align: "left", locked: true },
   { id: "vendorName", label: "Vendor", align: "left", locked: true },
   { id: "amount", label: "Amount", align: "right", locked: true },
   { id: "method", label: "Method", align: "left", locked: true },
@@ -228,10 +230,11 @@ export function ProjectSummarySection({
             initialSort={{ key: "paidOn", direction: "desc" }}
             sortValue={paymentSortValue}
             mobileItem={(payment) => ({
-              title: <Money value={payment.amount} />,
+              title: <PaymentAmount payment={payment} />,
+              value: <PaymentTypeBadge direction={payment.direction} />,
               subtitle: [
                 payment.paidOn ? formatIsoDate(payment.paidOn) : "",
-                payment.vendorName,
+                payment.direction === "out" ? payment.vendorName : "",
                 payment.method,
               ]
                 .filter(Boolean)
@@ -450,14 +453,35 @@ function compareSortValues(left: string | number, right: string | number) {
   return String(left).localeCompare(String(right), "en", { sensitivity: "base" })
 }
 
+function PaymentTypeBadge({ direction }: { direction: RecentClientPayment["direction"] }) {
+  const incoming = direction === "in"
+  return (
+    <Badge variant={incoming ? "success" : "destructive"}>
+      {incoming ? "Client Receipt" : "Vendor Payment"}
+    </Badge>
+  )
+}
+
+function PaymentAmount({ payment }: { payment: RecentClientPayment }) {
+  const incoming = payment.direction === "in"
+  return (
+    <Money
+      value={incoming ? payment.amount : -payment.amount}
+      className={incoming ? "text-success" : "text-destructive"}
+    />
+  )
+}
+
 function paymentSortValue(row: RecentClientPayment, key: PaymentColumn) {
   switch (key) {
     case "paidOn":
       return row.paidOn
+    case "direction":
+      return row.direction
     case "vendorName":
       return row.vendorName
     case "amount":
-      return row.amount
+      return row.direction === "out" ? -row.amount : row.amount
     case "method":
       return row.method
   }
@@ -511,14 +535,16 @@ function PaymentCell({
       ) : (
         <span className="text-muted-foreground">—</span>
       )
+    case "direction":
+      return <PaymentTypeBadge direction={payment.direction} />
     case "vendorName":
-      return payment.vendorName ? (
+      return payment.direction === "out" && payment.vendorName ? (
         <span>{payment.vendorName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
     case "amount":
-      return <Money value={payment.amount} />
+      return <PaymentAmount payment={payment} />
     case "method":
       return payment.method || <span className="text-muted-foreground">—</span>
   }

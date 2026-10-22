@@ -256,7 +256,7 @@ export function BankPanel({
             <Button
               className="w-full md:w-fit"
               nativeButton={false}
-              render={<Link href="/settings" />}
+              render={<Link href="/settings/bank" />}
             >
               Open Settings
             </Button>
