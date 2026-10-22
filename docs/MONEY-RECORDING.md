@@ -45,7 +45,7 @@ These two cards are calculated in the app from figures the dashboard already loa
 - **Collection Efficiency** = (Total Revenue − Accounts Receivable) / Total Revenue, shown as a percent. Total Revenue is the dashboard revenue for the selected period. Accounts Receivable is the open client balance: current when the period is All Time or the current year, otherwise as of that year end. Total Revenue of zero shows 0%.
 - **Forecasted Profit** = Accounts Receivable − Accounts Payable. Accounts Payable is open vendor bills, the same balance as the Accounts Payable card.
 - The period selector opens on **All Time**. A chosen fiscal year still limits the period figures.
-- Project overhead stays in project expense and in the Expense Summary amount. That row does not show a percent.
+- Project overhead stays in project expense and in the Expense Summary total. The summary list does not show a Project Overhead row.
 - **High Value** and **Low Value** counts use ৳50,000 of project value. At or above that is high; below it is low. The card shows those counts only.
 - **Asset Value** on the dashboard is the Assets page Total Asset Value, for accounts that can view Assets (including the owner). Both use `assetValue` and `sumAssetCurrentValue` in `src/lib/asset-value.ts`: straight-line depreciation from purchase date, cost, and lifespan, then the sum of those current values. The card stays hidden without that permission. If the asset, project, or backlog lookup fails, the figure shows — rather than ৳0.
 - **Backlog value** is the sum of `project_backlogs.backlog_amount` for backlog projects in the selected period. It is shown beside the backlog count when that count is greater than zero.

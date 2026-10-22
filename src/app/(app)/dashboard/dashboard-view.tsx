@@ -9,7 +9,6 @@ import {
   Box,
   Clock,
   Download,
-  Gem,
   Hammer,
   Minus,
   Target,
@@ -150,6 +149,10 @@ function DashboardSections({
     ...slice,
     amount: snapshot[slice.key],
   }))
+  const summaryRows = slices.filter((slice) => slice.key !== "projectOverhead")
+  const donutSlices = slices.map((slice) =>
+    slice.key === "projectOverhead" ? { ...slice, fill: "var(--fill)" } : slice,
+  )
   const previousWeek = model.weeks[model.weeks.length - 2]
   const latestWeek = model.weeks[model.weeks.length - 1]
   const performanceCaption =
@@ -418,7 +421,7 @@ function DashboardSections({
         </Panel>
 
         <Panel title="Expense Summary">
-          <ExpenseDonut slices={slices}>
+          <ExpenseDonut slices={donutSlices}>
             <Money value={snapshot.totalExpense} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
             <span className="text-micro text-muted-foreground md:text-xs">Total Expense</span>
           </ExpenseDonut>
@@ -427,18 +430,16 @@ function DashboardSections({
               <span>Project Expense</span>
               <Money value={snapshot.projectExpense} />
             </div>
-            {slices.map((slice) => (
+            {summaryRows.map((slice) => (
               <div key={slice.key} className="flex h-7.5 items-center justify-between gap-3 text-ui md:h-6.75 md:text-label">
                 <span className="flex min-w-0 items-center gap-2 text-muted-foreground md:gap-2.25">
                   <span aria-hidden="true" className={cn("size-2.25 shrink-0 rounded-[3px]", slice.swatch)} />
                   <span className="truncate">{slice.label}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2 md:gap-3">
-                  {slice.key === "projectOverhead" ? null : (
-                    <span className="text-xs text-subtle-foreground tabular-nums">
-                      {formatShare(slice.amount, snapshot.totalExpense)}
-                    </span>
-                  )}
+                  <span className="text-xs text-subtle-foreground tabular-nums">
+                    {formatShare(slice.amount, snapshot.totalExpense)}
+                  </span>
                   <Money value={slice.amount} className="font-strong md:font-semibold" />
                 </span>
               </div>
@@ -711,6 +712,9 @@ function CompactMetric({
   )
 }
 
+const metricSurface =
+  "h-full min-w-0 rounded-2xl bg-surface shadow-glass backdrop-blur-glass backdrop-saturate-180 md:rounded-tile md:bg-fill md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100"
+
 function ProjectValueTile({
   high,
   low,
@@ -718,22 +722,12 @@ function ProjectValueTile({
   high: number | null
   low: number | null
 }) {
+  const threshold = formatExactBdt(HIGH_VALUE_PROJECT_MIN).replace(/\.00$/, "")
   return (
-    <div className="col-span-2 flex min-w-0 flex-col rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:flex-row md:items-start md:gap-3.5 md:rounded-tile md:bg-fill md:p-4 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100">
-      <span className="mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] bg-chart-1 text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl">
-        <Gem aria-hidden="true" className="size-4 md:size-4.5" />
-      </span>
-      <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:gap-4">
-        <ProjectCount
-          label="High Value"
-          count={high}
-          hint={`${formatExactBdt(HIGH_VALUE_PROJECT_MIN)} Or More`}
-        />
-        <ProjectCount
-          label="Low Value"
-          count={low}
-          hint={`Under ${formatExactBdt(HIGH_VALUE_PROJECT_MIN)}`}
-        />
+    <div className={cn(metricSurface, "col-span-2 flex flex-col px-3.5 py-3.25 md:p-4")}>
+      <div className="grid min-w-0 flex-1 grid-cols-2">
+        <ProjectCount label="High Value Projects" count={high} hint={`≥ ${threshold}`} />
+        <ProjectCount label="Low Value Projects" count={low} hint={`< ${threshold}`} divided />
       </div>
     </div>
   )
@@ -743,20 +737,22 @@ function ProjectCount({
   label,
   count,
   hint,
+  divided = false,
 }: {
   label: string
   count: number | null
   hint: string
+  divided?: boolean
 }) {
   return (
-    <div className="min-w-0">
+    <div className={cn("min-w-0", divided ? "border-l border-border pl-3 md:pl-4" : "pr-3 md:pr-4")}>
       <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">
         {label}
       </p>
-      <p className="mt-0.5 text-metric tabular-nums">
+      <p className="mt-0.5 truncate text-metric tabular-nums">
         {count == null ? <span className="text-muted-foreground">—</span> : count}
       </p>
-      <p className="mt-px text-micro text-subtle-foreground md:text-xs">{hint}</p>
+      <p className="mt-px truncate text-micro text-subtle-foreground md:text-xs">{hint}</p>
     </div>
   )
 }
@@ -781,7 +777,7 @@ function MetricTile({
   className?: string
 }) {
   return (
-    <div className={cn("flex min-w-0 flex-col rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:flex-row md:items-start md:gap-3.5 md:rounded-tile md:bg-fill md:p-4 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100", className)}>
+    <div className={cn(metricSurface, "flex flex-col px-3.5 py-3.25 md:flex-row md:items-start md:gap-3.5 md:p-4", className)}>
       <span
         className={cn(
           "mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl",
