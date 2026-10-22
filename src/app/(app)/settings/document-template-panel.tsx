@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Copy, Pencil, Plus, Trash2 } from "lucide-react"
+import { Copy, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState, useTransition } from "react"
 
 import {
@@ -59,11 +59,9 @@ const kinds: { value: DocumentTemplateKind; label: string }[] = [
 export function DocumentTemplatePanel({
   templates,
   projectTypes,
-  onBack,
 }: {
   templates: DocumentTemplate[]
   projectTypes: readonly string[]
-  onBack: () => void
 }) {
   const [formOpen, setFormOpen] = useState(false)
   const [session, setSession] = useState(0)
@@ -75,11 +73,7 @@ export function DocumentTemplatePanel({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button type="button" variant="ghost" onClick={onBack}>
-          <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-          Settings
-        </Button>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           type="button"
           onClick={() => {

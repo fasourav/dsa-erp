@@ -1,11 +1,10 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
-
 import type { AccessInput } from "@/app/(app)/settings/users/types"
 import { isUuid } from "@/lib/ids"
 import { denyUnlessOwner, getAccess } from "@/lib/permissions"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { revalidateSettings } from "@/lib/revalidate-settings"
 import { createClient } from "@/lib/supabase/server"
 
 export type ActionResult = {
@@ -212,7 +211,7 @@ export async function inviteUser(input: AccessInput): Promise<ActionResult> {
     return { error: permissionError }
   }
 
-  revalidatePath("/settings/users")
+  revalidateSettings("users")
   return { error: null }
 }
 
@@ -250,7 +249,7 @@ export async function saveUserAccess(
     let updated = await updateSelf(true)
     if (missingDesignation(updated.error?.message)) updated = await updateSelf(false)
     if (updated.error) return { error: friendly(updated.error.message, "Could not update this user.") }
-    revalidatePath("/settings/users")
+    revalidateSettings("users")
     return { error: null }
   }
 
@@ -290,7 +289,7 @@ export async function saveUserAccess(
   )
   if (permissionError) return { error: permissionError }
 
-  revalidatePath("/settings/users")
+  revalidateSettings("users")
   return { error: null }
 }
 
@@ -321,7 +320,7 @@ export async function resendInvite(userId: string): Promise<ActionResult> {
   })
   if (sent.error) return { error: friendly(sent.error.message, "Could not resend this invite.") }
 
-  revalidatePath("/settings/users")
+  revalidateSettings("users")
   return { error: null }
 }
 
@@ -351,7 +350,7 @@ export async function cancelInvite(userId: string): Promise<ActionResult> {
   const removed = await admin.auth.admin.deleteUser(userId)
   if (removed.error) return { error: friendly(removed.error.message, "Could not cancel this invite.") }
 
-  revalidatePath("/settings/users")
+  revalidateSettings("users")
   return { error: null }
 }
 
@@ -396,7 +395,7 @@ export async function setUserActive(userId: string, active: boolean): Promise<Ac
     }
   }
 
-  revalidatePath("/settings/users")
+  revalidateSettings("users")
   return { error: null }
 }
 
@@ -458,6 +457,6 @@ export async function saveRoleTemplate(
     if (insertError) return { error: "Could not update this role template." }
   }
 
-  revalidatePath("/settings/users")
+  revalidateSettings("users")
   return { error: null }
 }

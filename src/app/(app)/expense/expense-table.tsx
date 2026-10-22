@@ -7,6 +7,7 @@ import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -32,8 +33,8 @@ export function ExpenseTable({
 }) {
   const visibility = useColumnVisibility(poExpenseColumnStore)
   const [sort, setSort] = useState<SortState<PoExpenseColumnId>>({
-    key: "projectName",
-    direction: "asc",
+    key: "expenseDate",
+    direction: "desc",
   })
   const [page, setPage] = useState(1)
   const [query, setQuery] = useState("")
@@ -52,14 +53,18 @@ export function ExpenseTable({
               filename: "expense",
               title: "Expense",
               columns: [
+                { header: "Date", kind: "text" },
                 { header: "Project", kind: "text" },
                 { header: "Vendor", kind: "text" },
-                { header: "Expense Amount", kind: "money" },
+                { header: "Work Type", kind: "text" },
+                { header: "Expense", kind: "money" },
                 { header: "Banking Channel", kind: "text" },
               ],
               rows: filtered.map((row) => [
+                row.expenseDate ? formatIsoDate(row.expenseDate) : "",
                 row.projectName,
                 row.vendorName,
+                row.workType,
                 row.expenseAmount,
                 row.bankingChannel,
               ]),
@@ -100,7 +105,9 @@ export function ExpenseTable({
         pagingLabel="Expense pagination"
         mobileItem={(row) => ({
           title: row.vendorName || "—",
-          subtitle: [row.projectName, row.bankingChannel].filter(Boolean).join(" · "),
+          subtitle: [row.workType, row.projectName, row.expenseDate ? formatIsoDate(row.expenseDate) : "", row.bankingChannel]
+            .filter(Boolean)
+            .join(" · "),
           meta: <Money value={row.expenseAmount} />,
         })}
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}
@@ -117,6 +124,12 @@ function Cell({
   columnId: PoExpenseColumnId
 }) {
   switch (columnId) {
+    case "expenseDate":
+      return row.expenseDate ? (
+        formatIsoDate(row.expenseDate)
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
     case "projectName":
       return (
         <span
@@ -129,10 +142,15 @@ function Cell({
         </span>
       )
     case "vendorName":
-      return row.vendorName ? (
-        <span>{row.vendorName}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
+      return (
+        <span className="flex min-w-0 flex-col">
+          <span className={cn("truncate", !row.vendorName && "text-muted-foreground")}>
+            {row.vendorName || "—"}
+          </span>
+          {row.workType ? (
+            <span className="truncate text-caption text-muted-foreground">{row.workType}</span>
+          ) : null}
+        </span>
       )
     case "expenseAmount":
       return <Money value={row.expenseAmount} />

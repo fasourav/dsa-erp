@@ -483,7 +483,7 @@ function PaymentFieldRows({
             type="button"
             variant="outline"
             className="w-full md:w-fit"
-            render={<Link href="/settings" />}
+            render={<Link href="/settings/bank" />}
           >
             Open Settings
           </Button>

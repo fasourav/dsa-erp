@@ -31,6 +31,7 @@ import {
   type SortState,
 } from "@/lib/list-paging"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { sumAssetCurrentValue } from "@/lib/asset-value"
 import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 import { cn } from "@/lib/utils"
 
@@ -105,10 +106,10 @@ export function AssetsTable({
   const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortAssets(assets, sort), [assets, sort])
-  const totalAssetValue = useMemo(() => {
-    const total = assets.reduce((sum, asset) => sum + asset.currentValue, 0)
-    return Math.round(total * 100) / 100
-  }, [assets])
+  const totalAssetValue = useMemo(
+    () => sumAssetCurrentValue(assets.map((asset) => asset.currentValue)),
+    [assets],
+  )
   const filterOptions = [
     { value: "all", label: "All Categories" },
     ...categories.map((category) => ({ value: category.id, label: category.name })),

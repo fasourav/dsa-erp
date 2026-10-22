@@ -1,6 +1,7 @@
 import { fetchAllPages, fetchByIds } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isPaymentStatus } from "@/lib/payment-status"
+import { dateInputValue } from "@/lib/project-validation"
 import type { PoExpenseRow } from "@/lib/po-expenses"
 import { createClient } from "@/lib/supabase/server"
 
@@ -15,7 +16,7 @@ export async function getPoExpenses(): Promise<{
       (from, to) =>
         supabase
           .from("project_expenses")
-          .select("expense_id, project_name, vendor_name, total_expense")
+          .select("expense_id, expense_date, po_id, project_name, vendor_name, total_expense")
           .order("expense_id", { ascending: true })
           .range(from, to),
       "Expense list is larger than expected.",
@@ -73,6 +74,14 @@ export async function getPoExpenses(): Promise<{
     const accountNames = new Map(
       accounts.map((account) => [account.id, account.name.trim()]),
     )
+    const purchaseOrders = await fetchByIds(
+      expenses.flatMap((expense) => (expense.po_id ? [expense.po_id] : [])),
+      (ids) =>
+        supabase.from("vendor_purchase_orders").select("id, work_type").in("id", ids),
+    )
+    const workByPo = new Map(
+      purchaseOrders.map((order) => [order.id, order.work_type?.trim() ?? ""]),
+    )
 
     const rows = expenses.flatMap((expense) => {
       if (!expense.expense_id) {
@@ -99,8 +108,10 @@ export async function getPoExpenses(): Promise<{
       return [
         {
           id: expense.expense_id,
+          expenseDate: dateInputValue(expense.expense_date ?? ""),
           projectName: expense.project_name?.trim() ?? "",
           vendorName: expense.vendor_name?.trim() ?? "",
+          workType: workByPo.get(expense.po_id ?? "") ?? "",
           expenseAmount: toNumber(expense.total_expense),
           bankingChannel: accountNames.get(accountId) ?? "",
         } satisfies PoExpenseRow,

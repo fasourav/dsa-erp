@@ -1,8 +1,26 @@
 "use client"
 
-import { ArrowLeft, FileText, Inbox, Landmark, ListTree, Plus } from "lucide-react"
+import {
+  ArrowLeft,
+  Box,
+  Contact,
+  FileText,
+  FolderKanban,
+  Inbox,
+  Landmark,
+  ListTree,
+  Plus,
+  Receipt,
+  Settings,
+  Shield,
+  Truck,
+  UserPlus,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useMemo, useState, useTransition } from "react"
+import { useMemo, useState, useTransition, type ReactNode } from "react"
 
 import {
   deleteBankAccount,
@@ -17,7 +35,7 @@ import { CatalogFormDialog } from "@/app/(app)/settings/catalog-form-dialog"
 import { DocumentTemplatePanel } from "@/app/(app)/settings/document-template-panel"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
-import { PageHeader } from "@/components/page-header"
+import { PageHeader, SectionHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -44,12 +62,15 @@ import { formatDayMonYear } from "@/lib/format"
 import { fiscalMonthOptions } from "@/lib/fiscal-year"
 import {
   catalogSingularTitle,
+  isCatalogKey,
   nextSortOrder,
   type CatalogItem,
+  type CatalogKey,
   type CatalogList,
 } from "@/lib/lookup-catalogs"
 import type { DocumentTemplate } from "@/lib/document-templates"
 import { savedToast } from "@/lib/saved"
+import { cn } from "@/lib/utils"
 
 type LastBackupStatus = {
   ranAtLabel: string
@@ -57,13 +78,10 @@ type LastBackupStatus = {
   status: string
 } | null
 
-type ActiveView =
-  | { kind: "home" }
-  | { kind: "catalog"; key: CatalogList["key"] }
-  | { kind: "bank" }
-  | { kind: "documents" }
+type SettingsSection = "home" | "company" | "bank" | "documents" | CatalogKey
 
 export function SettingsPanel({
+  section = "home",
   catalogs,
   documentTemplates,
   bankAccounts,
@@ -73,6 +91,7 @@ export function SettingsPanel({
   lastBackup,
   error,
 }: {
+  section?: SettingsSection
   catalogs: CatalogList[]
   documentTemplates: DocumentTemplate[]
   bankAccounts: BankAccountRow[]
@@ -83,7 +102,6 @@ export function SettingsPanel({
   error: string | null
 }) {
   const router = useRouter()
-  const [view, setView] = useState<ActiveView>({ kind: "home" })
   const [formOpen, setFormOpen] = useState(false)
   const [formCatalog, setFormCatalog] = useState<CatalogList>(
     catalogs[0] ?? emptyCatalog(),
@@ -125,8 +143,7 @@ export function SettingsPanel({
     return new Map(catalogs.map((catalog) => [catalog.key, catalog]))
   }, [catalogs])
 
-  const activeCatalog =
-    view.kind === "catalog" ? (catalogByKey.get(view.key) ?? null) : null
+  const activeCatalog = isCatalogKey(section) ? (catalogByKey.get(section) ?? null) : null
 
   function openCreate(catalog: CatalogList) {
     setFormCatalog(catalog)
@@ -226,11 +243,18 @@ export function SettingsPanel({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader
-        title="Settings"
-        className="mb-0 md:mb-2"
-        description="Manage Lookup Lists For Departments, Projects, Expenses, Payments, Vendors, Leads, And Bank Accounts."
-      />
+      {section === "home" ? (
+        <PageHeader
+          title="Settings"
+          className="mb-0 md:mb-2"
+          description="Company, Lists, Bank Accounts, Documents, And Access."
+        />
+      ) : (
+        <SettingsBackLink
+          title={sectionTitle(section, activeCatalog)}
+          description={sectionDescription(section)}
+        />
+      )}
 
       {error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -238,7 +262,7 @@ export function SettingsPanel({
         </p>
       ) : null}
 
-      {view.kind === "home" ? (
+      {section === "company" ? (
         <Card>
           <CardHeader>
             <CardTitle>Operational Tenure</CardTitle>
@@ -288,7 +312,7 @@ export function SettingsPanel({
         </Card>
       ) : null}
 
-      {view.kind === "home" ? (
+      {section === "company" ? (
         <Card>
           <CardHeader>
             <CardTitle>Last Backup</CardTitle>
@@ -313,7 +337,7 @@ export function SettingsPanel({
         </Card>
       ) : null}
 
-      {view.kind === "home" ? (
+      {section === "company" ? (
         <Card>
           <CardHeader>
             <CardTitle>Print Margins</CardTitle>
@@ -386,101 +410,31 @@ export function SettingsPanel({
         </Card>
       ) : null}
 
-      {view.kind === "home" ? (
-        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:gap-3.5">
-          {catalogs.map((catalog) => (
-            <button
-              key={catalog.key}
-              type="button"
-              onClick={() => setView({ kind: "catalog", key: catalog.key })}
-              className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left md:px-5 md:py-4.5"
-            >
-              <span className="flex items-start justify-between gap-3">
-                <span className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-fill text-muted-foreground">
-                  <ListTree className="size-4.5" aria-hidden="true" />
-                </span>
-                <Badge variant="outline" className="tabular-nums">
-                  {itemCountLabel(catalog.items.length)}
-                </Badge>
-              </span>
-              <span className="mt-auto pt-4.5 text-row font-strong">{catalog.label}</span>
-              <span className="mt-0.5 text-caption text-muted-foreground">
-                Add, Edit, Or Remove Entries
-              </span>
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setView({ kind: "documents" })}
-            className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left md:px-5 md:py-4.5"
-          >
-            <span className="flex items-start justify-between gap-3">
-              <span className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-fill text-muted-foreground">
-                <FileText className="size-4.5" aria-hidden="true" />
-              </span>
-              <Badge variant="outline" className="tabular-nums">
-                {itemCountLabel(documentTemplates.length)}
-              </Badge>
-            </span>
-            <span className="mt-auto pt-4.5 text-row font-strong">Document Templates</span>
-            <span className="mt-0.5 text-caption text-muted-foreground">
-              Quotations And Work Orders
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setView({ kind: "bank" })}
-            className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left md:px-5 md:py-4.5"
-          >
-            <span className="flex items-start justify-between gap-3">
-              <span className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-fill text-muted-foreground">
-                <Landmark className="size-4.5" aria-hidden="true" />
-              </span>
-              <Badge variant="outline" className="tabular-nums">
-                {itemCountLabel(bankAccounts.length)}
-              </Badge>
-            </span>
-            <span className="mt-auto pt-4.5 text-row font-strong">Bank Accounts</span>
-            <span className="mt-0.5 text-caption text-muted-foreground">
-              Add, Edit, Or Remove Entries
-            </span>
-          </button>
-        </div>
-      ) : null}
+      {section === "home" ? <SettingsHome catalogs={catalogs} documentCount={documentTemplates.length} bankCount={bankAccounts.length} /> : null}
 
-      {view.kind === "documents" ? (
+      {section === "documents" ? (
         <DocumentTemplatePanel
           templates={documentTemplates}
           projectTypes={
             catalogs.find((catalog) => catalog.key === "project_types")?.items.map((item) => item.name) ??
             []
           }
-          onBack={() => setView({ kind: "home" })}
         />
       ) : null}
 
-      {view.kind === "catalog" && activeCatalog ? (
+      {activeCatalog ? (
         <CatalogDetail
           catalog={activeCatalog}
-          onBack={() => setView({ kind: "home" })}
           onCreate={() => openCreate(activeCatalog)}
           onEdit={(item) => openEdit(activeCatalog, item)}
           onDelete={(item) => openDelete(activeCatalog, item)}
         />
       ) : null}
 
-      {view.kind === "bank" ? (
+      {section === "bank" ? (
         <>
           <Card>
             <CardHeader>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setView({ kind: "home" })}
-              >
-                <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-                All Categories
-              </Button>
               <CardTitle>Fiscal Year</CardTitle>
               <CardDescription>
                 Statements Label A July Start As FY 2025–26. Bangladesh Tax Year Stays 1 July–30 June.
@@ -684,13 +638,11 @@ export function SettingsPanel({
 
 function CatalogDetail({
   catalog,
-  onBack,
   onCreate,
   onEdit,
   onDelete,
 }: {
   catalog: CatalogList
-  onBack: () => void
   onCreate: () => void
   onEdit: (item: CatalogItem) => void
   onDelete: (item: CatalogItem) => void
@@ -698,10 +650,6 @@ function CatalogDetail({
   return (
     <Card>
       <CardHeader>
-        <Button type="button" variant="ghost" onClick={onBack}>
-          <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-          All Categories
-        </Button>
         <CardTitle>{catalog.label}</CardTitle>
         <CardDescription>
           {itemCountLabel(catalog.items.length)}. Ordered By Sort Order, Then Name.
@@ -755,6 +703,191 @@ function CatalogDetail({
       </CardFooter>
     </Card>
   )
+}
+
+const catalogIcons: Partial<Record<CatalogKey, LucideIcon>> = {
+  departments: Contact,
+  project_types: FolderKanban,
+  project_phases: ListTree,
+  office_expense_categories: Wallet,
+  project_expense_categories: Receipt,
+  payment_methods: Landmark,
+  vendor_work_categories: Truck,
+  asset_categories: Box,
+  lead_sources: UserPlus,
+  lead_stages: ListTree,
+  lead_statuses: Shield,
+}
+
+const catalogDescriptions: Partial<Record<CatalogKey, string>> = {
+  departments: "Teams Used On Employees",
+  project_types: "Types Shown On Projects",
+  project_phases: "Phases A Project Can Be In",
+  office_expense_categories: "Categories For Office Costs",
+  project_expense_categories: "Categories For Project Costs",
+  payment_methods: "How Money Is Received And Paid",
+  vendor_work_categories: "Work Vendors Can Be Hired For",
+  asset_categories: "Groups On The Assets List",
+  lead_sources: "Where A Lead Came From",
+  lead_stages: "Steps In The Lead Pipeline",
+  lead_statuses: "Open, Won, Lost, And Other States",
+}
+
+function SettingsHome({
+  catalogs,
+  documentCount,
+  bankCount,
+}: {
+  catalogs: CatalogList[]
+  documentCount: number
+  bankCount: number
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <SettingsGroup
+        title="Company"
+        description="Launch Date, Bank Accounts, Documents, And Who Can Sign In."
+        columns="lg:grid-cols-4"
+      >
+        <SettingLink
+          href="/settings/company"
+          icon={Settings}
+          title="Company"
+          description="Launch Date, Print Margins, And Backup"
+        />
+        <SettingLink
+          href="/settings/bank"
+          icon={Landmark}
+          title="Bank Accounts"
+          description="Accounts, Opening Balances, And Fiscal Year"
+          count={bankCount}
+        />
+        <SettingLink
+          href="/settings/documents"
+          icon={FileText}
+          title="Document Templates"
+          description="Quotations And Work Orders"
+          count={documentCount}
+        />
+        <SettingLink
+          href="/settings/users"
+          icon={Shield}
+          title="Users & Permissions"
+          description="People, Invites, And Role Templates"
+        />
+      </SettingsGroup>
+      <SettingsGroup
+        title="Lists"
+        description="Names Used On Projects, Expenses, Vendors, Leads, And Assets."
+      >
+        {catalogs.map((catalog) => (
+          <SettingLink
+            key={catalog.key}
+            href={`/settings/${catalog.key}`}
+            icon={catalogIcons[catalog.key] ?? ListTree}
+            title={catalog.label}
+            description={catalogDescriptions[catalog.key] ?? "Add, Edit, Or Remove Entries"}
+            count={catalog.items.length}
+          />
+        ))}
+      </SettingsGroup>
+    </div>
+  )
+}
+
+function SettingsGroup({
+  title,
+  description,
+  columns = "md:grid-cols-3",
+  children,
+}: {
+  title: string
+  description: string
+  columns?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-2.5">
+      <SectionHeader title={title} className="pt-0 md:mt-0" />
+      <p className="px-1 text-sm text-muted-foreground md:-mt-1 md:px-0">{description}</p>
+      <div className={cn("grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:gap-3.5", columns)}>
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function SettingLink({
+  href,
+  icon: Icon,
+  title,
+  description,
+  count,
+}: {
+  href: string
+  icon: LucideIcon
+  title: string
+  description: string
+  count?: number
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-32 flex-col rounded-card glass-panel px-4 py-4 text-left focus-visible:ring-3 focus-visible:ring-ring/50 md:px-5 md:py-4.5"
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-fill text-muted-foreground">
+          <Icon className="size-4.5" aria-hidden="true" />
+        </span>
+        {count != null ? (
+          <Badge variant="outline" className="tabular-nums">
+            {itemCountLabel(count)}
+          </Badge>
+        ) : null}
+      </span>
+      <span className="mt-auto pt-4.5 text-row font-strong">{title}</span>
+      <span className="mt-0.5 text-caption text-muted-foreground">{description}</span>
+    </Link>
+  )
+}
+
+function SettingsBackLink({
+  title,
+  description,
+}: {
+  title: string
+  description?: string
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        className="w-fit"
+        nativeButton={false}
+        render={<Link href="/settings" />}
+      >
+        <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+        Settings
+      </Button>
+      <PageHeader title={title} description={description} className="mb-0 md:mb-2" />
+    </div>
+  )
+}
+
+function sectionTitle(section: SettingsSection, catalog: CatalogList | null): string {
+  if (catalog) return catalog.label
+  if (section === "company") return "Company"
+  if (section === "bank") return "Bank Accounts"
+  if (section === "documents") return "Document Templates"
+  return "Settings"
+}
+
+function sectionDescription(section: SettingsSection): string | undefined {
+  if (section === "company") return "Launch Date, Print Margins, And The Latest Backup."
+  if (section === "bank") return "Accounts, Opening Balances, And The Fiscal Year Start."
+  if (section === "documents") return "Reusable Layouts For Quotations And Work Orders."
+  return undefined
 }
 
 function itemCountLabel(count: number) {

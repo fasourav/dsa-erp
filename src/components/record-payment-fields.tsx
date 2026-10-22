@@ -115,7 +115,7 @@ export function RecordPaymentFields({
             type="button"
             variant="outline"
             className="w-full sm:w-fit"
-            render={<Link href="/settings" />}
+            render={<Link href="/settings/bank" />}
           >
             Open Settings
           </Button>

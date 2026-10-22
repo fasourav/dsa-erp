@@ -6,13 +6,16 @@ import {
 
 export type PoExpenseRow = {
   id: string
+  expenseDate: string
   projectName: string
   vendorName: string
+  workType: string
   expenseAmount: number
   bankingChannel: string
 }
 
 export type PoExpenseColumnId =
+  | "expenseDate"
   | "projectName"
   | "vendorName"
   | "expenseAmount"
@@ -20,16 +23,17 @@ export type PoExpenseColumnId =
 
 export type PoExpenseOptionalColumnId = Exclude<
   PoExpenseColumnId,
-  "projectName" | "vendorName"
+  "expenseDate" | "projectName" | "vendorName"
 >
 
 export type PoExpenseColumnVisibility = Record<PoExpenseOptionalColumnId, boolean>
 
 export const poExpenseColumns: readonly ListColumn<PoExpenseColumnId>[] = [
+  { id: "expenseDate", label: "Date", align: "left", locked: true },
   { id: "projectName", label: "Project", align: "left", locked: true },
   { id: "vendorName", label: "Vendor", align: "left", locked: true },
-  { id: "expenseAmount", label: "Expense Amount", align: "right", locked: false },
-  { id: "bankingChannel", label: "Banking Channel", align: "left", locked: false },
+  { id: "expenseAmount", label: "Expense", align: "right", locked: true },
+  { id: "bankingChannel", label: "Banking Channel", align: "left", locked: true },
 ]
 
 const defaultVisibility: PoExpenseColumnVisibility = {
@@ -73,6 +77,7 @@ function compareRows(
   key: PoExpenseColumnId,
 ): number {
   switch (key) {
+    case "expenseDate":
     case "projectName":
     case "vendorName":
     case "bankingChannel":

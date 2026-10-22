@@ -1,11 +1,17 @@
+import { sumAssetCurrentValue } from "@/lib/asset-value"
+import { getAssets } from "@/lib/assets"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { normalizeLaunchDate, toNumber } from "@/lib/format"
 import {
   buildDashboard,
+  collectionEfficiencyOf,
+  forecastedProfitOf,
   formatUpdatedAt,
   presentAnnualCaption,
   presentTenure,
   presentWeekCaption,
+  projectValueCounts,
+  scopedBacklogValue,
   type ChartPoint,
   type DashboardInput,
   type DashboardModel,
@@ -17,18 +23,134 @@ import { createClient } from "@/lib/supabase/server"
 export async function getDashboard(
   scopeYear: number | null,
   now = new Date(),
+  includeAssets = false,
 ): Promise<{
   model: DashboardModel | null
   error: string | null
 }> {
   try {
-    const scoped = await loadDashboardScope(scopeYear, now)
-    if (scoped) return { model: scoped, error: null }
-    const input = await loadDashboardRows()
-    return { model: buildDashboard(input, now, scopeYear), error: null }
+    const [scoped, details] = await Promise.all([
+      loadDashboardScope(scopeYear, now),
+      loadPerformanceDetails(scopeYear, includeAssets),
+    ])
+    const base = scoped ?? buildDashboard(await loadDashboardRows(), now, scopeYear)
+    return { model: withPerformance(base, details), error: null }
   } catch (error) {
     return { model: null, error: messageOf(error) }
   }
+}
+
+type PerformanceDetails = {
+  highValue: number | null
+  lowValue: number | null
+  backlogValue: number | null
+  assetValue: number | null
+}
+
+function withPerformance(model: DashboardModel, details: PerformanceDetails): DashboardModel {
+  const snapshot = model.snapshots[0]
+  return {
+    ...model,
+    forecastedProfit: forecastedProfitOf(model.receivables, model.payables),
+    performance: {
+      ...model.performance,
+      collectionEfficiency: collectionEfficiencyOf(snapshot?.revenue ?? 0, model.receivables),
+      highValue: details.highValue ?? model.performance.highValue,
+      lowValue: details.lowValue ?? model.performance.lowValue,
+      backlogValue: details.backlogValue,
+      assetValue: details.assetValue,
+    },
+  }
+}
+
+async function loadPerformanceDetails(
+  scopeYear: number | null,
+  includeAssets: boolean,
+): Promise<PerformanceDetails> {
+  const [counts, backlogValue, assetValue] = await Promise.all([
+    loadProjectCounts(scopeYear),
+    loadBacklogValue(scopeYear),
+    includeAssets ? loadAssetTotal() : Promise.resolve<number | null>(null),
+  ])
+
+  return {
+    highValue: counts?.highValue ?? null,
+    lowValue: counts?.lowValue ?? null,
+    backlogValue,
+    assetValue,
+  }
+}
+
+async function loadProjectCounts(
+  scopeYear: number | null,
+): Promise<{ highValue: number; lowValue: number } | null> {
+  try {
+    const supabase = await createClient()
+    const rows = await fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("projects")
+          .select("total_value, year, started_on")
+          .order("id", { ascending: true })
+          .range(from, to),
+      "Project list is larger than expected.",
+    )
+    return projectValueCounts(
+      rows.map((row) => ({
+        totalValue: toNumber(row.total_value),
+        year: row.year,
+        startedOn: row.started_on ?? "",
+      })),
+      scopeYear,
+    )
+  } catch {
+    return null
+  }
+}
+
+async function loadBacklogValue(scopeYear: number | null): Promise<number | null> {
+  try {
+    const supabase = await createClient()
+    const [projectRows, backlogRows] = await Promise.all([
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("projects")
+            .select("id, year, started_on")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Project list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("project_backlogs")
+            .select("project_id, backlog_amount")
+            .order("project_id", { ascending: true })
+            .range(from, to),
+        "Backlog list is larger than expected.",
+      ),
+    ])
+    return scopedBacklogValue(
+      projectRows.flatMap((row) => {
+        if (!row.id) return []
+        return [{ id: row.id, year: row.year, startedOn: row.started_on ?? "" }]
+      }),
+      backlogRows.flatMap((row) => {
+        if (!row.project_id) return []
+        return [{ projectId: row.project_id, amount: toNumber(row.backlog_amount) }]
+      }),
+      scopeYear,
+    )
+  } catch {
+    return null
+  }
+}
+
+async function loadAssetTotal(): Promise<number | null> {
+  const assets = await getAssets()
+  if (assets.error) return null
+  return sumAssetCurrentValue(assets.assets.map((asset) => asset.currentValue))
 }
 
 async function loadDashboardScope(
@@ -450,8 +572,6 @@ function modelFromScope(data: unknown, now: Date): DashboardModel {
     performance: {
       projectCount: toNumber(asRecord(row.performance).project_count),
       sinceYear: nullableNumber(asRecord(row.performance).since_year),
-      highValue: toNumber(asRecord(row.performance).high_value),
-      lowValue: toNumber(asRecord(row.performance).low_value),
       active: toNumber(asRecord(row.performance).active),
       openLeads: toNumber(asRecord(row.performance).open_leads),
       clients: toNumber(asRecord(row.performance).clients),
@@ -459,6 +579,10 @@ function modelFromScope(data: unknown, now: Date): DashboardModel {
       winRate: toNumber(asRecord(row.performance).win_rate),
       collectionEfficiency: toNumber(asRecord(row.performance).collection_efficiency),
       backlog: toNumber(asRecord(row.performance).backlog),
+      backlogValue: null,
+      highValue: null,
+      lowValue: null,
+      assetValue: null,
     },
     tenure: presentTenure({
       launch: text(asRecord(row.tenure).launch),

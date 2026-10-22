@@ -10,6 +10,7 @@ import {
 } from "@/lib/project-progress"
 import { denyUnlessOwner } from "@/lib/permissions"
 import { firstIssue } from "@/lib/schemas"
+import { revalidateSettings } from "@/lib/revalidate-settings"
 import { createClient } from "@/lib/supabase/server"
 
 const idPattern =
@@ -70,7 +71,7 @@ export async function saveStageTemplate(
     if (error) return { error: templateError(error) }
   }
 
-  revalidatePath("/settings")
+  revalidateSettings()
   revalidatePath("/projects")
   return { error: null }
 }
@@ -83,7 +84,7 @@ export async function deleteStageTemplate(templateId: string): Promise<TemplateA
   const supabase = await createClient()
   const { error } = await supabase.from("project_stage_templates").delete().eq("id", templateId)
   if (error) return { error: templateError(error) }
-  revalidatePath("/settings")
+  revalidateSettings()
   return { error: null }
 }
 
@@ -121,7 +122,7 @@ export async function moveStageTemplate(
     .eq("id", neighbor.id)
   if (second.error) return { error: templateError(second.error) }
 
-  revalidatePath("/settings")
+  revalidateSettings()
   return { error: null }
 }
 

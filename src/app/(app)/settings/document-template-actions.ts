@@ -10,6 +10,7 @@ import {
 import { friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { denyUnless } from "@/lib/permissions"
+import { revalidateSettings } from "@/lib/revalidate-settings"
 import {
   documentTemplateNameSchema,
   documentTemplateSchema,
@@ -38,7 +39,7 @@ function templateError(error: { message?: string; code?: string }): string {
 }
 
 function revalidateTemplates() {
-  revalidatePath("/settings")
+  revalidateSettings("documents")
   revalidatePath("/documents/quotations")
   revalidatePath("/documents/work-orders")
 }

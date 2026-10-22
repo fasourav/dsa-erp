@@ -166,8 +166,6 @@ export type DashboardModel = {
   performance: {
     projectCount: number
     sinceYear: number | null
-    highValue: number
-    lowValue: number
     active: number
     openLeads: number
     clients: number
@@ -175,6 +173,10 @@ export type DashboardModel = {
     winRate: number
     collectionEfficiency: number
     backlog: number
+    backlogValue: number | null
+    highValue: number | null
+    lowValue: number | null
+    assetValue: number | null
   }
   tenure: {
     launchDateLabel: string
@@ -258,6 +260,46 @@ export function formatRatio(value: number): string {
   return `${sign}${Math.abs(value).toFixed(2)}%`
 }
 
+// (Total Revenue − Accounts Receivable) / Total Revenue. Zero revenue is 0%.
+export function collectionEfficiencyOf(revenue: number, receivables: number): number {
+  return percentOf(revenue - receivables, revenue)
+}
+
+// Accounts receivable minus open vendor bills (accounts payable).
+export function forecastedProfitOf(receivables: number, payables: number): number {
+  return receivables - payables
+}
+
+export function projectValueCounts(
+  projects: { totalValue: number; year: number | null; startedOn: string }[],
+  scopeYear: number | null,
+): { highValue: number; lowValue: number } {
+  const scoped = projects.filter(
+    (project) => scopeYear == null || projectYear(project) === scopeYear,
+  )
+  return {
+    highValue: scoped.filter((project) => project.totalValue >= HIGH_VALUE_PROJECT_MIN).length,
+    lowValue: scoped.filter((project) => project.totalValue < HIGH_VALUE_PROJECT_MIN).length,
+  }
+}
+
+export function scopedBacklogValue(
+  projects: { id: string; year: number | null; startedOn: string }[],
+  backlogs: { projectId: string; amount: number }[],
+  scopeYear: number | null,
+): number {
+  const inScope = new Set(
+    projects
+      .filter((project) => scopeYear == null || projectYear(project) === scopeYear)
+      .map((project) => project.id),
+  )
+  const total = backlogs.reduce(
+    (sum, row) => (inScope.has(row.projectId) ? sum + row.amount : sum),
+    0,
+  )
+  return Math.round(total * 100) / 100
+}
+
 export function formatShare(part: number, total: number): string {
   if (total <= 0) {
     return "0.0%"
@@ -308,7 +350,6 @@ export function buildDashboard(
   const scoped = scopeYear != null
   const windowStart = scoped ? `${scopeYear}-01-01` : "0001-01-01"
   const windowEnd = !scoped || scopeYear === currentYear ? today : `${scopeYear}-12-31`
-  const forecastEnd = scoped ? `${scopeYear}-12-31` : "9999-12-31"
   const asOfToday = !scoped || scopeYear === currentYear
 
   const rawRevenue = dated(input.revenue)
@@ -336,18 +377,6 @@ export function buildDashboard(
     ? buildYear(scopeYear, today, currentYear, books)
     : buildSpan(currentYear, windowEnd, books)
 
-  const forecastBooks: Books = {
-    revenue: rawRevenue,
-    vendorPayments: rawVendorPayments,
-    operational: rawOperational,
-    taxes: rawTaxes,
-    bank: rawBank,
-    collectionRate: 0,
-  }
-  const forecastNet = netProfitOf(
-    totalBetween(rawRevenue, windowStart, forecastEnd),
-    expenseTotals(forecastBooks, windowStart, forecastEnd),
-  )
   const receivables = receivablesAsOf(input, windowEnd, asOfToday)
   const payables = payablesAsOf(input, windowEnd, asOfToday)
 
@@ -374,7 +403,6 @@ export function buildDashboard(
   const backlogCount = scoped
     ? input.backlogYears.filter((year) => year === scopeYear).length
     : input.backlogCount
-  const contractValue = projects.reduce((total, project) => total + project.totalValue, 0)
   const windowRevenue = totalBetween(revenue, windowStart, windowEnd)
   const won = leads.filter((lead) => lead.status === "won").length
   const lost = leads.filter((lead) => lead.status === "lost").length
@@ -446,10 +474,7 @@ export function buildDashboard(
         })),
     receivables,
     payables,
-    // Net profit, using the same formula as the KPI, if open invoices are collected
-    // and open payables are paid. A year includes later dates in that year.
-    // All Time includes every dated row. Uncommitted future costs are not included.
-    forecastedProfit: forecastNet + receivables - payables,
+    forecastedProfit: forecastedProfitOf(receivables, payables),
     weeks,
     weekCaption: presentWeekCaption(latestWeek.start, latestWeek.end, latestWeek.week),
     annual,
@@ -471,10 +496,6 @@ export function buildDashboard(
         : projectYears.length > 0
           ? Math.min(...projectYears)
           : null,
-      highValue: projects.filter((project) => project.totalValue >= HIGH_VALUE_PROJECT_MIN)
-        .length,
-      lowValue: projects.filter((project) => project.totalValue < HIGH_VALUE_PROJECT_MIN)
-        .length,
       active: projects.filter((project) => project.status === "active").length,
       openLeads: leads.filter((lead) => lead.isOpen).length,
       clients: clientCount,
@@ -483,10 +504,12 @@ export function buildDashboard(
         .reduce((total, lead) => total + lead.estimatedValue, 0),
       // Won leads divided by won + lost. Open, on hold, and cancelled leads are not decided.
       winRate: percentOf(won, won + lost),
-      // Cash collected in the scope over contracted value of projects in the scope.
-      collectionEfficiency: percentOf(windowRevenue, contractValue),
+      collectionEfficiency: collectionEfficiencyOf(windowRevenue, receivables),
       // project_backlogs: spend already above collections, not a not-started phase.
       backlog: backlogCount,
+      backlogValue: null,
+      ...projectValueCounts(projects, scopeYear),
+      assetValue: null,
     },
     tenure: {
       launchDateLabel: formatDayMonYear(launch),
@@ -549,8 +572,7 @@ export function parseDashboardYear(
   value: string | undefined,
   currentYear: number,
 ): number | null {
-  if (value === "all") return null
-  if (!value) return currentYear
+  if (value == null || value === "" || value === "all") return null
   const year = Number(value)
   if (!Number.isInteger(year) || year < DASHBOARD_FIRST_YEAR || year > currentYear) {
     return currentYear

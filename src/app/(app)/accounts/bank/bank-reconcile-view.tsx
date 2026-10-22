@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition, type ReactNode } from "react"
+import { useMemo, useRef, useState, useTransition, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -79,6 +79,37 @@ export function BankReconcileView({
   periodTo: string
   showFinancials: boolean
 }) {
+  return (
+    <ReconcileSession
+      key={account?.id ?? "choose"}
+      accounts={accounts}
+      account={account}
+      transactions={transactions}
+      reconciliation={reconciliation}
+      periodFrom={periodFrom}
+      periodTo={periodTo}
+      showFinancials={showFinancials}
+    />
+  )
+}
+
+function ReconcileSession({
+  accounts,
+  account,
+  transactions,
+  reconciliation,
+  periodFrom,
+  periodTo,
+  showFinancials,
+}: {
+  accounts: BankAccountRow[]
+  account: BankAccountRow | null
+  transactions: BankTransactionRow[]
+  reconciliation: ReconciliationBundle | null
+  periodFrom: string
+  periodTo: string
+  showFinancials: boolean
+}) {
   const router = useRouter()
   const canEdit = useCan("banking", "edit")
   const canDelete = useCan("banking", "delete")
@@ -134,8 +165,14 @@ export function BankReconcileView({
   const difference = statementKnown ? Math.round((statementValue - (exact?.bookBalance ?? book)) * 100) / 100 : null
 
   function close() {
-    if (pending) return
     router.push(ledgerHref)
+  }
+
+  function clearAccount() {
+    const params = new URLSearchParams({ view: "reconcile" })
+    if (from) params.set("from", from)
+    if (to) params.set("to", to)
+    router.push(`/accounts/bank?${params.toString()}`)
   }
 
   function applyPeriod() {
@@ -170,7 +207,7 @@ export function BankReconcileView({
 
   if (!showFinancials) {
     return (
-      <ReconcileDrawer title="Bank" pending={false} onClose={close}>
+      <ReconcileDrawer title="Bank" onClose={close}>
         <p className="text-sm text-muted-foreground">
           Reconciliation is available when financial figures are visible.
         </p>
@@ -180,7 +217,7 @@ export function BankReconcileView({
 
   if (!reconciliation) {
     return (
-      <ReconcileDrawer title={title} pending={false} onClose={close}>
+      <ReconcileDrawer title={title} onClose={close}>
         <p className="text-sm text-muted-foreground">
           Reconciliation is available when financial figures are visible.
         </p>
@@ -190,7 +227,7 @@ export function BankReconcileView({
 
   if (reconciliation.status === "missing") {
     return (
-      <ReconcileDrawer title={title} pending={pending} onClose={close}>
+      <ReconcileDrawer title={title} onClose={close}>
         <p className="text-sm text-muted-foreground">
           Bank reconciliation is not installed on this database yet.
         </p>
@@ -200,7 +237,7 @@ export function BankReconcileView({
 
   if (!account) {
     return (
-      <ReconcileDrawer title="Choose An Account To Reconcile" pending={pending} onClose={close}>
+      <ReconcileDrawer title="Choose An Account To Reconcile" onClose={close}>
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
           {accounts.map((row) => (
             <Button
@@ -230,7 +267,15 @@ export function BankReconcileView({
   const matchedLines = inPeriod.filter((line) => line.bankTransactionId)
 
   return (
-    <ReconcileDrawer title={title} pending={pending} onClose={close}>
+    <ReconcileDrawer
+      title={title}
+      onClose={close}
+      action={
+        <Button type="button" variant="outline" onClick={clearAccount}>
+          Change Account
+        </Button>
+      }
+    >
       {locked ? (
         <p className="text-sm text-muted-foreground">This Period Is Reconciled And Locked.</p>
       ) : null}
@@ -549,27 +594,44 @@ export function BankReconcileView({
 
 function ReconcileDrawer({
   title,
-  pending,
   onClose,
+  action,
   children,
 }: {
   title: string
-  pending: boolean
   onClose: () => void
+  action?: ReactNode
   children: ReactNode
 }) {
+  const [open, setOpen] = useState(true)
+  const closing = useRef(false)
+
+  function requestClose() {
+    if (closing.current) return
+    closing.current = true
+    setOpen(false)
+    onClose()
+  }
+
   return (
     <Dialog
-      open
+      open={open}
       onOpenChange={(next) => {
-        if (!next) onClose()
+        if (!next) requestClose()
       }}
     >
-      <DialogContent variant="drawer" className="overflow-hidden" showCloseButton={!pending}>
+      <DialogContent
+        variant="drawer"
+        className="overflow-hidden [&_[data-slot=dialog-close]]:pointer-events-auto [&_[data-slot=dialog-close]]:z-30"
+        showCloseButton
+      >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <div className="flex min-w-0 flex-col gap-2">
+            <DialogTitle>{title}</DialogTitle>
+            {action}
+          </div>
         </DialogHeader>
-        <DialogBody className="flex flex-col gap-4">
+        <DialogBody className="relative z-0 flex flex-col gap-4">
           {children}
         </DialogBody>
       </DialogContent>

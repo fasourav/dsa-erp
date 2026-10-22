@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 
+import { revalidateSettings } from "@/lib/revalidate-settings"
+
 import { friendlyDbError } from "@/lib/db-errors"
 import { phaseProgressPercent } from "@/lib/project-progress"
 import { createClient } from "@/lib/supabase/server"
@@ -371,7 +373,7 @@ async function isSignedIn(supabase: Awaited<ReturnType<typeof createClient>>) {
 }
 
 function revalidateCatalogs(catalog: CatalogKey) {
-  revalidatePath("/settings")
+  revalidateSettings(catalog)
   revalidatePath("/projects")
 
   if (
