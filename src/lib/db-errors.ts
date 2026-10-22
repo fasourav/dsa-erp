@@ -180,6 +180,14 @@ export function dbIssue(error: DbError | null | undefined): DbIssue | null {
   const balance = balanceIssue(error)
   if (balance) return balance
 
+  if (/operational purchase order/i.test(errorText(error))) {
+    return {
+      message:
+        "Vendor costs go through an Operational Purchase Order, then a vendor bill and a vendor payment.",
+      field: null,
+    }
+  }
+
   const name = constraintName(error)
   if (name && constraintMessages[name]) {
     const known = constraintMessages[name]

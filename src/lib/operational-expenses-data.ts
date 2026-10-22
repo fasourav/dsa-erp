@@ -2,6 +2,7 @@ import type { BankAccountChoice } from "@/lib/bank-account"
 import { listBankAccounts } from "@/lib/bank-accounts"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
+import { creatorNames } from "@/lib/record-audit"
 import type {
   NamedOption,
   OperationalExpenseRow,
@@ -16,7 +17,6 @@ export async function getOperationalExpenses(): Promise<{
   expenses: OperationalExpenseRow[]
   categories: string[]
   departments: NamedOption[]
-  vendors: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
   error: string | null
@@ -25,7 +25,6 @@ export async function getOperationalExpenses(): Promise<{
     expenses: [] as OperationalExpenseRow[],
     categories: [] as string[],
     departments: [] as NamedOption[],
-    vendors: [] as NamedOption[],
     paymentMethods: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
     error: "Could not load operational expenses.",
@@ -33,14 +32,14 @@ export async function getOperationalExpenses(): Promise<{
   const supabase = await createClient()
 
   try {
-    const [expenseRows, categoryRows, departmentRows, vendorRows, methodRows, bankAccounts] =
+    const [expenseRows, categoryRows, departmentRows, methodRows, bankAccounts] =
       await Promise.all([
         fetchAllPages(
           (from, to) =>
             supabase
               .from("operational_expenses")
               .select(
-                "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, departments(name), vendors(person_name, company_name)",
+                "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, created_at, created_by, departments(name), vendors(person_name, company_name)",
               )
               .order("id", { ascending: true })
               .range(from, to),
@@ -70,15 +69,6 @@ export async function getOperationalExpenses(): Promise<{
         fetchAllPages(
           (from, to) =>
             supabase
-              .from("vendors")
-              .select("id, person_name, company_name")
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Vendor list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
               .from("payment_methods")
               .select("name, sort_order")
               .order("sort_order", { ascending: true })
@@ -94,14 +84,11 @@ export async function getOperationalExpenses(): Promise<{
       id: row.id,
       name: row.name?.trim() ?? "",
     }))
-    const vendors = vendorRows
-      .map((row) => ({
-        id: row.id,
-        name: partyName(row.person_name, row.company_name),
-      }))
-      .sort((left, right) =>
-        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
-      )
+    const creators = await creatorNames(
+      supabase,
+      "operational_expenses",
+      expenseRows.map((row) => ({ id: row.id, createdBy: row.created_by })),
+    )
 
     const expenses = expenseRows.map((row) => {
       const department = one(row.departments)
@@ -121,6 +108,8 @@ export async function getOperationalExpenses(): Promise<{
           : "",
         notes: row.notes ?? "",
         bankAccountId: row.bank_account_id,
+        createdByName: creators.get(row.id) ?? "Unknown",
+        createdAt: row.created_at,
       }
     })
 
@@ -128,7 +117,6 @@ export async function getOperationalExpenses(): Promise<{
       expenses,
       categories,
       departments,
-      vendors,
       paymentMethods: mergeCategorySuggestions(
         methodRows.map((row) => row.name),
         expenses.map((expense) => expense.paymentMethod),

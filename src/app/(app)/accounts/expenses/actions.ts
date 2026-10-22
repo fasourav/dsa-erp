@@ -4,6 +4,7 @@ import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
+import { resolveDuplicateNotes, type DuplicateMatch } from "@/lib/duplicate-outflow"
 import { isUuid } from "@/lib/ids"
 import { overdraftMessage } from "@/lib/insufficient-balance"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
@@ -19,11 +20,12 @@ export type ExpenseInput = {
   amount: string
   paymentMethod: string
   departmentId: string
-  vendorId: string
   notes: string
   bankAccountId: string
   newAccountName: string
   newBankName: string
+  confirmNotDuplicate?: boolean
+  duplicateReason?: string
 }
 
 export type ExpenseFieldErrors = {
@@ -31,13 +33,14 @@ export type ExpenseFieldErrors = {
   category?: string
   amount?: string
   departmentId?: string
-  vendorId?: string
   bankAccountId?: string
+  duplicateReason?: string
 }
 
 export type ExpenseResult = {
   error: string | null
   fieldErrors?: ExpenseFieldErrors
+  duplicates?: DuplicateMatch[]
 }
 
 export type DeleteResult = {
@@ -111,7 +114,6 @@ async function saveExpense(
   const expenseDate = input.expenseDate.trim()
   const category = input.category.trim()
   const departmentId = input.departmentId.trim()
-  const vendorId = input.vendorId.trim()
   const notes = input.notes.trim()
   const paymentMethod = input.paymentMethod.trim()
   const amount = parseProjectValue(input.amount)
@@ -135,10 +137,6 @@ async function saveExpense(
 
   if (departmentId && !isUuid(departmentId)) {
     fieldErrors.departmentId = "Choose a department."
-  }
-
-  if (vendorId && !isUuid(vendorId)) {
-    fieldErrors.vendorId = "Choose a vendor."
   }
 
   if (Object.keys(fieldErrors).length > 0 || amount === null || amount <= 0) {
@@ -181,20 +179,6 @@ async function saveExpense(
     }
   }
 
-  if (vendorId) {
-    const vendor = await supabase
-      .from("vendors")
-      .select("id")
-      .eq("id", vendorId)
-      .limit(1)
-    if (vendor.error) {
-      return { error: "Could not save this expense." }
-    }
-    if (!vendor.data || vendor.data.length === 0) {
-      return { error: null, fieldErrors: { vendorId: "Choose a vendor." } }
-    }
-  }
-
   const bank = await resolveBankAccountId(
     supabase,
     input.bankAccountId,
@@ -227,14 +211,32 @@ async function saveExpense(
     return { error: overdraft, fieldErrors: { bankAccountId: overdraft, amount: overdraft } }
   }
 
+  const duplicate = await resolveDuplicateNotes(supabase, {
+    amount,
+    bankAccountId: bank.id,
+    date: expenseDate,
+    notes,
+    confirmNotDuplicate: input.confirmNotDuplicate === true,
+    duplicateReason: input.duplicateReason ?? "",
+    exceptExpenseId: id,
+    exceptPaymentId: null,
+  })
+  if (duplicate.status === "error") return { error: duplicate.error }
+  if (duplicate.status === "blocked") {
+    return {
+      error: null,
+      duplicates: duplicate.matches,
+      fieldErrors: { duplicateReason: duplicate.reasonError },
+    }
+  }
+
   const values = {
     expense_date: expenseDate,
     category,
     amount,
     payment_method: paymentMethod || null,
     department_id: departmentId || null,
-    vendor_id: vendorId || null,
-    notes: notes || null,
+    notes: duplicate.notes || null,
     bank_account_id: bank.id,
   }
 
@@ -243,7 +245,10 @@ async function saveExpense(
         supabase.from("operational_expenses").update(withVersion(values, input.version)).eq("id", id),
         input.version,
       ).select("id")
-    : await supabase.from("operational_expenses").insert(values).select("id")
+    : await supabase
+        .from("operational_expenses")
+        .insert({ ...values, vendor_id: null })
+        .select("id")
 
   if (error) {
     const stale = staleWriteMessage(error)
@@ -257,7 +262,7 @@ async function saveExpense(
       }
     }
     if (error.code === "23503") {
-      return { error: "Choose a valid department or vendor." }
+      return { error: "Choose a valid department." }
     }
 
     if (error.code === "23514" && issue?.message === "This value is not allowed.") {

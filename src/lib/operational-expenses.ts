@@ -21,6 +21,8 @@ export type OperationalExpenseRow = {
   vendorName: string
   notes: string
   bankAccountId: string
+  createdByName: string
+  createdAt: string
 }
 
 export type ExpenseColumnId =

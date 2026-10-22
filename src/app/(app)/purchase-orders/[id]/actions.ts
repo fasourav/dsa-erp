@@ -4,6 +4,7 @@ import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "
 import { revalidatePath } from "next/cache"
 
 import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
+import { resolveDuplicateNotes, type DuplicateMatch } from "@/lib/duplicate-outflow"
 import { formatMoney } from "@/lib/format"
 import { overdraftMessage } from "@/lib/insufficient-balance"
 import { isUuid } from "@/lib/ids"
@@ -57,17 +58,21 @@ export type VendorPaymentInput = {
   bankAccountId: string
   newAccountName: string
   newBankName: string
+  confirmNotDuplicate?: boolean
+  duplicateReason?: string
 }
 
 export type VendorPaymentFieldErrors = {
   paidOn?: string
   amount?: string
   bankAccountId?: string
+  duplicateReason?: string
 }
 
 export type VendorPaymentResult = {
   error: string | null
   fieldErrors?: VendorPaymentFieldErrors
+  duplicates?: DuplicateMatch[]
 }
 
 export type DeleteResult = {
@@ -237,6 +242,8 @@ export type RecordVendorPaymentInput = {
   invoiceIssuedOn: string
   invoiceDueOn: string
   invoiceAmount: string
+  confirmNotDuplicate?: boolean
+  duplicateReason?: string
 }
 
 export type RecordVendorPaymentFieldErrors = VendorPaymentFieldErrors & {
@@ -248,6 +255,7 @@ export type RecordVendorPaymentFieldErrors = VendorPaymentFieldErrors & {
 export type RecordVendorPaymentResult = {
   error: string | null
   fieldErrors?: RecordVendorPaymentFieldErrors
+  duplicates?: DuplicateMatch[]
 }
 
 export async function recordPurchaseOrderPayment(
@@ -341,6 +349,8 @@ export async function recordPurchaseOrderPayment(
     bankAccountId: input.bankAccountId,
     newAccountName: input.newAccountName,
     newBankName: input.newBankName,
+    confirmNotDuplicate: input.confirmNotDuplicate,
+    duplicateReason: input.duplicateReason,
   }
 
   if (input.separateInvoice && invoiceAmount !== null) {
@@ -580,6 +590,43 @@ async function saveVendorInvoice(
   return { error: null }
 }
 
+async function duplicateBlock(
+  supabase: SupabaseClient,
+  input: VendorPaymentInput,
+  bankAccountId: string,
+  exceptPaymentId: string | null,
+): Promise<{ blocked: VendorPaymentResult | null; notes: string }> {
+  const amount = parsePositiveAmount(input.amount)
+  const paidOn = input.paidOn.trim()
+  const notes = input.notes.trim()
+  if (amount === null || !isIsoDate(paidOn)) {
+    return { blocked: null, notes }
+  }
+
+  const decision = await resolveDuplicateNotes(supabase, {
+    amount,
+    bankAccountId,
+    date: paidOn,
+    notes,
+    confirmNotDuplicate: input.confirmNotDuplicate === true,
+    duplicateReason: input.duplicateReason ?? "",
+    exceptExpenseId: null,
+    exceptPaymentId,
+  })
+  if (decision.status === "error") return { blocked: { error: decision.error }, notes }
+  if (decision.status === "blocked") {
+    return {
+      blocked: {
+        error: null,
+        duplicates: decision.matches,
+        fieldErrors: { duplicateReason: decision.reasonError },
+      },
+      notes,
+    }
+  }
+  return { blocked: null, notes: decision.notes }
+}
+
 async function saveVendorPayment(
   id: string | null,
   vendorInvoiceId: string | null,
@@ -589,7 +636,6 @@ async function saveVendorPayment(
   const amount = parsePositiveAmount(input.amount)
   const method = input.method.trim()
   const reference = input.reference.trim()
-  const notes = input.notes.trim()
   const expenseCategory = input.expenseCategory.trim()
   const fieldErrors: VendorPaymentFieldErrors = {}
 
@@ -726,13 +772,16 @@ async function saveVendorPayment(
     return { error: overdraft, fieldErrors: { bankAccountId: overdraft, amount: overdraft } }
   }
 
+  const duplicate = await duplicateBlock(supabase, input, bank.id, id)
+  if (duplicate.blocked) return duplicate.blocked
+
   const values = {
     vendor_invoice_id: invoiceId,
     paid_on: paidOn,
     amount,
     method: method || null,
     reference: reference || null,
-    notes: notes || null,
+    notes: duplicate.notes || null,
     expense_category: expenseCategory || null,
     bank_account_id: bank.id,
   }
@@ -902,6 +951,16 @@ async function payAgainstNewInvoice(
     }
   }
 
+  const bank = await resolveBankAccountId(supabase, input.payment.bankAccountId, "", "")
+  if (bank.fieldError) {
+    return { error: null, fieldErrors: { bankAccountId: bank.fieldError } }
+  }
+  if (bank.error || !bank.id) {
+    return { error: bank.error ?? "Could not save this payment." }
+  }
+  const duplicate = await duplicateBlock(supabase, input.payment, bank.id, null)
+  if (duplicate.blocked) return duplicate.blocked
+
   const created = await supabase
     .from("vendor_invoices")
     .insert({
@@ -920,7 +979,7 @@ async function payAgainstNewInvoice(
 
   const invoiceId = created.data[0].id
   const result = await saveVendorPayment(null, invoiceId, input.payment)
-  if (result.error || result.fieldErrors) {
+  if (result.error || result.fieldErrors || result.duplicates?.length) {
     const existing = await supabase
       .from("vendor_payments")
       .select("id")

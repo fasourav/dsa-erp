@@ -15,6 +15,15 @@ export type VendorPaymentRow = {
   expenseCategory: string
   bankAccountId: string
   bankAccountName: string
+  createdByName: string
+  createdAt: string
+  purchaseOrderId: string
+  purchaseOrderIssuedOn: string
+  billIssuedOn: string
+  billAmount: number
+  bankLineDate: string
+  bankLineAmount: number
+  bankLineAccount: string
 }
 
 export type VendorInvoiceRow = {
