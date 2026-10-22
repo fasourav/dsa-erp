@@ -4,6 +4,7 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteOperationalExpense } from "@/app/(app)/accounts/expenses/actions"
@@ -131,7 +132,9 @@ export function ExpensesTable({
                 ],
                 rows: filtered.map((row) => [
                   formatDayMonYear(row.expenseDate),
-                  row.category,
+                  row.fromPurchaseOrder
+                    ? `${row.category} · From Operational PO`
+                    : row.category,
                   row.amount,
                   row.paymentMethod,
                   row.departmentName || "—",
@@ -182,6 +185,7 @@ export function ExpensesTable({
         mobileItem={(expense) => ({
           title: expense.category || "—",
           subtitle: [
+            expense.fromPurchaseOrder ? "From Operational PO" : "",
             expense.vendorName,
             expense.paymentMethod,
             expense.expenseDate ? formatIsoDate(expense.expenseDate) : "",
@@ -208,13 +212,25 @@ export function ExpensesTable({
             >
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {canEdit ? (<DropdownMenuItem onClick={() => openForm(expense)}>
+            <DropdownMenuContent align="end" className="w-52">
+              {expense.fromPurchaseOrder ? (
+                <DropdownMenuItem
+                  nativeButton={false}
+                  render={
+                    <Link href={`/purchase-orders/${expense.purchaseOrderId}`} />
+                  }
+                >
+                  View Purchase Order
+                </DropdownMenuItem>
+              ) : null}
+              {!expense.fromPurchaseOrder && canEdit ? (<DropdownMenuItem onClick={() => openForm(expense)}>
                 <Pencil aria-hidden="true" />
                 Edit
               </DropdownMenuItem>) : null}
-              <DropdownMenuSeparator />
-              {canDelete ? (<DropdownMenuItem
+              {!expense.fromPurchaseOrder && canEdit && canDelete ? (
+                <DropdownMenuSeparator />
+              ) : null}
+              {!expense.fromPurchaseOrder && canDelete ? (<DropdownMenuItem
                 variant="destructive"
                 onClick={() => {
                   setDeleteError(null)
@@ -288,6 +304,14 @@ function Cell({
           <span className="text-label text-muted-foreground">
             {expense.createdByName} · {formatRecordedAt(expense.createdAt)}
           </span>
+          {expense.fromPurchaseOrder ? (
+            <Link
+              href={`/purchase-orders/${expense.purchaseOrderId}`}
+              className="text-label text-muted-foreground underline underline-offset-4"
+            >
+              From Operational PO
+            </Link>
+          ) : null}
           {expense.vendorName ? (
             <span className="text-label text-muted-foreground">
               Vendor {expense.vendorName}

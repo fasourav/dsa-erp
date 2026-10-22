@@ -23,6 +23,8 @@ export type OperationalExpenseRow = {
   bankAccountId: string
   createdByName: string
   createdAt: string
+  fromPurchaseOrder: boolean
+  purchaseOrderId: string
 }
 
 export type ExpenseColumnId =

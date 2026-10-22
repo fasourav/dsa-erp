@@ -46,6 +46,7 @@ import {
 type OperationalColumnId =
   | "issuedOn"
   | "workType"
+  | "category"
   | "vendorName"
   | "totalValue"
   | "totalPaid"
@@ -54,6 +55,7 @@ type OperationalColumnId =
 const columns: readonly ListColumn<OperationalColumnId>[] = [
   { id: "issuedOn", label: "Date", align: "left", locked: true },
   { id: "workType", label: "Work Category", align: "left", locked: true },
+  { id: "category", label: "Category", align: "left", locked: true },
   { id: "vendorName", label: "Vendor Name", align: "left", locked: true },
   {
     id: "totalValue",
@@ -70,11 +72,13 @@ export function OperationalPurchaseOrdersDialog({
   vendors,
   workTypes,
   expenseCategories,
+  officeExpenseCategories,
 }: {
   orders: PurchaseOrderRow[]
   vendors: VendorOption[]
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
+  officeExpenseCategories: ExpenseCategoryOption[]
 }) {
   const canAdd = useCan("purchase_orders", "add")
 
@@ -187,6 +191,7 @@ export function OperationalPurchaseOrdersDialog({
               mobileItem={(order) => ({
                 title: order.vendorName || "—",
                 subtitle: [
+                  order.officeExpenseCategoryName,
                   order.workType,
                   order.issuedOn ? formatPurchaseOrderDate(order.issuedOn) : "",
                 ]
@@ -235,6 +240,7 @@ export function OperationalPurchaseOrdersDialog({
         vendors={vendors}
         workTypes={workTypes}
         expenseCategories={expenseCategories}
+        officeExpenseCategories={officeExpenseCategories}
         defaultProjectId={null}
         operational
       />
@@ -277,6 +283,12 @@ function OperationalCell({
     case "workType":
       return order.workType ? (
         <Badge variant="outline">{order.workType}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "category":
+      return order.officeExpenseCategoryName ? (
+        <span>{order.officeExpenseCategoryName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -404,6 +416,12 @@ function compareOperational(
       return left.workType.localeCompare(right.workType, "en", {
         sensitivity: "base",
       })
+    case "category":
+      return left.officeExpenseCategoryName.localeCompare(
+        right.officeExpenseCategoryName,
+        "en",
+        { sensitivity: "base" },
+      )
     case "vendorName":
       return left.vendorName.localeCompare(right.vendorName, "en", {
         sensitivity: "base",

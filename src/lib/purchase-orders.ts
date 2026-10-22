@@ -27,6 +27,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
   vendors: VendorOption[]
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
+  officeExpenseCategories: ExpenseCategoryOption[]
   projectFilter: ProjectFilter | null
   error: string | null
 }> {
@@ -37,18 +38,19 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
     vendors: [] as VendorOption[],
     workTypes: [] as string[],
     expenseCategories: [] as ExpenseCategoryOption[],
+    officeExpenseCategories: [] as ExpenseCategoryOption[],
     projectFilter: null,
     error: "Could not load purchase orders.",
   }
 
   try {
-    const [orderRows, balanceRows, billRows, paymentRows, projectRows, vendorRows, categoryRows, expenseCategoryRows] =
+    const [orderRows, balanceRows, billRows, paymentRows, projectRows, vendorRows, categoryRows, expenseCategoryRows, officeCategoryRows] =
       await Promise.all([
         fetchPages((from, to) =>
           supabase
             .from("vendor_purchase_orders")
             .select(
-              "id, issued_on, notes, project_id, vendor_id, work_type, total_value, expense_category_id",
+              "id, issued_on, notes, project_id, vendor_id, work_type, total_value, expense_category_id, office_expense_category_id",
             )
             .order("id", { ascending: true })
             .range(from, to),
@@ -104,6 +106,14 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
             .order("name", { ascending: true })
             .range(from, to),
         ),
+        fetchPages((from, to) =>
+          supabase
+            .from("office_expense_categories")
+            .select("id, name, sort_order")
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true })
+            .range(from, to),
+        ),
       ])
 
     const projects = projectRows
@@ -140,6 +150,14 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
     })
     const expenseCategoryNames = new Map(
       expenseCategories.map((category) => [category.id, category.name]),
+    )
+    const officeExpenseCategories = officeCategoryRows.flatMap((row) => {
+      const name = row.name?.trim() ?? ""
+      if (!name) return []
+      return [{ id: row.id, name } satisfies ExpenseCategoryOption]
+    })
+    const officeCategoryNames = new Map(
+      officeExpenseCategories.map((category) => [category.id, category.name]),
     )
 
     const projectsById = new Map(projects.map((project) => [project.id, project]))
@@ -179,6 +197,10 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         expenseCategoryName: row.expense_category_id
           ? (expenseCategoryNames.get(row.expense_category_id) ?? "")
           : "",
+        officeExpenseCategoryId: row.office_expense_category_id ?? "",
+        officeExpenseCategoryName: row.office_expense_category_id
+          ? (officeCategoryNames.get(row.office_expense_category_id) ?? "")
+          : "",
         totalValue: toNumber(row.total_value),
         totalPaid: toNumber(balance?.total_paid),
         totalPending: pendingByPo.get(row.id) ?? 0,
@@ -204,6 +226,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         vendors,
         workTypes,
         expenseCategories,
+        officeExpenseCategories,
         projectFilter: null,
         error: "That project could not be found.",
       }
@@ -211,12 +234,16 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
 
     return {
       orders: matchedProject
-        ? orders.filter((order) => order.projectId === matchedProject.id)
+        ? orders.filter(
+            (order) =>
+              order.projectId == null || order.projectId === matchedProject.id,
+          )
         : orders,
       projects,
       vendors,
       workTypes,
       expenseCategories,
+      officeExpenseCategories,
       projectFilter: matchedProject
         ? { id: matchedProject.id, name: matchedProject.name }
         : null,

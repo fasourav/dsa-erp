@@ -90,7 +90,8 @@ async function vendorProjectNames(
   ])
   return {
     vendor: partyLabel(vendor.data?.company_name, vendor.data?.person_name),
-    project: project.data?.name?.trim() ?? "",
+    // No project means an operational purchase order. orderNumber codes that as OPS.
+    project: projectId ? (project.data?.name?.trim() ?? "") : "",
   }
 }
 

@@ -33,12 +33,17 @@ export function bankDirectionLabel(direction: BankDirection): string {
   return direction === "inflow" ? "Inflow" : "Outflow"
 }
 
-export function bankSourceLabel(source: BankSourceKind): string {
+export function bankSourceLabel(
+  source: BankSourceKind,
+  options?: { projectId?: string | null },
+): string {
   switch (source) {
     case "project_income":
       return "Project Income"
     case "vendor_expense":
-      return "Vendor Expense"
+      return options && !options.projectId
+        ? "Operational Expense (PO)"
+        : "Vendor Expense"
     case "operational_expense":
       return "Operational Expense"
     case "vat_tax":

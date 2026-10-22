@@ -30,6 +30,8 @@ export type PurchaseOrderRow = {
   workType: string
   expenseCategoryId: string
   expenseCategoryName: string
+  officeExpenseCategoryId: string
+  officeExpenseCategoryName: string
   totalValue: number
   totalPaid: number
   totalPending: number

@@ -665,7 +665,7 @@ function LedgerAmount({ row }: { row: BankTransactionRow }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-ui font-semibold">{bankSourceLabel(row.sourceKind)}</p>
+        <p className="text-ui font-semibold">{bankSourceLabel(row.sourceKind, { projectId: row.projectId })}</p>
         <p className="text-sm text-muted-foreground">
           {formatIsoDate(row.transactionDate)}
           {row.notes.trim() ? ` · ${row.notes.trim()}` : ""}
@@ -841,7 +841,7 @@ function reconcileTitle(name: string) {
 
 function bookLabel(row: BankTransactionRow): string {
   const note = row.notes.trim()
-  return [formatIsoDate(row.transactionDate), bankFlowLabel(row.direction), formatExactBdt(row.amount), bankSourceLabel(row.sourceKind), note]
+  return [formatIsoDate(row.transactionDate), bankFlowLabel(row.direction), formatExactBdt(row.amount), bankSourceLabel(row.sourceKind, { projectId: row.projectId }), note]
     .filter(Boolean)
     .join(" · ")
 }

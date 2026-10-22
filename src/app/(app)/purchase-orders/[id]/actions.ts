@@ -54,7 +54,6 @@ export type VendorPaymentInput = {
   method: string
   reference: string
   notes: string
-  expenseCategory: string
   bankAccountId: string
   newAccountName: string
   newBankName: string
@@ -345,7 +344,6 @@ export async function recordPurchaseOrderPayment(
     method: input.method,
     reference: "",
     notes: input.notes,
-    expenseCategory: "",
     bankAccountId: input.bankAccountId,
     newAccountName: input.newAccountName,
     newBankName: input.newBankName,
@@ -627,6 +625,36 @@ async function duplicateBlock(
   return { blocked: null, notes: decision.notes }
 }
 
+async function purchaseOrderCategoryName(
+  supabase: SupabaseClient,
+  order: {
+    project_id: string | null
+    expense_category_id: string | null
+    office_expense_category_id: string | null
+  },
+): Promise<string | null | undefined> {
+  const categoryId = order.project_id
+    ? order.expense_category_id
+    : order.office_expense_category_id
+  if (!categoryId) return null
+
+  const category = order.project_id
+    ? await supabase
+        .from("project_expense_categories")
+        .select("name")
+        .eq("id", categoryId)
+        .limit(1)
+    : await supabase
+        .from("office_expense_categories")
+        .select("name")
+        .eq("id", categoryId)
+        .limit(1)
+  if (category.error) return undefined
+
+  const name = category.data?.[0]?.name?.trim() ?? ""
+  return name || null
+}
+
 async function saveVendorPayment(
   id: string | null,
   vendorInvoiceId: string | null,
@@ -636,7 +664,6 @@ async function saveVendorPayment(
   const amount = parsePositiveAmount(input.amount)
   const method = input.method.trim()
   const reference = input.reference.trim()
-  const expenseCategory = input.expenseCategory.trim()
   const fieldErrors: VendorPaymentFieldErrors = {}
 
   if (!isIsoDate(paidOn)) {
@@ -704,7 +731,9 @@ async function saveVendorPayment(
 
   const order = await supabase
     .from("vendor_purchase_orders")
-    .select("issued_on, total_value")
+    .select(
+      "issued_on, total_value, project_id, expense_category_id, office_expense_category_id",
+    )
     .eq("id", invoiceRow.purchase_order_id)
     .limit(1)
 
@@ -712,8 +741,15 @@ async function saveVendorPayment(
     return { error: "Could not save this payment." }
   }
 
-  const issuedOn = order.data[0]?.issued_on
-  const orderTotalValue = Number(order.data[0]?.total_value ?? 0)
+  const orderRow = order.data[0]
+  const issuedOn = orderRow?.issued_on
+  const orderTotalValue = Number(orderRow?.total_value ?? 0)
+  const expenseCategory = orderRow
+    ? await purchaseOrderCategoryName(supabase, orderRow)
+    : null
+  if (expenseCategory === undefined) {
+    return { error: "Could not save this payment." }
+  }
   if (issuedOn && paidOn < issuedOn) {
     return {
       error: null,
@@ -782,7 +818,7 @@ async function saveVendorPayment(
     method: method || null,
     reference: reference || null,
     notes: duplicate.notes || null,
-    expense_category: expenseCategory || null,
+    expense_category: expenseCategory,
     bank_account_id: bank.id,
   }
 

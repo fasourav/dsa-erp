@@ -2237,6 +2237,7 @@ export type Database = {
           id: string
           issued_on: string
           notes: string | null
+          office_expense_category_id: string | null
           project_id: string | null
           total_value: number
           updated_at: string
@@ -2249,6 +2250,7 @@ export type Database = {
           id?: string
           issued_on?: string
           notes?: string | null
+          office_expense_category_id?: string | null
           project_id?: string | null
           total_value?: number
           updated_at?: string
@@ -2261,6 +2263,7 @@ export type Database = {
           id?: string
           issued_on?: string
           notes?: string | null
+          office_expense_category_id?: string | null
           project_id?: string | null
           total_value?: number
           updated_at?: string
@@ -2329,6 +2332,13 @@ export type Database = {
             columns: ["expense_category_id"]
             isOneToOne: false
             referencedRelation: "project_expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_purchase_orders_office_expense_category_id_fkey"
+            columns: ["office_expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "office_expense_categories"
             referencedColumns: ["id"]
           },
         ]

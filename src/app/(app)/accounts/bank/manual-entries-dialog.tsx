@@ -124,7 +124,7 @@ export function ManualEntriesDialog({
             onPageChange={setPage}
             pagingLabel="Deposits and withdrawals pagination"
             mobileItem={(row) => ({
-              title: bankSourceLabel(row.sourceKind),
+              title: bankSourceLabel(row.sourceKind, { projectId: row.projectId }),
               subtitle: [row.accountName, row.transactionDate ? formatIsoDate(row.transactionDate) : null]
                 .filter(Boolean)
                 .join(" · "),
@@ -146,7 +146,7 @@ export function ManualEntriesDialog({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label={`Actions for ${bankSourceLabel(row.sourceKind)} on ${row.transactionDate || "an unknown date"}`}
+                      aria-label={`Actions for ${bankSourceLabel(row.sourceKind, { projectId: row.projectId })} on ${row.transactionDate || "an unknown date"}`}
                     />
                   }
                 >
@@ -192,7 +192,7 @@ function EntryCell({
         <span className="text-muted-foreground">—</span>
       )
     case "type":
-      return <Badge variant="outline">{bankSourceLabel(row.sourceKind)}</Badge>
+      return <Badge variant="outline">{bankSourceLabel(row.sourceKind, { projectId: row.projectId })}</Badge>
     case "accountName":
       return (
         <span className={cn("text-ui font-semibold", !row.accountName && "text-muted-foreground")}>
@@ -243,8 +243,8 @@ function compare(
     case "transactionDate":
       return left.transactionDate.localeCompare(right.transactionDate)
     case "type":
-      return bankSourceLabel(left.sourceKind).localeCompare(
-        bankSourceLabel(right.sourceKind),
+      return bankSourceLabel(left.sourceKind, { projectId: left.projectId }).localeCompare(
+        bankSourceLabel(right.sourceKind, { projectId: right.projectId }),
         "en",
         { sensitivity: "base" },
       )

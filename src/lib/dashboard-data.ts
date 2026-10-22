@@ -75,6 +75,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
     invoices,
     purchaseOrders,
     expenseCategories,
+    officeCategories,
     operational,
     taxes,
     bankAccounts,
@@ -152,7 +153,9 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("vendor_purchase_orders")
-          .select("id, work_type, project_id, issued_on, total_value, expense_category_id")
+          .select(
+            "id, work_type, project_id, issued_on, total_value, expense_category_id, office_expense_category_id",
+          )
           .order("id", { ascending: true })
           .range(from, to),
       "Purchase order list is larger than expected.",
@@ -166,6 +169,16 @@ async function loadDashboardRows(): Promise<DashboardInput> {
           .order("name", { ascending: true })
           .range(from, to),
       "Expense category list is larger than expected.",
+    ),
+    fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("office_expense_categories")
+          .select("id, name")
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true })
+          .range(from, to),
+      "Office expense category list is larger than expected.",
     ),
     fetchAllPages(
       (from, to) =>
@@ -244,6 +257,9 @@ async function loadDashboardRows(): Promise<DashboardInput> {
   const categoryNameById = new Map(
     expenseCategories.map((category) => [category.id, category.name?.trim() ?? ""]),
   )
+  const officeCategoryNameById = new Map(
+    officeCategories.map((category) => [category.id, category.name?.trim() ?? ""]),
+  )
   const openByStatus = new Map(statuses.map((status) => [status.code, status.is_open]))
   const backlogIds = new Set(
     backlogs.flatMap((row) => (row.project_id ? [row.project_id] : [])),
@@ -311,6 +327,9 @@ async function loadDashboardRows(): Promise<DashboardInput> {
         workType: order?.work_type ?? null,
         expenseCategory: order?.expense_category_id
           ? categoryNameById.get(order.expense_category_id) || null
+          : null,
+        officeCategory: order?.office_expense_category_id
+          ? officeCategoryNameById.get(order.office_expense_category_id) || null
           : null,
         // A payment whose purchase order is missing keeps the project-cost path.
         projectLinked: order ? order.project_id != null : true,

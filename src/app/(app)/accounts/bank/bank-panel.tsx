@@ -236,7 +236,7 @@ export function BankPanel({
                 formatDayMonYear(transaction.transactionDate),
                 transaction.accountName,
                 bankFlowLabel(transaction.direction),
-                bankSourceLabel(transaction.sourceKind),
+                bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId }),
                 showFinancials ? transaction.amount : "Hidden",
                 showFinancials ? transaction.balance : "Hidden",
               ]),
@@ -329,7 +329,7 @@ export function BankPanel({
           onPageChange={setPage}
           pagingLabel="Bank transactions pagination"
           mobileItem={(transaction) => ({
-            title: bankSourceLabel(transaction.sourceKind),
+            title: bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId }),
             value: <StatusBadge status={transaction.direction} />,
             subtitle: [
               transaction.accountName,
@@ -592,7 +592,7 @@ function TransactionCell({
     case "direction":
       return <StatusBadge status={transaction.direction} />
     case "sourceKind":
-      return <Badge variant="outline">{bankSourceLabel(transaction.sourceKind)}</Badge>
+      return <Badge variant="outline">{bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId })}</Badge>
     case "amount":
       return showFinancials ? (
         <Money
