@@ -9,7 +9,9 @@ import {
   Box,
   Clock,
   Download,
+  Gem,
   Hammer,
+  Layers,
   Minus,
   Target,
   TrendingDown,
@@ -726,34 +728,72 @@ function ProjectValueTile({
   return (
     <div className={cn(metricSurface, "col-span-2 flex flex-col px-3.5 py-3.25 md:p-4")}>
       <div className="grid min-w-0 flex-1 grid-cols-2">
-        <ProjectCount label="High Value Projects" count={high} hint={`≥ ${threshold}`} />
-        <ProjectCount label="Low Value Projects" count={low} hint={`< ${threshold}`} divided />
+        <ProjectCount
+          icon={Gem}
+          color="bg-chart-1"
+          label="High Value Projects"
+          count={high}
+          hint={`≥ ${threshold}`}
+        />
+        <ProjectCount
+          icon={Layers}
+          color="bg-chart-10"
+          label="Low Value Projects"
+          count={low}
+          hint={`< ${threshold}`}
+          divided
+        />
       </div>
     </div>
   )
 }
 
 function ProjectCount({
+  icon,
+  color,
   label,
   count,
   hint,
   divided = false,
 }: {
+  icon: LucideIcon
+  color: string
   label: string
   count: number | null
   hint: string
   divided?: boolean
 }) {
   return (
-    <div className={cn("min-w-0", divided ? "border-l border-border pl-3 md:pl-4" : "pr-3 md:pr-4")}>
-      <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">
-        {label}
-      </p>
-      <p className="mt-0.5 truncate text-metric tabular-nums">
-        {count == null ? <span className="text-muted-foreground">—</span> : count}
-      </p>
-      <p className="mt-px truncate text-micro text-subtle-foreground md:text-xs">{hint}</p>
+    <div
+      className={cn(
+        "flex h-full min-w-0 flex-col md:flex-row md:items-start md:gap-3.5",
+        divided ? "border-l border-border pl-3 md:pl-4" : "pr-3 md:pr-4",
+      )}
+    >
+      <MetricIcon icon={icon} color={color} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">
+          {label}
+        </p>
+        <p className="mt-0.5 truncate text-metric tabular-nums">
+          {count == null ? <span className="text-muted-foreground">—</span> : count}
+        </p>
+        <p className="mt-px truncate text-micro text-subtle-foreground md:text-xs">{hint}</p>
+      </div>
     </div>
+  )
+}
+
+function MetricIcon({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
+  return (
+    <span
+      className={cn(
+        "mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl",
+        color,
+      )}
+    >
+      <Icon aria-hidden="true" className="size-4 md:size-4.5" />
+    </span>
   )
 }
 
@@ -778,14 +818,7 @@ function MetricTile({
 }) {
   return (
     <div className={cn(metricSurface, "flex flex-col px-3.5 py-3.25 md:flex-row md:items-start md:gap-3.5 md:p-4", className)}>
-      <span
-        className={cn(
-          "mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl",
-          color,
-        )}
-      >
-        <Icon aria-hidden="true" className="size-4 md:size-4.5" />
-      </span>
+      <MetricIcon icon={Icon} color={color} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">{label}</p>
         <p className={cn("mt-0.5 text-metric tabular-nums", wrap ? "break-words" : "truncate")}>
