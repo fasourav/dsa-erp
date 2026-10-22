@@ -23,7 +23,6 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
   purchaseOrder: PurchaseOrderDetail | null
   invoices: VendorInvoiceRow[]
   paymentMethods: string[]
-  expenseCategories: string[]
   bankAccounts: BankAccountChoice[]
   error: string | null
 }> {
@@ -31,7 +30,6 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
     purchaseOrder: null,
     invoices: [] as VendorInvoiceRow[],
     paymentMethods: [] as string[],
-    expenseCategories: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
     error: "Could not load vendor payments.",
   }
@@ -46,7 +44,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
     const orderResult = await supabase
       .from("vendor_purchase_orders")
       .select(
-        "id, issued_on, notes, project_id, vendor_id, work_type, total_value, expense_category_id",
+        "id, issued_on, notes, project_id, vendor_id, work_type, total_value, expense_category_id, office_expense_category_id",
       )
       .eq("id", purchaseOrderId)
       .limit(1)
@@ -60,7 +58,7 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
       return { ...empty, error: "That purchase order could not be found." }
     }
 
-    const [projectRows, vendorRows, balanceRows, invoiceRows, methodRows, categoryRows, bankAccounts] =
+    const [projectRows, vendorRows, balanceRows, invoiceRows, methodRows, projectCategory, officeCategory, bankAccounts] =
       await Promise.all([
         order.project_id
           ? supabase.from("projects").select("id, name").eq("id", order.project_id).limit(1)
@@ -97,20 +95,30 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
               .range(from, to),
           "Payment method list is larger than expected.",
         ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
+        order.expense_category_id
+          ? supabase
               .from("project_expense_categories")
-              .select("id, name, sort_order")
-              .order("sort_order", { ascending: true })
-              .order("name", { ascending: true })
-              .range(from, to),
-          "Expense category list is larger than expected.",
-        ),
+              .select("name")
+              .eq("id", order.expense_category_id)
+              .limit(1)
+          : Promise.resolve({ data: [], error: null }),
+        order.office_expense_category_id
+          ? supabase
+              .from("office_expense_categories")
+              .select("name")
+              .eq("id", order.office_expense_category_id)
+              .limit(1)
+          : Promise.resolve({ data: [], error: null }),
         listBankAccounts(),
       ])
 
-    if (projectRows.error || vendorRows.error || balanceRows.error) {
+    if (
+      projectRows.error ||
+      vendorRows.error ||
+      balanceRows.error ||
+      projectCategory.error ||
+      officeCategory.error
+    ) {
       return empty
     }
 
@@ -229,9 +237,8 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
       vendorId: order.vendor_id,
       vendorName: vendorRows.data?.[0]?.display_name?.trim() ?? "",
       workType: order.work_type?.trim() ?? "",
-      expenseCategoryName:
-        categoryRows.find((row) => row.id === order.expense_category_id)?.name?.trim() ??
-        "",
+      expenseCategoryName: projectCategory.data?.[0]?.name?.trim() ?? "",
+      officeExpenseCategoryName: officeCategory.data?.[0]?.name?.trim() ?? "",
       totalValue: toNumber(order.total_value),
       totalPaid: toNumber(balance?.total_paid),
       totalPending: sumOpenPayable(
@@ -252,12 +259,6 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
         methodRows.map((row) => row.name),
         invoices.flatMap((invoice) =>
           invoice.payments.map((payment) => payment.method),
-        ),
-      ),
-      expenseCategories: mergeCategorySuggestions(
-        categoryRows.map((row) => row.name),
-        invoices.flatMap((invoice) =>
-          invoice.payments.map((payment) => payment.expenseCategory),
         ),
       ),
       bankAccounts,

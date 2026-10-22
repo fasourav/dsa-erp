@@ -81,7 +81,7 @@ function signedCents(row: BankTransactionRow): number {
 }
 
 function describeLine(row: BankTransactionRow, showAccount: boolean): string {
-  const source = bankSourceLabel(row.sourceKind)
+  const source = bankSourceLabel(row.sourceKind, { projectId: row.projectId })
   const notes = row.notes.trim()
   const detail = notes && notes !== source ? `${source} · ${notes}` : notes || source
   if (showAccount && row.accountName) {

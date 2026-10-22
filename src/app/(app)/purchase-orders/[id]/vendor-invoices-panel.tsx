@@ -52,7 +52,6 @@ export function VendorInvoicesPanel({
   purchaseOrder,
   invoices,
   paymentMethods,
-  expenseCategories,
   bankAccounts,
   error,
   workOrderId = null,
@@ -60,7 +59,6 @@ export function VendorInvoicesPanel({
   purchaseOrder: PurchaseOrderDetail | null
   invoices: VendorInvoiceRow[]
   paymentMethods: string[]
-  expenseCategories: string[]
   bankAccounts: BankAccountChoice[]
   workOrderId?: string | null
   error: string | null
@@ -471,8 +469,11 @@ export function VendorInvoicesPanel({
         invoice={paymentsInvoice}
         partyName={purchaseOrder?.vendorName}
         paymentMethods={paymentMethods}
-        expenseCategories={expenseCategories}
-        defaultExpenseCategory={purchaseOrder?.expenseCategoryName ?? ""}
+        categoryName={
+          purchaseOrder?.projectId
+            ? purchaseOrder.expenseCategoryName
+            : purchaseOrder?.officeExpenseCategoryName ?? ""
+        }
         bankAccounts={bankAccounts}
       />
 

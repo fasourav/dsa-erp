@@ -5,9 +5,9 @@ One cost, one bank outflow. Do not record the same cost twice.
 ## Which form
 
 - **Operational Expense** (`/accounts/expenses`): a company cost with no vendor, such as rent or office supplies. Category comes from Office Expense Categories.
-- **Purchase Order** (`/purchase-orders`): any cost that has a vendor, project or operational. Operational purchase orders have no project.
+- **Purchase Order** (`/purchase-orders`): any cost that has a vendor, project or operational. Operational purchase orders have no project. A new operational purchase order requires an office expense category (the same list as Operational Expense, such as Employee Salary, Office Rent, Office Materials, or Legal). A project purchase order still requires a project expense category.
 - **Vendor bill**: the amount owed on that purchase order.
-- **Vendor payment**: money paid against the bill.
+- **Vendor payment**: money paid against the bill. The payment form does not ask for a category. It shows the purchase order's category as read-only text: the project expense category on a project purchase order, and the office expense category on an operational purchase order. The server stores that name on `vendor_payments.expense_category` for display.
 - **Client invoice and client payment**: money in. Not a cost.
 - **Payroll**: salary paid to employees.
 - **VAT/Tax payment**: tax paid to the authority.
@@ -19,7 +19,7 @@ Vendor costs only go purchase order, then vendor bill, then vendor payment. The 
 Saving posts one outflow. The triggers keep the bank line in step with the source row.
 
 - An operational expense runs `sync_operational_expense_bank_tx`: outflow, source `operational_expense`, date `expense_date`, amount and bank account from the expense, linked by `operational_expense_id`.
-- A vendor payment runs `sync_vendor_payment_bank_tx`: outflow, source `vendor_expense`, date `paid_on`, linked by `vendor_payment_id`. The project, when there is one, comes from the purchase order.
+- A vendor payment runs `sync_vendor_payment_bank_tx`: outflow, source `vendor_expense`, date `paid_on`, linked by `vendor_payment_id`. The project, when there is one, comes from the purchase order. The bank ledger labels a vendor payment whose purchase order has no project as Operational Expense (PO). A vendor payment on a project stays Vendor Expense.
 - Payroll posts an outflow with source `payroll`. A VAT/Tax payment posts its own outflow. A client payment posts an inflow.
 
 Deleting the source removes its bank line. Do not also enter an operational expense for a cost that already has a vendor payment.
@@ -28,12 +28,12 @@ Deleting the source removes its bank line. Do not also enter an operational expe
 
 Buckets are summed in `expenseTotals` (`src/lib/dashboard-metrics.ts`). This note describes them. It does not change the formulas.
 
-- **Material** and **Subcontractor**: vendor payments whose purchase order has a project. Material when the purchase order expense category, or otherwise the work type, contains material, supply, or goods. Otherwise subcontractor.
-- **Operational**: vendor payments on a purchase order with no project, plus operational expenses with no project whose category is not salary, marketing, or admin.
+- **Material** and **Subcontractor**: vendor payments whose purchase order has a project, and, on the accrual report, vendor bills on a project purchase order. Material when the purchase order expense category, or otherwise the work type, contains material, supply, or goods. Otherwise subcontractor. Cash and accrual use that same split.
+- **Operational**: payments (cash) or bills (accrual) on a purchase order with no project whose office expense category, or otherwise the work type, or otherwise Operational, is not salary, marketing, or admin, plus operational expenses with no project in that same bucket.
 - **Project overhead**: operational expenses linked to a project. They are not also counted as operational, salary, admin, or marketing.
-- **Salary**: operational expenses with no project whose category contains salary, payroll, or wage, plus payroll outflows on the bank ledger.
-- **Marketing**: operational expenses with no project whose category contains market, advert, or promotion.
-- **Admin**: operational expenses with no project whose category contains admin, office, rent, or utilit (utilities). Office materials stay here, not in Material.
+- **Salary**: operational expenses with no project whose category contains salary, payroll, or wage, plus the same match on an operational purchase order's office category (then work type), plus payroll outflows on the bank ledger.
+- **Marketing**: operational expenses with no project whose category contains market, advert, or promotion, plus the same match on an operational purchase order.
+- **Admin**: operational expenses with no project whose category contains admin, office, rent, or utilit (utilities), plus the same match on an operational purchase order. Office materials stay here, not in Material.
 - **Tax**: VAT/Tax payments. Counted in gross profit, not in project expense.
 
 Project expense is material + subcontractor + project overhead. The admin expense total is operational + marketing + salary + admin. Gross profit is client collections minus project expense minus tax. Net profit subtracts the admin expense total.
@@ -43,5 +43,9 @@ Project expense is material + subcontractor + project overhead. The admin expens
 Before an operational expense or a vendor payment is saved, the server looks for another operational expense or vendor payment with the same amount, the same bank account, and a date within 7 days. The form lists each match (type, date, amount, vendor or category). Saving then requires **This Is Not A Duplicate** and a reason. The reason is stored at the start of notes as `Duplicate override: `.
 
 The database rejects an operational expense insert, or an update that sets or changes `vendor_id`. Apply `supabase/migrations/20261023150000_operational_expense_no_vendor.sql` before using the new columns. It does not update or delete existing rows.
+
+Apply `supabase/migrations/20261023203000_operational_po_office_category.sql` after that. It adds nullable `office_expense_category_id` on purchase orders, buckets operational purchase-order payments and bills with the office category, labels cash-flow vendor payments with no project as Operational Expenses, and renumbers operational purchase-order document numbers from project code NA to OPS. Previous numbers are copied into `private.bak_20261023_po_numbers` first. It does not drop or rename columns.
+
+The Operational Expense page also lists payments on operational purchase orders as read-only rows marked From Operational PO, with a link to the purchase order. For one period, those rows plus operational expenses that have no project equal dashboard Operational + Admin + Marketing + Employee Salary, except payroll outflows, which stay on the bank ledger and in Employee Salary. A duplicate warning shows the vendor's company name when it is set, and otherwise the person name.
 
 To list likely duplicates already in the data, run `docs/duplicate-money-scan.sql` in the SQL editor. It is read-only.

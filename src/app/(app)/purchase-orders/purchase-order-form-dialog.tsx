@@ -62,6 +62,7 @@ export function PurchaseOrderFormDialog({
   vendors,
   workTypes,
   expenseCategories,
+  officeExpenseCategories,
   defaultProjectId,
   operational = false,
 }: {
@@ -72,6 +73,7 @@ export function PurchaseOrderFormDialog({
   vendors: VendorOption[]
   workTypes: readonly string[]
   expenseCategories: readonly ExpenseCategoryOption[]
+  officeExpenseCategories: readonly ExpenseCategoryOption[]
   defaultProjectId: string | null
   operational?: boolean
 }) {
@@ -87,6 +89,9 @@ export function PurchaseOrderFormDialog({
   const [workType, setWorkType] = useState(purchaseOrder?.workType ?? "")
   const [expenseCategoryId, setExpenseCategoryId] = useState(
     purchaseOrder?.expenseCategoryId ?? "",
+  )
+  const [officeExpenseCategoryId, setOfficeExpenseCategoryId] = useState(
+    purchaseOrder?.officeExpenseCategoryId ?? "",
   )
   const [totalValue, setTotalValue] = useState(
     purchaseOrder ? String(purchaseOrder.totalValue) : "",
@@ -114,6 +119,21 @@ export function PurchaseOrderFormDialog({
     value: category.id,
     label: category.name,
   }))
+  const officeChoices =
+    officeExpenseCategoryId &&
+    !officeExpenseCategories.some((category) => category.id === officeExpenseCategoryId)
+      ? [
+          ...officeExpenseCategories,
+          {
+            id: officeExpenseCategoryId,
+            name: purchaseOrder?.officeExpenseCategoryName || "Saved Category",
+          },
+        ]
+      : officeExpenseCategories
+  const officeItems = officeChoices.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }))
   const projectItems = projects.map((project) => ({
     value: project.id,
     label: project.name || "—",
@@ -138,6 +158,12 @@ export function PurchaseOrderFormDialog({
       (attempted && !purchaseOrderId && !expenseCategoryId
         ? "Choose a project expense category."
         : null))
+  const officeCategoryError = operational
+    ? (serverErrors.officeExpenseCategoryId ??
+      (attempted && !purchaseOrderId && !officeExpenseCategoryId
+        ? "Choose an office expense category."
+        : null))
+    : null
   const valueError =
     serverErrors.totalValue ??
     (attempted && parseProjectValue(totalValue) === null
@@ -177,6 +203,7 @@ export function PurchaseOrderFormDialog({
     if (
       (!operational && !projectId) ||
       (!operational && !purchaseOrderId && !expenseCategoryId) ||
+      (operational && !purchaseOrderId && !officeExpenseCategoryId) ||
       !vendorId ||
       !isIsoDate(issuedOn) ||
       parsedValue === null
@@ -190,6 +217,7 @@ export function PurchaseOrderFormDialog({
       issuedOn,
       workType: workType.trim(),
       expenseCategoryId: operational ? "" : expenseCategoryId,
+      officeExpenseCategoryId: operational ? officeExpenseCategoryId : "",
       totalValue: totalValue.trim(),
       notes: notes.trim(),
     }
@@ -319,7 +347,37 @@ export function PurchaseOrderFormDialog({
               {valueError ? <FieldError>{valueError}</FieldError> : null}
             </Field>
 
-            {operational ? null : (
+            {operational ? (
+              <Field data-invalid={Boolean(officeCategoryError) || undefined}>
+                <FieldLabel htmlFor="po-office-category">
+                  Office Expense Category
+                </FieldLabel>
+                <Select
+                  items={officeItems}
+                  value={officeExpenseCategoryId || null}
+                  disabled={pending}
+                  onValueChange={(value) => setOfficeExpenseCategoryId(value ?? "")}
+                >
+                  <SelectTrigger
+                    id="po-office-category"
+                    className="w-full"
+                    aria-invalid={Boolean(officeCategoryError)}
+                  >
+                    <SelectValue placeholder="Select A Category" />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {officeItems.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {officeCategoryError ? (
+                  <FieldError>{officeCategoryError}</FieldError>
+                ) : null}
+              </Field>
+            ) : (
               <Field data-invalid={Boolean(categoryError) || undefined}>
                 <FieldLabel htmlFor="po-expense-category">
                   Project Expense Category

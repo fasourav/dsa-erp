@@ -1,6 +1,6 @@
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { listBankAccounts } from "@/lib/bank-accounts"
-import { fetchAllPages } from "@/lib/fetch-pages"
+import { fetchAllPages, fetchByIds } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { creatorNames } from "@/lib/record-audit"
 import type {
@@ -49,7 +49,7 @@ export async function getOperationalExpenses(): Promise<{
           (from, to) =>
             supabase
               .from("office_expense_categories")
-              .select("name, sort_order")
+              .select("id, name, sort_order")
               .order("sort_order", { ascending: true })
               .order("name", { ascending: true })
               .range(from, to),
@@ -80,6 +80,16 @@ export async function getOperationalExpenses(): Promise<{
       ])
 
     const categories = uniqueNames(categoryRows.map((row) => row.name))
+    const officeCategoryNames = new Map(
+      categoryRows.flatMap((row) => {
+        const name = row.name?.trim() ?? ""
+        return name ? [[row.id, name] as const] : []
+      }),
+    )
+    const purchaseOrderPayments = await operationalPurchaseOrderPayments(
+      supabase,
+      officeCategoryNames,
+    )
     const departments = departmentRows.map((row) => ({
       id: row.id,
       name: row.name?.trim() ?? "",
@@ -110,11 +120,13 @@ export async function getOperationalExpenses(): Promise<{
         bankAccountId: row.bank_account_id,
         createdByName: creators.get(row.id) ?? "Unknown",
         createdAt: row.created_at,
+        fromPurchaseOrder: false,
+        purchaseOrderId: "",
       }
     })
 
     return {
-      expenses,
+      expenses: [...expenses, ...purchaseOrderPayments],
       categories,
       departments,
       paymentMethods: mergeCategorySuggestions(
@@ -127,6 +139,138 @@ export async function getOperationalExpenses(): Promise<{
   } catch {
     return empty
   }
+}
+
+async function operationalPurchaseOrderPayments(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  officeCategoryNames: Map<string, string>,
+): Promise<OperationalExpenseRow[]> {
+  const orders = await fetchAllPages(
+    (from, to) =>
+      supabase
+        .from("vendor_purchase_orders")
+        .select("id, vendor_id, work_type, office_expense_category_id")
+        .is("project_id", null)
+        .order("id", { ascending: true })
+        .range(from, to),
+    "Operational purchase order list is larger than expected.",
+  )
+  if (orders.length === 0) return []
+
+  const orderById = new Map(orders.map((order) => [order.id, order]))
+  const invoices = await fetchChunks(orders.map((order) => order.id), (ids, from, to) =>
+    supabase
+      .from("vendor_invoices")
+      .select("id, purchase_order_id")
+      .in("purchase_order_id", ids)
+      .order("id", { ascending: true })
+      .range(from, to),
+  )
+  if (invoices.length === 0) return []
+
+  const orderIdByInvoice = new Map(
+    invoices.flatMap((invoice) =>
+      invoice.purchase_order_id
+        ? [[invoice.id, invoice.purchase_order_id] as const]
+        : [],
+    ),
+  )
+  const payments = await fetchChunks(
+    invoices.map((invoice) => invoice.id),
+    (ids, from, to) =>
+      supabase
+        .from("vendor_payments")
+        .select(
+          "id, vendor_invoice_id, paid_on, amount, method, created_at, created_by",
+        )
+        .in("vendor_invoice_id", ids)
+        .order("id", { ascending: true })
+        .range(from, to),
+  )
+  if (payments.length === 0) return []
+
+  const vendorIds = orders.flatMap((order) =>
+    order.vendor_id ? [order.vendor_id] : [],
+  )
+  const [vendors, creators] = await Promise.all([
+    fetchByIds(vendorIds, (ids) =>
+      supabase.from("vendors").select("id, company_name, person_name").in("id", ids),
+    ),
+    creatorNames(
+      supabase,
+      "vendor_payments",
+      payments.map((payment) => ({ id: payment.id, createdBy: payment.created_by })),
+    ),
+  ])
+  const vendorNames = new Map(
+    vendors.map((vendor) => [
+      vendor.id,
+      vendorDisplayName(vendor.company_name, vendor.person_name),
+    ]),
+  )
+
+  return payments.flatMap((payment) => {
+    const orderId = orderIdByInvoice.get(payment.vendor_invoice_id)
+    const order = orderId ? orderById.get(orderId) : undefined
+    if (!order || !orderId) return []
+
+    const officeName = order.office_expense_category_id
+      ? officeCategoryNames.get(order.office_expense_category_id) ?? ""
+      : ""
+    const workType = order.work_type?.trim() ?? ""
+
+    return [
+      {
+        id: payment.id,
+        expenseDate: dateInputValue(payment.paid_on),
+        category: officeName || workType || "Operational",
+        amount: toNumber(payment.amount),
+        paymentMethod: payment.method?.trim() ?? "",
+        departmentId: "",
+        departmentName: "",
+        vendorId: order.vendor_id,
+        vendorName: vendorNames.get(order.vendor_id) ?? "",
+        notes: "From Operational PO",
+        bankAccountId: "",
+        createdByName: creators.get(payment.id) ?? "Unknown",
+        createdAt: payment.created_at,
+        fromPurchaseOrder: true,
+        purchaseOrderId: orderId,
+      } satisfies OperationalExpenseRow,
+    ]
+  })
+}
+
+async function fetchChunks<T>(
+  ids: readonly string[],
+  load: (
+    ids: string[],
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const unique = [...new Set(ids.filter((id) => id.length > 0))]
+  const rows: T[] = []
+
+  for (let index = 0; index < unique.length; index += 100) {
+    const slice = unique.slice(index, index + 100)
+    const page = await fetchAllPages(
+      (from, to) => load(slice, from, to),
+      "Operational purchase order list is larger than expected.",
+    )
+    rows.push(...page)
+  }
+
+  return rows
+}
+
+function vendorDisplayName(
+  companyName: string | null,
+  personName: string | null,
+): string {
+  const company = companyName?.trim() ?? ""
+  if (company) return company
+  return personName?.trim() ?? ""
 }
 
 function uniqueNames(values: readonly (string | null)[]): string[] {

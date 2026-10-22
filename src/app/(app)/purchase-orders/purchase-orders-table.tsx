@@ -55,6 +55,7 @@ export function PurchaseOrdersTable({
   vendors,
   workTypes,
   expenseCategories,
+  officeExpenseCategories,
   projectFilter,
   error,
 }: {
@@ -63,6 +64,7 @@ export function PurchaseOrdersTable({
   vendors: VendorOption[]
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
+  officeExpenseCategories: ExpenseCategoryOption[]
   projectFilter: ProjectFilter | null
   error: string | null
 }) {
@@ -244,6 +246,7 @@ export function PurchaseOrdersTable({
               vendors={vendors}
               workTypes={workTypes}
               expenseCategories={expenseCategories}
+              officeExpenseCategories={officeExpenseCategories}
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>
@@ -329,6 +332,7 @@ export function PurchaseOrdersTable({
         vendors={vendors}
         workTypes={workTypes}
         expenseCategories={expenseCategories}
+        officeExpenseCategories={officeExpenseCategories}
         defaultProjectId={projectFilter?.id ?? null}
         operational={formOperational}
       />

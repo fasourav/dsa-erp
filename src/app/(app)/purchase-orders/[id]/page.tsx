@@ -19,7 +19,6 @@ export default async function PurchaseOrderInvoicesPage({
       purchaseOrder={page.purchaseOrder}
       invoices={page.invoices}
       paymentMethods={page.paymentMethods}
-      expenseCategories={page.expenseCategories}
       bankAccounts={page.bankAccounts}
       error={page.error}
       workOrderId={workOrderId}

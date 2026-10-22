@@ -43,7 +43,8 @@ export function quotationNumber(
 }
 
 export function orderNumber(issuedOn: string, vendorName: string, projectName: string): string {
-  return `WO/${documentDateCode(issuedOn)}-${nameCode(vendorName)}-${nameCode(projectName)}`
+  const projectCode = projectName.trim() ? nameCode(projectName) : "OPS"
+  return `WO/${documentDateCode(issuedOn)}-${nameCode(vendorName)}-${projectCode}`
 }
 
 export function invoiceNumber(issuedOn: string, clientName: string, projectName: string): string {

@@ -118,6 +118,7 @@ export type DashboardInput = {
     amount: number
     workType: string | null
     expenseCategory: string | null
+    officeCategory: string | null
     projectLinked: boolean
   }[]
   operational: {
@@ -718,6 +719,7 @@ type Books = {
   vendorPayments: (Dated & {
     workType: string | null
     expenseCategory: string | null
+    officeCategory: string | null
     projectLinked: boolean
   })[]
   operational: (Dated & { category: string; projectLinked: boolean })[]
@@ -829,11 +831,13 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
 
   for (const row of books.vendorPayments) {
     if (!inSpan(row.date, start, end)) continue
-    // Operational purchase orders have no project. Their payments stay in Total
-    // Expense as Operational Expense, and stay out of material, subcontractor,
-    // and project expense.
+    // Operational purchase orders have no project. Their payments stay out of
+    // material, subcontractor, and project expense. The office category, then
+    // the work type, then Operational, chooses Admin, Salary, Marketing, or Operational.
     if (!row.projectLinked) {
-      totals.operational += row.amount
+      const category =
+        row.officeCategory?.trim() || row.workType?.trim() || "Operational"
+      totals[classifyOperational(category)] += row.amount
       continue
     }
     // A project payment whose purchase order has an expense category counts as
@@ -886,6 +890,7 @@ function grossBetween(
   vendorPayments: (Dated & {
     workType: string | null
     expenseCategory: string | null
+    officeCategory: string | null
     projectLinked: boolean
   })[],
   operational: (Dated & { category: string; projectLinked: boolean })[],

@@ -171,7 +171,7 @@ async function vendorNamesForPayments(
   if (vendors.error || !vendors.data) return names
 
   const vendorById = new Map(
-    vendors.data.map((row) => [row.id, (row.person_name ?? row.company_name ?? "").trim()]),
+    vendors.data.map((row) => [row.id, vendorDisplayName(row.company_name, row.person_name)]),
   )
   const vendorByOrder = new Map(
     orders.data.map((row) => [row.id, vendorById.get(row.vendor_id) ?? ""]),
@@ -194,7 +194,16 @@ function embeddedName(
 ): string {
   const row = Array.isArray(value) ? value[0] : value
   if (!row) return ""
-  return (row.person_name ?? row.company_name ?? "").trim()
+  return vendorDisplayName(row.company_name, row.person_name)
+}
+
+function vendorDisplayName(
+  companyName: string | null | undefined,
+  personName: string | null | undefined,
+): string {
+  const company = companyName?.trim() ?? ""
+  if (company) return company
+  return personName?.trim() ?? ""
 }
 
 function isHardError(error: { code?: string; message?: string } | null): boolean {
