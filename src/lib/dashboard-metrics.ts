@@ -117,6 +117,7 @@ export type DashboardInput = {
     date: string
     amount: number
     workType: string | null
+    expenseCategory: string | null
     projectLinked: boolean
   }[]
   operational: {
@@ -714,7 +715,11 @@ function payablesAsOf(input: DashboardInput, asOf: string, countEveryPayment: bo
 
 type Books = {
   revenue: Dated[]
-  vendorPayments: (Dated & { workType: string | null; projectLinked: boolean })[]
+  vendorPayments: (Dated & {
+    workType: string | null
+    expenseCategory: string | null
+    projectLinked: boolean
+  })[]
   operational: (Dated & { category: string; projectLinked: boolean })[]
   taxes: Dated[]
   bank: (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[]
@@ -831,9 +836,12 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
       totals.operational += row.amount
       continue
     }
-    // Vendor payments do not store Material vs Subcontractor. Supply, material, and goods
-    // work types count as Material Cost. Every other project purchase-order payment is Subcontractor Cost.
-    const bucket = isMaterialWork(row.workType) ? "material" : "subcontractor"
+    // A project payment whose purchase order has an expense category counts as
+    // Material Cost when that name contains material, supply, or goods. Otherwise
+    // it is Subcontractor Cost. With no category, the work type decides the same way.
+    const bucket = isMaterialCost(row.expenseCategory, row.workType)
+      ? "material"
+      : "subcontractor"
     totals[bucket] += row.amount
   }
 
@@ -875,7 +883,11 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
 
 function grossBetween(
   revenue: Dated[],
-  vendorPayments: (Dated & { workType: string | null; projectLinked: boolean })[],
+  vendorPayments: (Dated & {
+    workType: string | null
+    expenseCategory: string | null
+    projectLinked: boolean
+  })[],
   operational: (Dated & { category: string; projectLinked: boolean })[],
   taxes: Dated[],
   start: string,
@@ -900,6 +912,15 @@ function grossBetween(
 export function isMaterialWork(workType: string | null): boolean {
   const name = (workType ?? "").toLowerCase()
   return name.includes("material") || name.includes("supply") || name.includes("goods")
+}
+
+export function isMaterialCost(
+  categoryName: string | null | undefined,
+  workType: string | null | undefined,
+): boolean {
+  const category = categoryName?.trim() ?? ""
+  if (category) return isMaterialWork(category)
+  return isMaterialWork(workType ?? null)
 }
 
 export function classifyOperational(

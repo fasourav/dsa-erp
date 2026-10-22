@@ -24,6 +24,7 @@ export type PurchaseOrderFormInput = {
   vendorId: string
   issuedOn: string
   workType: string
+  expenseCategoryId: string
   totalValue: string
   notes: string
 }
@@ -32,6 +33,7 @@ export type PurchaseOrderFormFieldErrors = {
   projectId?: string
   vendorId?: string
   issuedOn?: string
+  expenseCategoryId?: string
   totalValue?: string
 }
 
@@ -74,12 +76,19 @@ async function savePurchaseOrder(
   const vendorId = input.vendorId.trim()
   const issuedOn = input.issuedOn.trim()
   const workType = input.workType.trim()
+  const expenseCategoryId = input.expenseCategoryId.trim()
   const notes = input.notes.trim()
   const totalValue = parseProjectValue(input.totalValue)
   const fieldErrors: PurchaseOrderFormFieldErrors = {}
 
   if (!operational && !idPattern.test(projectId)) {
     fieldErrors.projectId = "Choose a project."
+  }
+
+  if (!operational && !id && !idPattern.test(expenseCategoryId)) {
+    fieldErrors.expenseCategoryId = "Choose a project expense category."
+  } else if (!operational && expenseCategoryId && !idPattern.test(expenseCategoryId)) {
+    fieldErrors.expenseCategoryId = "Choose a project expense category."
   }
 
   if (!idPattern.test(vendorId)) {
@@ -114,14 +123,21 @@ async function savePurchaseOrder(
     return { error: "You must be signed in." }
   }
 
-  const [projectLookup, vendorLookup] = await Promise.all([
+  const [projectLookup, vendorLookup, categoryLookup] = await Promise.all([
     operational
       ? Promise.resolve({ data: [{ id: "", total_value: null }], error: null })
       : supabase.from("projects").select("id, total_value").eq("id", projectId).limit(1),
     supabase.from("vendors").select("id").eq("id", vendorId).limit(1),
+    !operational && idPattern.test(expenseCategoryId)
+      ? supabase
+          .from("project_expense_categories")
+          .select("id")
+          .eq("id", expenseCategoryId)
+          .limit(1)
+      : Promise.resolve({ data: [{ id: "" }], error: null }),
   ])
 
-  if (projectLookup.error || vendorLookup.error) {
+  if (projectLookup.error || vendorLookup.error || categoryLookup.error) {
     return { error: "Could not save this purchase order." }
   }
 
@@ -144,6 +160,17 @@ async function savePurchaseOrder(
     return {
       error: null,
       fieldErrors: { vendorId: "Choose a vendor." },
+    }
+  }
+
+  if (
+    !operational &&
+    idPattern.test(expenseCategoryId) &&
+    (!categoryLookup.data || categoryLookup.data.length === 0)
+  ) {
+    return {
+      error: null,
+      fieldErrors: { expenseCategoryId: "Choose a project expense category." },
     }
   }
 
@@ -174,6 +201,7 @@ async function savePurchaseOrder(
     vendor_id: vendorId,
     issued_on: issuedOn,
     work_type: workType || null,
+    expense_category_id: operational || !expenseCategoryId ? null : expenseCategoryId,
     total_value: totalValue ?? 0,
     notes: notes || null,
   }
@@ -193,6 +221,13 @@ async function savePurchaseOrder(
     if (stale) return { error: stale }
 
     if (error.code === "23503") {
+      if (/expense_category/i.test(error.message)) {
+        return {
+          error: null,
+          fieldErrors: { expenseCategoryId: "Choose a project expense category." },
+        }
+      }
+
       if (/vendor/i.test(error.message)) {
         return {
           error: null,

@@ -38,6 +38,7 @@ import {
 } from "@/lib/list-paging"
 import {
   formatPurchaseOrderDate,
+  type ExpenseCategoryOption,
   type PurchaseOrderRow,
   type VendorOption,
 } from "@/lib/purchase-order-summary"
@@ -68,10 +69,12 @@ export function OperationalPurchaseOrdersDialog({
   orders,
   vendors,
   workTypes,
+  expenseCategories,
 }: {
   orders: PurchaseOrderRow[]
   vendors: VendorOption[]
   workTypes: string[]
+  expenseCategories: ExpenseCategoryOption[]
 }) {
   const canAdd = useCan("purchase_orders", "add")
 
@@ -231,6 +234,7 @@ export function OperationalPurchaseOrdersDialog({
         projects={[]}
         vendors={vendors}
         workTypes={workTypes}
+        expenseCategories={expenseCategories}
         defaultProjectId={null}
         operational
       />

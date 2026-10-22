@@ -74,6 +74,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
     vendorPayments,
     invoices,
     purchaseOrders,
+    expenseCategories,
     operational,
     taxes,
     bankAccounts,
@@ -151,10 +152,20 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("vendor_purchase_orders")
-          .select("id, work_type, project_id, issued_on, total_value")
+          .select("id, work_type, project_id, issued_on, total_value, expense_category_id")
           .order("id", { ascending: true })
           .range(from, to),
       "Purchase order list is larger than expected.",
+    ),
+    fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("project_expense_categories")
+          .select("id, name")
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true })
+          .range(from, to),
+      "Expense category list is larger than expected.",
     ),
     fetchAllPages(
       (from, to) =>
@@ -230,6 +241,9 @@ async function loadDashboardRows(): Promise<DashboardInput> {
     invoices.map((invoice) => [invoice.id, invoice.purchase_order_id]),
   )
   const orderById = new Map(purchaseOrders.map((order) => [order.id, order]))
+  const categoryNameById = new Map(
+    expenseCategories.map((category) => [category.id, category.name?.trim() ?? ""]),
+  )
   const openByStatus = new Map(statuses.map((status) => [status.code, status.is_open]))
   const backlogIds = new Set(
     backlogs.flatMap((row) => (row.project_id ? [row.project_id] : [])),
@@ -295,6 +309,9 @@ async function loadDashboardRows(): Promise<DashboardInput> {
         date: payment.paid_on,
         amount: toNumber(payment.amount),
         workType: order?.work_type ?? null,
+        expenseCategory: order?.expense_category_id
+          ? categoryNameById.get(order.expense_category_id) || null
+          : null,
         // A payment whose purchase order is missing keeps the project-cost path.
         projectLinked: order ? order.project_id != null : true,
       }

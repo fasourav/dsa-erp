@@ -2,6 +2,7 @@ import { toNumber } from "@/lib/format"
 import { openPayableByPurchaseOrder } from "@/lib/open-payable"
 import { dateInputValue } from "@/lib/project-validation"
 import {
+  type ExpenseCategoryOption,
   type ProjectOption,
   type PurchaseOrderRow,
   type VendorOption,
@@ -25,6 +26,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
   projects: ProjectOption[]
   vendors: VendorOption[]
   workTypes: string[]
+  expenseCategories: ExpenseCategoryOption[]
   projectFilter: ProjectFilter | null
   error: string | null
 }> {
@@ -34,18 +36,19 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
     projects: [] as ProjectOption[],
     vendors: [] as VendorOption[],
     workTypes: [] as string[],
+    expenseCategories: [] as ExpenseCategoryOption[],
     projectFilter: null,
     error: "Could not load purchase orders.",
   }
 
   try {
-    const [orderRows, balanceRows, billRows, paymentRows, projectRows, vendorRows, categoryRows] =
+    const [orderRows, balanceRows, billRows, paymentRows, projectRows, vendorRows, categoryRows, expenseCategoryRows] =
       await Promise.all([
         fetchPages((from, to) =>
           supabase
             .from("vendor_purchase_orders")
             .select(
-              "id, issued_on, notes, project_id, vendor_id, work_type, total_value",
+              "id, issued_on, notes, project_id, vendor_id, work_type, total_value, expense_category_id",
             )
             .order("id", { ascending: true })
             .range(from, to),
@@ -93,6 +96,14 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
             .order("name", { ascending: true })
             .range(from, to),
         ),
+        fetchPages((from, to) =>
+          supabase
+            .from("project_expense_categories")
+            .select("id, name, sort_order")
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true })
+            .range(from, to),
+        ),
       ])
 
     const projects = projectRows
@@ -121,6 +132,15 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
           { id: right.id, name: right.displayName },
         ),
       )
+
+    const expenseCategories = expenseCategoryRows.flatMap((row) => {
+      const name = row.name?.trim() ?? ""
+      if (!name) return []
+      return [{ id: row.id, name } satisfies ExpenseCategoryOption]
+    })
+    const expenseCategoryNames = new Map(
+      expenseCategories.map((category) => [category.id, category.name]),
+    )
 
     const projectsById = new Map(projects.map((project) => [project.id, project]))
     const vendorsById = new Map(vendors.map((vendor) => [vendor.id, vendor]))
@@ -155,6 +175,10 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         vendorId: row.vendor_id,
         vendorName: vendor?.displayName ?? "",
         workType: row.work_type?.trim() ?? "",
+        expenseCategoryId: row.expense_category_id ?? "",
+        expenseCategoryName: row.expense_category_id
+          ? (expenseCategoryNames.get(row.expense_category_id) ?? "")
+          : "",
         totalValue: toNumber(row.total_value),
         totalPaid: toNumber(balance?.total_paid),
         totalPending: pendingByPo.get(row.id) ?? 0,
@@ -179,6 +203,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         projects,
         vendors,
         workTypes,
+        expenseCategories,
         projectFilter: null,
         error: "That project could not be found.",
       }
@@ -191,6 +216,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
       projects,
       vendors,
       workTypes,
+      expenseCategories,
       projectFilter: matchedProject
         ? { id: matchedProject.id, name: matchedProject.name }
         : null,
