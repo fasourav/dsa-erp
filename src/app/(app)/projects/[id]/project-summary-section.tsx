@@ -40,12 +40,13 @@ import { formatPercent } from "@/lib/project-summary"
 import type { ProjectProgressData } from "@/lib/project-progress"
 import { cn } from "@/lib/utils"
 
-type PaymentColumn = "paidOn" | "amount" | "method"
+type PaymentColumn = "paidOn" | "vendorName" | "amount" | "method"
 type InvoiceColumn = "issuedOn" | "description" | "amount" | "paid" | "balance" | "status"
 type PurchaseColumn = "vendorName" | "issuedOn" | "workType" | "totalValue" | "paid" | "pending"
 
 const paymentColumns: readonly ListColumn<PaymentColumn>[] = [
   { id: "paidOn", label: "Date", align: "left", locked: true },
+  { id: "vendorName", label: "Vendor", align: "left", locked: true },
   { id: "amount", label: "Amount", align: "right", locked: true },
   { id: "method", label: "Method", align: "left", locked: true },
 ]
@@ -215,7 +216,7 @@ export function ProjectSummarySection({
         </TabsContent>
 
         <TabsContent keepMounted value="payments" className="flex flex-col gap-3">
-          <h2 className="px-1 text-panel-title font-bold md:px-0 md:font-strong">Recent Payments</h2>
+          <h2 className="px-1 text-panel-title font-bold md:px-0 md:font-strong">Payments</h2>
           <RecordList
             columns={paymentColumns}
             rows={overview.recentPayments}
@@ -228,7 +229,11 @@ export function ProjectSummarySection({
             sortValue={paymentSortValue}
             mobileItem={(payment) => ({
               title: <Money value={payment.amount} />,
-              subtitle: [payment.paidOn ? formatIsoDate(payment.paidOn) : "", payment.method]
+              subtitle: [
+                payment.paidOn ? formatIsoDate(payment.paidOn) : "",
+                payment.vendorName,
+                payment.method,
+              ]
                 .filter(Boolean)
                 .join(" · "),
             })}
@@ -449,6 +454,8 @@ function paymentSortValue(row: RecentClientPayment, key: PaymentColumn) {
   switch (key) {
     case "paidOn":
       return row.paidOn
+    case "vendorName":
+      return row.vendorName
     case "amount":
       return row.amount
     case "method":
@@ -501,6 +508,12 @@ function PaymentCell({
     case "paidOn":
       return payment.paidOn ? (
         formatIsoDate(payment.paidOn)
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "vendorName":
+      return payment.vendorName ? (
+        <span>{payment.vendorName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

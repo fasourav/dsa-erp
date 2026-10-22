@@ -37,7 +37,7 @@ export default async function BankPage({
 
   return (
     <BankPanel
-      key={`${page.accountFilter?.id ?? "all"}-${view}-${initialQuery}-${period.from}-${period.to}`}
+      key={`${view === "reconcile" ? "reconcile" : (page.accountFilter?.id ?? "all")}-${view}-${initialQuery}-${period.from}-${period.to}`}
       accounts={page.accounts}
       transactions={page.transactions}
       paymentMethods={page.paymentMethods}

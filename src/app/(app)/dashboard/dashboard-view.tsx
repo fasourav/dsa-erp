@@ -6,11 +6,11 @@ import { type ReactNode } from "react"
 import {
   AlertCircle,
   BadgeCheck,
+  Box,
   Clock,
   Download,
   Gem,
   Hammer,
-  Layers,
   Minus,
   Target,
   TrendingDown,
@@ -50,7 +50,6 @@ import {
   formatExactBdt,
   formatRatio,
   formatShare,
-  HIGH_VALUE_PROJECT_MIN,
   weekTrend,
   type DashboardModel,
   type YearSnapshot,
@@ -244,7 +243,7 @@ function DashboardSections({
           <CompactMetric
             label="Forecasted Profit"
             value={model.forecastedProfit}
-            detail="After Open Balances"
+            detail="Receivable Minus Payable"
             tone={model.forecastedProfit < 0 ? "negative" : "positive"}
             icon={model.forecastedProfit < 0 ? TrendingDown : TrendingUp}
           />
@@ -264,20 +263,10 @@ function DashboardSections({
           </h2>
           <p className="text-label text-muted-foreground md:text-caption">{performanceCaption}</p>
         </div>
-        <div className="grid grid-cols-2 gap-2.5 md:gap-3 lg:grid-cols-3">
-          <MetricTile
-            icon={Gem}
-            color="bg-chart-1"
-            label="High-Value Projects"
-            value={String(model.performance.highValue)}
-            hint={`${formatExactBdt(HIGH_VALUE_PROJECT_MIN)} Or More`}
-          />
-          <MetricTile
-            icon={Layers}
-            color="bg-chart-5"
-            label="Low-Value Projects"
-            value={String(model.performance.lowValue)}
-            hint={`Under ${formatExactBdt(HIGH_VALUE_PROJECT_MIN)}`}
+        <div className="grid grid-cols-2 gap-2.5 md:gap-3 lg:grid-cols-4">
+          <ProjectValueTile
+            highest={model.performance.highestProject}
+            lowest={model.performance.lowestProject}
           />
           <MetricTile
             icon={Hammer}
@@ -325,8 +314,28 @@ function DashboardSections({
             icon={Clock}
             color="bg-chart-4"
             label="Backlog Projects"
-            value={String(model.performance.backlog)}
+            value={
+              <span className="inline-flex flex-wrap items-baseline gap-x-2">
+                <span>{model.performance.backlog}</span>
+                {model.performance.backlog > 0 ? (
+                  <Money
+                    value={model.performance.backlogValue}
+                    className="text-sm font-semibold text-muted-foreground md:text-label"
+                  />
+                ) : null}
+              </span>
+            }
             hint="Expense Exceeds Collection"
+            wrap
+            className="lg:col-span-2"
+          />
+          <MetricTile
+            icon={Box}
+            color="bg-chart-5"
+            label="Asset Value"
+            value={<Money value={model.performance.assetValue} />}
+            hint="Current Value"
+            className="lg:col-span-2"
           />
         </div>
       </section>
@@ -410,9 +419,11 @@ function DashboardSections({
                   <span className="truncate">{slice.label}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2 md:gap-3">
-                  <span className="text-xs text-subtle-foreground tabular-nums">
-                    {formatShare(slice.amount, snapshot.totalExpense)}
-                  </span>
+                  {slice.key === "projectOverhead" ? null : (
+                    <span className="text-xs text-subtle-foreground tabular-nums">
+                      {formatShare(slice.amount, snapshot.totalExpense)}
+                    </span>
+                  )}
                   <Money value={slice.amount} className="font-strong md:font-semibold" />
                 </span>
               </div>
@@ -685,6 +696,48 @@ function CompactMetric({
   )
 }
 
+function ProjectValueTile({
+  highest,
+  lowest,
+}: {
+  highest: { name: string; value: number } | null
+  lowest: { name: string; value: number } | null
+}) {
+  return (
+    <div className="col-span-2 flex min-w-0 flex-col rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:flex-row md:items-start md:gap-3.5 md:rounded-tile md:bg-fill md:p-4 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100">
+      <span className="mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] bg-chart-1 text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl">
+        <Gem aria-hidden="true" className="size-4 md:size-4.5" />
+      </span>
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+        <ProjectExtreme label="Highest Value" project={highest} />
+        <ProjectExtreme label="Lowest Value" project={lowest} />
+      </div>
+    </div>
+  )
+}
+
+function ProjectExtreme({
+  label,
+  project,
+}: {
+  label: string
+  project: { name: string; value: number } | null
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">
+        {label}
+      </p>
+      <p className="mt-0.5 truncate text-ui font-semibold">
+        {project?.name.trim() || "No Project"}
+      </p>
+      <p className="mt-px text-metric tabular-nums">
+        {project ? <Money value={project.value} /> : <span className="text-muted-foreground">—</span>}
+      </p>
+    </div>
+  )
+}
+
 function MetricTile({
   icon: Icon,
   color,
@@ -692,6 +745,8 @@ function MetricTile({
   value,
   hint,
   bar,
+  wrap = false,
+  className,
 }: {
   icon: LucideIcon
   color: string
@@ -699,9 +754,11 @@ function MetricTile({
   value: ReactNode
   hint?: string
   bar?: number
+  wrap?: boolean
+  className?: string
 }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 last:odd:col-span-2 md:flex-row md:items-start md:gap-3.5 md:rounded-tile md:bg-fill md:p-4 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 lg:last:odd:col-span-1">
+    <div className={cn("flex min-w-0 flex-col rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:flex-row md:items-start md:gap-3.5 md:rounded-tile md:bg-fill md:p-4 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100", className)}>
       <span
         className={cn(
           "mb-2.25 flex size-7.5 shrink-0 items-center justify-center rounded-[9px] text-on-color tile-sheen md:mb-0 md:size-9.5 md:rounded-xl",
@@ -712,7 +769,7 @@ function MetricTile({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">{label}</p>
-        <p className="mt-0.5 truncate text-metric tabular-nums">
+        <p className={cn("mt-0.5 text-metric tabular-nums", wrap ? "break-words" : "truncate")}>
           {value}
         </p>
         {hint ? <p className="mt-px truncate text-micro text-subtle-foreground md:text-xs">{hint}</p> : null}
@@ -864,15 +921,19 @@ function downloadDashboard(
     ["Project Cost Ratio", snapshot.projectCostRatio],
     ["Tax Ratio", snapshot.taxRatio],
     ["Admin Expense Ratio", snapshot.adminRatio],
-    ["High-Value Projects", model.performance.highValue],
-    ["Low-Value Projects", model.performance.lowValue],
     ["Active Projects", model.performance.active],
     ["Projects in Leads", model.performance.openLeads],
     ["Clients", model.performance.clients],
     ["Project Lead Value", formatExactBdt(model.performance.leadValue)],
     ["Win Rate", model.performance.winRate],
     ["Collection Efficiency", model.performance.collectionEfficiency],
+    ["Highest Value Project", model.performance.highestProject?.name ?? ""],
+    ["Highest Value", formatExactBdt(model.performance.highestProject?.value ?? 0)],
+    ["Lowest Value Project", model.performance.lowestProject?.name ?? ""],
+    ["Lowest Value", formatExactBdt(model.performance.lowestProject?.value ?? 0)],
     ["Backlog Projects", model.performance.backlog],
+    ["Backlog Value", formatExactBdt(model.performance.backlogValue)],
+    ["Asset Value", formatExactBdt(model.performance.assetValue)],
     ["Launch Date", model.tenure.launchDateLabel],
     ["In Operation", model.tenure.inOperation],
     ["Revenue Per Day", formatExactBdt(model.tenure.revenuePerDay)],

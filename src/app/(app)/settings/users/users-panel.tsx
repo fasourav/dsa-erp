@@ -2,7 +2,8 @@
 
 import { ListExport } from "@/components/list-export"
 import { savedToast } from "@/lib/saved"
-import { MoreHorizontal } from "lucide-react"
+import { ArrowLeft, MoreHorizontal } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { AccessDrawer } from "@/app/(app)/settings/users/access-drawer"
@@ -178,6 +179,16 @@ export function UsersPanel({
 
   return (
     <div className="flex flex-col gap-3.5">
+      <Button
+        type="button"
+        variant="ghost"
+        className="w-fit"
+        nativeButton={false}
+        render={<Link href="/settings" />}
+      >
+        <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+        Settings
+      </Button>
       <PageHeader
         eyebrow="Admin"
         title="Users & Permissions"

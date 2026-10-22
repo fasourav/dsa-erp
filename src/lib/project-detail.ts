@@ -68,6 +68,7 @@ export type RecentClientPayment = {
   paidOn: string
   amount: number
   method: string
+  vendorName: string
 }
 
 export type OpenInvoice = LinkedInvoice & {
@@ -303,7 +304,7 @@ export async function getProjectDetail(projectId: string): Promise<{
             (from, to) =>
               supabase
                 .from("vendor_payments")
-                .select("amount, paid_on, vendor_invoice_id")
+                .select("id, amount, paid_on, method, vendor_invoice_id")
                 .in("vendor_invoice_id", vendorInvoiceIds)
                 .order("id", { ascending: true })
                 .range(from, to),
@@ -366,8 +367,10 @@ function buildOverview(input: {
     status: string
   }[]
   vendorPayments: {
+    id: string
     amount: number
     paid_on: string
+    method: string | null
     vendor_invoice_id: string
   }[]
   operational: { amount: number; expense_date: string; category: string }[]
@@ -513,19 +516,33 @@ function buildOverview(input: {
         netProfit: sumAmounts([point.revenue, -point.expense]),
       })),
     breakdown: [...buckets.entries()].map(([key, amount]) => ({ key, amount })),
-    recentPayments: payments
-      .map((payment) => ({
-        id: payment.id,
+    recentPayments: [
+      ...payments.map((payment) => ({
+        id: `client:${payment.id}`,
         paidOn: dateInputValue(payment.paid_on),
         amount: toNumber(payment.amount),
         method: payment.method?.trim() ?? "",
-      }))
-      .sort(
-        (left, right) =>
-          right.paidOn.localeCompare(left.paidOn) ||
-          right.id.localeCompare(left.id),
-      )
-      .slice(0, 5),
+        vendorName: "",
+      })),
+      ...input.vendorPayments.flatMap((payment) => {
+        if (!payment.id) return []
+        const purchaseOrderId = poByVendorInvoice.get(payment.vendor_invoice_id) ?? ""
+        return [
+          {
+            id: `vendor:${payment.id}`,
+            paidOn: dateInputValue(payment.paid_on),
+            amount: toNumber(payment.amount),
+            method: payment.method?.trim() ?? "",
+            vendorName:
+              input.purchaseOrders.find((order) => order.id === purchaseOrderId)?.vendorName ??
+              "",
+          },
+        ]
+      }),
+    ].sort(
+      (left, right) =>
+        right.paidOn.localeCompare(left.paidOn) || right.id.localeCompare(left.id),
+    ),
     openInvoices: input.invoices.flatMap((invoice) => {
       if (invoice.status === "void") return []
       const paid = settledByInvoice.get(invoice.id) ?? 0

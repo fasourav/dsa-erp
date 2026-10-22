@@ -38,6 +38,17 @@ Buckets are summed in `expenseTotals` (`src/lib/dashboard-metrics.ts`). This not
 
 Project expense is material + subcontractor + project overhead. The admin expense total is operational + marketing + salary + admin. Gross profit is client collections minus project expense minus tax. Net profit subtracts the admin expense total.
 
+## Dashboard figures
+
+These two cards are calculated in the app from figures the dashboard already loads (`collectionEfficiencyOf` and `forecastedProfitOf` in `src/lib/dashboard-metrics.ts`). The screen uses those results. Other profit, expense, receivable, and payable totals are unchanged.
+
+- **Collection Efficiency** = (Total Revenue − Accounts Receivable) / Total Revenue, shown as a percent. Total Revenue is the dashboard revenue for the selected period. Accounts Receivable is the open client balance: current when the period is All Time or the current year, otherwise as of that year end. Total Revenue of zero shows 0%.
+- **Forecasted Profit** = Accounts Receivable − Accounts Payable. Accounts Payable is open vendor bills, the same balance as the Accounts Payable card.
+- The period selector opens on **All Time**. A chosen fiscal year still limits the period figures.
+- Project overhead stays in project expense and in the Expense Summary amount. That row does not show a percent.
+- **Asset Value** on the dashboard is the Assets page Total Asset Value. Both use `assetValue` and `sumAssetCurrentValue` in `src/lib/asset-value.ts`: straight-line depreciation from purchase date, cost, and lifespan, then the sum of those current values.
+- **Backlog value** is the sum of `project_backlogs.backlog_amount` for backlog projects in the selected period. It is shown beside the backlog count when that count is greater than zero.
+
 ## Duplicates
 
 Before an operational expense or a vendor payment is saved, the server looks for another operational expense or vendor payment with the same amount, the same bank account, and a date within 7 days. The form lists each match (type, date, amount, vendor or category). Saving then requires **This Is Not A Duplicate** and a reason. The reason is stored at the start of notes as `Duplicate override: `.
