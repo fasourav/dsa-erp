@@ -50,26 +50,27 @@ export function renderDocument(
   margins: PrintMargins,
   mode: DocumentMode,
   inlineCss?: string,
+  draft = false,
 ): { pages: string[]; html: string } {
   const box = contentBox(margins)
   const built = build(model, box)
   const pages = built.bodies.map((body, index) =>
     pageHtml({
       body,
-      signs: index === built.bodies.length - 1 ? built.signs : "",
-      ref: built.ref,
+      signs: built.pageSigns?.[index] || (index === built.bodies.length - 1 ? built.signs : ""),
+      ref: built.pageFooters?.[index] || built.ref,
       page: index + 1,
       total: built.bodies.length,
-      title: built.title,
+      title: built.pageTitles?.[index] || built.title,
       subtitle: built.pageSubtitles[index] ?? built.subtitle,
       refLines: built.pageRefs[index] ?? built.refLines,
-      verifyUrl: built.verifyUrl,
+      verifyUrl: built.showQr === false ? null : built.verifyUrl,
       box,
       mode,
       documentTitle: built.title,
     }),
   )
-  return { pages, html: shell(pages.join("\n"), built.title, box, mode, inlineCss) }
+  return { pages, html: shell(pages.join("\n"), built.title, box, mode, inlineCss, draft) }
 }
 
 function build(model: DocumentModel, box: ContentBox): Built {
@@ -88,6 +89,10 @@ type Built = {
   refLines: Array<[string, string]>
   pageRefs: Array<Array<[string, string]>>
   pageSubtitles: string[]
+  pageTitles?: string[]
+  pageFooters?: string[]
+  pageSigns?: string[]
+  showQr?: boolean
   verifyUrl: string | null
   bodies: string[]
   signs: string
@@ -101,9 +106,9 @@ function buildPrint(doc: PrintDocument, box: ContentBox): Built {
   const signs = signBlock(doc.signatures)
   const signReserve = doc.signatures.length ? SIGN_MM : 0
   if (doc.kicker === "Quotation") return quotation(doc, box, refLines, signs, signReserve)
-  if (doc.kicker === "Work Order") return workOrder(doc, box, refLines, signs, signReserve)
+  if (doc.kicker === "Work Order") return workOrder(doc, box, refLines)
   if (doc.kicker === "Purchase Order") return purchaseOrder(doc, box, refLines, signs, signReserve)
-  if (doc.kicker === "Bill Invoice") return invoice(doc, box, refLines, signs, signReserve)
+  if (doc.kicker === "Bill Invoice") return invoice(doc, box, refLines)
   return receipt(doc, box, refLines, signs, signReserve)
 }
 
@@ -173,8 +178,6 @@ function workOrder(
   doc: PrintDocument,
   box: ContentBox,
   refLines: Array<[string, string]>,
-  signs: string,
-  signReserve: number,
 ): Built {
   const intro = splitIntro(doc.intro)
   const rows = itemRows(doc.lines)
@@ -185,22 +188,31 @@ function workOrder(
   }
   if (intro.body) page1.push(chunk(`<div class="letter"><p class="intro">${esc(intro.body)}</p></div>`, estimateText(intro.body)))
   page1.push(...table, chunk(wordsBox(doc.wordsLabel, doc.words), 16), chunk(`<p class="thanks">Thanks &amp; Regards,</p>`, 6))
-  const terms = listBlock(doc.terms, doc.milestonesTitle || "Terms & Conditions", true)
+  const terms = listBlock(doc.terms, "Terms & Conditions", true)
   const pay = doc.milestones.length
     ? chunk(
-        `<div class="block tight"><h4>Payment Terms</h4>${milestoneTable(doc, true)}</div>`,
-        18 + doc.milestones.length * 7,
+        `<div class="block tight"><h4>Payment Terms</h4>${milestoneTable(doc, true)}<p class="note" style="margin-top:1mm">Applicable VAT and AIT will be deducted at source from each bill as per Government rules.</p></div>`,
+        22 + doc.milestones.length * 7,
       )
     : null
   const page2: Chunk[] = []
   if (pay) page2.push(pay)
   if (terms) page2.push(terms)
   if (page2.length) page2.push(chunk(`<p class="thanks">Thank you for your cooperation.</p>`, 6))
-  const bodies = [
-    ...flow(page1, budget(box, page2.length ? 0 : signReserve)),
-    ...flow(page2, budget(box, signReserve)),
-  ]
-  return baseBuilt("Work Order", doc, refLines, bodies, signs)
+  const pageSigns = signBlock(
+    doc.signatures.filter((line) => /authorized|accepted by/i.test(line.label)),
+  )
+  const first = stamp(flow(page1, budget(box, pageSigns ? SIGN_MM : 0)), pageSigns)
+  const second = page2.length ? stamp(flow(page2, budget(box, pageSigns ? SIGN_MM : 0)), pageSigns) : { bodies: [], signs: [] }
+  const bodies = [...first.bodies, ...second.bodies]
+  const foot = `WO No. ${doc.documentNo}`
+  return {
+    ...baseBuilt("Work Order", doc, refLines, bodies, ""),
+    ref: foot,
+    pageSigns: [...first.signs, ...second.signs],
+    pageFooters: bodies.map(() => foot),
+    pageSubtitles: bodies.map((_, index) => (index < first.bodies.length ? doc.title : "Terms & Conditions")),
+  }
 }
 
 function purchaseOrder(
@@ -226,8 +238,6 @@ function invoice(
   doc: PrintDocument,
   box: ContentBox,
   refLines: Array<[string, string]>,
-  signs: string,
-  signReserve: number,
 ): Built {
   const description = doc.lines.map((line) => line.item).filter(Boolean).join("; ") || "Final bill"
   const spec = doc.lines.map((line) => line.specification).filter(Boolean)[0] ?? ""
@@ -256,35 +266,51 @@ function invoice(
     html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${esc(line.item)}</td><td><span class="spec" style="margin:0">${esc(line.specification)}</span></td><td class="c">${esc(line.quantity)}</td><td class="c">${esc(line.unit)}</td><td class="r">${esc(plainAmount(line.unitPrice))}</td><td class="r">${esc(plainAmount(line.total))}</td></tr>`,
     mm: line.specification ? 11 : 7,
   }))
+  const carried = doc.summary.find((row) => /grand total|total quoted|net payable/i.test(row.label) && row.strong)
   const annex = doc.lines.length
     ? tableChunk(
         `<thead><tr><th class="c" style="width:7mm">S/L</th><th style="width:44mm">Item</th><th>Specification</th><th class="c" style="width:12mm">Qty</th><th class="c" style="width:9mm">Unit</th><th class="r" style="width:17mm">Unit Price (৳)</th><th class="r" style="width:21mm">Total Price (৳)</th></tr></thead>`,
         annexRows,
-        `<tfoot><tr class="grand"><td colspan="6" class="lbl">Total</td><td class="r">${tkSpan(amount)}</td></tr></tfoot>`,
-        12,
+        `<tfoot><tr><td colspan="6" class="lbl">Sub Total</td><td class="r">${tkSpan(amount)}</td></tr><tr class="grand"><td colspan="6" class="lbl">Rounded Total (carried to Invoice)</td><td class="r">${tkSpan(carried?.amount || amount)}</td></tr></tfoot>`,
+        16,
         box,
       )
     : []
-  const first = flow(chunks, budget(box, annex.length ? 0 : signReserve))
-  const second = flow(annex, budget(box, signReserve))
-  const bodies = [...first, ...second]
+  const page1Signs = signBlock(
+    doc.signatures.filter((line) => /prepared by|authorized|received by/i.test(line.label)),
+  )
+  const page2Signs = signBlock(
+    doc.signatures.flatMap((line) => {
+      if (/^prepared by$/i.test(line.label)) return [{ ...line, label: "Measured & Prepared By" }]
+      if (/authorized/i.test(line.label)) return [line]
+      return []
+    }),
+  )
+  const first = stamp(flow(chunks, budget(box, page1Signs ? SIGN_MM : 0)), page1Signs)
+  const second = annex.length ? stamp(flow(annex, budget(box, page2Signs ? SIGN_MM : 0)), page2Signs) : { bodies: [], signs: [] }
+  const bodies = [...first.bodies, ...second.bodies]
   const project = doc.facts.find((fact) => fact.label === "Project Name")?.value ?? ""
+  const foot = `Invoice No. ${doc.documentNo}`
   return {
     title: "Bill Invoice",
     subtitle: doc.title,
-    ref: `Invoice No. ${doc.documentNo}`,
+    ref: foot,
     refLines,
-    pageRefs: [
-      refLines,
-      [
-        ["Invoice No.", doc.documentNo],
-        ["Project Name", project || "—"],
-      ],
-    ],
-    pageSubtitles: [doc.title, second.length ? "Bill Of Quantities" : doc.title],
+    pageRefs: bodies.map((_, index) =>
+      index < first.bodies.length
+        ? refLines
+        : [
+            ["Invoice No.", doc.documentNo],
+            ["Project Name", project || "—"],
+          ],
+    ),
+    pageSubtitles: bodies.map((_, index) => (index < first.bodies.length ? doc.title : "Bill Of Quantities")),
+    pageTitles: bodies.map((_, index) => (index < first.bodies.length ? "Bill Invoice" : "Annexure-A")),
+    pageFooters: bodies.map((_, index) => (index < first.bodies.length ? foot : `${foot} · Annexure-A`)),
+    pageSigns: [...first.signs, ...second.signs],
     verifyUrl: doc.verifyUrl,
     bodies: bodies.length ? bodies : [""],
-    signs,
+    signs: "",
   }
 }
 
@@ -340,7 +366,19 @@ function buildChallan(doc: ChallanModel, box: ContentBox): Built {
     ),
   ]
   if (doc.note.trim()) chunks.push(chunk(`<p class="note" style="margin-top:3mm">${esc(doc.note)}</p>`, 8))
-  return finish("Delivery Challan", "Goods Dispatch Note", `Challan No. ${doc.documentNo}`, doc, chunks, box)
+  const driver = doc.facts.find((fact) => fact.label === "Driver Name")?.value ?? ""
+  const dispatched = doc.signatures.find((line) => /dispatched|prepared/i.test(line.label))
+  const received = doc.signatures.find((line) => /received/i.test(line.label))
+  const signHtml = signBlock([
+    ...(dispatched ? [{ ...dispatched, label: "Dispatched By" }] : []),
+    { label: "Delivered By", name: driver, detail: "Driver" },
+    {
+      label: "Received By",
+      name: received?.name ?? "",
+      detail: received?.detail || "Name, Signature & Date",
+    },
+  ])
+  return finish("Delivery Challan", "Goods Dispatch Note", "Challan No.", doc, chunks, box, { signHtml })
 }
 
 function buildVoucher(doc: VoucherModel, box: ContentBox): Built {
@@ -369,7 +407,7 @@ function buildVoucher(doc: VoucherModel, box: ContentBox): Built {
     chunks.push(chunk(`<div class="words"><span>Narration</span>${esc(doc.narration)}</div>`, 16))
   }
   if (doc.note.trim()) chunks.push(chunk(`<p class="note" style="margin-top:2mm">${esc(doc.note)}</p>`, 8))
-  return finish("Payment Voucher", "Vendor Payment", `Voucher No. ${doc.documentNo}`, doc, chunks, box)
+  return finish("Payment Voucher", "Vendor Payment", "Voucher No.", doc, chunks, box)
 }
 
 function buildCertificate(doc: CertificateModel, box: ContentBox): Built {
@@ -389,21 +427,21 @@ function buildCertificate(doc: CertificateModel, box: ContentBox): Built {
     )
   }
   if (rows.length) {
-    chunks.push(
-      ...tableChunk(
-        `<thead><tr><th>Inspection Item</th><th class="c" style="width:28mm">Status</th><th style="width:60mm">Remarks</th></tr></thead>`,
-        rows,
-        "",
-        0,
-        box,
-      ),
+    const tables = tableChunk(
+      `<thead><tr><th>Inspection Item</th><th class="c" style="width:28mm">Status</th><th style="width:60mm">Remarks</th></tr></thead>`,
+      rows,
+      "",
+      0,
+      box,
     )
+    if (tables[0]) tables[0] = { html: `<div class="spaced">${tables[0].html}</div>`, mm: tables[0].mm + 4 }
+    chunks.push(...tables)
   }
   if (doc.defect.trim()) chunks.push(chunk(`<div class="words"><span>Defect Liability</span>${esc(doc.defect)}</div>`, 16))
   return finish(
     "Completion Certificate",
     "Work Completion · Handover & Acceptance",
-    `Certificate No. ${doc.documentNo}`,
+    "Certificate No.",
     doc,
     chunks,
     box,
@@ -442,25 +480,39 @@ function buildSalary(doc: SalaryModel, box: ContentBox): Built {
       ),
     )
   }
-  return finish("Salary Slip", doc.periodSubtitle || "Pay Slip", `Salary Slip No. ${doc.documentNo}`, doc, chunks, box)
+  return finish("Salary Slip", doc.periodSubtitle || "Pay Slip", "Slip No.", doc, chunks, box)
 }
 
 function buildLetter(doc: LetterModel, box: ContentBox): Built {
   const title = doc.notice ? "Notice" : "Letter"
   const chunks: Chunk[] = []
   if (!doc.notice && doc.addressee.length) {
-    chunks.push(chunk(`<div class="addr">${doc.addressee.map((line) => esc(line)).join("<br>")}</div>`, 8 + doc.addressee.length * 5))
+    chunks.push(
+      chunk(
+        `<div class="addr">${doc.addressee
+          .map((line, index) => {
+            const strong = doc.addresseeStrong?.[index] ?? index === 0
+            const html = rich(line)
+            return strong ? `<b>${html}</b>` : html
+          })
+          .join("<br>")}</div>`,
+        8 + doc.addressee.length * 5,
+      ),
+    )
   }
-  if (doc.subject.trim()) chunks.push(chunk(`<div class="subject"><span>Subject</span>${esc(doc.subject)}</div>`, 14))
-  for (const paragraph of doc.paragraphs) {
-    if (paragraph.trim()) chunks.push(chunk(`<div class="letter"><p>${esc(paragraph)}</p></div>`, estimateText(paragraph)))
+  if (doc.subject.trim()) chunks.push(chunk(`<div class="subject"><span>Subject</span>${rich(doc.subject)}</div>`, 14))
+  const paragraphs = doc.paragraphs.filter((paragraph) => paragraph.trim())
+  const lead = doc.notice ? paragraphs.slice(0, 1) : paragraphs
+  const rest = doc.notice ? paragraphs.slice(1) : []
+  for (const paragraph of lead) {
+    chunks.push(chunk(`<div class="letter"><p>${rich(paragraph)}</p></div>`, estimateText(paragraph)))
   }
   if (doc.rows.length) {
     chunks.push(
       ...tableChunk(
         `<thead><tr><th style="width:55mm">Item</th><th>Instruction</th></tr></thead>`,
         doc.rows.map((row) => ({
-          html: `<tr><td class="item">${esc(row.label)}</td><td>${esc(row.value)}</td></tr>`,
+          html: `<tr><td class="item">${esc(row.label)}</td><td>${rich(row.value)}</td></tr>`,
           mm: 8,
         })),
         "",
@@ -470,52 +522,78 @@ function buildLetter(doc: LetterModel, box: ContentBox): Built {
     )
   }
   if (doc.duty.length) {
+    const duty = tableChunk(
+      `<thead><tr><th class="c" style="width:10mm">S/L</th><th>Project Name</th><th>Site Location</th><th>Duty In-Charge</th><th style="width:30mm">Mobile</th></tr></thead>`,
+      doc.duty.map((row, index) => ({
+        html: `<tr><td class="c">${pad(index + 1)}</td><td>${esc(row.project)}</td><td>${esc(row.site)}</td><td>${esc(row.person)}</td><td>${esc(row.phone)}</td></tr>`,
+        mm: 8,
+      })),
+      "",
+      0,
+      box,
+    )
     chunks.push(
-      ...tableChunk(
-        `<thead><tr><th class="c" style="width:10mm">S/L</th><th>Project Name</th><th>Site Location</th><th>Duty In-Charge</th><th style="width:30mm">Mobile</th></tr></thead>`,
-        doc.duty.map((row, index) => ({
-          html: `<tr><td class="c">${pad(index + 1)}</td><td>${esc(row.project)}</td><td>${esc(row.site)}</td><td>${esc(row.person)}</td><td>${esc(row.phone)}</td></tr>`,
-          mm: 8,
-        })),
-        "",
-        0,
-        box,
+      chunk(
+        `<div class="block spaced"><h4>Site Security Duty During Holiday</h4>${duty.map((piece) => piece.html).join("")}</div>`,
+        12 + doc.duty.length * 8,
       ),
     )
   }
-  if (doc.closing.trim()) chunks.push(chunk(`<div class="letter"><p>${esc(doc.closing)}</p></div>`, estimateText(doc.closing)))
-  chunks.push(chunk(`<p class="thanks">Thanks &amp; Regards,</p>`, 6))
-  const built = finish(title, doc.audience || (doc.notice ? "For All Office & Site Staff" : "Official Correspondence"), `Ref: ${doc.documentNo}`, doc, chunks, box)
-  if (doc.cc.trim()) {
-    built.bodies[built.bodies.length - 1] += `<p class="note" style="margin-top:3mm">${esc(doc.cc)}</p>`
+  for (const paragraph of rest) {
+    chunks.push(chunk(`<div class="letter"><p>${rich(paragraph)}</p></div>`, estimateText(paragraph)))
   }
+  if (doc.closing.trim()) chunks.push(chunk(`<div class="letter"><p>${rich(doc.closing)}</p></div>`, estimateText(doc.closing)))
+  const signed = doc.notice
+    ? (doc.signatures.length ? doc.signatures : [{ label: "Issued By", name: "", detail: "" }]).map((line, index) =>
+        index === 0 ? { ...line, label: "Issued By" } : line,
+      )
+    : doc.signatures
+  const signHtml = `${doc.notice ? "" : `<p class="thanks">Thanks &amp; Regards,</p>`}${signBlock(signed.length ? signed : [{ label: "Authorized Signature", name: "", detail: "" }], "half")}${
+    doc.cc.trim() ? `<p class="note" style="margin-top:3mm">${esc(doc.cc)}</p>` : ""
+  }`
+  const built = finish(
+    title,
+    doc.audience || (doc.notice ? "For All Office & Site Staff" : "Official Correspondence"),
+    "Ref",
+    doc,
+    chunks,
+    box,
+    { showQr: false, signHtml },
+  )
   return built
 }
 
 function finish(
   title: string,
   subtitle: string,
-  ref: string,
+  label: string,
   doc: { documentNo: string; issuedOn: string; verifyUrl: string | null; signatures: SignLine[] },
   chunks: Chunk[],
   box: ContentBox,
+  options?: { showQr?: boolean; signHtml?: string },
 ): Built {
-  const signs = signBlock(doc.signatures)
+  const signs = options?.signHtml ?? signBlock(doc.signatures)
   const refLines: Array<[string, string]> = [
-    [ref.split(":")[0]?.trim() || "Ref", doc.documentNo],
+    [label, doc.documentNo],
     ["Date", doc.issuedOn],
   ]
   return {
     title,
     subtitle,
-    ref,
+    ref: `${label} ${doc.documentNo}`,
     refLines,
     pageRefs: [],
     pageSubtitles: [],
+    showQr: options?.showQr,
     verifyUrl: doc.verifyUrl,
     bodies: flow(chunks, budget(box, signs ? SIGN_MM : 0)),
     signs,
   }
+}
+
+function stamp(bodies: string[], signs: string): { bodies: string[]; signs: string[] } {
+  if (!bodies.length) return { bodies: [""], signs: [signs] }
+  return { bodies, signs: bodies.map((_, index) => (index === bodies.length - 1 ? signs : "")) }
 }
 
 function baseBuilt(
@@ -631,8 +709,11 @@ function shell(
   box: ContentBox,
   mode: DocumentMode,
   inlineCss?: string,
+  draft = false,
 ): string {
-  const bodyClass = mode === "print" ? "pad" : mode === "sheet" ? "sheet" : ""
+  const bodyClass = [mode === "print" ? "pad" : mode === "sheet" ? "sheet" : "", draft ? "draft" : ""]
+    .filter(Boolean)
+    .join(" ")
   const css = inlineCss
     ? `<style>${inlineCss}</style>`
     : `<link rel="stylesheet" href="/documents/setc.css">`
@@ -706,12 +787,14 @@ function card(
   return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`
 }
 
-function signBlock(lines: SignLine[]): string {
+function signBlock(lines: SignLine[], layout: "auto" | "half" = "auto"): string {
   const visible = lines.filter((line) => line.label.trim())
   if (!visible.length) return ""
-  const count = Math.min(4, visible.length)
-  return `<div class="signs s${count}">${visible
+  const count = layout === "half" ? 2 : Math.min(4, visible.length)
+  const cells = visible
     .slice(0, 4)
+  const filler = layout === "half" && visible.length < 2 ? "<div></div>" : ""
+  return `<div class="signs s${count}">${cells
     .map(
       (line) =>
         `<div class="sign"><div class="line"><div class="role">${esc(line.label)}</div><div class="who">${esc(line.name)}</div><div class="des">${line.detail
@@ -719,7 +802,11 @@ function signBlock(lines: SignLine[]): string {
           .map((part) => esc(part))
           .join("<br>")}</div></div></div>`,
     )
-    .join("")}</div>`
+    .join("")}${filler}</div>`
+}
+
+function rich(value: string): string {
+  return esc(value).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
 }
 
 function invoiceWords(doc: PrintDocument): string {

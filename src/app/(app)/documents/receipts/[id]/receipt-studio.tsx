@@ -74,6 +74,7 @@ export function ReceiptStudio({
       description="Prints the receipt only. The letterhead and footer stay on the pad."
       margins={margins}
       source={{ kind: "print", doc: preview }}
+      record={form.exists ? { kind: "receipt", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This receipt"}

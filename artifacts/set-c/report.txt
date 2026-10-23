@@ -1,0 +1,25 @@
+16-54 box top 16 floor 243 height 227
+16-54 01-quotation pages 2 floor OK
+16-54 02-work-order pages 2 floor OK
+16-54 03-purchase-order pages 1 floor OK
+16-54 04-delivery-challan pages 1 floor OK
+16-54 05-bill-invoice pages 2 floor OK
+16-54 06-money-receipt pages 1 floor OK
+16-54 07-payment-voucher pages 1 floor OK
+16-54 08-completion pages 1 floor OK
+16-54 09-salary-slip pages 1 floor OK
+16-54 10-notice pages 1 floor OK
+16-54 11-letter pages 1 floor OK
+32-28 box top 32 floor 243 height 211
+32-28 01-quotation pages 2 floor OK
+32-28 02-work-order pages 2 floor OK
+32-28 03-purchase-order pages 1 floor OK
+32-28 04-delivery-challan pages 1 floor OK
+32-28 05-bill-invoice pages 2 floor OK
+32-28 06-money-receipt pages 1 floor OK
+32-28 07-payment-voucher pages 1 floor OK
+32-28 08-completion pages 1 floor OK
+32-28 09-salary-slip pages 1 floor OK
+32-28 10-notice pages 1 floor OK
+32-28 11-letter pages 1 floor OK
+375 night shell rgb(20, 20, 20) page rgb(255, 255, 255) paper 343px in 343px spill no

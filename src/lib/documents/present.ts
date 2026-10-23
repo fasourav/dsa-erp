@@ -231,7 +231,7 @@ export function presentWorkOrder(input: {
   return {
     kicker: "Work Order",
     title: printedSubtitle(input.subtitle, defaultSubtitles.workOrder),
-    numberLabel: "Ref",
+    numberLabel: "WO No.",
     documentNo: input.documentNo || "Assigned when saved",
     issuedOn: formatIsoDate(input.issuedOn),
     verifyUrl: input.verifyUrl,
@@ -311,7 +311,10 @@ export function presentInvoice(input: {
   const ait = aligned ? lineAit : 0
   const subtotal = aligned ? priced.subtotal : grand
   const rate = Number(input.aitPercent)
-  const summary: SummaryRow[] = [{ label: "Sub Total", amount: formatMoney(subtotal) }]
+  const sectionCount = new Set(input.lines.map((line) => line.section.trim()).filter(Boolean)).size
+  const subLabel =
+    sectionCount > 1 ? `Sub Total (Sections A–${String.fromCharCode(64 + Math.min(sectionCount, 26))})` : "Sub Total"
+  const summary: SummaryRow[] = [{ label: subLabel, amount: formatMoney(subtotal) }]
   if (ait > 0) {
     summary.push({ label: `AIT (${trimNumber(rate)}%)`, amount: formatMoney(ait) })
   }
@@ -456,7 +459,7 @@ export function presentReceipt(input: {
       checkedByRole: input.checkedByRole,
       authorizedBy: input.authorizedBy ?? "",
       authorizedByRole: input.authorizedByRole ?? "",
-    }),
+    }).map((line) => (line.label === "Prepared By" ? { ...line, label: "Received By (Accounts)" } : line)),
   }
 }
 

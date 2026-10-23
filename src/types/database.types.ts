@@ -1116,6 +1116,7 @@ export type Database = {
           department_id: string | null
           designation: string | null
           email: string | null
+          employee_code: string | null
           full_name: string
           id: string
           is_active: boolean
@@ -1132,6 +1133,7 @@ export type Database = {
           department_id?: string | null
           designation?: string | null
           email?: string | null
+          employee_code?: string | null
           full_name: string
           id?: string
           is_active?: boolean
@@ -1148,6 +1150,7 @@ export type Database = {
           department_id?: string | null
           designation?: string | null
           email?: string | null
+          employee_code?: string | null
           full_name?: string
           id?: string
           is_active?: boolean

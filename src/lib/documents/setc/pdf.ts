@@ -111,10 +111,11 @@ export async function renderDocumentPdf(
   model: DocumentModel,
   margins: PrintMargins,
   letterhead: boolean,
+  draft = false,
 ): Promise<Uint8Array> {
   const css = await loadPrintCss()
   const mode: DocumentMode = letterhead ? "letterhead" : "print"
-  let { html } = renderDocument(model, margins, mode, css)
+  let { html } = renderDocument(model, margins, mode, css, draft)
   if (letterhead) {
     const png = await letterheadPng()
     const uri = `data:image/png;base64,${Buffer.from(png).toString("base64")}`

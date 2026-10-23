@@ -44,6 +44,7 @@ export type FormBody = {
   authorizedBy: string
   partyName: string
   partyDetail: string
+  companyName: string
   projectName: string
   notes: string
   subject: string
@@ -101,6 +102,8 @@ export type FormDraft = {
   lockedNet: number
   lockedGross: number
   lockedDeductions: number
+  statusNote: string
+  employeeCode: string
   body: FormBody
 }
 
@@ -112,6 +115,7 @@ export function blankBody(): FormBody {
     authorizedBy: "",
     partyName: "",
     partyDetail: "",
+    companyName: "",
     projectName: "",
     notes: "",
     subject: "",
@@ -153,11 +157,16 @@ export function blankBody(): FormBody {
   }
 }
 
-function signs(body: FormBody, employees: EmployeeChoice[], extra: SignLine[] = []): SignLine[] {
+function signs(
+  body: FormBody,
+  employees: EmployeeChoice[],
+  extra: SignLine[] = [],
+  preparedLabel = "Prepared By",
+): SignLine[] {
   const rows: SignLine[] = []
   if (isSignatureEnabled(body.preparedBy)) {
     rows.push({
-      label: "Prepared By",
+      label: preparedLabel,
       name: signatureName(body.preparedBy),
       detail: roleFor(employees, body.preparedBy),
     })
@@ -216,9 +225,17 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
         packages: body.packages,
         declaration: "",
         note: body.notes,
-        signatures: signs(body, employees, [
+        signatures: [
+          ...(isSignatureEnabled(body.preparedBy)
+            ? [{
+                label: "Dispatched By",
+                name: signatureName(body.preparedBy),
+                detail: roleFor(employees, body.preparedBy) || "Store In-Charge",
+              }]
+            : []),
+          { label: "Delivered By", name: body.driverName, detail: "Driver" },
           { label: "Received By", name: "", detail: "Name, Signature & Date" },
-        ]),
+        ],
       },
     }
   }
@@ -257,7 +274,7 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
         lines,
         net,
         paymentMode: body.paymentMode,
-        statusNote: "",
+        statusNote: draft.statusNote,
         narration: body.narration,
         note: body.notes,
         signatures: signs(body, employees, [
@@ -286,9 +303,12 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
         scope: body.scope.split(/\n+/).map((line) => line.trim()).filter(Boolean),
         inspections: body.inspections.filter((row) => row.item.trim()),
         defect: body.defect,
-        signatures: signs(body, employees, [
-          { label: "Accepted By (Client)", name: body.partyName, detail: "Signature & Date" },
-        ]),
+        signatures: signs(
+          body,
+          employees,
+          [{ label: "Accepted By (Client)", name: body.partyName, detail: "Signature & Date" }],
+          "Certified By",
+        ),
       },
     }
   }
@@ -334,7 +354,8 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
       verifyUrl: url,
       notice,
       audience: body.audience || (notice ? "For All Office & Site Staff" : "Official Correspondence"),
-      addressee: [body.partyName, ...body.partyDetail.split(/\n/)].map((line) => line.trim()).filter(Boolean),
+      addressee: letterLines(body),
+      addresseeStrong: letterStrong(body),
       subject: body.subject,
       paragraphs: body.paragraphs.split(/\n\n+/).map((line) => line.trim()).filter(Boolean),
       rows: notice ? body.noticeRows.filter((row) => row.label.trim()) : [],
@@ -344,6 +365,20 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
       signatures: signs(body, employees),
     },
   }
+}
+
+function letterLines(body: FormBody): string[] {
+  const detail = body.partyDetail.split(/\n/).map((line) => line.trim()).filter(Boolean)
+  const lines = [body.partyName.trim()]
+  if (detail[0]) lines.push(detail[0])
+  if (body.companyName.trim()) lines.push(body.companyName.trim())
+  lines.push(...detail.slice(1))
+  return lines.filter(Boolean)
+}
+
+function letterStrong(body: FormBody): boolean[] {
+  const lines = letterLines(body)
+  return lines.map((line, index) => index === 0 || line.replace(/\*/g, "").trim() === body.companyName.trim() || /^\*\*/.test(line))
 }
 
 export function formTitle(kind: FormKind): string {

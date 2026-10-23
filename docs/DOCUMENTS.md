@@ -17,7 +17,7 @@ The PDF route is `src/app/api/documents/pdf/route.ts`. On Vercel it uses `puppet
 
 ## Margins
 
-Settings → top and bottom print margins apply to every page of every document, including page 2 and later. Content starts at the top margin. It stops at the higher of the bottom margin and the letterhead footer: nothing may sit below 243 mm, and a larger bottom margin pulls that floor up (`min(243 mm, 297 mm − bottom margin)`). A top margin that would push content through the floor is capped so at least 40 mm of content remains. Left and right insets stay 20 mm and 16 mm, as in the Set C sheet.
+Settings → top and bottom print margins apply on every page, including page 2. Content starts at the top margin. It ends at `min(243 mm, 297 mm − bottom margin)`, so it never crosses the letterhead footer. A bottom margin under 54 mm does not move that footer line; a larger one shortens every page. When no saved margins are loaded, the defaults are the Set C page: 16 mm top and 54 mm bottom. The saved company row is left as it is. Left and right insets stay 20 mm and 16 mm.
 
 Prepared By, Checked By, and Authorized By each have a checkbox. Only ticked signatures are printed. The signature block sits inside the content box, above a flexible gap, so it does not overlap the footer.
 
@@ -29,7 +29,7 @@ New documents use:
 
 TYPE is QTN, WO, PO, DC, INV, MR, PV, or WCC. PARTYCODE is the vendor for WO, PO, DC, and PV, and the client (or lead) for QTN, INV, MR, and WCC. Codes are the initials of the name. An operational purchase order uses OPS as the project code. A second document with the same stem on the same day gets `-2`, `-3`, and so on. A revised quotation gets `-V2`, `-V3`.
 
-Salary slips: `SAL/DSAE/YYYY-MM/EMPCODE`.
+Salary slips: `SAL/DSAE/YYYY-MM/EMPCODE`, using the employee code (for example 014), not name initials.
 
 Letters and notices: `DSAE/PROJECTCODE-or-ADM/LTR-or-NTC/DDMM-YYYY`.
 

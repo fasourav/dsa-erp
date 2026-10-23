@@ -16,6 +16,39 @@ alter table public.quotations
 comment on column public.quotations.lead_id is
   'Set when the quotation is for a lead that is not yet a client.';
 
+alter table public.employees
+  add column if not exists employee_code text;
+
+comment on column public.employees.employee_code is
+  'Code printed on the salary slip, for example 014.';
+
+with numbered as (
+  select
+    id,
+    lpad(
+      (
+        coalesce((
+          select max(employee_code::integer)
+          from public.employees
+          where employee_code ~ '^[0-9]+$'
+        ), 0)
+        + row_number() over (order by created_at, full_name, id)
+      )::text,
+      3,
+      '0'
+    ) as code
+  from public.employees
+  where employee_code is null or btrim(employee_code) = ''
+)
+update public.employees as employee
+set employee_code = numbered.code
+from numbered
+where employee.id = numbered.id;
+
+create unique index if not exists employees_employee_code_key
+  on public.employees (lower(btrim(employee_code)))
+  where employee_code is not null and btrim(employee_code) <> '';
+
 create table public.form_documents (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in (
@@ -30,14 +63,14 @@ create table public.form_documents (
   project_id uuid references public.projects (id) on delete restrict,
   client_id uuid references public.clients (id) on delete restrict,
   vendor_id uuid references public.vendors (id) on delete restrict,
-  purchase_order_id uuid references public.vendor_purchase_orders (id) on delete restrict,
-  vendor_payment_id uuid references public.vendor_payments (id) on delete restrict,
-  operational_expense_id uuid references public.operational_expenses (id) on delete restrict,
-  payroll_line_id uuid references public.payroll_lines (id) on delete restrict,
+  purchase_order_id uuid references private.vendor_purchase_orders (id) on delete restrict,
+  vendor_payment_id uuid references public.vendor_payments (id) on delete cascade,
+  operational_expense_id uuid references public.operational_expenses (id) on delete cascade,
+  payroll_line_id uuid references public.payroll_lines (id) on delete cascade,
   employee_id uuid references public.employees (id) on delete restrict,
   body jsonb not null default '{}'::jsonb,
   deleted_at timestamptz,
-  deleted_by uuid,
+  deleted_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint form_documents_source_check check (
@@ -118,8 +151,42 @@ create policy form_documents_delete on public.form_documents
     or (kind = 'letter' and (private.can('projects', 'delete') or private.can('clients', 'delete')))
   );
 
+-- Restrictive policies AND with the module policies above. They do not widen them.
+create policy form_documents_hide_trash on public.form_documents
+  as restrictive for select to authenticated
+  using (deleted_at is null or private.is_owner());
+
+create policy form_documents_insert_live on public.form_documents
+  as restrictive for insert to authenticated
+  with check (deleted_at is null and deleted_by is null);
+
+create policy form_documents_trash_owner on public.form_documents
+  as restrictive for update to authenticated
+  using (deleted_at is null or private.is_owner())
+  with check (private.is_owner() or (deleted_at is null and deleted_by is null));
+
+create policy form_documents_hard_delete_owner on public.form_documents
+  as restrictive for delete to authenticated
+  using (private.is_owner() and deleted_at is not null);
+
 revoke all on table public.form_documents from anon, public;
 grant select, insert, update, delete on public.form_documents to authenticated;
+
+drop trigger if exists form_documents_activity on public.form_documents;
+create trigger form_documents_activity
+  after insert or update or delete on public.form_documents
+  for each row execute function private.log_activity();
+
+drop trigger if exists form_documents_version on public.form_documents;
+create trigger form_documents_version
+  before update on public.form_documents
+  for each row execute function private.guard_record_version();
+
+drop trigger if exists record_attachments_cleanup on public.form_documents;
+create trigger record_attachments_cleanup
+  after delete on public.form_documents
+  referencing old table as old_rows
+  for each statement execute function private.delete_parent_attachments('form_document');
 
 create or replace function private.reject_duplicate_document_no()
 returns trigger

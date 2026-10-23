@@ -31,6 +31,7 @@ function asBody(value: Json | null): FormBody {
     authorizedBy: text("authorizedBy") as string,
     partyName: text("partyName") as string,
     partyDetail: text("partyDetail") as string,
+    companyName: text("companyName") as string,
     projectName: text("projectName") as string,
     notes: text("notes") as string,
     subject: text("subject") as string,
@@ -107,6 +108,8 @@ function rowToDraft(row: {
     lockedNet: Number(row.total) || 0,
     lockedGross: Number(row.total) || 0,
     lockedDeductions: 0,
+    statusNote: "",
+    employeeCode: "",
     body,
   }
 }
@@ -171,6 +174,13 @@ export async function loadFormDraft(
     }
     if (kind === "payment_voucher") {
       draft.lockedNet = await voucherAmount(supabase, draft)
+      if (draft.purchaseOrderId) {
+        draft.statusNote = await workOrderStatus(supabase, draft.purchaseOrderId, draft.lockedNet, draft.vendorPaymentId)
+      }
+    }
+    if (kind === "salary_slip" && draft.employeeId) {
+      const employee = await supabase.from("employees").select("employee_code").eq("id", draft.employeeId).maybeSingle()
+      draft.employeeCode = employee.data?.employee_code?.trim() ?? ""
     }
     return { draft, error: null }
   }
@@ -192,6 +202,8 @@ export async function loadFormDraft(
     lockedNet: 0,
     lockedGross: 0,
     lockedDeductions: 0,
+    statusNote: "",
+    employeeCode: "",
     body: blankBody(),
   }
 
@@ -325,6 +337,28 @@ async function fillVendor(supabase: Client, draft: FormDraft, vendorId: string) 
     .join("\n")
 }
 
+async function workOrderStatus(
+  supabase: Client,
+  purchaseOrderId: string,
+  thisBill: number,
+  thisPaymentId: string,
+): Promise<string> {
+  const order = await supabase.from("vendor_purchase_orders").select("total_value").eq("id", purchaseOrderId).maybeSingle()
+  const total = Number(order.data?.total_value)
+  if (!Number.isFinite(total)) return ""
+  const invoices = await supabase.from("vendor_invoices").select("id").eq("purchase_order_id", purchaseOrderId)
+  const ids = (invoices.data ?? []).map((row) => row.id)
+  const payments = ids.length
+    ? await supabase.from("vendor_payments").select("id, amount").in("vendor_invoice_id", ids)
+    : { data: [] as Array<{ id: string; amount: number }> }
+  const paidBefore = (payments.data ?? [])
+    .filter((row) => row.id !== thisPaymentId)
+    .reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+  const balance = Math.round((total - paidBefore - thisBill) * 100) / 100
+  const money = (value: number) => value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `PO value ৳${money(total)} · Paid before this bill ৳${money(paidBefore)} · This bill ৳${money(thisBill)} · Balance ৳${money(balance)}`
+}
+
 async function fillFromVendorPayment(supabase: Client, draft: FormDraft) {
   const payment = await supabase
     .from("vendor_payments")
@@ -347,6 +381,7 @@ async function fillFromVendorPayment(supabase: Client, draft: FormDraft) {
   draft.body.billNo = invoice.data.description?.trim() || ""
   await fillFromPurchaseOrder(supabase, draft)
   draft.body.subject = invoice.data.description?.trim() || draft.body.subject
+  draft.statusNote = await workOrderStatus(supabase, invoice.data.purchase_order_id, draft.lockedNet, draft.vendorPaymentId)
 }
 
 async function fillFromExpense(supabase: Client, draft: FormDraft) {
@@ -384,7 +419,7 @@ async function fillFromPayroll(supabase: Client, draft: FormDraft): Promise<stri
     .maybeSingle()
   const employee = await supabase
     .from("employees")
-    .select("full_name, designation, joining_date")
+    .select("full_name, designation, joining_date, employee_code")
     .eq("id", line.data.employee_id)
     .maybeSingle()
   const gross = Number(line.data.basic_salary) + Number(line.data.allowance) + Number(line.data.bonus)
@@ -396,6 +431,7 @@ async function fillFromPayroll(supabase: Client, draft: FormDraft): Promise<stri
   draft.issuedOn = run.data?.paid_on?.slice(0, 10) || draft.issuedOn
   const month = run.data ? `${run.data.period_year}-${String(run.data.period_month).padStart(2, "0")}` : ""
   draft.body.periodLabel = month
+  draft.employeeCode = employee.data?.employee_code?.trim() ?? ""
   draft.body.partyName = employee.data?.full_name ?? ""
   draft.body.designation = employee.data?.designation ?? ""
   draft.body.joinedOn = employee.data?.joining_date?.slice(0, 10) ?? ""

@@ -8,8 +8,10 @@ import { contentBox, renderDocument } from "../src/lib/documents/setc/render"
 import type { DocumentModel } from "../src/lib/documents/setc/types"
 
 const outDir = path.resolve("artifacts/set-c")
-const margins = { topMm: 16, bottomMm: 54 }
-const tight = { topMm: 40, bottomMm: 70 }
+const marginSets = [
+  { name: "16-54", margins: { topMm: 16, bottomMm: 54 } },
+  { name: "32-28", margins: { topMm: 32, bottomMm: 28 } },
+]
 
 const words = amountInWords(1632960)
 
@@ -246,7 +248,7 @@ const models: Array<[string, DocumentModel]> = [
     ],
   } }],
   ["09-salary-slip", { kind: "salary", doc: {
-    documentNo: "SAL/DSAE/2026-09/TA",
+    documentNo: "SAL/DSAE/2026-09/014",
     issuedOn: "05 October 2026",
     verifyUrl: "https://erp.example.com/verify/" + "99".repeat(32),
     periodSubtitle: "Pay Period: September 2026",
@@ -268,13 +270,40 @@ const models: Array<[string, DocumentModel]> = [
       { label: "Received By", name: "Engr. Tanvir Ahmed", detail: "Employee Signature & Date" },
     ],
   } }],
-  ["10-letter", { kind: "letter", doc: {
+  ["10-notice", { kind: "letter", doc: {
+    documentNo: "DSAE/ADM/NTC/1805-2026",
+    issuedOn: "18 May 2026",
+    verifyUrl: null,
+    notice: true,
+    audience: "For All Office & Site Staff",
+    addressee: [],
+    subject: "Office & Site Holiday for Eid-ul-Adha 2026",
+    paragraphs: [
+      "This is to notify all employees that the office and all project sites will remain closed from **25 May 2026 (Monday)** to **31 May 2026 (Sunday)**. Regular work will resume on **01 June 2026 (Monday)**.",
+      "All staff are requested to complete pending handovers by 21 May 2026. We wish everyone a safe and joyous Eid Mubarak.",
+    ],
+    rows: [
+      { label: "Salary & Festival Bonus", value: "Will be disbursed on or before 21 May 2026." },
+      { label: "Project Sites", value: "Site Engineers must secure materials before leaving on 24 May 2026." },
+      { label: "Emergency Contact", value: "DSA Office · +880 1841-848831" },
+      { label: "Pending Payments", value: "Vendor payments due during the holiday will be processed on 01 June 2026." },
+    ],
+    duty: [
+      { project: "Meghna Digital – Navana Tower L7", site: "Gulshan-1, Dhaka", person: "Md. Jamal Uddin", phone: "+880 1734-221190" },
+      { project: "Chowdhury Residence", site: "Bashundhara R/A", person: "Md. Shafiqul Islam", phone: "+880 1922-675341" },
+    ],
+    closing: "",
+    cc: "Distribution: Notice Board · All Site Offices",
+    signatures: [{ label: "Authorized Signature", name: "Zishan MD Adnan Ul Hoque", detail: "Founder | Architect" }],
+  } }],
+  ["11-letter", { kind: "letter", doc: {
     documentNo: "DSAE/MDL/LTR/1005-2026",
     issuedOn: "10 May 2026",
     verifyUrl: "https://erp.example.com/verify/" + "aa".repeat(32),
     notice: false,
     audience: "Official Correspondence",
     addressee: ["Ms. Sharmin Akter", "Meghna Digital Ltd.", "Gulshan-1, Dhaka"],
+    addresseeStrong: [true, true, false],
     subject: "Completion of work and request for final inspection",
     paragraphs: [
       "Dear Madam,",
@@ -320,12 +349,7 @@ async function main() {
   const css = await loadPrintCss()
   const letterheadUri = `data:image/png;base64,${(await readFile("public/brand/letterhead-300dpi.png")).toString("base64")}`
   const withLetterhead = (html: string) => html.replaceAll('src="/brand/letterhead-300dpi.png"', `src="${letterheadUri}"`)
-  const box = contentBox(margins)
-  const tightBox = contentBox(tight)
-  const report: string[] = [
-    `default box top ${box.top} floor ${box.floor} height ${box.height}`,
-    `tight box top ${tightBox.top} floor ${tightBox.floor} height ${tightBox.height}`,
-  ]
+  const report: string[] = []
   const puppeteer = await import("puppeteer-core")
   const browser = await puppeteer.default.launch({
     executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -335,39 +359,79 @@ async function main() {
   const page = await browser.newPage()
   await page.setViewport({ width: 1406, height: 1988, deviceScaleFactor: 1 })
 
-  for (const [name, model] of models) {
-    const letter = renderDocument(model, margins, "letterhead", css)
-    const printed = renderDocument(model, margins, "print", css)
-    const tightDoc = renderDocument(model, tight, "letterhead", css)
-    await page.setContent(withLetterhead(letter.html), { waitUntil: "load" })
-    await page.evaluate(() => document.fonts.ready)
-    const checked = await page.evaluate(checkLayout)
-    report.push(`${name} pages ${checked.pages} ${checked.issues.length ? checked.issues.join("; ") : "floor OK"}`)
-    const handles = await page.$$(".page")
-    for (let index = 0; index < handles.length; index += 1) {
-      const shot = await handles[index].screenshot({ type: "png" })
-      const file = handles.length === 1 ? `${name}-download.png` : `${name}-download-p${index + 1}.png`
-      await writeFile(path.join(outDir, file), shot)
+  for (const set of marginSets) {
+    const dir = path.join(outDir, set.name)
+    await mkdir(dir, { recursive: true })
+    const box = contentBox(set.margins)
+    report.push(`${set.name} box top ${box.top} floor ${box.floor} height ${box.height}`)
+    for (const [name, model] of models) {
+      const letter = renderDocument(model, set.margins, "letterhead", css)
+      const printed = renderDocument(model, set.margins, "print", css)
+      await page.setContent(withLetterhead(letter.html), { waitUntil: "load" })
+      await page.evaluate(() => document.fonts.ready)
+      const checked = await page.evaluate(checkLayout)
+      report.push(`${set.name} ${name} pages ${checked.pages} ${checked.issues.length ? checked.issues.join("; ") : "floor OK"}`)
+      const handles = await page.$$(".page")
+      for (let index = 0; index < handles.length; index += 1) {
+        const shot = await handles[index].screenshot({ type: "png" })
+        const file = handles.length === 1 ? `${name}-download.png` : `${name}-download-p${index + 1}.png`
+        await writeFile(path.join(dir, file), shot)
+      }
+      await page.setContent(printed.html, { waitUntil: "load" })
+      await page.evaluate(() => document.fonts.ready)
+      const printPages = await page.$$(".page")
+      for (let index = 0; index < printPages.length; index += 1) {
+        const shot = await printPages[index].screenshot({ type: "png" })
+        const file = printPages.length === 1 ? `${name}-print.png` : `${name}-print-p${index + 1}.png`
+        await writeFile(path.join(dir, file), shot)
+      }
+      if (set.name === "16-54") {
+        const download = await renderDocumentPdf(model, set.margins, true)
+        const printPdf = await renderDocumentPdf(model, set.margins, false)
+        await writeFile(path.join(dir, `${name}-download.pdf`), download)
+        await writeFile(path.join(dir, `${name}-print.pdf`), printPdf)
+      }
     }
-    await page.setContent(printed.html, { waitUntil: "load" })
-    await page.evaluate(() => document.fonts.ready)
-    const printPages = await page.$$(".page")
-    for (let index = 0; index < printPages.length; index += 1) {
-      const shot = await printPages[index].screenshot({ type: "png" })
-      const file = printPages.length === 1 ? `${name}-print.png` : `${name}-print-p${index + 1}.png`
-      await writeFile(path.join(outDir, file), shot)
-    }
-    await page.setContent(tightDoc.html, { waitUntil: "load" })
-    await page.evaluate(() => document.fonts.ready)
-    const tightCheck = await page.evaluate(checkLayout)
-    const page2 = tightCheck.pages > 1 ? "page2 included" : "single page"
-    report.push(`${name} tight ${page2} top ${tightCheck.top} height ${tightCheck.height} ${tightCheck.issues.length ? tightCheck.issues.join("; ") : "floor OK"}`)
-    const download = await renderDocumentPdf(model, margins, true)
-    const printPdf = await renderDocumentPdf(model, margins, false)
-    await writeFile(path.join(outDir, `${name}-download.pdf`), download)
-    await writeFile(path.join(outDir, `${name}-print.pdf`), printPdf)
-    report.push(`${name} pdf download ${download.byteLength} print ${printPdf.byteLength}`)
   }
+  await page.setViewport({ width: 375, height: 812, deviceScaleFactor: 1 })
+  const phone = renderDocument(models[3][1], marginSets[1].margins, "letterhead", css)
+  await page.setContent(
+    `<!DOCTYPE html><html class="dark"><body style="margin:0;background:#141414;width:375px"><div id="frame" style="width:343px;margin:16px;overflow:hidden"></div></body></html>`,
+    { waitUntil: "load" },
+  )
+  await page.evaluate((doc) => {
+    const frame = document.getElementById("frame")
+    const iframe = document.createElement("iframe")
+    iframe.setAttribute("scrolling", "no")
+    iframe.style.cssText = "width:794px;height:1123px;border:0;transform-origin:top left;transform:scale(0.432)"
+    iframe.srcdoc = doc
+    frame?.appendChild(iframe)
+    if (frame) frame.style.height = `${Math.round(1123 * 0.432)}px`
+  }, withLetterhead(phone.html))
+  await new Promise((resolve) => setTimeout(resolve, 400))
+  const phoneCheck = await page.evaluate(() => {
+    const frame = document.getElementById("frame")
+    const iframe = frame?.querySelector("iframe")
+    const paper = iframe?.getBoundingClientRect()
+    const doc = iframe?.contentDocument
+    const pageBg = doc ? getComputedStyle(doc.body).backgroundColor : ""
+    const shell = getComputedStyle(document.body).backgroundColor
+    const frameBox = frame?.getBoundingClientRect()
+    const spills =
+      paper && frameBox
+        ? paper.right > frameBox.right + 1 || paper.left < frameBox.left - 1
+        : true
+    return {
+      shell,
+      pageBg,
+      paperWidth: Math.round(paper?.width ?? 0),
+      frameWidth: Math.round(frameBox?.width ?? 0),
+      spills,
+    }
+  })
+  report.push(
+    `375 night shell ${phoneCheck.shell} page ${phoneCheck.pageBg} paper ${phoneCheck.paperWidth}px in ${phoneCheck.frameWidth}px spill ${phoneCheck.spills ? "YES" : "no"}`,
+  )
   await browser.close()
   await writeFile(path.join(outDir, "report.txt"), report.join("\n"), "utf8")
   console.log(report.join("\n"))

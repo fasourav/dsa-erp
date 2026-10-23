@@ -68,6 +68,7 @@ export function PurchaseOrderStudio({
       description="Prints the order only. The letterhead and footer stay on the pad."
       margins={margins}
       source={{ kind: "print", doc: preview }}
+      record={form.exists ? { kind: "purchase_order", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This purchase order"}

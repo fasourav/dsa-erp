@@ -101,6 +101,7 @@ export function QuotationStudio({
       description="Prints the quotation only. The letterhead and footer stay on the pad."
       margins={margins}
       source={{ kind: "print", doc: preview }}
+      record={form.id ? { kind: "quotation", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This quotation"}

@@ -57,6 +57,7 @@ export function FormStudio({
       description="The preview and the downloaded PDF use the same Set C page."
       margins={margins}
       source={source}
+      record={form.id ? { kind: form.kind, id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || formTitle(form.kind)}
@@ -166,6 +167,7 @@ export function FormStudio({
       {form.kind === "letter" ? (
         <>
           <TextField id="audience" label="Subtitle" value={body.audience} disabled={!canSave} onChange={(audience) => setBody({ audience })} />
+          <TextField id="company" label="Company Name" value={body.companyName} disabled={!canSave} onChange={(companyName) => setBody({ companyName })} />
           <TextField id="subject" label="Subject" value={body.subject} disabled={!canSave} onChange={(subject) => setBody({ subject })} />
           <AreaField id="paragraphs" label="Letter" value={body.paragraphs} disabled={!canSave} onChange={(paragraphs) => setBody({ paragraphs })} />
           {body.letterKind === "notice" ? (

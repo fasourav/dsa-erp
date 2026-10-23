@@ -84,6 +84,7 @@ export type LetterModel = {
   notice: boolean
   audience: string
   addressee: string[]
+  addresseeStrong?: boolean[]
   subject: string
   paragraphs: string[]
   rows: Array<{ label: string; value: string }>
@@ -92,6 +93,21 @@ export type LetterModel = {
   cc: string
   signatures: SignLine[]
 }
+
+export const savedRecordKinds = [
+  "quotation",
+  "work_order",
+  "invoice",
+  "receipt",
+  "purchase_order",
+  "delivery_challan",
+  "payment_voucher",
+  "completion",
+  "salary_slip",
+  "letter",
+] as const
+
+export type SavedRecordKind = (typeof savedRecordKinds)[number]
 
 export type DocumentModel =
   | { kind: "print"; doc: PrintDocument }

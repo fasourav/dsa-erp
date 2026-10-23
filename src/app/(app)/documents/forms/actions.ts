@@ -12,7 +12,6 @@ import {
   challanNumber,
   collisionNumber,
   letterNumber,
-  nameCode,
   salaryNumber,
   voucherNumber,
 } from "@/lib/documents/numbers"
@@ -64,8 +63,8 @@ export async function saveFormDocument(input: {
   const supabase = await createClient()
   const linked = await linkedFacts(supabase, input)
   if (linked.error) return { error: linked.error }
-
-  const base = numberFor(input.kind, input.issuedOn, linked.project, linked.party, linked.notice, linked.period)
+  const base = numberFor(input.kind, input.issuedOn, linked.project, linked.party, linked.notice, linked.period, linked.employeeCode)
+  if (!base) return { error: linked.kindError || "Could not build a document number from the linked record." }
   let documentNo = ""
   if (input.id) {
     const existing = await supabase.from("form_documents").select("document_no, verify_token").eq("id", input.id).maybeSingle()
@@ -133,13 +132,28 @@ function numberFor(
   party: string,
   notice: boolean,
   period: { year: number; month: number } | null,
-): string {
+  employeeCode: string,
+): string | null {
   if (kind === "delivery_challan") return challanNumber(issuedOn, party, project)
   if (kind === "payment_voucher") return voucherNumber(issuedOn, party, project)
   if (kind === "completion") return certificateNumber(issuedOn, party, project)
-  if (kind === "salary_slip" && period) return salaryNumber(period.year, period.month, party)
+  if (kind === "salary_slip") {
+    if (!period || !employeeCode.trim()) return null
+    return salaryNumber(period.year, period.month, employeeCode)
+  }
   if (kind === "letter") return letterNumber(issuedOn, project, notice)
-  return `DOC/DSAE/${nameCode(project)}-${nameCode(party)}/${issuedOn.replaceAll("-", "")}`
+  return null
+}
+
+type LinkFacts = {
+  error: string | null
+  kindError: string
+  total: number
+  project: string
+  party: string
+  notice: boolean
+  period: { year: number; month: number } | null
+  employeeCode: string
 }
 
 async function linkedFacts(
@@ -149,56 +163,139 @@ async function linkedFacts(
     projectId: string
     clientId: string
     vendorId: string
+    purchaseOrderId: string
     vendorPaymentId: string
     operationalExpenseId: string
     payrollLineId: string
+    employeeId: string
     body: FormBody
   },
-): Promise<{ error: string | null; total: number; project: string; party: string; notice: boolean; period: { year: number; month: number } | null }> {
-  const empty = { total: 0, project: input.body.projectName, party: input.body.partyName, notice: input.body.letterKind === "notice", period: null }
+): Promise<LinkFacts> {
+  const empty = (error: string | null, extra: Partial<LinkFacts> = {}): LinkFacts => ({
+    error,
+    kindError: "",
+    total: 0,
+    project: "",
+    party: "",
+    notice: input.body.letterKind === "notice",
+    period: null,
+    employeeCode: "",
+    ...extra,
+  })
+  const projectName = await lookupName(supabase, "projects", input.projectId, "name")
+  const clientName = await partyName(supabase, "clients", input.clientId)
+  const vendorName = await partyName(supabase, "vendors", input.vendorId)
+
   if (input.kind === "payment_voucher" && input.vendorPaymentId) {
-    const payment = await supabase.from("vendor_payments").select("amount").eq("id", input.vendorPaymentId).maybeSingle()
-    if (!payment.data) return { ...empty, error: "That vendor payment could not be found." }
-    return { ...empty, error: null, total: Number(payment.data.amount) || 0, project: input.body.projectName || "OPS" }
+    const payment = await supabase
+      .from("vendor_payments")
+      .select("amount, vendor_invoice_id")
+      .eq("id", input.vendorPaymentId)
+      .maybeSingle()
+    if (!payment.data) return empty("That vendor payment could not be found.")
+    const invoice = await supabase
+      .from("vendor_invoices")
+      .select("purchase_order_id")
+      .eq("id", payment.data.vendor_invoice_id)
+      .maybeSingle()
+    const order = invoice.data
+      ? await supabase
+          .from("vendor_purchase_orders")
+          .select("vendor_id, project_id")
+          .eq("id", invoice.data.purchase_order_id)
+          .maybeSingle()
+      : { data: null }
+    const vendor = order.data ? await partyName(supabase, "vendors", order.data.vendor_id) : vendorName
+    const project = order.data?.project_id ? await lookupName(supabase, "projects", order.data.project_id, "name") : ""
+    return empty(null, { total: Number(payment.data.amount) || 0, party: vendor, project })
   }
   if (input.kind === "payment_voucher" && input.operationalExpenseId) {
-    const expense = await supabase.from("operational_expenses").select("amount").eq("id", input.operationalExpenseId).maybeSingle()
-    if (!expense.data) return { ...empty, error: "That expense could not be found." }
-    return { ...empty, error: null, total: Number(expense.data.amount) || 0, project: input.body.projectName || "" }
+    const expense = await supabase
+      .from("operational_expenses")
+      .select("amount, vendor_id, project_id")
+      .eq("id", input.operationalExpenseId)
+      .maybeSingle()
+    if (!expense.data) return empty("That expense could not be found.")
+    const vendor = expense.data.vendor_id ? await partyName(supabase, "vendors", expense.data.vendor_id) : "Expense"
+    const project = expense.data.project_id ? await lookupName(supabase, "projects", expense.data.project_id, "name") : ""
+    return empty(null, { total: Number(expense.data.amount) || 0, party: vendor, project })
   }
-  if (input.kind === "salary_slip" && input.payrollLineId) {
+  if (input.kind === "salary_slip") {
+    if (!input.payrollLineId) return empty("Open a salary slip from a payroll line.")
     const line = await supabase
       .from("payroll_lines")
       .select("basic_salary, allowance, bonus, deductions, net_salary, payroll_run_id, employee_id")
       .eq("id", input.payrollLineId)
       .maybeSingle()
-    if (!line.data) return { ...empty, error: "That payroll line could not be found." }
+    if (!line.data) return empty("That payroll line could not be found.")
+    if (input.employeeId && input.employeeId !== line.data.employee_id) {
+      return empty("The employee does not match this payroll line.")
+    }
+    const employee = await supabase.from("employees").select("employee_code").eq("id", line.data.employee_id).maybeSingle()
+    const code = employee.data?.employee_code?.trim() ?? ""
+    if (!code) return empty("Add an employee code before saving this salary slip.", { kindError: "This employee has no code." })
     const run = await supabase
       .from("payroll_runs")
       .select("period_year, period_month")
       .eq("id", line.data.payroll_run_id)
       .maybeSingle()
+    if (!run.data?.period_year || !run.data.period_month) {
+      return empty("This payroll run has no pay period.", { kindError: "This payroll run has no pay period." })
+    }
     const gross = Number(line.data.basic_salary) + Number(line.data.allowance) + Number(line.data.bonus)
     const deductions = Number(line.data.deductions) || 0
     const earnSum = input.body.earnings.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
     const deductSum = input.body.deductions.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
     if (Math.abs(earnSum - gross) > 0.05 || Math.abs(deductSum - deductions) > 0.05) {
-      return { ...empty, error: "Earnings and deductions must equal the payroll record." }
+      return empty("Earnings and deductions must equal the payroll record.")
     }
     const net = line.data.net_salary == null ? gross - deductions : Number(line.data.net_salary)
-    return {
-      error: null,
+    return empty(null, {
       total: net,
-      project: "",
-      party: input.body.partyName,
-      notice: false,
-      period: run.data ? { year: run.data.period_year, month: run.data.period_month } : null,
-    }
+      employeeCode: code,
+      period: { year: run.data.period_year, month: run.data.period_month },
+    })
   }
-  if (input.kind === "letter" && !input.body.subject.trim()) return { ...empty, error: "Enter a subject." }
-  if (input.kind === "letter" && !input.body.paragraphs.trim()) return { ...empty, error: "Enter the letter." }
+  if (input.kind === "letter" && !input.body.subject.trim()) return empty("Enter a subject.")
+  if (input.kind === "letter" && !input.body.paragraphs.trim()) return empty("Enter the letter.")
   if (input.kind === "delivery_challan" && !input.body.challanLines.some((line) => line.item.trim())) {
-    return { ...empty, error: "Add at least one item." }
+    return empty("Add at least one item.")
   }
-  return { ...empty, error: null }
+  if (input.kind === "delivery_challan" && input.purchaseOrderId) {
+    const order = await supabase
+      .from("vendor_purchase_orders")
+      .select("vendor_id, project_id")
+      .eq("id", input.purchaseOrderId)
+      .maybeSingle()
+    const vendor = order.data ? await partyName(supabase, "vendors", order.data.vendor_id) : vendorName
+    const project = order.data?.project_id
+      ? await lookupName(supabase, "projects", order.data.project_id, "name")
+      : projectName
+    return empty(null, { party: vendor, project })
+  }
+  return empty(null, {
+    party: input.kind === "completion" || input.kind === "letter" ? clientName : vendorName || clientName,
+    project: projectName,
+  })
+}
+
+async function lookupName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: "projects",
+  id: string,
+  column: "name",
+): Promise<string> {
+  if (!isUuid(id)) return ""
+  const { data } = await supabase.from(table).select(column).eq("id", id).maybeSingle()
+  return (data?.name as string | undefined)?.trim() ?? ""
+}
+
+async function partyName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: "clients" | "vendors",
+  id: string,
+): Promise<string> {
+  if (!isUuid(id)) return ""
+  const { data } = await supabase.from(table).select("company_name, person_name").eq("id", id).maybeSingle()
+  return data?.company_name?.trim() || data?.person_name?.trim() || ""
 }

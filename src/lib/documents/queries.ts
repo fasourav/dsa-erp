@@ -855,16 +855,43 @@ export async function listQuotations(): Promise<{
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("quotations")
-    .select("id, document_no, issued_on, client_id, total, status")
+    .select("id, document_no, issued_on, client_id, lead_id, total, status")
     .is("deleted_at", null)
     .order("issued_on", { ascending: false })
+  if (error && /lead_id/i.test(error.message ?? "")) {
+    const fallback = await supabase
+      .from("quotations")
+      .select("id, document_no, issued_on, client_id, total, status")
+      .is("deleted_at", null)
+      .order("issued_on", { ascending: false })
+    if (fallback.error) return { items: [], error: storageError(fallback.error) }
+    const catalog = await loadDocumentCatalog()
+    return {
+      items: (fallback.data ?? []).map((row) => ({
+        id: row.id,
+        title: catalog.clients.find((client) => client.id === row.client_id)?.name || "—",
+        detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))}`,
+        documentNo: row.document_no,
+        status: row.status,
+      })),
+      error: catalog.error,
+    }
+  }
   const missing = storageError(error)
   if (error) return { items: [], error: missing }
   const catalog = await loadDocumentCatalog()
+  const leadIds = (data ?? []).flatMap((row) => (row.lead_id ? [row.lead_id] : []))
+  const leads = leadIds.length
+    ? await supabase.from("leads").select("id, lead_name").in("id", leadIds)
+    : { data: [] as Array<{ id: string; lead_name: string | null }> }
+  const leadNames = new Map((leads.data ?? []).map((row) => [row.id, row.lead_name?.trim() || ""]))
   return {
     items: (data ?? []).map((row) => ({
       id: row.id,
-      title: catalog.clients.find((client) => client.id === row.client_id)?.name || "—",
+      title:
+        catalog.clients.find((client) => client.id === row.client_id)?.name ||
+        (row.lead_id ? leadNames.get(row.lead_id) : "") ||
+        "—",
       detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))}`,
       documentNo: row.document_no,
       status: row.status,

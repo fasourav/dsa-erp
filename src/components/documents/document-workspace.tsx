@@ -28,7 +28,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { deliverPdf } from "@/lib/documents/deliver-pdf"
 import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
 import { documentFileName, renderDocument } from "@/lib/documents/setc/render"
-import { documentNumberOf, type DocumentModel } from "@/lib/documents/setc/types"
+import { documentNumberOf, type DocumentModel, type SavedRecordKind } from "@/lib/documents/setc/types"
 import { cn } from "@/lib/utils"
 
 const pxPerMm = 96 / 25.4
@@ -39,6 +39,7 @@ export function DocumentWorkspace({
   description,
   margins,
   source,
+  record = null,
   canSave,
   canShare = true,
   canTrash = false,
@@ -59,6 +60,8 @@ export function DocumentWorkspace({
   description: string
   margins: PrintMargins
   source: DocumentModel
+  /** Set only after the document is saved. The PDF is rebuilt on the server from that record. */
+  record?: { kind: SavedRecordKind; id: string } | null
   canSave: boolean
   /** Hide Share for read-only viewers of documents that require edit rights to share. */
   canShare?: boolean
@@ -109,7 +112,11 @@ export function DocumentWorkspace({
       const response = await fetch("/api/documents/pdf", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source, margins: { topMm: top, bottomMm: bottom }, letterhead }),
+        body: JSON.stringify(
+          record?.id
+            ? { recordKind: record.kind, id: record.id, letterhead }
+            : { source, margins: { topMm: top, bottomMm: bottom }, letterhead, draft: true },
+        ),
       })
       if (!response.ok) throw new Error("pdf")
       const bytes = new Uint8Array(await response.arrayBuffer())

@@ -13,11 +13,14 @@ export function isNewDocumentNumber(value: string): boolean {
   return NEW_NUMBER.test(value.trim())
 }
 
+const nameTitles = /^(mr|mrs|ms|md|engr|dr|mohammad|mohammed)\.?$/i
+
 export function nameCode(name: string): string {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  while (words.length > 1 && nameTitles.test(words[0]?.replace(/[^A-Za-z.]/g, "") ?? "")) {
+    words.shift()
+  }
+  const initials = words
     .map((word) => word.replace(/[^A-Za-z0-9]/g, "")[0] ?? "")
     .join("")
     .toUpperCase()
@@ -80,9 +83,10 @@ export function certificateNumber(issuedOn: string, clientName: string, projectN
   return stem("WCC", projectCode(projectName), nameCode(clientName), issuedOn)
 }
 
-export function salaryNumber(periodYear: number, periodMonth: number, employeeName: string): string {
+export function salaryNumber(periodYear: number, periodMonth: number, employeeCode: string): string {
   const month = String(periodMonth).padStart(2, "0")
-  return `SAL/DSAE/${periodYear}-${month}/${nameCode(employeeName)}`
+  const code = employeeCode.trim().replace(/[^A-Za-z0-9]/g, "").toUpperCase()
+  return `SAL/DSAE/${periodYear}-${month}/${code || "NA"}`
 }
 
 export function letterNumber(issuedOn: string, projectName: string, notice: boolean): string {

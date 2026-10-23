@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto"
 
 import { revalidatePath } from "next/cache"
 
+import { formatMoney } from "@/lib/format"
 import { clip, linesToJson, storedLines, storedMilestones } from "@/lib/documents/body"
 import {
   isQuotationStatus,
@@ -68,12 +69,26 @@ function partyLabel(company: string | null | undefined, person: string | null | 
 }
 
 async function numberTaken(supabase: DocumentClient, value: string): Promise<boolean> {
-  const [quotations, orders, issued] = await Promise.all([
+  const [quotations, orders, issued, forms] = await Promise.all([
     supabase.from("quotations").select("id").eq("document_no", value).limit(1),
     supabase.from("work_orders").select("id").eq("document_no", value).limit(1),
     supabase.from("issued_documents").select("id").eq("document_no", value).limit(1),
+    supabase.from("form_documents").select("id").eq("document_no", value).limit(1),
   ])
-  return Boolean(quotations.data?.length || orders.data?.length || issued.data?.length)
+  const formsMissing =
+    forms.error &&
+    /42P01|PGRST205|schema cache|does not exist|Could not find the table/i.test(
+      `${forms.error.code ?? ""} ${forms.error.message ?? ""}`,
+    )
+  return Boolean(
+    quotations.data?.length || orders.data?.length || issued.data?.length || (!formsMissing && forms.data?.length),
+  )
+}
+
+function amountMismatch(what: string, computed: number, book: number): string {
+  const difference = Math.round((computed - book) * 100) / 100
+  const direction = difference > 0 ? "more" : "less"
+  return `The lines add up to ${formatMoney(computed)}, which is ${formatMoney(Math.abs(difference))} ${direction} than the ${what} of ${formatMoney(book)}.`
 }
 
 async function clientProjectNames(
@@ -211,7 +226,7 @@ export async function saveInvoicePrint(input: {
   const book = Math.max(0, Number(invoice.data.amount) || 0)
   const computed = grandTotal(input.lines, String(ait))
   if (Math.abs(computed - book) > 0.05) {
-    return { error: "Item totals must equal the invoice amount." }
+    return { error: amountMismatch("invoice amount", computed, book) }
   }
   const total = book
   const body: Json = {
@@ -433,7 +448,7 @@ export async function savePurchaseOrderPrint(input: {
   const book = Math.max(0, Number(order.data.total_value) || 0)
   const computed = grandTotal(input.lines, "0", carrying)
   if (Math.abs(computed - book) > 0.05) {
-    return { error: "Item totals must equal the purchase order amount." }
+    return { error: amountMismatch("purchase order amount", computed, book) }
   }
   const total = book
   const body: Json = {
