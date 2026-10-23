@@ -210,7 +210,17 @@ export function hasFullDashboardAccess(access: AccessSnapshot): boolean {
   return dashboardSourceModules.every((module) => allows(access, module, "view"))
 }
 
-const documentModules = ["quotations", "work_orders", "purchase_orders", "client_invoices"] as const satisfies readonly ModuleKey[]
+const documentModules = [
+  "quotations",
+  "work_orders",
+  "purchase_orders",
+  "client_invoices",
+  "projects",
+  "clients",
+  "vendor_payments",
+  "expenses",
+  "payroll",
+] as const satisfies readonly ModuleKey[]
 
 export function canOpenDocuments(access: AccessSnapshot): boolean {
   return documentModules.some((module) => allows(access, module, "view"))

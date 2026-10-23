@@ -55,30 +55,31 @@ function underHundred(value: number): string {
 }
 
 function underThousand(value: number): string {
-  if (value < 100) return underHundred(value)
-  const hundred = ones[Math.floor(value / 100)] ?? ""
-  const rest = value % 100
-  return rest ? `${hundred} Hundred ${underHundred(rest)}` : `${hundred} Hundred`
+  const parts: string[] = []
+  let rest = value
+  if (rest >= 100) {
+    parts.push(`${ones[Math.floor(rest / 100)] ?? ""} Hundred`)
+    rest %= 100
+  }
+  if (rest) parts.push(underHundred(rest))
+  return parts.join(" ")
 }
 
-function indianWords(value: number): string {
-  if (value <= 0) return ""
-  if (value < 1000) return underThousand(value)
-  if (value < 100000) {
-    const thousand = Math.floor(value / 1000)
-    const rest = value % 1000
-    return [underHundred(thousand) + " Thousand", rest ? underThousand(rest) : ""]
-      .filter(Boolean)
-      .join(" ")
-  }
-  if (value < 10000000) {
-    const lakh = Math.floor(value / 100000)
-    const rest = value % 100000
-    return [`${underHundred(lakh)} Lakh`, indianWords(rest)].filter(Boolean).join(" ")
-  }
+/** Indian grouping, matching the Set C "Taka … Only" converter. */
+function wordsInt(value: number): string {
+  if (value <= 0) return "Zero"
+  const parts: string[] = []
   const crore = Math.floor(value / 10000000)
-  const rest = value % 10000000
-  return [`${indianWords(crore)} Crore`, indianWords(rest)].filter(Boolean).join(" ")
+  let rest = value % 10000000
+  if (crore) parts.push(`${wordsInt(crore)} Crore`)
+  const lakh = Math.floor(rest / 100000)
+  rest %= 100000
+  if (lakh) parts.push(`${underHundred(lakh)} Lakh`)
+  const thousand = Math.floor(rest / 1000)
+  rest %= 1000
+  if (thousand) parts.push(`${underHundred(thousand)} Thousand`)
+  if (rest) parts.push(underThousand(rest))
+  return parts.join(" ")
 }
 
 export function amountInWords(value: number): string {
@@ -87,13 +88,9 @@ export function amountInWords(value: number): string {
   const cents = Math.round(Math.abs(safe) * 100)
   const taka = Math.floor(cents / 100)
   const paisa = cents % 100
-  const takaWords = taka === 0 ? "" : indianWords(taka)
-  const paisaWords = paisa === 0 ? "" : `${underHundred(paisa)} Paisa`
-
-  if (!takaWords && !paisaWords) return "Taka Zero Only"
-  if (takaWords && paisaWords) return `${sign}Taka ${takaWords} And ${paisaWords} Only`
-  if (paisaWords) return `${sign}Taka ${paisaWords} Only`
-  return `${sign}Taka ${takaWords} Only`
+  let words = `Taka ${wordsInt(taka)}`
+  if (paisa) words += ` and ${wordsInt(paisa)} Paisa`
+  return `${sign}${words} Only`
 }
 
 export function sumAmounts(values: number[]): number {

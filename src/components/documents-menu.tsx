@@ -13,13 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { allows } from "@/lib/access"
-import { documentKinds } from "@/lib/documents/kinds"
+import { canViewDocumentKind, documentKinds } from "@/lib/documents/kinds"
 
 export function DocumentsMenu() {
   const access = useAccess()
   const pathname = usePathname()
-  const visible = documentKinds.filter((kind) => allows(access, kind.module, "view"))
+  const visible = documentKinds.filter((kind) => canViewDocumentKind(access, kind))
   if (visible.length === 0) return null
 
   const active = pathname === "/documents" || pathname.startsWith("/documents/")

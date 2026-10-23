@@ -46,6 +46,7 @@ export function QuotationStudio({
   origin,
   margins,
   templates,
+  leads = [],
 }: {
   draft: QuotationDraft
   clients: NamedOption[]
@@ -54,6 +55,7 @@ export function QuotationStudio({
   origin: string
   margins: PrintMargins
   templates: DocumentTemplate[]
+  leads?: NamedOption[]
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
@@ -64,17 +66,19 @@ export function QuotationStudio({
   const canManageTemplates = useCan("document_templates", "add")
   const canSaveAsTemplate = Boolean(form.id) && canManageTemplates
   const client = clients.find((item) => item.id === form.clientId)
+  const lead = leads.find((item) => item.id === form.leadId)
   const clientProjects = projects.filter((project) => project.clientId === form.clientId)
-  const project = clientProjects.find((item) => item.id === form.projectId)
+  const project = projects.find((item) => item.id === form.projectId)
+  const partyName = client ? customerDisplayName(client) : lead?.name || ""
   const preview = presentQuotation({
         documentNo: form.documentNo,
         issuedOn: form.issuedOn,
         validUntil: form.validUntil,
         verifyUrl: verifyUrl(origin, form.verifyToken),
-        preparedForName: client?.personName || client?.name || "",
-        preparedForDetail: client?.detail || "",
-        clientName: customerDisplayName(client),
-        projectName: project?.name || "",
+        preparedForName: client?.personName || client?.name || lead?.name || "",
+        preparedForDetail: client?.detail || lead?.detail || "",
+        clientName: partyName,
+        projectName: project?.name || lead?.companyName || "",
         area: form.area,
         subject: form.subject,
         aitPercent: form.aitPercent,
@@ -96,7 +100,7 @@ export function QuotationStudio({
       title="Quotation"
       description="Prints the quotation only. The letterhead and footer stay on the pad."
       margins={margins}
-      preview={preview}
+      source={{ kind: "print", doc: preview }}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This quotation"}
@@ -170,6 +174,14 @@ export function QuotationStudio({
         disabled={!canSave}
         options={clients.map((item) => ({ value: item.id, label: item.name }))}
         onChange={(clientId) => setForm({ ...form, clientId, projectId: "" })}
+      />
+      <ChoiceField
+        id="lead"
+        label="Lead"
+        value={form.leadId}
+        disabled={!canSave}
+        options={leads.map((item) => ({ value: item.id, label: item.name }))}
+        onChange={(leadId) => setForm({ ...form, leadId })}
       />
       <ChoiceField
         id="project"

@@ -4,8 +4,7 @@ import { Banknote, ClipboardList, FileText, Receipt, ScrollText, Trash2, type Lu
 
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent } from "@/components/ui/card"
-import { allows } from "@/lib/access"
-import { documentKinds } from "@/lib/documents/kinds"
+import { canViewDocumentKind, documentKinds } from "@/lib/documents/kinds"
 import { getAccess } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
 
@@ -24,14 +23,14 @@ const kindIcons: Record<string, LucideIcon> = {
 export default async function DocumentsPage() {
   const access = await getAccess()
   if (!access || access.status === "deactivated") redirect("/login")
-  const visible = documentKinds.filter((kind) => allows(access, kind.module, "view"))
+  const visible = documentKinds.filter((kind) => canViewDocumentKind(access, kind))
   if (visible.length === 0) redirect("/no-access")
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       <PageHeader
         title="Documents"
-        description="Prepare a printable document. Output is the content only, so it sits on the letterhead pad."
+        description="Prepare a document. Download the letterhead PDF, or print the content for a pre-printed pad."
       />
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
         {visible.map((kind, index) => {

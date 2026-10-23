@@ -60,6 +60,7 @@ export function InvoiceStudio({
         checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
+        bookAmount: form.bookAmount,
       }),
     [employees, form, origin],
   )
@@ -69,7 +70,7 @@ export function InvoiceStudio({
       title="Client Invoice"
       description="Prints the bill only. The letterhead and footer stay on the pad."
       margins={margins}
-      preview={preview}
+      source={{ kind: "print", doc: preview }}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This invoice"}

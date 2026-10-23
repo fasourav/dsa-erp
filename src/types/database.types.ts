@@ -749,13 +749,82 @@ export type Database = {
         }
         Relationships: []
       }
+      form_documents: {
+        Row: {
+          body: Json
+          client_id: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          document_no: string
+          employee_id: string | null
+          id: string
+          issued_on: string
+          kind: string
+          operational_expense_id: string | null
+          payroll_line_id: string | null
+          project_id: string | null
+          purchase_order_id: string | null
+          status: string
+          total: number
+          updated_at: string
+          vendor_id: string | null
+          vendor_payment_id: string | null
+          verify_token: string
+        }
+        Insert: {
+          body?: Json
+          client_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          document_no: string
+          employee_id?: string | null
+          id?: string
+          issued_on: string
+          kind: string
+          operational_expense_id?: string | null
+          payroll_line_id?: string | null
+          project_id?: string | null
+          purchase_order_id?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+          vendor_id?: string | null
+          vendor_payment_id?: string | null
+          verify_token: string
+        }
+        Update: {
+          body?: Json
+          client_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          document_no?: string
+          employee_id?: string | null
+          id?: string
+          issued_on?: string
+          kind?: string
+          operational_expense_id?: string | null
+          payroll_line_id?: string | null
+          project_id?: string | null
+          purchase_order_id?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+          vendor_id?: string | null
+          vendor_payment_id?: string | null
+          verify_token?: string
+        }
+        Relationships: []
+      }
       quotations: {
         Row: {
           ait_percent: number
           area: string
           authorized_by: string
           checked_by: string
-          client_id: string
+          client_id: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
@@ -763,6 +832,7 @@ export type Database = {
           exclusions: string
           id: string
           issued_on: string
+          lead_id: string | null
           old_number: string | null
           prepared_by: string
           project_id: string | null
@@ -780,7 +850,7 @@ export type Database = {
           area?: string
           authorized_by?: string
           checked_by?: string
-          client_id: string
+          client_id?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -788,6 +858,7 @@ export type Database = {
           exclusions?: string
           id?: string
           issued_on: string
+          lead_id?: string | null
           old_number?: string | null
           prepared_by?: string
           project_id?: string | null
@@ -805,7 +876,7 @@ export type Database = {
           area?: string
           authorized_by?: string
           checked_by?: string
-          client_id?: string
+          client_id?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -813,6 +884,7 @@ export type Database = {
           exclusions?: string
           id?: string
           issued_on?: string
+          lead_id?: string | null
           old_number?: string | null
           prepared_by?: string
           project_id?: string | null

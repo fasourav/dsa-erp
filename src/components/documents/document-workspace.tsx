@@ -1,13 +1,11 @@
 "use client"
 
 import { ChevronLeft, ChevronRight, Download, Printer, Share2, Trash2 } from "lucide-react"
-import Image from "next/image"
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 
 import { useAccess } from "@/components/access-provider"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
-import { DocumentSheet } from "@/components/documents/document-sheet"
 import { NameCombobox } from "@/components/name-combobox"
 import { RecordAttachments } from "@/components/record-attachments"
 import type { AttachmentParent } from "@/lib/attachments"
@@ -27,25 +25,20 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { deliverPdf, pdfFilename, readBrandPng } from "@/lib/documents/deliver-pdf"
-import { clampPrintMargin, contentFloorMm, type PrintMargins } from "@/lib/documents/drafts"
-import { buildDocumentPdf } from "@/lib/documents/pdf"
-import type { PrintDocument } from "@/lib/documents/present"
+import { deliverPdf } from "@/lib/documents/deliver-pdf"
+import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
+import { documentFileName, renderDocument } from "@/lib/documents/setc/render"
+import { documentNumberOf, type DocumentModel } from "@/lib/documents/setc/types"
 import { cn } from "@/lib/utils"
-
-import "./document.css"
 
 const pxPerMm = 96 / 25.4
 const paper = { width: 210 * pxPerMm, height: 297 * pxPerMm }
-const sideMm = 12
-
-type PageSlice = { start: number; end: number }
 
 export function DocumentWorkspace({
   title,
   description,
   margins,
-  preview,
+  source,
   canSave,
   canShare = true,
   canTrash = false,
@@ -65,7 +58,7 @@ export function DocumentWorkspace({
   title: string
   description: string
   margins: PrintMargins
-  preview: PrintDocument
+  source: DocumentModel
   canSave: boolean
   /** Hide Share for read-only viewers of documents that require edit rights to share. */
   canShare?: boolean
@@ -105,31 +98,6 @@ export function DocumentWorkspace({
     return () => window.clearTimeout(timer)
   }, [copied])
 
-  useEffect(() => {
-    const style = document.createElement("style")
-    style.setAttribute("data-document-page", "true")
-    style.textContent = `@media print{@page{size:A4;margin:${top}mm ${sideMm}mm ${bottom}mm;}}`
-    document.head.appendChild(style)
-
-    const root = document.documentElement
-    const beforePrint = () => {
-      root.dataset.documentTheme = root.classList.contains("dark") ? "dark" : "light"
-      root.classList.remove("dark")
-    }
-    const afterPrint = () => {
-      if (root.dataset.documentTheme === "dark") root.classList.add("dark")
-      delete root.dataset.documentTheme
-    }
-    window.addEventListener("beforeprint", beforePrint)
-    window.addEventListener("afterprint", afterPrint)
-
-    return () => {
-      style.remove()
-      window.removeEventListener("beforeprint", beforePrint)
-      window.removeEventListener("afterprint", afterPrint)
-    }
-  }, [top, bottom])
-
   function openPdf(letterhead: boolean) {
     const popup = window.open("about:blank", "_blank")
     setPdfKind(letterhead ? "letterhead" : "print")
@@ -138,22 +106,15 @@ export function DocumentWorkspace({
 
   async function createPdf(letterhead: boolean, popup: Window | null) {
     try {
-      const [watermark, logo] = letterhead
-        ? await Promise.all([readBrandPng("/brand/mark-olive.png"), readBrandPng("/brand/mark-white.png")])
-        : [undefined, undefined]
-      const bytes = await buildDocumentPdf({
-        document: preview,
-        topMm: top,
-        bottomMm: bottom,
-        letterhead,
-        watermark,
-        logo,
+      const response = await fetch("/api/documents/pdf", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source, margins: { topMm: top, bottomMm: bottom }, letterhead }),
       })
-      await deliverPdf(
-        bytes,
-        pdfFilename(preview.documentNo, preview.kicker, letterhead),
-        popup,
-      )
+      if (!response.ok) throw new Error("pdf")
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      const named = response.headers.get("x-document-filename")
+      await deliverPdf(bytes, named || documentFileName(documentNumberOf(source), letterhead), popup)
     } catch {
       if (popup && !popup.closed) popup.close()
       toast.error("Could not create the PDF.")
@@ -198,21 +159,21 @@ export function DocumentWorkspace({
               type="button"
               variant="outline"
               disabled={pdfKind !== null}
-              aria-label="Printable PDF"
+              aria-label="Print"
               onClick={() => openPdf(false)}
             >
               <Printer aria-hidden="true" data-icon="inline-start" />
-              {pdfKind === "print" ? "Creating…" : "Printable PDF"}
+              {pdfKind === "print" ? "Creating…" : "Print"}
             </Button>
             <Button
               type="button"
               variant="outline"
               disabled={pdfKind !== null}
-              aria-label="Downloadable PDF"
+              aria-label="Download PDF"
               onClick={() => openPdf(true)}
             >
               <Download aria-hidden="true" data-icon="inline-start" />
-              {pdfKind === "letterhead" ? "Creating…" : "Downloadable PDF"}
+              {pdfKind === "letterhead" ? "Creating…" : "Download PDF"}
             </Button>
             {showTrash ? (
               <Button
@@ -291,11 +252,8 @@ export function DocumentWorkspace({
           </CardContent>
         </Card>
         <div className={cn("min-w-0", pane === "edit" && "hidden md:block")}>
-          <PreviewStage top={top} bottom={bottom} preview={preview} />
+          <PreviewStage source={source} margins={{ topMm: top, bottomMm: bottom }} />
         </div>
-      </div>
-      <div className="hidden print:block">
-        <DocumentSheet document={preview} />
       </div>
       {showTrash && onTrash ? (
         <DeleteConfirmDialog
@@ -382,39 +340,36 @@ export function DocumentWorkspace({
 }
 
 function PreviewStage({
-  top,
-  bottom,
-  preview,
+  source,
+  margins,
 }: {
-  top: number
-  bottom: number
-  preview: PrintDocument
+  source: DocumentModel
+  margins: PrintMargins
 }) {
   const frame = useRef<HTMLDivElement>(null)
   const pager = useRef<HTMLDivElement>(null)
-  const measure = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState<number | null>(null)
-  const [slices, setSlices] = useState<PageSlice[]>([{ start: 0, end: 0 }])
   const [page, setPage] = useState(0)
-  const bodyHeight = Math.max(1, (297 - top - contentFloorMm(bottom)) * pxPerMm)
-  const paged = slices.length > 1
-  const current = Math.min(page, slices.length - 1)
-  const slice = slices[current]
+  const rendered = useMemo(() => renderDocument(source, margins, "letterhead"), [source, margins])
+  const current = Math.min(page, Math.max(0, rendered.pages.length - 1))
+  const pageHtml = rendered.pages[current] ?? rendered.html
+  const src = useMemo(() => URL.createObjectURL(new Blob([pageHtml], { type: "text/html" })), [pageHtml])
+
+  useEffect(() => {
+    return () => URL.revokeObjectURL(src)
+  }, [src])
 
   useLayoutEffect(() => {
     const frameEl = frame.current
     if (!frameEl) return
     const main = frameEl.closest("main")
-
     const update = () => {
       const box = getComputedStyle(frameEl)
-      const width =
-        frameEl.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight)
+      const width = frameEl.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight)
       let height = window.innerHeight
       if (main) {
         const mainBox = getComputedStyle(main)
-        height =
-          main.clientHeight - parseFloat(mainBox.paddingTop) - parseFloat(mainBox.paddingBottom)
+        height = main.clientHeight - parseFloat(mainBox.paddingTop) - parseFloat(mainBox.paddingBottom)
       }
       height -= parseFloat(box.paddingTop) + parseFloat(box.paddingBottom)
       if (pager.current) {
@@ -425,7 +380,6 @@ function PreviewStage({
       const next = Math.max(0.1, Math.min(1, width / paper.width, height / paper.height))
       setScale((value) => (value != null && Math.abs(value - next) < 0.001 ? value : next))
     }
-
     update()
     const observer = new ResizeObserver(update)
     observer.observe(frameEl)
@@ -435,69 +389,31 @@ function PreviewStage({
       observer.disconnect()
       window.removeEventListener("resize", update)
     }
-  }, [paged])
-
-  useLayoutEffect(() => {
-    const root = measure.current
-    if (!root) return
-
-    const update = () => {
-      const next = paginate(root, bodyHeight)
-      setSlices((value) => (sameSlices(value, next) ? value : next))
-    }
-
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(root)
-    return () => observer.disconnect()
-  }, [bodyHeight, preview])
+  }, [rendered.pages.length])
 
   const width = scale == null ? undefined : paper.width * scale
   const height = scale == null ? undefined : paper.height * scale
-  const lastSlice = slices[slices.length - 1] ?? slice
-  const drop = Math.max(0, bodyHeight - (lastSlice.end - lastSlice.start))
+  const paged = rendered.pages.length > 1
 
   return (
     <aside aria-label="Live preview" className="flex min-w-0 flex-col gap-3 md:sticky md:top-0">
       <div ref={frame} className="flex min-w-0 justify-center overflow-hidden rounded-card bg-fill p-4 md:p-8">
         <div
-          className="relative shrink-0 overflow-hidden rounded-sm shadow-md"
+          className="relative shrink-0 overflow-hidden bg-white"
           style={{ width, height, aspectRatio: scale == null ? "210 / 297" : undefined }}
         >
-          <div
-            className="doc-paper light absolute top-0 left-0 origin-top-left"
+          <iframe
+            title="Document preview"
+            src={src}
+            scrolling="no"
+            className="absolute top-0 left-0 origin-top-left border-0 bg-white"
             style={{
+              width: paper.width,
+              height: paper.height,
               transform: `scale(${scale ?? 0})`,
               visibility: scale == null ? "hidden" : undefined,
             }}
-          >
-            <LetterheadPad />
-            <div
-              className="doc-paper-body"
-              style={{
-                top: `${top}mm`,
-                left: `${sideMm}mm`,
-                right: `${sideMm}mm`,
-                height: Math.max(0, slice.end - slice.start) + (current === slices.length - 1 ? drop : 0),
-              }}
-            >
-              <div style={{ transform: `translateY(${-slice.start}px)` }}>
-                <DocumentSheet
-                  document={preview}
-                  signatureDrop={current === slices.length - 1 ? drop : 0}
-                />
-              </div>
-            </div>
-            <div
-              ref={measure}
-              aria-hidden="true"
-              inert
-              className="doc-paper-measure"
-              style={{ top: `${top}mm`, left: `${sideMm}mm`, right: `${sideMm}mm` }}
-            >
-              <DocumentSheet document={preview} />
-            </div>
-          </div>
+          />
         </div>
       </div>
       {paged ? (
@@ -513,129 +429,23 @@ function PreviewStage({
             <ChevronLeft aria-hidden="true" className="size-4" />
           </Button>
           <p aria-live="polite" className="text-sm text-muted-foreground tabular-nums">
-            Page {current + 1} of {slices.length}
+            Page {current + 1} of {rendered.pages.length}
           </p>
           <Button
             type="button"
             variant="outline"
             size="icon"
             aria-label="Next page"
-            disabled={current === slices.length - 1}
+            disabled={current >= rendered.pages.length - 1}
             onClick={() => setPage(current + 1)}
           >
             <ChevronRight aria-hidden="true" className="size-4" />
           </Button>
         </div>
-      ) : null}
+      ) : (
+        <div ref={pager} />
+      )}
     </aside>
   )
 }
 
-function LetterheadPad() {
-  return (
-    <div aria-hidden="true" className="doc-pad">
-      <Image
-        src="/brand/mark-olive.png"
-        alt=""
-        width={829}
-        height={1002}
-        sizes="400px"
-        className="doc-pad-watermark"
-      />
-      <Image
-        src="/brand/letterhead-band.svg"
-        alt=""
-        width={794}
-        height={174}
-        className="doc-pad-band"
-      />
-      <div className="doc-pad-contact">
-        <p className="doc-pad-company">
-          <strong>DYNAMICSPACE</strong> ARCHITECTS &amp; ENGINEERS
-        </p>
-        <p>H42, R5, E, Banasree, Rampura, Dhaka-1219, Bangladesh</p>
-        <p>+8801841 84 88 31 | studio.dynamicspace.bd@gmail.com</p>
-        <p className="doc-pad-web">www.studiodynamicspace.com</p>
-      </div>
-      <div className="doc-pad-services">
-        <p>Architecture/</p>
-        <p>Interior Design/</p>
-        <p>Visualization/</p>
-        <p>Construction/</p>
-      </div>
-      <div className="doc-pad-logo">
-        <Image src="/brand/mark-white.png" alt="" width={829} height={1002} sizes="120px" />
-        <p className="doc-pad-logo-name">DYNAMICSPACE</p>
-        <p className="doc-pad-logo-tag">ARCHITECTS &amp; ENGINEERS</p>
-      </div>
-    </div>
-  )
-}
-
-function offsetWithin(element: HTMLElement, root: HTMLElement) {
-  let offset = 0
-  let node: HTMLElement | null = element
-  while (node && node !== root) {
-    offset += node.offsetTop
-    node = node.offsetParent as HTMLElement | null
-  }
-  return offset
-}
-
-type Block = { top: number; bottom: number; rows: number[]; line: { top: number; height: number } | null }
-
-const unbreakable = ".doc-header, .doc-card, .doc-total, .doc-signs, table"
-
-// Mirrors how the print engine breaks .doc-stack: a block that avoids breaks moves
-// whole to the next page, a block taller than a page splits between table rows,
-// and plain text splits between lines.
-function paginate(root: HTMLElement, bodyHeight: number): PageSlice[] {
-  const total = root.offsetHeight
-  const stack = root.querySelector<HTMLElement>(".doc-stack")
-  const blocks: Block[] = Array.from(stack?.children ?? []).map((node) => {
-    const element = node as HTMLElement
-    const top = offsetWithin(element, root)
-    const avoids = element.matches(unbreakable) || element.querySelector(unbreakable) != null
-    const text = avoids ? null : element.querySelector<HTMLElement>("p") ?? element
-    const lineHeight = text ? parseFloat(getComputedStyle(text).lineHeight) : NaN
-    return {
-      top,
-      bottom: top + element.offsetHeight,
-      rows: Array.from(element.querySelectorAll<HTMLElement>("tbody tr")).map((row) =>
-        offsetWithin(row, root),
-      ),
-      line:
-        text && lineHeight > 0 ? { top: offsetWithin(text, root), height: lineHeight } : null,
-    }
-  })
-
-  const slices: PageSlice[] = []
-  let start = 0
-  while (total - start > bodyHeight + 0.5 && slices.length < 50) {
-    const limit = start + bodyHeight
-    const block = blocks.find((item) => item.bottom > limit)
-    let end = limit
-    if (block && block.top <= limit) {
-      const lines = block.line ? Math.floor((limit - block.line.top) / block.line.height) : 0
-      if (block.line && lines >= 1) {
-        end = block.line.top + lines * block.line.height
-      } else if (block.top > start + 0.5) {
-        end = block.top
-      } else {
-        const cut = block.rows.filter((row) => row > start + 0.5 && row <= limit).pop()
-        if (cut != null) end = cut
-      }
-    }
-    slices.push({ start, end })
-    start = end
-  }
-  slices.push({ start, end: total })
-  return slices
-}
-
-function sameSlices(a: PageSlice[], b: PageSlice[]) {
-  return (
-    a.length === b.length &&
-    a.every((slice, index) => slice.start === b[index].start && slice.end === b[index].end)
-  )
-}

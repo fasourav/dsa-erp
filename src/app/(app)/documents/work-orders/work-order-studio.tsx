@@ -131,7 +131,7 @@ export function WorkOrderStudio({
       title="Work Order"
       description="Printable work order for a purchase order. The letterhead and footer stay on the pad."
       margins={margins}
-      preview={preview}
+      source={{ kind: "print", doc: preview }}
       canSave={canSave}
       canShare={canSave}
       canTrash={Boolean(form.id)}

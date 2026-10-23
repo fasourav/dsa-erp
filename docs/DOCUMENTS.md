@@ -1,0 +1,59 @@
+# Documents
+
+Set C is the print design for every business document. The on-screen preview and the downloaded PDF are the same HTML and CSS. Nothing is drawn a second time with pdf-lib except placing the letterhead image under the pages so the 300 dpi PNG is not recompressed.
+
+## Templates
+
+The design lives in one stylesheet, `public/documents/setc.css`, and one renderer, `src/lib/documents/setc/render.ts`. Fonts are Poppins, Inter, and Noto Sans Bengali (the ৳ sign) in `public/documents/fonts/`. The letterhead is `public/brand/letterhead-300dpi.png`. Do not recompress that file.
+
+To change the look later, edit `public/documents/setc.css` (and, only if the structure of a page changes, the matching function in `render.ts`). Preview and PDF both read that renderer, so they stay in step. Swap the stylesheet, keep the class names (`.page`, `.content`, `.head`, `.grid`, `.signs`), and the documents follow.
+
+## Print and download
+
+- **Download PDF** is the full A4 page on the letterhead.
+- **Print** is the same inner page with the letterhead image removed, for pre-printed pads. Positions and spacing do not move.
+
+The PDF route is `src/app/api/documents/pdf/route.ts`. On Vercel it uses `puppeteer-core` and `@sparticuz/chromium`. On this machine it uses the installed Chrome.
+
+## Margins
+
+Settings → top and bottom print margins apply to every page of every document, including page 2 and later. Content starts at the top margin. It stops at the higher of the bottom margin and the letterhead footer: nothing may sit below 243 mm, and a larger bottom margin pulls that floor up (`min(243 mm, 297 mm − bottom margin)`). A top margin that would push content through the floor is capped so at least 40 mm of content remains. Left and right insets stay 20 mm and 16 mm, as in the Set C sheet.
+
+Prepared By, Checked By, and Authorized By each have a checkbox. Only ticked signatures are printed. The signature block sits inside the content box, above a flexible gap, so it does not overlap the footer.
+
+## Numbering
+
+New documents use:
+
+`TYPE/DSAE/PROJECTCODE-PARTYCODE/DDMMYYYY`
+
+TYPE is QTN, WO, PO, DC, INV, MR, PV, or WCC. PARTYCODE is the vendor for WO, PO, DC, and PV, and the client (or lead) for QTN, INV, MR, and WCC. Codes are the initials of the name. An operational purchase order uses OPS as the project code. A second document with the same stem on the same day gets `-2`, `-3`, and so on. A revised quotation gets `-V2`, `-V3`.
+
+Salary slips: `SAL/DSAE/YYYY-MM/EMPCODE`.
+
+Letters and notices: `DSAE/PROJECTCODE-or-ADM/LTR-or-NTC/DDMM-YYYY`.
+
+Documents that already have a number keep it. Saving an existing document does not renumber it. Download file names are the document number with `/` replaced by `-`. The print file adds `-print`.
+
+## Where each document gets its figures
+
+| Document | Source | Amount |
+| --- | --- | --- |
+| Quotation | Client or lead, and an optional project | Sum of its own lines, plus AIT |
+| Work order | Purchase order | Sum of the work order lines |
+| Purchase order | The purchase order | Must equal the purchase order total |
+| Delivery challan | Purchase order or project | Quantities on the challan; no second money total |
+| Bill / invoice | Client invoice | Must equal the invoice amount; payments are the recorded receipts |
+| Money receipt | Client payment | The payment amount |
+| Payment voucher | Vendor payment or operational expense | Net paid is that recorded amount |
+| Work completion certificate | Project, and its work order number when one exists | No invented contract value |
+| Salary slip | Payroll line and employee | Earnings, deductions, and net pay match the payroll line |
+| Letter / notice | Optional client or project | No book amount |
+
+The verification QR is `https://<origin>/verify/<token>` after the document is saved.
+
+## Permissions and trash
+
+Each document uses the module it belongs to (quotations, work orders, purchase orders, projects, client invoices, vendor payments, operational expenses, payroll, or clients). Delete and permanent delete stay owner-only, through the existing trash.
+
+Apply `supabase/migrations/20261023220000_set_c_documents.sql` before creating challans, vouchers, certificates, salary slips, or letters, and before saving a quotation that has a lead and no client. Do not apply it from the app.

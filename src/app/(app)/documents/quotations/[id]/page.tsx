@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
 import { listActiveDocumentTemplates } from "@/lib/document-templates-data"
-import { loadDocumentCatalog, loadQuotationDraft } from "@/lib/documents/queries"
+import { loadDocumentCatalog, loadLeadChoices, loadQuotationDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Quotation" }
@@ -15,9 +15,10 @@ export default async function QuotationPage({
 }) {
   await requireModule("quotations")
   const { id } = await params
-  const [catalog, loaded, margins, origin, templateList] = await Promise.all([
+  const [catalog, loaded, leads, margins, origin, templateList] = await Promise.all([
     loadDocumentCatalog(),
     loadQuotationDraft(id),
+    loadLeadChoices(),
     getPrintMargins(),
     requestOrigin(),
     listActiveDocumentTemplates("quotation"),
@@ -49,6 +50,7 @@ export default async function QuotationPage({
         origin={origin}
         margins={margins}
         templates={templateList.templates}
+        leads={leads}
       />
     </>
   )
