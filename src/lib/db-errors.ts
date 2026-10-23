@@ -143,6 +143,10 @@ const constraintMessages: Record<string, { message: string; field?: string }> = 
     message: "An item with this name already exists.",
     field: "name",
   },
+  office_expense_categories_report_group_check: {
+    message: "Choose a report group.",
+    field: "reportGroup",
+  },
   office_expense_categories_name_key: {
     message: "An item with this name already exists.",
     field: "name",

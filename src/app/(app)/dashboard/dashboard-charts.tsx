@@ -25,7 +25,6 @@ export const expenseSliceStyle = [
   { key: "material", label: "Material Cost", fill: "var(--chart-1)", swatch: "bg-chart-1" },
   { key: "projectOverhead", label: "Project Overhead", fill: "var(--chart-6)", swatch: "bg-chart-6" },
   { key: "tax", label: "Tax Paid", fill: "var(--chart-8)", swatch: "bg-chart-8" },
-  { key: "admin", label: "Admin Expense", fill: "var(--chart-7)", swatch: "bg-chart-7" },
   { key: "operational", label: "Operational Expense", fill: "var(--chart-3)", swatch: "bg-chart-3" },
   { key: "marketing", label: "Marketing", fill: "var(--chart-10)", swatch: "bg-chart-10" },
   { key: "salary", label: "Employee Salary", fill: "var(--chart-9)", swatch: "bg-chart-9" },

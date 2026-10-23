@@ -189,7 +189,7 @@ export function buildReport(
         landscape: false,
         tables: [statementTable(title, report.profitAndLoss.lines)],
         notes: [
-          "Accrual basis: revenue is counted on the client invoice date and vendor costs on the vendor bill date. Gross Profit is project revenue minus project expense and tax. Net Profit subtracts admin expense (operational, marketing, salaries, office admin, and depreciation). The dashboard shows cash received and paid, so its figures can differ.",
+          "Accrual basis: revenue is counted on the client invoice date and vendor costs on the vendor bill date. Gross Profit is project revenue minus project expense and tax. Net Profit subtracts admin expense (operational, marketing, salaries, and depreciation). The dashboard shows cash received and paid, so its figures can differ.",
         ],
       }
     case "cash-flow":

@@ -68,6 +68,7 @@ import {
   type CatalogKey,
   type CatalogList,
 } from "@/lib/lookup-catalogs"
+import { reportGroupLabel } from "@/lib/report-cost-group"
 import type { DocumentTemplate } from "@/lib/document-templates"
 import { savedToast } from "@/lib/saved"
 import { cn } from "@/lib/utils"
@@ -680,6 +681,9 @@ function CatalogDetail({
                   ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground tabular-nums">
+                  {catalog.hasReportGroup && item.reportGroup
+                    ? `${reportGroupLabel(item.reportGroup)} · `
+                    : ""}
                   Sort Order {item.sortOrder}
                 </p>
               </div>
@@ -902,6 +906,7 @@ function emptyCatalog(): CatalogList {
     hasActive: true,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
     items: [],
   }
 }

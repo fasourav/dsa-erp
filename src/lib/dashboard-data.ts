@@ -18,6 +18,12 @@ import {
   type WeekPoint,
   type YearSnapshot,
 } from "@/lib/dashboard-metrics"
+import {
+  isReportGroup,
+  keywordReportGroup,
+  resolveCostGroup,
+  type OfficeCategoryGroup,
+} from "@/lib/report-cost-group"
 import { createClient } from "@/lib/supabase/server"
 
 export async function getDashboard(
@@ -296,7 +302,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("office_expense_categories")
-          .select("id, name")
+          .select("id, name, report_group")
           .order("sort_order", { ascending: true })
           .order("name", { ascending: true })
           .range(from, to),
@@ -306,7 +312,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("operational_expenses")
-          .select("amount, expense_date, category, project_id")
+          .select("amount, expense_date, category, project_id, departments(name)")
           .order("id", { ascending: true })
           .range(from, to),
       "Operational expense list is larger than expected.",
@@ -379,8 +385,19 @@ async function loadDashboardRows(): Promise<DashboardInput> {
   const categoryNameById = new Map(
     expenseCategories.map((category) => [category.id, category.name?.trim() ?? ""]),
   )
-  const officeCategoryNameById = new Map(
-    officeCategories.map((category) => [category.id, category.name?.trim() ?? ""]),
+  const officeCategoryById = new Map(
+    officeCategories.flatMap((category) => {
+      const name = category.name?.trim() ?? ""
+      if (!name) return []
+      const group: OfficeCategoryGroup = {
+        id: category.id,
+        name,
+        reportGroup: isReportGroup(category.report_group)
+          ? category.report_group
+          : keywordReportGroup(name),
+      }
+      return [[category.id, group] as const]
+    }),
   )
   const openByStatus = new Map(statuses.map((status) => [status.code, status.is_open]))
   const backlogIds = new Set(
@@ -451,18 +468,29 @@ async function loadDashboardRows(): Promise<DashboardInput> {
           ? categoryNameById.get(order.expense_category_id) || null
           : null,
         officeCategory: order?.office_expense_category_id
-          ? officeCategoryNameById.get(order.office_expense_category_id) || null
+          ? officeCategoryById.get(order.office_expense_category_id)?.name || null
+          : null,
+        officeReportGroup: order?.office_expense_category_id
+          ? officeCategoryById.get(order.office_expense_category_id)?.reportGroup ?? null
           : null,
         // A payment whose purchase order is missing keeps the project-cost path.
         projectLinked: order ? order.project_id != null : true,
       }
     }),
-    operational: operational.map((expense) => ({
-      date: expense.expense_date,
-      amount: toNumber(expense.amount),
-      category: expense.category,
-      projectLinked: expense.project_id != null,
-    })),
+    operational: operational.map((expense) => {
+      const department = embeddedName(expense.departments)
+      return {
+        date: expense.expense_date,
+        amount: toNumber(expense.amount),
+        category: expense.category,
+        reportGroup: resolveCostGroup({
+          categoryName: expense.category,
+          departmentName: department,
+          categories: [...officeCategoryById.values()],
+        }),
+        projectLinked: expense.project_id != null,
+      }
+    }),
     taxes: taxes.map((payment) => ({
       date: payment.paid_on,
       amount: toNumber(payment.amount),
@@ -495,6 +523,14 @@ async function loadDashboardRows(): Promise<DashboardInput> {
     backlogCount: backlogIds.size,
     launchDate: normalizeLaunchDate(companySettings.data?.launch_date),
   }
+}
+
+function embeddedName(
+  value: { name: string | null } | { name: string | null }[] | null,
+): string | null {
+  const row = Array.isArray(value) ? value[0] : value
+  const name = row?.name?.trim() ?? ""
+  return name || null
 }
 
 function yearOf(iso: string): number | null {
