@@ -95,8 +95,8 @@ body.draft .page::after{content:"DRAFT";position:absolute;left:50%;top:46%;trans
 .tight{margin-top:0}
 
 .signs{display:grid;gap:12mm;margin-top:4mm;align-items:start}
-.signs.s1{grid-template-columns:1fr}
-.signs.s2{grid-template-columns:1fr 1fr}
+.signs.s1{grid-template-columns:repeat(4,1fr);gap:7mm}
+.signs.s2{grid-template-columns:repeat(4,1fr);gap:7mm}
 .signs.s3{grid-template-columns:1fr 1fr 1fr}
 .signs.s4{grid-template-columns:repeat(4,1fr);gap:7mm}
 .sign{padding-top:12mm}
