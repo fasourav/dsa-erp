@@ -1,7 +1,8 @@
 /**
  * Opens the real /documents screens in Chrome and checks the live preview
- * against the same HTML the PDF route prints. Requires the app on PREVIEW_BASE_URL
- * (default http://127.0.0.1:3000) and .env.local so a session can be opened.
+ * against the same HTML the PDF route prints.
+ * Only the test project aomofxkglixqijtqywfp is allowed. Set PREVIEW_EMAIL
+ * to that project's test account. This script never chooses a user.
  * Prints style results only. Does not print secrets.
  */
 import { readFile } from "node:fs/promises"
@@ -13,6 +14,7 @@ import { renderDocument } from "../src/lib/documents/setc/render"
 import type { DocumentModel } from "../src/lib/documents/setc/types"
 
 const base = process.env.PREVIEW_BASE_URL ?? "http://127.0.0.1:3000"
+const testProjectRef = "aomofxkglixqijtqywfp"
 
 type PreviewMetrics = {
   ok?: boolean
@@ -36,7 +38,7 @@ type PreviewMetrics = {
 const certificate: DocumentModel = {
   kind: "certificate",
   doc: {
-    documentNo: "WCC/DSAE/MDL-MDL/12052026",
+    documentNo: "WCC/DSAE/NT-MDL/12052026",
     issuedOn: "12 May 2026",
     verifyUrl: null,
     clientName: "Meghna Digital Ltd.",
@@ -46,7 +48,11 @@ const certificate: DocumentModel = {
     scope: ["Partitions", "Glass doors"],
     inspections: [{ item: "Workmanship", status: "Satisfactory", remarks: "—" }],
     defect: "Six months.",
-    signatures: [{ label: "Certified By", name: "Engr. Mahmudul Hasan", detail: "Project Manager" }],
+    signatures: [
+      { label: "Certified By", name: "Engr. Mahmudul Hasan", detail: "Project Manager" },
+      { label: "Authorized Signature", name: "Zishan MD Adnan Ul Hoque", detail: "Founder | Architect" },
+      { label: "Accepted By (Client)", name: "Ms. Sharmin Akter", detail: "Meghna Digital Ltd." },
+    ],
   },
 }
 
@@ -114,6 +120,25 @@ function loadEnv() {
   }
 }
 
+function testEmail(): string {
+  loadEnv()
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? ""
+  let host = ""
+  try {
+    host = new URL(raw).hostname
+  } catch {
+    host = ""
+  }
+  if (host !== `${testProjectRef}.supabase.co`) {
+    throw new Error("This script only runs against the test project.")
+  }
+  const email = process.env.PREVIEW_EMAIL?.trim() ?? ""
+  if (!email.includes("@")) {
+    throw new Error("Set PREVIEW_EMAIL to the test account. This script does not choose a user.")
+  }
+  return email
+}
+
 function sessionCookies(supabaseUrl: string, session: object) {
   const ref = new URL(supabaseUrl).hostname.split(".")[0]
   const name = `sb-${ref}-auth-token`
@@ -128,16 +153,13 @@ function sessionCookies(supabaseUrl: string, session: object) {
 }
 
 async function signIn(page: import("puppeteer-core").Page) {
-  loadEnv()
+  const email = testEmail()
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !serviceKey || !anonKey) throw new Error("Missing Supabase env. The documents pages need a session.")
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-  const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 20 })
-  const user = listed.data.users.find((item) => item.email)
-  if (!user?.email) throw new Error("No signed-up user to open the documents pages.")
-  const link = await admin.auth.admin.generateLink({ type: "magiclink", email: user.email })
+  const link = await admin.auth.admin.generateLink({ type: "magiclink", email })
   const token = link.data.properties?.hashed_token
   if (!token) throw new Error("Could not open a session.")
   const anon = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -214,6 +236,13 @@ async function discoverPaths(page: import("puppeteer-core").Page) {
 }
 
 async function main() {
+  try {
+    testEmail()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Refused."
+    console.log(JSON.stringify({ ok: false, error: message }))
+    process.exit(1)
+  }
   const css = await loadPrintCss()
   const letterhead = `data:image/png;base64,${(await readFile("public/brand/letterhead-300dpi.png")).toString("base64")}`
   const pdfHtml = renderDocument(certificate, { topMm: 16, bottomMm: 54 }, "letterhead", css, true).html.replaceAll(

@@ -303,12 +303,19 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
         scope: body.scope.split(/\n+/).map((line) => line.trim()).filter(Boolean),
         inspections: body.inspections.filter((row) => row.item.trim()),
         defect: body.defect,
-        signatures: signs(
-          body,
-          employees,
-          [{ label: "Accepted By (Client)", name: body.partyName, detail: "Signature & Date" }],
-          "Certified By",
-        ),
+        signatures: [
+          {
+            label: "Certified By",
+            name: isSignatureEnabled(body.preparedBy) ? signatureName(body.preparedBy) : "",
+            detail: isSignatureEnabled(body.preparedBy) ? roleFor(employees, body.preparedBy) : "",
+          },
+          {
+            label: "Authorized Signature",
+            name: isSignatureEnabled(body.authorizedBy) ? signatureName(body.authorizedBy) : "",
+            detail: isSignatureEnabled(body.authorizedBy) ? roleFor(employees, body.authorizedBy) : "",
+          },
+          { label: "Accepted By (Client)", name: body.partyName, detail: "Signature & Date" },
+        ],
       },
     }
   }

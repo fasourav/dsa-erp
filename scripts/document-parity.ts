@@ -8,6 +8,14 @@ import { contentBox, renderDocument } from "../src/lib/documents/setc/render"
 import type { DocumentModel } from "../src/lib/documents/setc/types"
 
 const outDir = path.resolve("artifacts/set-c")
+
+function chromeExecutable(): string {
+  const fromEnv = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_PATH
+  if (fromEnv) return fromEnv
+  if (process.platform === "darwin") return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  if (process.platform === "win32") return "chrome"
+  return "google-chrome"
+}
 const marginSets = [
   { name: "16-54", margins: { topMm: 16, bottomMm: 54 } },
   { name: "32-28", margins: { topMm: 32, bottomMm: 28 } },
@@ -154,7 +162,7 @@ const models: Array<[string, DocumentModel]> = [
     kicker: "Bill Invoice",
     title: "Final Bill",
     numberLabel: "Invoice No.",
-    documentNo: "INV/DSAE/MDL-MDL/14052026",
+    documentNo: "INV/DSAE/NT-MDL/14052026",
     parties: [{ heading: "Bill To", name: "Ms. Sharmin Akter", detail: "Meghna Digital Ltd.\nGulshan-1, Dhaka" }],
     facts: [
       { label: "Due Date", value: "28 May 2026" },
@@ -181,10 +189,10 @@ const models: Array<[string, DocumentModel]> = [
     kicker: "Money Receipt",
     title: "Payment Acknowledgement",
     numberLabel: "Receipt No.",
-    documentNo: "MR/DSAE/MDL-MDL/02032026",
+    documentNo: "MR/DSAE/NT-MDL/02032026",
     parties: [{ heading: "Received From", name: "Meghna Digital Ltd.", detail: "Gulshan-1, Dhaka" }],
     facts: [
-      { label: "Against Invoice No.", value: "INV/DSAE/MDL-MDL/20022026" },
+      { label: "Against Invoice No.", value: "INV/DSAE/NT-MDL/20022026" },
       { label: "Customer Name", value: "Meghna Digital Ltd." },
       { label: "Payment Method", value: "RTGS" },
       { label: "Transaction Ref.", value: "SCB-RTGS-260302-45871" },
@@ -226,7 +234,7 @@ const models: Array<[string, DocumentModel]> = [
     ],
   } }],
   ["08-completion", { kind: "certificate", doc: {
-    documentNo: "WCC/DSAE/MDL-MDL/12052026",
+    documentNo: "WCC/DSAE/NT-MDL/12052026",
     issuedOn: "12 May 2026",
     verifyUrl: "https://erp.example.com/verify/" + "12".repeat(32),
     clientName: "Ms. Sharmin Akter",
@@ -243,7 +251,8 @@ const models: Array<[string, DocumentModel]> = [
     inspections: [{ item: "Workmanship", status: "Satisfactory", remarks: "—" }],
     defect: "Workmanship defects reported within 6 months will be rectified.",
     signatures: [
-      { label: "Prepared By", name: "Engr. Mahmudul Hasan", detail: "Project Manager" },
+      { label: "Certified By", name: "Engr. Mahmudul Hasan", detail: "Project Manager" },
+      { label: "Authorized Signature", name: "Zishan MD Adnan Ul Hoque", detail: "Founder | Architect" },
       { label: "Accepted By (Client)", name: "Ms. Sharmin Akter", detail: "Meghna Digital Ltd." },
     ],
   } }],
@@ -357,7 +366,7 @@ async function main() {
   const report: string[] = []
   const puppeteer = await import("puppeteer-core")
   const browser = await puppeteer.default.launch({
-    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    executablePath: chromeExecutable(),
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   })

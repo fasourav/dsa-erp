@@ -371,7 +371,7 @@ async function workOrderStatus(
     : { data: [] as Array<{ id: string; amount: number; paid_on: string; created_at: string }> }
   const anchor = current.data
   const paidBefore = (payments.data ?? [])
-    .filter((row) => (anchor ? paymentNotAfter(row, anchor) : false))
+    .filter((row) => (anchor ? paymentNotAfter(row, anchor) : true))
     .reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
   const balance = Math.round((total - paidBefore - thisBill) * 100) / 100
   const money = (value: number) => value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })

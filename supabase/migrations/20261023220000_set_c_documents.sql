@@ -28,7 +28,7 @@ with numbered as (
     lpad(
       (
         coalesce((
-          select max(employee_code::integer)
+          select max(employee_code::bigint)
           from public.employees
           where employee_code ~ '^[0-9]+$'
         ), 0)
@@ -62,10 +62,11 @@ declare
 begin
   if new.employee_code is null or btrim(new.employee_code) = '' then
     perform pg_advisory_xact_lock(hashtext('public.employees.employee_code'));
-    select lpad((coalesce(max(employee_code::integer), 0) + 1)::text, 3, '0')
+    select lpad((coalesce(max(employee_code::bigint), 0) + 1)::text, 3, '0')
       into next_code
       from public.employees
-      where employee_code ~ '^[0-9]+$';
+      where employee_code ~ '^[0-9]+$'
+        and id is distinct from new.id;
     new.employee_code := next_code;
   else
     new.employee_code := btrim(new.employee_code);
@@ -78,7 +79,7 @@ revoke all on function private.assign_employee_code() from public, anon, authent
 
 drop trigger if exists employees_assign_code on public.employees;
 create trigger employees_assign_code
-  before insert on public.employees
+  before insert or update on public.employees
   for each row execute function private.assign_employee_code();
 
 create table public.form_documents (
