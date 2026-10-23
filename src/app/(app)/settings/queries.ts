@@ -5,6 +5,7 @@ import {
   type CatalogKey,
   type CatalogList,
 } from "@/lib/lookup-catalogs"
+import { isReportGroup, type ReportGroup } from "@/lib/report-cost-group"
 
 export type LookupCatalogsResult = {
   catalogs: CatalogList[]
@@ -20,7 +21,6 @@ export type LastBackupStatus = {
 const sharedCatalogs = [
   "project_types",
   "project_phases",
-  "office_expense_categories",
   "project_expense_categories",
   "payment_methods",
   "vendor_work_categories",
@@ -29,7 +29,7 @@ const sharedCatalogs = [
   "asset_categories",
 ] as const satisfies readonly Exclude<
   CatalogKey,
-  "departments" | "lead_statuses"
+  "departments" | "lead_statuses" | "office_expense_categories"
 >[]
 
 type SharedCatalog = (typeof sharedCatalogs)[number]
@@ -37,7 +37,7 @@ type SharedCatalog = (typeof sharedCatalogs)[number]
 export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
   const supabase = await createClient()
 
-  const [departments, statuses, ...shared] = await Promise.all([
+  const [departments, statuses, officeCategories, ...shared] = await Promise.all([
     supabase
       .from("departments")
       .select("id, name, sort_order, is_active")
@@ -46,6 +46,11 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
     supabase
       .from("lead_statuses")
       .select("id, name, sort_order, code, is_open")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("office_expense_categories")
+      .select("id, name, sort_order, report_group")
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
     ...sharedCatalogs.map((table) => loadShared(supabase, table)),
@@ -61,7 +66,7 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
     rows.set(
       "departments",
       departments.data.map((row) =>
-        toItem(row, row.is_active, null, null),
+        toItem(row, row.is_active, null, null, null),
       ),
     )
   }
@@ -73,7 +78,7 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
     rows.set(
       "lead_statuses",
       statuses.data.map((row) =>
-        toItem(row, null, row.code, Boolean(row.is_open)),
+        toItem(row, null, row.code, Boolean(row.is_open), null),
       ),
     )
   }
@@ -89,9 +94,21 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
 
     rows.set(
       key,
-      result.data.map((row) => toItem(row, null, null, null)),
+      result.data.map((row) => toItem(row, null, null, null, null)),
     )
   })
+
+  if (officeCategories.error || !officeCategories.data) {
+    failed = true
+    rows.set("office_expense_categories", [])
+  } else {
+    rows.set(
+      "office_expense_categories",
+      officeCategories.data.map((row) =>
+        toItem(row, null, null, null, isReportGroup(row.report_group) ? row.report_group : null),
+      ),
+    )
+  }
 
   return {
     catalogs: catalogDefinitions.map((definition) => ({
@@ -158,6 +175,7 @@ function toItem(
   isActive: boolean | null,
   code: string | null,
   isOpen: boolean | null,
+  reportGroup: ReportGroup | null,
 ): CatalogItem {
   return {
     id: row.id,
@@ -166,5 +184,6 @@ function toItem(
     isActive,
     code,
     isOpen,
+    reportGroup,
   }
 }

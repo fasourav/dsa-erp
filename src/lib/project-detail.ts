@@ -1,4 +1,10 @@
-import { classifyOperational, isMaterialCost } from "@/lib/dashboard-metrics"
+import { isMaterialCost } from "@/lib/dashboard-metrics"
+import {
+  isReportGroup,
+  keywordReportGroup,
+  resolveCostGroup,
+  type OfficeCategoryGroup,
+} from "@/lib/report-cost-group"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { openPayableByPurchaseOrder } from "@/lib/open-payable"
@@ -157,7 +163,8 @@ export async function getProjectDetail(projectId: string): Promise<{
       details: p.details ?? "",
     }
 
-    const [poRows, invRows, blRows, operationalRows, taxRows, categoryRows] = await Promise.all([
+    const [poRows, invRows, blRows, operationalRows, taxRows, categoryRows, officeCategoryRows] =
+      await Promise.all([
       fetchAllPages(
         (from, to) =>
           supabase
@@ -187,7 +194,7 @@ export async function getProjectDetail(projectId: string): Promise<{
         (from, to) =>
           supabase
             .from("operational_expenses")
-            .select("amount, expense_date, category")
+            .select("amount, expense_date, category, departments(name)")
             .eq("project_id", projectId)
             .order("id", { ascending: true })
             .range(from, to),
@@ -212,6 +219,16 @@ export async function getProjectDetail(projectId: string): Promise<{
             .order("name", { ascending: true })
             .range(from, to),
         "Expense category list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("office_expense_categories")
+            .select("id, name, report_group")
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true })
+            .range(from, to),
+        "Office expense category list is larger than expected.",
       ),
     ])
 
@@ -331,7 +348,16 @@ export async function getProjectDetail(projectId: string): Promise<{
       balances: balanceRows,
       vendorInvoices: vendorInvoiceRows,
       vendorPayments: vendorPaymentRows,
-      operational: operationalRows,
+      operational: operationalRows.map((row) => ({
+        amount: row.amount,
+        expense_date: row.expense_date,
+        category: row.category,
+        reportGroup: resolveCostGroup({
+          categoryName: row.category,
+          departmentName: embeddedDepartment(row.departments),
+          categories: officeCategoryGroups(officeCategoryRows),
+        }),
+      })),
       taxes: taxRows,
     })
 
@@ -344,6 +370,32 @@ export async function getProjectDetail(projectId: string): Promise<{
       error: "Could not load project details.",
     }
   }
+}
+
+function embeddedDepartment(
+  value: { name: string | null } | { name: string | null }[] | null,
+): string | null {
+  const row = Array.isArray(value) ? value[0] : value
+  const name = row?.name?.trim() ?? ""
+  return name || null
+}
+
+function officeCategoryGroups(
+  rows: { id: string; name: string | null; report_group: string }[],
+): OfficeCategoryGroup[] {
+  return rows.flatMap((row) => {
+    const name = row.name?.trim() ?? ""
+    if (!name) return []
+    return [
+      {
+        id: row.id,
+        name,
+        reportGroup: isReportGroup(row.report_group)
+          ? row.report_group
+          : keywordReportGroup(name),
+      },
+    ]
+  })
 }
 
 function buildOverview(input: {
@@ -374,7 +426,12 @@ function buildOverview(input: {
     method: string | null
     vendor_invoice_id: string
   }[]
-  operational: { amount: number; expense_date: string; category: string }[]
+  operational: {
+    amount: number
+    expense_date: string
+    category: string
+    reportGroup: string
+  }[]
   taxes: {
     amount: number
     paid_on: string
@@ -468,7 +525,12 @@ function buildOverview(input: {
 
   for (const expense of input.operational) {
     const amount = toNumber(expense.amount)
-    addBucket(classifyOperational(expense.category ?? ""), amount)
+    addBucket(
+      isReportGroup(expense.reportGroup)
+        ? expense.reportGroup
+        : keywordReportGroup(expense.category ?? ""),
+      amount,
+    )
     addMonth(expense.expense_date, "expense", amount)
   }
 

@@ -7,6 +7,10 @@ import {
   type PurchaseOrderRow,
   type VendorOption,
 } from "@/lib/purchase-order-summary"
+import {
+  isReportGroup,
+  keywordReportGroup,
+} from "@/lib/report-cost-group"
 import { createClient } from "@/lib/supabase/server"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 
@@ -109,7 +113,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         fetchPages((from, to) =>
           supabase
             .from("office_expense_categories")
-            .select("id, name, sort_order")
+            .select("id, name, sort_order, report_group")
             .order("sort_order", { ascending: true })
             .order("name", { ascending: true })
             .range(from, to),
@@ -154,7 +158,15 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
     const officeExpenseCategories = officeCategoryRows.flatMap((row) => {
       const name = row.name?.trim() ?? ""
       if (!name) return []
-      return [{ id: row.id, name } satisfies ExpenseCategoryOption]
+      return [
+        {
+          id: row.id,
+          name,
+          reportGroup: isReportGroup(row.report_group)
+            ? row.report_group
+            : keywordReportGroup(name),
+        } satisfies ExpenseCategoryOption,
+      ]
     })
     const officeCategoryNames = new Map(
       officeExpenseCategories.map((category) => [category.id, category.name]),

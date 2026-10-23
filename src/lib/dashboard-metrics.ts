@@ -8,6 +8,7 @@ import {
   formatMoney,
   normalizeLaunchDate,
 } from "@/lib/format"
+import { keywordReportGroup, type ReportGroup } from "@/lib/report-cost-group"
 
 export const HIGH_VALUE_PROJECT_MIN = 50_000
 export const DASHBOARD_FIRST_YEAR = 2021
@@ -119,12 +120,14 @@ export type DashboardInput = {
     workType: string | null
     expenseCategory: string | null
     officeCategory: string | null
+    officeReportGroup: ReportGroup | null
     projectLinked: boolean
   }[]
   operational: {
     date: string
     amount: number
     category: string
+    reportGroup: ReportGroup
     projectLinked: boolean
   }[]
   taxes: { date: string; amount: number }[]
@@ -742,9 +745,14 @@ type Books = {
     workType: string | null
     expenseCategory: string | null
     officeCategory: string | null
+    officeReportGroup: ReportGroup | null
     projectLinked: boolean
   })[]
-  operational: (Dated & { category: string; projectLinked: boolean })[]
+  operational: (Dated & {
+    category: string
+    reportGroup: ReportGroup
+    projectLinked: boolean
+  })[]
   taxes: Dated[]
   bank: (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[]
   collectionRate: number
@@ -854,12 +862,13 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
   for (const row of books.vendorPayments) {
     if (!inSpan(row.date, start, end)) continue
     // Operational purchase orders have no project. Their payments stay out of
-    // material, subcontractor, and project expense. The office category, then
-    // the work type, then Operational, chooses Admin, Salary, Marketing, or Operational.
+    // material, subcontractor, and project expense. The office category group,
+    // then the work type, then Operational, chooses the bucket.
     if (!row.projectLinked) {
-      const category =
-        row.officeCategory?.trim() || row.workType?.trim() || "Operational"
-      totals[classifyOperational(category)] += row.amount
+      const group =
+        row.officeReportGroup ??
+        keywordReportGroup(row.workType?.trim() || "Operational")
+      totals[group] += row.amount
       continue
     }
     // A project payment whose purchase order has an expense category counts as
@@ -879,7 +888,7 @@ function expenseTotals(books: Books, start: string, end: string): ExpenseTotals 
       totals.projectOverhead += row.amount
       continue
     }
-    totals[classifyOperational(row.category)] += row.amount
+    totals[row.reportGroup] += row.amount
   }
 
   for (const row of books.taxes) {
@@ -913,9 +922,14 @@ function grossBetween(
     workType: string | null
     expenseCategory: string | null
     officeCategory: string | null
+    officeReportGroup: ReportGroup | null
     projectLinked: boolean
   })[],
-  operational: (Dated & { category: string; projectLinked: boolean })[],
+  operational: (Dated & {
+    category: string
+    reportGroup: ReportGroup
+    projectLinked: boolean
+  })[],
   taxes: Dated[],
   start: string,
   end: string,
@@ -950,26 +964,8 @@ export function isMaterialCost(
   return isMaterialWork(workType ?? null)
 }
 
-export function classifyOperational(
-  category: string,
-): "admin" | "operational" | "marketing" | "salary" {
-  const name = category.trim().toLowerCase()
-  if (name.includes("salary") || name.includes("payroll") || name.includes("wage")) {
-    return "salary"
-  }
-  if (name.includes("market") || name.includes("advert") || name.includes("promotion")) {
-    return "marketing"
-  }
-  // Office overhead, including "Office Materials", stays out of project Material Cost.
-  if (
-    name.includes("admin") ||
-    name.includes("office") ||
-    name.includes("rent") ||
-    name.includes("utilit")
-  ) {
-    return "admin"
-  }
-  return "operational"
+export function classifyOperational(category: string): ReportGroup {
+  return keywordReportGroup(category)
 }
 
 function lastWeeks(

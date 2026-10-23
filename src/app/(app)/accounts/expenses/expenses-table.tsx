@@ -40,6 +40,7 @@ import {
   type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import type { OfficeCategoryGroup } from "@/lib/report-cost-group"
 import { cn } from "@/lib/utils"
 
 export function ExpensesTable({
@@ -51,7 +52,7 @@ export function ExpensesTable({
   error,
 }: {
   expenses: OperationalExpenseRow[]
-  categories: string[]
+  categories: OfficeCategoryGroup[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]

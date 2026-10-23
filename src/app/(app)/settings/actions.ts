@@ -16,6 +16,7 @@ import {
   slugifyCatalogCode,
   type CatalogKey,
 } from "@/lib/lookup-catalogs"
+import { isReportGroup, type ReportGroup } from "@/lib/report-cost-group"
 
 const idPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -28,6 +29,7 @@ export type CatalogFieldErrors = {
   isActive?: string
   code?: string
   isOpen?: string
+  reportGroup?: string
 }
 
 export type CatalogActionResult = {
@@ -42,6 +44,7 @@ export type CatalogItemInput = {
   isActive: boolean
   code?: string
   isOpen?: boolean
+  reportGroup?: string
 }
 
 export async function addCatalogItem(
@@ -157,12 +160,21 @@ async function saveCatalogItem(
     }
   }
 
+  let reportGroup: ReportGroup | null = null
+  if (definition.hasReportGroup) {
+    reportGroup = isReportGroup(input.reportGroup) ? input.reportGroup : null
+    if (!reportGroup) {
+      fieldErrors.reportGroup = "Choose a report group."
+    }
+  }
+
   if (
     fieldErrors.name ||
     fieldErrors.sortOrder ||
     fieldErrors.isActive ||
     fieldErrors.code ||
-    fieldErrors.isOpen
+    fieldErrors.isOpen ||
+    fieldErrors.reportGroup
   ) {
     return { error: null, fieldErrors }
   }
@@ -193,10 +205,16 @@ async function saveCatalogItem(
             sort_order: sortOrder,
             code,
           })
-        : await writeShared(supabase, input.catalog, id, {
-            name,
-            sort_order: sortOrder,
-          })
+        : input.catalog === "office_expense_categories"
+          ? await writeOfficeCategory(supabase, id, {
+              name,
+              sort_order: sortOrder,
+              report_group: reportGroup ?? "operational",
+            })
+          : await writeShared(supabase, input.catalog, id, {
+              name,
+              sort_order: sortOrder,
+            })
 
   if (error) {
     if (isUniqueViolation(error)) {
@@ -264,6 +282,18 @@ async function writeDepartment(
   }
 
   return supabase.from("departments").insert(row).select("id")
+}
+
+async function writeOfficeCategory(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string | null,
+  row: { name: string; sort_order: number; report_group: ReportGroup },
+) {
+  if (id) {
+    return supabase.from("office_expense_categories").update(row).eq("id", id).select("id")
+  }
+
+  return supabase.from("office_expense_categories").insert(row).select("id")
 }
 
 async function writeShared(
@@ -387,6 +417,13 @@ function revalidateCatalogs(catalog: CatalogKey) {
   if (catalog === "vendor_work_categories") {
     revalidatePath("/vendors")
     revalidatePath("/purchase-orders")
+  }
+
+  if (catalog === "office_expense_categories") {
+    revalidatePath("/accounts/expenses")
+    revalidatePath("/purchase-orders")
+    revalidatePath("/dashboard")
+    revalidatePath("/reports", "layout")
   }
 
   if (catalog === "asset_categories") {

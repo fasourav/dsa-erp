@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -53,6 +54,7 @@ import type {
   PurchaseOrderRow,
   VendorOption,
 } from "@/lib/purchase-order-summary"
+import { countsAsLabel, isReportGroup, keywordReportGroup } from "@/lib/report-cost-group"
 
 export function PurchaseOrderFormDialog({
   open,
@@ -134,6 +136,16 @@ export function PurchaseOrderFormDialog({
     value: category.id,
     label: category.name,
   }))
+  const selectedOffice = officeChoices.find(
+    (category) => category.id === officeExpenseCategoryId,
+  )
+  const officeCountsAs = selectedOffice
+    ? countsAsLabel(
+        isReportGroup(selectedOffice.reportGroup)
+          ? selectedOffice.reportGroup
+          : keywordReportGroup(selectedOffice.name),
+      )
+    : null
   const projectItems = projects.map((project) => ({
     value: project.id,
     label: project.name || "—",
@@ -375,6 +387,9 @@ export function PurchaseOrderFormDialog({
                 </Select>
                 {officeCategoryError ? (
                   <FieldError>{officeCategoryError}</FieldError>
+                ) : null}
+                {officeCountsAs ? (
+                  <FieldDescription>{officeCountsAs}</FieldDescription>
                 ) : null}
               </Field>
             ) : (

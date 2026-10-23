@@ -6,6 +6,7 @@ export const catalogDefinitions = [
     hasActive: true,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "project_types",
@@ -14,6 +15,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "project_phases",
@@ -22,6 +24,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "office_expense_categories",
@@ -30,6 +33,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: true,
   },
   {
     key: "project_expense_categories",
@@ -38,6 +42,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "payment_methods",
@@ -46,6 +51,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "vendor_work_categories",
@@ -54,6 +60,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "asset_categories",
@@ -62,6 +69,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "lead_sources",
@@ -70,6 +78,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "lead_stages",
@@ -78,6 +87,7 @@ export const catalogDefinitions = [
     hasActive: false,
     hasCode: false,
     hasIsOpen: false,
+    hasReportGroup: false,
   },
   {
     key: "lead_statuses",
@@ -87,6 +97,7 @@ export const catalogDefinitions = [
     hasCode: true,
     // is_open remains in DB with silent defaults; not exposed in Settings UI
     hasIsOpen: false,
+    hasReportGroup: false,
   },
 ] as const
 
@@ -100,6 +111,7 @@ export type CatalogItem = {
   isActive: boolean | null
   code: string | null
   isOpen: boolean | null
+  reportGroup: "admin" | "salary" | "marketing" | "operational" | null
 }
 
 export type CatalogList = CatalogDefinition & {

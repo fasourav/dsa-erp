@@ -9,13 +9,18 @@ import type {
 } from "@/lib/operational-expenses"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
+import {
+  isReportGroup,
+  keywordReportGroup,
+  type OfficeCategoryGroup,
+} from "@/lib/report-cost-group"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 
 type Embedded<T> = T | T[] | null
 
 export async function getOperationalExpenses(): Promise<{
   expenses: OperationalExpenseRow[]
-  categories: string[]
+  categories: OfficeCategoryGroup[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
@@ -23,7 +28,7 @@ export async function getOperationalExpenses(): Promise<{
 }> {
   const empty = {
     expenses: [] as OperationalExpenseRow[],
-    categories: [] as string[],
+    categories: [] as OfficeCategoryGroup[],
     departments: [] as NamedOption[],
     paymentMethods: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
@@ -49,7 +54,7 @@ export async function getOperationalExpenses(): Promise<{
           (from, to) =>
             supabase
               .from("office_expense_categories")
-              .select("id, name, sort_order")
+              .select("id, name, sort_order, report_group")
               .order("sort_order", { ascending: true })
               .order("name", { ascending: true })
               .range(from, to),
@@ -79,7 +84,7 @@ export async function getOperationalExpenses(): Promise<{
         listBankAccounts(),
       ])
 
-    const categories = uniqueNames(categoryRows.map((row) => row.name))
+    const categories = officeCategoryChoices(categoryRows)
     const officeCategoryNames = new Map(
       categoryRows.flatMap((row) => {
         const name = row.name?.trim() ?? ""
@@ -273,21 +278,26 @@ function vendorDisplayName(
   return personName?.trim() ?? ""
 }
 
-function uniqueNames(values: readonly (string | null)[]): string[] {
-  const names: string[] = []
+function officeCategoryChoices(
+  rows: { id: string; name: string | null; report_group: string }[],
+): OfficeCategoryGroup[] {
+  const choices: OfficeCategoryGroup[] = []
   const seen = new Set<string>()
 
-  for (const value of values) {
-    const name = value?.trim() ?? ""
-    if (!name || seen.has(name)) {
-      continue
-    }
-
+  for (const row of rows) {
+    const name = row.name?.trim() ?? ""
+    if (!name || seen.has(name)) continue
     seen.add(name)
-    names.push(name)
+    choices.push({
+      id: row.id,
+      name,
+      reportGroup: isReportGroup(row.report_group)
+        ? row.report_group
+        : keywordReportGroup(name),
+    })
   }
 
-  return names
+  return choices
 }
 
 function partyName(

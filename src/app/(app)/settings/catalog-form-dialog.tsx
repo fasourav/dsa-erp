@@ -23,6 +23,13 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   catalogSingularTitle,
   nextSortOrder,
   parseSortOrder,
@@ -30,6 +37,11 @@ import {
   type CatalogItem,
   type CatalogList,
 } from "@/lib/lookup-catalogs"
+import {
+  isReportGroup,
+  reportGroupOptions,
+  type ReportGroup,
+} from "@/lib/report-cost-group"
 
 export function CatalogFormDialog({
   open,
@@ -47,8 +59,12 @@ export function CatalogFormDialog({
     String(item?.sortOrder ?? nextSortOrder(catalog.items)),
   )
   const [isActive, setIsActive] = useState(item?.isActive ?? true)
+  const [reportGroup, setReportGroup] = useState<ReportGroup | "">(
+    item?.reportGroup ?? "",
+  )
   const [nameError, setNameError] = useState<string | null>(null)
   const [sortOrderError, setSortOrderError] = useState<string | null>(null)
+  const [reportGroupError, setReportGroupError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
   const isCreate = !item
@@ -64,6 +80,7 @@ export function CatalogFormDialog({
   function applyFieldErrors(fieldErrors: CatalogFieldErrors) {
     setNameError(fieldErrors.name ?? fieldErrors.code ?? null)
     setSortOrderError(fieldErrors.sortOrder ?? null)
+    setReportGroupError(fieldErrors.reportGroup ?? null)
     if (fieldErrors.isActive || fieldErrors.isOpen) {
       setFormError(fieldErrors.isActive ?? fieldErrors.isOpen ?? null)
     }
@@ -75,15 +92,20 @@ export function CatalogFormDialog({
     const nextNameError = trimmedName ? null : "Enter a name."
     const nextSortOrderError =
       parsedSortOrder === null ? "Enter a whole number." : null
+    const nextReportGroupError =
+      catalog.hasReportGroup && !isReportGroup(reportGroup)
+        ? "Choose a report group."
+        : null
     const resolvedCode = catalog.hasCode
       ? slugifyCatalogCode(trimmedName)
       : ""
 
     setNameError(nextNameError)
     setSortOrderError(nextSortOrderError)
+    setReportGroupError(nextReportGroupError)
     setFormError(null)
 
-    if (!trimmedName || parsedSortOrder === null) {
+    if (!trimmedName || parsedSortOrder === null || nextReportGroupError) {
       return
     }
 
@@ -97,6 +119,7 @@ export function CatalogFormDialog({
       name: trimmedName,
       sortOrder: parsedSortOrder,
       isActive,
+      reportGroup: catalog.hasReportGroup ? reportGroup : undefined,
       code: catalog.hasCode
         ? isCreate
           ? resolvedCode
@@ -164,6 +187,40 @@ export function CatalogFormDialog({
               />
               {nameError ? <FieldError>{nameError}</FieldError> : null}
             </Field>
+
+            {catalog.hasReportGroup ? (
+              <Field data-invalid={Boolean(reportGroupError) || undefined}>
+                <FieldLabel htmlFor="catalog-report-group">Report Group</FieldLabel>
+                <Select
+                  items={reportGroupOptions.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  value={reportGroup || null}
+                  disabled={pending}
+                  onValueChange={(value) => {
+                    setReportGroup(isReportGroup(value) ? value : "")
+                    setReportGroupError(null)
+                  }}
+                >
+                  <SelectTrigger
+                    id="catalog-report-group"
+                    className="w-full"
+                    aria-invalid={Boolean(reportGroupError)}
+                  >
+                    <SelectValue placeholder="Select A Report Group" />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {reportGroupOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {reportGroupError ? <FieldError>{reportGroupError}</FieldError> : null}
+              </Field>
+            ) : null}
 
             <Field data-invalid={Boolean(sortOrderError) || undefined}>
               <FieldLabel htmlFor="catalog-sort-order">Sort Order</FieldLabel>

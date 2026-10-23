@@ -50,6 +50,10 @@ import type {
 import type { DuplicateMatch } from "@/lib/duplicate-outflow"
 import { formatRecordedAt } from "@/lib/recorded-at"
 import { isIsoDate, parseProjectValue, todayIsoDate } from "@/lib/project-validation"
+import {
+  countsAsLabel,
+  type OfficeCategoryGroup,
+} from "@/lib/report-cost-group"
 
 const noneValue = "__none__"
 
@@ -65,7 +69,7 @@ export function ExpenseFormDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   expense: OperationalExpenseRow | null
-  categories: readonly string[]
+  categories: readonly OfficeCategoryGroup[]
   departments: readonly NamedOption[]
   paymentMethods: readonly string[]
   bankAccounts: readonly BankAccountChoice[]
@@ -109,8 +113,11 @@ export function ExpenseFormDialog({
     bankAccounts.some((account) => account.isActive) || Boolean(bankAccountId)
   const categoryError =
     serverErrors.category ??
-    (attempted && !categories.includes(category) ? "Choose a category." : null)
-  const categoryItems = categories.map((name) => ({ value: name, label: name }))
+    (attempted && !categories.some((item) => item.name === category)
+      ? "Choose a category."
+      : null)
+  const categoryItems = categories.map((item) => ({ value: item.name, label: item.name }))
+  const selectedCategory = categories.find((item) => item.name === category)
   const departmentItems = [
     { value: noneValue, label: "None" },
     ...departments.map((department) => ({
@@ -140,7 +147,7 @@ export function ExpenseFormDialog({
       !isIsoDate(expenseDate) ||
       parsedAmount === null ||
       parsedAmount <= 0 ||
-      !categories.includes(category)
+      !categories.some((item) => item.name === category)
     ) {
       return
     }
@@ -270,6 +277,11 @@ export function ExpenseFormDialog({
                 </SelectContent>
               </Select>
               {categoryError ? <FieldError>{categoryError}</FieldError> : null}
+              {selectedCategory ? (
+                <FieldDescription>
+                  {countsAsLabel(selectedCategory.reportGroup)}
+                </FieldDescription>
+              ) : null}
             </Field>
             <Field>
               <FieldLabel htmlFor="expense-method">Payment Method</FieldLabel>
