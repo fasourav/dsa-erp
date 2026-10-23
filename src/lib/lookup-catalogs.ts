@@ -111,7 +111,7 @@ export type CatalogItem = {
   isActive: boolean | null
   code: string | null
   isOpen: boolean | null
-  reportGroup: "admin" | "salary" | "marketing" | "operational" | null
+  reportGroup: "operational" | "marketing" | "salary" | null
 }
 
 export type CatalogList = CatalogDefinition & {

@@ -1,12 +1,11 @@
-export const reportGroups = ["admin", "salary", "marketing", "operational"] as const
+export const reportGroups = ["operational", "marketing", "salary"] as const
 
 export type ReportGroup = (typeof reportGroups)[number]
 
 export const reportGroupOptions: readonly { value: ReportGroup; label: string }[] = [
-  { value: "admin", label: "Admin Expense" },
-  { value: "salary", label: "Salary" },
-  { value: "marketing", label: "Marketing" },
   { value: "operational", label: "Operational Expense" },
+  { value: "marketing", label: "Marketing" },
+  { value: "salary", label: "Salary" },
 ]
 
 export type OfficeCategoryGroup = {
@@ -16,12 +15,7 @@ export type OfficeCategoryGroup = {
 }
 
 export function isReportGroup(value: string | null | undefined): value is ReportGroup {
-  return (
-    value === "admin" ||
-    value === "salary" ||
-    value === "marketing" ||
-    value === "operational"
-  )
+  return value === "operational" || value === "marketing" || value === "salary"
 }
 
 export function reportGroupLabel(group: ReportGroup): string {
@@ -29,15 +23,14 @@ export function reportGroupLabel(group: ReportGroup): string {
 }
 
 export function countsAsLabel(group: ReportGroup): string {
-  return `Counts as ${reportGroupLabel(group)}`
+  return `Counts as ${reportGroupLabel(group)} (part of Admin Expense)`
 }
 
-// Same order as private.report_admin_bucket.
+// Same order as private.report_admin_bucket, except admin counts as operational.
 export function keywordReportGroup(category: string | null | undefined): ReportGroup {
   const name = (category ?? "").trim().toLowerCase()
   if (/salary|payroll|wage/.test(name)) return "salary"
   if (/market|advert|promotion/.test(name)) return "marketing"
-  if (/admin|office|rent|utilit/.test(name)) return "admin"
   return "operational"
 }
 
@@ -97,10 +90,9 @@ export function officeBucketTotals(
   categories: readonly OfficeCategoryGroup[],
 ): Record<ReportGroup, number> {
   const totals: Record<ReportGroup, number> = {
-    admin: 0,
-    salary: 0,
-    marketing: 0,
     operational: 0,
+    marketing: 0,
+    salary: 0,
   }
 
   for (const row of rows) {
@@ -131,10 +123,10 @@ export function officeBucketTotals(
 export function assertReportGroupChecks(): void {
   const categories: OfficeCategoryGroup[] = [
     { id: "salary", name: "Employee Salary", reportGroup: "salary" },
-    { id: "rent", name: "Office Rent", reportGroup: "admin" },
-    { id: "materials", name: "Office Materials", reportGroup: "admin" },
-    { id: "legal", name: "Legal", reportGroup: "admin" },
-    { id: "internet", name: "Internet Bill", reportGroup: "admin" },
+    { id: "rent", name: "Office Rent", reportGroup: "operational" },
+    { id: "materials", name: "Office Materials", reportGroup: "operational" },
+    { id: "legal", name: "Legal", reportGroup: "operational" },
+    { id: "internet", name: "Internet Bill", reportGroup: "operational" },
   ]
 
   for (const category of categories) {
@@ -146,12 +138,24 @@ export function assertReportGroupChecks(): void {
   if (keywordReportGroup("Internet Bill") !== "operational") {
     throw new Error("Internet Bill should stay operational under the keyword rule.")
   }
+  if (keywordReportGroup("Office Rent") !== "operational") {
+    throw new Error("An admin keyword should count as operational.")
+  }
+  if (keywordReportGroup("Employee Salary") !== "salary") {
+    throw new Error("Employee Salary should count as salary.")
+  }
+  if (keywordReportGroup("Marketing Campaign") !== "marketing") {
+    throw new Error("A marketing keyword should count as marketing.")
+  }
+  if (isReportGroup("admin")) {
+    throw new Error("Admin is a total, not a report group.")
+  }
   if (
     resolveCostGroup({
       categoryName: "Internet Bill",
       departmentName: "Design",
       categories,
-    }) !== "admin"
+    }) !== "operational"
   ) {
     throw new Error("Internet Bill should use its category group.")
   }
@@ -160,9 +164,9 @@ export function assertReportGroupChecks(): void {
       categoryName: "Tea",
       departmentName: "Admin",
       categories,
-    }) !== "admin"
+    }) !== "operational"
   ) {
-    throw new Error("An unmatched category should use the department.")
+    throw new Error("An unmatched category should use the department, and admin counts as operational.")
   }
   if (resolveCostGroup({ categoryName: "Tea", categories }) !== "operational") {
     throw new Error("An unmatched category with no department should use the keyword rule.")
@@ -173,7 +177,7 @@ export function assertReportGroupChecks(): void {
       categoryName: "Internet Bill",
       departmentName: "Admin",
       categories,
-    }) !== "admin"
+    }) !== "operational"
   ) {
     throw new Error("A missing category id should fall through to the department.")
   }
@@ -182,7 +186,7 @@ export function assertReportGroupChecks(): void {
       officeCategoryId: "legal",
       workType: "Legal Work",
       categories,
-    }) !== "admin"
+    }) !== "operational"
   ) {
     throw new Error("An operational purchase order should use the office category group.")
   }
@@ -227,9 +231,13 @@ export function assertReportGroupChecks(): void {
       throw new Error(`Dashboard ${group} does not match the financial report.`)
     }
   }
-  if (dashboard.admin !== 46520 || dashboard.operational !== 0 || dashboard.salary !== 500) {
+  const adminExpense = dashboard.operational + dashboard.marketing + dashboard.salary
+  if (dashboard.operational !== 46520 || dashboard.marketing !== 0 || dashboard.salary !== 500) {
     throw new Error(
-      `Unexpected buckets: admin ${dashboard.admin}, operational ${dashboard.operational}, salary ${dashboard.salary}.`,
+      `Unexpected buckets: operational ${dashboard.operational}, marketing ${dashboard.marketing}, salary ${dashboard.salary}.`,
     )
+  }
+  if (adminExpense !== 47020) {
+    throw new Error(`Admin Expense total ${adminExpense} should be operational plus marketing plus salary.`)
   }
 }

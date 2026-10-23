@@ -147,11 +147,17 @@ function DashboardSections({
     )
   }
 
+  const adminExpense =
+    snapshot.operational + snapshot.marketing + snapshot.salary + snapshot.admin
   const slices = expenseSliceStyle.map((slice) => ({
     ...slice,
-    amount: snapshot[slice.key],
+    amount:
+      slice.key === "operational" ? snapshot.operational + snapshot.admin : snapshot[slice.key],
   }))
   const summaryRows = slices.filter((slice) => slice.key !== "projectOverhead")
+  const adminBreakdown = new Set(["operational", "marketing", "salary"])
+  const projectRows = summaryRows.filter((slice) => !adminBreakdown.has(slice.key))
+  const adminRows = summaryRows.filter((slice) => adminBreakdown.has(slice.key))
   const donutSlices = slices.map((slice) =>
     slice.key === "projectOverhead" ? { ...slice, fill: "var(--fill)" } : slice,
   )
@@ -432,7 +438,25 @@ function DashboardSections({
               <span>Project Expense</span>
               <Money value={snapshot.projectExpense} />
             </div>
-            {summaryRows.map((slice) => (
+            {projectRows.map((slice) => (
+              <div key={slice.key} className="flex h-7.5 items-center justify-between gap-3 text-ui md:h-6.75 md:text-label">
+                <span className="flex min-w-0 items-center gap-2 text-muted-foreground md:gap-2.25">
+                  <span aria-hidden="true" className={cn("size-2.25 shrink-0 rounded-[3px]", slice.swatch)} />
+                  <span className="truncate">{slice.label}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2 md:gap-3">
+                  <span className="text-xs text-subtle-foreground tabular-nums">
+                    {formatShare(slice.amount, snapshot.totalExpense)}
+                  </span>
+                  <Money value={slice.amount} className="font-strong md:font-semibold" />
+                </span>
+              </div>
+            ))}
+            <div className="mb-1 flex items-center justify-between gap-3 border-b border-border pb-2 text-sm font-bold md:mb-2 md:pb-2.25 md:text-label md:font-strong">
+              <span>Admin Expense</span>
+              <Money value={adminExpense} />
+            </div>
+            {adminRows.map((slice) => (
               <div key={slice.key} className="flex h-7.5 items-center justify-between gap-3 text-ui md:h-6.75 md:text-label">
                 <span className="flex min-w-0 items-center gap-2 text-muted-foreground md:gap-2.25">
                   <span aria-hidden="true" className={cn("size-2.25 shrink-0 rounded-[3px]", slice.swatch)} />
@@ -962,8 +986,8 @@ function downloadDashboard(
     ["Subcontractor Cost", formatExactBdt(snapshot.subcontractor)],
     ["Project Overhead", formatExactBdt(snapshot.projectOverhead)],
     ["Tax Paid", formatExactBdt(snapshot.tax)],
-    ["Admin Expense", formatExactBdt(snapshot.admin)],
-    ["Operational Expense", formatExactBdt(snapshot.operational)],
+    ["Admin Expense", formatExactBdt(snapshot.operational + snapshot.marketing + snapshot.salary + snapshot.admin)],
+    ["Operational Expense", formatExactBdt(snapshot.operational + snapshot.admin)],
     ["Marketing", formatExactBdt(snapshot.marketing)],
     ["Employee Salary", formatExactBdt(snapshot.salary)],
     ["Collection Rate", snapshot.collectionRate],

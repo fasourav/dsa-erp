@@ -1,5 +1,7 @@
--- Every office expense category has a report group, and the dashboard
--- cash buckets match the Financial Report accrual buckets for one period.
+-- Every office expense category has one of the three report groups, and
+-- Admin Expense is operational + marketing + salary. The admin key stays
+-- in the profit JSON and is zero, so it is not added a second time.
+-- Cash buckets match the Financial Report accrual buckets for one period.
 -- Read-only. Run with psql as a role that can execute private functions,
 -- after 20261023233000_office_expense_report_group.sql is applied.
 
@@ -11,17 +13,17 @@ declare
   v_dashboard jsonb;
   v_from date := date '0001-01-01';
   v_to date := date '9999-12-31';
-  v_admin numeric;
   v_operational numeric;
   v_marketing numeric;
   v_salary numeric;
   v_payroll numeric;
+  v_admin_expense numeric;
 begin
   select count(*)
   into v_missing
   from public.office_expense_categories
   where report_group is null
-     or report_group not in ('admin', 'salary', 'marketing', 'operational');
+     or report_group not in ('operational', 'marketing', 'salary');
 
   if v_missing <> 0 then
     raise exception 'office expense category missing report_group: %', v_missing;
@@ -36,7 +38,7 @@ begin
     select 1
     from public.office_expense_categories
     where lower(btrim(name)) in ('office rent', 'office materials', 'legal', 'internet bill')
-      and report_group is distinct from 'admin'
+      and report_group is distinct from 'operational'
   ) then
     raise exception 'named office expense category has the wrong report group';
   end if;
@@ -45,18 +47,34 @@ begin
   v_accrual := private.report_profit_accrual(v_from, v_to);
   v_dashboard := private.dashboard_components(v_from, v_to);
 
-  if (v_dashboard->>'admin') is distinct from (v_cash->>'admin')
-    or (v_dashboard->>'operational') is distinct from (v_cash->>'operational')
+  if (v_cash->>'admin')::numeric <> 0
+    or (v_accrual->>'admin')::numeric <> 0
+    or (v_dashboard->>'admin')::numeric <> 0
+  then
+    raise exception 'admin key must stay zero so it is not counted twice: cash %, accrual %, dashboard %',
+      v_cash->>'admin', v_accrual->>'admin', v_dashboard->>'admin';
+  end if;
+
+  if (v_dashboard->>'operational') is distinct from (v_cash->>'operational')
     or (v_dashboard->>'marketing') is distinct from (v_cash->>'marketing')
     or (v_dashboard->>'salary') is distinct from (v_cash->>'salary')
+    or (v_dashboard->>'admin_expense')::numeric is distinct from (
+      (v_dashboard->>'operational')::numeric
+      + (v_dashboard->>'marketing')::numeric
+      + (v_dashboard->>'salary')::numeric
+      + (v_dashboard->>'admin')::numeric
+    )
+    or (v_dashboard->>'net')::numeric is distinct from (
+      (v_dashboard->>'gross')::numeric - (v_dashboard->>'admin_expense')::numeric
+    )
   then
     raise exception 'dashboard buckets % differ from cash profit %', v_dashboard, v_cash;
   end if;
 
-  if (v_cash->>'admin') is distinct from (v_accrual->>'admin')
-    or (v_cash->>'operational') is distinct from (v_accrual->>'operational')
+  if (v_cash->>'operational') is distinct from (v_accrual->>'operational')
     or (v_cash->>'marketing') is distinct from (v_accrual->>'marketing')
     or (v_cash->>'salary') is distinct from (v_accrual->>'salary')
+    or (v_cash->>'admin') is distinct from (v_accrual->>'admin')
   then
     raise exception 'dashboard buckets % differ from the financial report %', v_cash, v_accrual;
   end if;
@@ -69,11 +87,10 @@ begin
     and bt.direction = 'outflow';
 
   select
-    coalesce(sum(amount) filter (where bucket = 'admin'), 0),
     coalesce(sum(amount) filter (where bucket = 'operational'), 0),
     coalesce(sum(amount) filter (where bucket = 'marketing'), 0),
     coalesce(sum(amount) filter (where bucket = 'salary'), 0)
-  into v_admin, v_operational, v_marketing, v_salary
+  into v_operational, v_marketing, v_salary
   from (
     select
       private.report_cost_group(null, oe.category, dept.name) as bucket,
@@ -86,7 +103,7 @@ begin
     select
       coalesce(
         office.report_group,
-        private.report_admin_bucket(
+        private.report_office_group(
           case
             when btrim(coalesce(po.work_type, '')) <> '' then po.work_type
             else 'Operational'
@@ -104,15 +121,16 @@ begin
   ) rows;
 
   v_salary := v_salary + v_payroll;
+  v_admin_expense := v_operational + v_marketing + v_salary;
 
-  if round(v_admin, 2) is distinct from (v_cash->>'admin')::numeric
-    or round(v_operational, 2) is distinct from (v_cash->>'operational')::numeric
+  if round(v_operational, 2) is distinct from (v_cash->>'operational')::numeric
     or round(v_marketing, 2) is distinct from (v_cash->>'marketing')::numeric
     or round(v_salary, 2) is distinct from (v_cash->>'salary')::numeric
+    or round(v_admin_expense, 2) is distinct from (v_dashboard->>'admin_expense')::numeric
   then
     raise exception
-      'resolved cash buckets admin %, operational %, marketing %, salary % differ from report_profit %',
-      v_admin, v_operational, v_marketing, v_salary, v_cash;
+      'resolved cash buckets operational %, marketing %, salary % differ from report_profit %',
+      v_operational, v_marketing, v_salary, v_cash;
   end if;
 end;
 $$;

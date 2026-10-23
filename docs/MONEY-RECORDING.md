@@ -28,27 +28,28 @@ Deleting the source removes its bank line. Do not also enter an operational expe
 
 The dashboard sums cash in `private.report_profit`, through `private.dashboard_components`. The Financial Report profit and loss uses the same buckets on an accrual basis in `private.report_profit_accrual`. Office costs use the category's report group. The app fallback in `expenseTotals` (`src/lib/dashboard-metrics.ts`) uses the same rule.
 
-Each office expense category has a required report group: Admin Expense (`admin`), Salary (`salary`), Marketing (`marketing`), or Operational Expense (`operational`). Settings stores it. The forms show it as read-only text, "Counts as …", after a category is chosen.
+Each office expense category has a required report group: Operational Expense (`operational`), Marketing (`marketing`), or Salary (`salary`). There is no admin group. Settings stores the group. The forms show it as read-only text, "Counts as Operational Expense (part of Admin Expense)", after a category is chosen.
+
+Admin Expense is the total of those three groups. It is not a category and not a fourth bucket. The dashboard Expense Summary and the Financial Report profit and loss show that total, then Operational, Marketing, and Salary underneath it. Depreciation stays on the Financial Report and inside that report's Admin Expense subtotal. There is no Office And Admin line.
 
 An operational expense is stored with a category name, not a category id. Its group is resolved in this order:
 
 1. The office expense category with the same name, using that category's report group.
-2. If no category matches, the department name through the old keyword rule.
-3. If there is no department either, the old keyword rule on the category name.
+2. If no category matches, the department name through the keyword rule.
+3. If there is no department either, the keyword rule on the category name.
 
-The keyword rule, still available as `private.report_admin_bucket`, is: salary, payroll, or wage means salary; market, advert, or promotion means marketing; admin, office, rent, or utilit (utilities) means admin; otherwise operational. It is not removed.
+The keyword rule, still available as `private.report_admin_bucket`, is: salary, payroll, or wage means salary; market, advert, or promotion means marketing; admin, office, rent, or utilit (utilities) means admin; otherwise operational. Reports do not use that admin result. `private.report_office_group` maps it to operational. `report_admin_bucket` is not removed, so older callers keep working.
 
 An operational purchase order payment (cash) or bill (accrual) uses the purchase order's office category report group. If that category is missing, it uses the work type through the keyword rule, and otherwise Operational. A project purchase order does not use this group.
 
 - **Material** and **Subcontractor**: vendor payments whose purchase order has a project, and, on the accrual report, vendor bills on a project purchase order. Material when the purchase order expense category, or otherwise the work type, contains material, supply, or goods. Otherwise subcontractor. Cash and accrual use that same split.
-- **Operational**: payments (cash) or bills (accrual) on a purchase order with no project whose resolved group is operational, plus operational expenses with no project in that same group.
-- **Project overhead**: operational expenses linked to a project. They are not also counted as operational, salary, admin, or marketing.
+- **Operational**: payments (cash) or bills (accrual) on a purchase order with no project whose resolved group is operational, plus operational expenses with no project in that same group. Office rent, office materials, legal, and internet bill are operational.
+- **Project overhead**: operational expenses linked to a project. They are not also counted as operational, salary, or marketing.
 - **Salary**: operational expenses with no project whose resolved group is salary, plus operational purchase orders in that group, plus payroll outflows on the bank ledger.
 - **Marketing**: operational expenses with no project whose resolved group is marketing, plus operational purchase orders in that group.
-- **Admin**: operational expenses with no project whose resolved group is admin, plus operational purchase orders in that group. Office materials stay here, not in Material, because that category's group is admin.
 - **Tax**: VAT/Tax payments. Counted in gross profit, not in project expense.
 
-Project expense is material + subcontractor + project overhead. The admin expense total is operational + marketing + salary + admin. Gross profit is client collections minus project expense minus tax. Net profit subtracts the admin expense total.
+Project expense is material + subcontractor + project overhead. Admin Expense is operational + marketing + salary. The profit JSON still has an `admin` key so existing sums keep working. That key is zero, because no row resolves to admin, and it is not shown as its own line. Adding it again would double-count. Gross profit is client collections minus project expense minus tax. Net profit subtracts Admin Expense. On the Financial Report, Admin Expense also includes depreciation, as it did before.
 
 ## Dashboard figures
 
@@ -70,8 +71,8 @@ The database rejects an operational expense insert, or an update that sets or ch
 
 Apply `supabase/migrations/20261023203000_operational_po_office_category.sql` after that. It adds nullable `office_expense_category_id` on purchase orders, buckets operational purchase-order payments and bills with the office category, labels cash-flow vendor payments with no project as Operational Expenses, and renumbers operational purchase-order document numbers from project code NA to OPS. Previous numbers are copied into `private.bak_20261023_po_numbers` first. It does not drop or rename columns.
 
-Apply `supabase/migrations/20261023233000_office_expense_report_group.sql` after that. It adds `report_group` on office expense categories, backfills the current rows, and points the cash and accrual profit functions at that group. It does not drop `report_admin_bucket` or delete rows. The Settings page, the Operational Expense form, and the operational purchase order form read the new column, so apply this before using those screens.
+Apply `supabase/migrations/20261023233000_office_expense_report_group.sql` after that. It adds `report_group` on office expense categories, backfills the current rows (Employee Salary is salary; Office Rent, Office Materials, Legal, and Internet Bill are operational; any other row follows the keyword rule, with admin counting as operational), and points the cash and accrual profit functions at that group. The Financial Report drops the Office And Admin line. Admin Expense stays the subtotal. It does not drop `report_admin_bucket` or delete rows. The Settings page, the Operational Expense form, and the operational purchase order form read the new column, so apply this before using those screens.
 
-The Operational Expense page also lists payments on operational purchase orders as read-only rows marked From Operational PO, with a link to the purchase order. For one period, those rows plus operational expenses that have no project equal dashboard Operational + Admin + Marketing + Employee Salary, except payroll outflows, which stay on the bank ledger and in Employee Salary. A duplicate warning shows the vendor's company name when it is set, and otherwise the person name.
+The Operational Expense page also lists payments on operational purchase orders as read-only rows marked From Operational PO, with a link to the purchase order. For one period, those rows plus operational expenses that have no project equal Admin Expense, except payroll outflows, which stay on the bank ledger and in Salary. A duplicate warning shows the vendor's company name when it is set, and otherwise the person name.
 
 To list likely duplicates already in the data, run `docs/duplicate-money-scan.sql` in the SQL editor. It is read-only.

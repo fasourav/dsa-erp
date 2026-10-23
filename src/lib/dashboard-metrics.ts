@@ -831,7 +831,8 @@ function projectExpenseOf(expenses: ExpenseTotals): number {
 }
 
 function adminExpenseOf(expenses: ExpenseTotals): number {
-  // Non-project operational cost, marketing, salary, and the admin category.
+  // Admin Expense is the total of the three office groups. The admin field
+  // stays so a leftover bucket is included once, not shown as its own line.
   // Project-linked costs and VAT/Tax records are not in these buckets.
   return expenses.operational + expenses.marketing + expenses.salary + expenses.admin
 }

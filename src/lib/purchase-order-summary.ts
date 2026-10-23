@@ -18,7 +18,7 @@ export type VendorOption = {
 export type ExpenseCategoryOption = {
   id: string
   name: string
-  reportGroup?: "admin" | "salary" | "marketing" | "operational" | null
+  reportGroup?: "operational" | "marketing" | "salary" | null
 }
 
 export type PurchaseOrderRow = {
