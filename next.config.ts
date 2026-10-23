@@ -10,7 +10,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["exceljs"],
+  serverExternalPackages: ["exceljs", "puppeteer-core", "@sparticuz/chromium"],
   experimental: {
     serverActions: {
       // Attachments are uploaded through a Server Action and may be up to 10 MB.
@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/reports/export": ["./src/lib/reports/fonts/*.ttf"],
+    "/api/documents/pdf": [
+      "./public/documents/fonts/*.ttf",
+      "./public/documents/setc.css",
+      "./public/brand/letterhead-300dpi.png",
+      "./node_modules/@sparticuz/chromium/bin/**",
+    ],
   },
   async headers() {
     return [

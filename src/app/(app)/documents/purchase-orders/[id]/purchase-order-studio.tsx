@@ -32,6 +32,7 @@ export function PurchaseOrderStudio({
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
+  const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("purchase_orders", form.exists ? "edit" : "add")
@@ -57,6 +58,7 @@ export function PurchaseOrderStudio({
         checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
+        bookAmount: form.bookAmount,
       }),
     [employees, form, origin],
   )
@@ -66,7 +68,8 @@ export function PurchaseOrderStudio({
       title="Purchase Order"
       description="Prints the order only. The letterhead and footer stay on the pad."
       margins={margins}
-      preview={preview}
+      source={{ kind: "print", doc: preview }}
+      record={form.exists ? { kind: "purchase_order", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This purchase order"}
@@ -79,6 +82,7 @@ export function PurchaseOrderStudio({
       }}
       pending={pending}
       error={error}
+      dirty={JSON.stringify(form) !== savedMark}
       files={{ parentType: "purchase_order", parentId: form.id }}
       onSave={() => {
         setError(null)
@@ -91,6 +95,13 @@ export function PurchaseOrderStudio({
             setError(result.error)
             return
           }
+          const saved = {
+            ...form,
+            exists: true,
+            documentNo: result.documentNo ?? form.documentNo,
+            verifyToken: result.verifyToken ?? form.verifyToken,
+          }
+          setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
             exists: true,

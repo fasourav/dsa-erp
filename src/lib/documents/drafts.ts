@@ -13,8 +13,9 @@ export function printedSubtitle(value: string, fallback: string): string {
   return trimmed || fallback
 }
 
-export const DEFAULT_PRINT_MARGIN_TOP_MM = 32
-export const DEFAULT_PRINT_MARGIN_BOTTOM_MM = 28
+/** Mockup safe area: content starts 16mm down and stops at 243mm (54mm above the page foot). */
+export const DEFAULT_PRINT_MARGIN_TOP_MM = 16
+export const DEFAULT_PRINT_MARGIN_BOTTOM_MM = 54
 
 /** Top of the letterhead footer artwork, including the raised logo block. */
 export const LETTERHEAD_FOOTER_MM = 46

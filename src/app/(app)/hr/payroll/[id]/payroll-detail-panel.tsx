@@ -319,7 +319,11 @@ function Cell({ line, columnId }: { line: SalaryLine; columnId: ColumnId }) {
 
   switch (columnId) {
     case "employee":
-      return <span className="text-ui font-semibold">{line.employeeName || "—"}</span>
+      return (
+        <Link href={`/documents/salary-slips/new?line=${line.id}`} className="text-ui font-semibold">
+          {line.employeeName || "—"}
+        </Link>
+      )
     case "salary":
       return amount(line.salary)
     case "allowance":

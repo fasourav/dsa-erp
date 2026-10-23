@@ -233,6 +233,10 @@ export function VendorPaymentsDialog({
                             {row.createdByName} · {formatRecordedAt(row.createdAt)}
                           </p>
                           <p className="text-label text-muted-foreground">
+                            <Link href={`/documents/vouchers/new?payment=${row.id}`} className="underline underline-offset-4">
+                              Print / Download
+                            </Link>
+                            {" · "}
                             <Link
                               href={`/purchase-orders/${row.purchaseOrderId}`}
                               className="underline underline-offset-4"

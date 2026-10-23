@@ -265,6 +265,9 @@ export function ClientInvoicesTable({
                 <Wallet aria-hidden="true" />
                 Payments
               </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href={`/documents/invoices/${invoice.id}`} />}>
+                Print / Download
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               {canDelete ? (<DropdownMenuItem
                 variant="destructive"

@@ -1,0 +1,107 @@
+/* Set C print template. Swap this file to change the document design.
+   Letterpad safe area: content starts at --doc-top and ends at --doc-top + --doc-height,
+   which is never below 243mm and never inside the bottom margin. */
+@font-face{font-family:"Poppins";src:url(/documents/fonts/Poppins-Regular.ttf);font-weight:400}
+@font-face{font-family:"Poppins";src:url(/documents/fonts/Poppins-Medium.ttf);font-weight:500}
+@font-face{font-family:"Poppins";src:url(/documents/fonts/Poppins-SemiBold.ttf);font-weight:600}
+@font-face{font-family:"Poppins";src:url(/documents/fonts/Poppins-Bold.ttf);font-weight:700}
+@font-face{font-family:"Inter";src:url(/documents/fonts/Inter-400.ttf);font-weight:400}
+@font-face{font-family:"Inter";src:url(/documents/fonts/Inter-400Italic.ttf);font-weight:400;font-style:italic}
+@font-face{font-family:"Inter";src:url(/documents/fonts/Inter-500.ttf);font-weight:500}
+@font-face{font-family:"Inter";src:url(/documents/fonts/Inter-600.ttf);font-weight:600}
+@font-face{font-family:"Inter";src:url(/documents/fonts/Inter-700.ttf);font-weight:700}
+@font-face{font-family:"DSA Taka";src:url(/documents/fonts/NotoSansBengali-Medium.ttf);font-weight:400;unicode-range:U+09F3}
+@font-face{font-family:"DSA Taka";src:url(/documents/fonts/NotoSansBengali-Medium.ttf);font-weight:500;unicode-range:U+09F3}
+
+:root{--accent:#45632d;--ink:#23272a;--soft:#4a4f4c;--muted:#80867f;--rule:#e3e6e0;--rule-strong:#9aa095;--doc-top:16mm;--doc-height:227mm}
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#fff}
+body{font-family:"DSA Taka","Inter",sans-serif;font-size:8.5pt;line-height:1.5;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;position:relative;overflow:hidden;background:#fff;margin:0 auto;break-after:page}
+.page:last-child{break-after:auto}
+.page>.bg{position:absolute;inset:0;width:210mm;height:297mm;z-index:0}
+body.pad .bg,body.sheet .bg{display:none}
+body.sheet,body.sheet .page{background:transparent}
+.content{position:absolute;z-index:1;top:var(--doc-top);left:20mm;right:16mm;height:var(--doc-height);display:flex;flex-direction:column;overflow:hidden}
+.tk{font-family:"DSA Taka",sans-serif;font-weight:500;margin-right:.5pt}
+.r,.num{font-variant-numeric:tabular-nums}
+
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:4mm;margin-bottom:8mm}
+.hl{display:flex;align-items:flex-start;gap:4mm;flex:0 0 auto}
+.qr{width:15mm;text-align:center;background:#fff;padding:1mm;margin:-1mm}
+.qr svg{width:13mm;height:13mm;display:block;margin:0 auto}
+.qr .cap{font-size:5pt;color:var(--muted);letter-spacing:.2pt;margin-top:.8mm;white-space:nowrap}
+.head .ref{font-size:7.8pt;color:var(--muted);line-height:1.7;padding-top:.2mm;white-space:nowrap}
+.head .ref b{color:var(--ink);font-weight:500;white-space:nowrap}
+.title{flex:1 1 auto;min-width:0;text-align:right}
+.title h1{font-family:"DSA Taka","Poppins";font-weight:500;font-size:17pt;letter-spacing:2.2pt;color:var(--accent);line-height:1.15;text-transform:uppercase;white-space:nowrap}
+.title.compact h1{font-size:13pt;letter-spacing:.4pt}
+.title .sub{font-size:7.8pt;color:var(--muted);margin-top:.6mm;letter-spacing:.3pt}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12mm;margin-bottom:8mm}
+.cards.three{grid-template-columns:1fr 1fr 1fr;gap:8mm}
+.card h3{font-family:"DSA Taka","Inter";font-size:6.8pt;font-weight:600;letter-spacing:1.1pt;text-transform:uppercase;color:var(--muted);margin-bottom:1.6mm}
+.card .name{font-weight:600;font-size:9.4pt}
+.card p{font-size:8.1pt;color:var(--soft);line-height:1.5}
+.kv{width:100%;border-collapse:collapse;font-size:8.1pt}
+.kv td{padding:.35mm 0;vertical-align:top}
+.kv td:first-child{color:var(--muted);width:36%;padding-right:2mm;white-space:nowrap}
+.kv td:last-child{font-weight:500}
+
+table.grid{width:100%;border-collapse:collapse;font-size:8.2pt}
+table.grid th{font-family:"DSA Taka","Inter";font-weight:600;font-size:7.3pt;color:var(--soft);text-align:left;padding:0 2mm 1.6mm;border-bottom:.8pt solid var(--ink);vertical-align:bottom}
+table.grid td{padding:1.5mm 2mm;border-bottom:.5pt solid var(--rule);vertical-align:top}
+table.grid th:first-child,table.grid td:first-child{padding-left:0}
+table.grid th:last-child,table.grid td:last-child{padding-right:0}
+table.grid .c{text-align:center}
+table.grid .r,table.grid th.r{text-align:right;white-space:nowrap}
+table.grid th.c{text-align:center}
+table.grid td.c:first-child{color:var(--muted)}
+table.grid td.item{font-weight:600}
+table.grid td .spec{display:block;font-weight:400;color:var(--muted);font-size:7.4pt;line-height:1.4;margin-top:.3mm}
+table.grid tfoot td{border:0;padding:1.2mm 2mm;font-weight:500}
+table.grid tfoot tr:first-child td{padding-top:2.4mm}
+table.grid tfoot td.lbl{text-align:right;color:var(--muted);font-weight:400}
+table.grid tfoot tr.soft td{font-weight:600;color:var(--ink)}
+table.grid tfoot tr.grand td{border-top:.8pt solid var(--ink);padding-top:2mm;font-size:10pt;font-weight:600;color:var(--ink)}
+table.grid tfoot tr.grand td.lbl{color:var(--ink);font-weight:600;font-size:8.6pt}
+table.grid tfoot tr.grand td.r{color:var(--accent)}
+table.grid.compact td{padding:.95mm 1.6mm}
+table.grid.compact td .spec{margin-top:0;line-height:1.3}
+table.grid.compact th{padding:0 1.6mm 1.3mm}
+.sec-row td{font-weight:600;font-size:7.4pt;color:var(--soft);padding-top:3mm!important;letter-spacing:.3pt;border-bottom:.5pt solid var(--rule-strong)!important}
+
+.words{margin-top:5mm;font-size:8.6pt}
+.words>span{display:block;font-size:6.8pt;font-weight:600;letter-spacing:1.1pt;text-transform:uppercase;color:var(--muted);margin-bottom:.4mm}
+.words b{font-weight:600}
+.block{margin-top:5mm}
+.block h4{font-size:6.8pt;font-weight:600;letter-spacing:1.1pt;text-transform:uppercase;color:var(--muted);margin-bottom:1.4mm}
+.block ol,.block ul{padding-left:4.2mm;font-size:8pt;color:var(--soft)}
+.block li{margin-bottom:.6mm}
+.block .plain{font-size:8.2pt;color:var(--soft)}
+.letter p{font-size:9.4pt;line-height:1.7;margin-bottom:3.4mm;text-align:justify}
+.subject{font-weight:600;font-size:9.6pt;margin:6mm 0 5mm}
+.subject span{font-size:6.8pt;font-weight:600;letter-spacing:1.1pt;color:var(--muted);margin-right:2.5mm;text-transform:uppercase}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10mm}
+.note{font-size:7.5pt;color:var(--muted)}
+.spacer{flex:1;min-height:4mm}
+.spaced{margin-top:4mm}
+.inspect{margin-top:8mm}
+body.draft .page::after{content:"DRAFT";position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) rotate(-24deg);font-family:"Poppins",sans-serif;font-size:42pt;font-weight:600;letter-spacing:6pt;color:rgba(69,99,45,.16);z-index:2;pointer-events:none}
+.addr{font-size:9.4pt;line-height:1.5;margin-top:2mm}
+.intro{font-size:8.5pt;line-height:1.5;margin-bottom:2mm}
+.thanks{font-size:8.6pt}
+.tight{margin-top:0}
+
+.signs{display:grid;gap:12mm;margin-top:4mm;align-items:start}
+.signs.s1{grid-template-columns:1fr}
+.signs.s2{grid-template-columns:1fr 1fr}
+.signs.s3{grid-template-columns:1fr 1fr 1fr}
+.signs.s4{grid-template-columns:repeat(4,1fr);gap:7mm}
+.sign{padding-top:12mm}
+.sign .line{border-top:.6pt solid var(--rule-strong);padding-top:1.5mm}
+.sign .role{font-size:6.8pt;font-weight:600;letter-spacing:1.1pt;text-transform:uppercase;color:var(--muted)}
+.sign .who{font-size:8.3pt;font-weight:600;margin-top:.4mm}
+.sign .des{font-size:7.5pt;color:var(--muted);line-height:1.4}
+.pfoot{display:flex;justify-content:space-between;font-size:6.8pt;color:#a3a8a0;margin-top:5mm}

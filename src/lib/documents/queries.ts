@@ -69,6 +69,7 @@ export type InvoiceDraft = {
   lines: LineInput[]
   deductions: MoneyDeduction[]
   receivedNote: string
+  bookAmount: number
 }
 
 export type ReceiptDraft = {
@@ -109,6 +110,7 @@ export type PurchaseOrderDraft = {
   deliveryOn: string
   lines: LineInput[]
   carrying: string
+  bookAmount: number
   terms: string
   subtitle: string
   preparedBy: string
@@ -125,6 +127,7 @@ export type QuotationDraft = {
   validUntil: string
   status: string
   clientId: string
+  leadId: string
   projectId: string
   area: string
   subject: string
@@ -399,6 +402,22 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
   }
 }
 
+export async function loadLeadChoices(): Promise<NamedOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id, lead_name, project_name, phone, email")
+    .order("lead_name", { ascending: true })
+  if (error || !data) return []
+  return data.map((row) => ({
+    id: row.id,
+    name: row.lead_name?.trim() || "Lead",
+    detail: [row.project_name, row.phone, row.email].map((part) => part?.trim() ?? "").filter(Boolean).join("\n"),
+    companyName: row.project_name?.trim() ?? "",
+    personName: row.lead_name?.trim() ?? "",
+  }))
+}
+
 export async function listInvoiceDocuments(): Promise<{
   items: DocumentListItem[]
   error: string | null
@@ -549,6 +568,7 @@ export async function loadInvoiceDraft(id: string): Promise<{
       deductions,
       receivedNote:
         received > 0 ? `Received to date ${formatMoney(received)}.` : "",
+      bookAmount: amount,
     },
     error: storageError(printResult.error),
   }
@@ -804,6 +824,7 @@ export async function loadPurchaseOrderDraft(id: string): Promise<{
       receiver: readText(body, "receiver"),
       deliveryOn: readText(body, "deliveryOn"),
       carrying: readText(body, "carrying"),
+      bookAmount: toNumber(order.total_value),
       terms: readText(body, "terms") || order.notes?.trim() || "",
       subtitle: readText(body, "subtitle") || defaultSubtitles.purchaseOrder,
       preparedBy: readText(body, "preparedBy"),
@@ -834,16 +855,43 @@ export async function listQuotations(): Promise<{
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("quotations")
-    .select("id, document_no, issued_on, client_id, total, status")
+    .select("id, document_no, issued_on, client_id, lead_id, total, status")
     .is("deleted_at", null)
     .order("issued_on", { ascending: false })
+  if (error && /lead_id/i.test(error.message ?? "")) {
+    const fallback = await supabase
+      .from("quotations")
+      .select("id, document_no, issued_on, client_id, total, status")
+      .is("deleted_at", null)
+      .order("issued_on", { ascending: false })
+    if (fallback.error) return { items: [], error: storageError(fallback.error) }
+    const catalog = await loadDocumentCatalog()
+    return {
+      items: (fallback.data ?? []).map((row) => ({
+        id: row.id,
+        title: catalog.clients.find((client) => client.id === row.client_id)?.name || "—",
+        detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))}`,
+        documentNo: row.document_no,
+        status: row.status,
+      })),
+      error: catalog.error,
+    }
+  }
   const missing = storageError(error)
   if (error) return { items: [], error: missing }
   const catalog = await loadDocumentCatalog()
+  const leadIds = (data ?? []).flatMap((row) => (row.lead_id ? [row.lead_id] : []))
+  const leads = leadIds.length
+    ? await supabase.from("leads").select("id, lead_name").in("id", leadIds)
+    : { data: [] as Array<{ id: string; lead_name: string | null }> }
+  const leadNames = new Map((leads.data ?? []).map((row) => [row.id, row.lead_name?.trim() || ""]))
   return {
     items: (data ?? []).map((row) => ({
       id: row.id,
-      title: catalog.clients.find((client) => client.id === row.client_id)?.name || "—",
+      title:
+        catalog.clients.find((client) => client.id === row.client_id)?.name ||
+        (row.lead_id ? leadNames.get(row.lead_id) : "") ||
+        "—",
       detail: `${formatIsoDate(dateInputValue(row.issued_on))} · ${formatMoney(toNumber(row.total))}`,
       documentNo: row.document_no,
       status: row.status,
@@ -867,6 +915,7 @@ export async function loadQuotationDraft(id: string | null): Promise<{
         validUntil: "",
         status: "draft",
         clientId: "",
+        leadId: "",
         projectId: "",
         area: "",
         subject: "",
@@ -913,7 +962,8 @@ export async function loadQuotationDraft(id: string | null): Promise<{
       issuedOn: dateInputValue(row.issued_on),
       validUntil: row.valid_until ? dateInputValue(row.valid_until) : "",
       status: row.status,
-      clientId: row.client_id,
+      clientId: row.client_id ?? "",
+      leadId: row.lead_id ?? "",
       projectId: row.project_id ?? "",
       area: row.area,
       subject: row.subject,
@@ -1090,7 +1140,7 @@ export async function workOrderForPurchaseOrder(purchaseOrderId: string): Promis
 
 export type TrashedDocument = {
   id: string
-  kind: "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order"
+  kind: "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order" | "delivery_challan" | "payment_voucher" | "completion" | "salary_slip" | "letter"
   kindLabel: string
   documentNo: string
   detail: string
@@ -1101,7 +1151,7 @@ export async function listTrashedDocuments(): Promise<{
   error: string | null
 }> {
   const supabase = await createClient()
-  const [quotations, orders, issued] = await Promise.all([
+  const [quotations, orders, issued, forms] = await Promise.all([
     supabase
       .from("quotations")
       .select("id, document_no, issued_on, deleted_at")
@@ -1115,8 +1165,13 @@ export async function listTrashedDocuments(): Promise<{
       .select("id, kind, document_no, issued_on, deleted_at, status")
       .not("deleted_at", "is", null)
       .neq("status", "deleted"),
+    supabase
+      .from("form_documents")
+      .select("id, kind, document_no, issued_on, deleted_at")
+      .not("deleted_at", "is", null),
   ])
-  const error = quotations.error ?? orders.error ?? issued.error
+  const formMissing = forms.error && /42P01|PGRST205|schema cache|does not exist|Could not find the table/i.test(`${forms.error.code ?? ""} ${forms.error.message ?? ""}`)
+  const error = quotations.error ?? orders.error ?? issued.error ?? (formMissing ? null : forms.error)
   if (error) return { items: [], error: storageError(error) }
 
   const items: Array<TrashedDocument & { deletedAt: string }> = [
@@ -1152,6 +1207,23 @@ export async function listTrashedDocuments(): Promise<{
         },
       ]
     }),
+    ...(formMissing ? [] : (forms.data ?? [])).map((row) => ({
+      id: row.id,
+      kind: row.kind as TrashedDocument["kind"],
+      kindLabel:
+        row.kind === "delivery_challan"
+          ? "Delivery Challan"
+          : row.kind === "payment_voucher"
+            ? "Payment Voucher"
+            : row.kind === "completion"
+              ? "Work Completion Certificate"
+              : row.kind === "salary_slip"
+                ? "Salary Slip"
+                : "Letter / Notice",
+      documentNo: row.document_no,
+      detail: formatIsoDate(dateInputValue(row.issued_on)),
+      deletedAt: row.deleted_at ?? "",
+    })),
   ]
   items.sort((left, right) => right.deletedAt.localeCompare(left.deletedAt))
   return {

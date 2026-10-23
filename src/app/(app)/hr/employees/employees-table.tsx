@@ -95,11 +95,13 @@ function sortEmployees(
 export function EmployeesTable({
   employees,
   departments,
+  nextCode,
   error,
   initialQuery = "",
 }: {
   employees: EmployeeRow[]
   departments: DepartmentOption[]
+  nextCode: string
   error: string | null
   initialQuery?: string
 }) {
@@ -280,6 +282,7 @@ export function EmployeesTable({
         onOpenChange={setFormOpen}
         employee={formEmployee}
         departments={departments}
+        nextCode={nextCode}
       />
 
       <DeleteConfirmDialog

@@ -82,11 +82,12 @@ export function WorkOrderStudio({
   templates: DocumentTemplate[]
 }) {
   const router = useRouter()
-  const [form, setForm] = useState(() =>
+  const initialForm =
     draft.purchaseOrderId && !draft.id
       ? withPurchaseOrder(draft, purchaseOrders.find((item) => item.id === draft.purchaseOrderId))
-      : draft,
-  )
+      : draft
+  const [form, setForm] = useState(initialForm)
+  const [savedMark, setSavedMark] = useState(() => JSON.stringify(initialForm))
   // The PO link as last saved. Once saved with a PO, the link can switch but never be cleared.
   const [savedPurchaseOrderId, setSavedPurchaseOrderId] = useState(() => (draft.id ? draft.purchaseOrderId : ""))
   const linked = Boolean(form.purchaseOrderId || savedPurchaseOrderId)
@@ -131,7 +132,8 @@ export function WorkOrderStudio({
       title="Work Order"
       description="Printable work order for a purchase order. The letterhead and footer stay on the pad."
       margins={margins}
-      preview={preview}
+      source={{ kind: "print", doc: preview }}
+      record={form.id ? { kind: "work_order", id: form.id } : null}
       canSave={canSave}
       canShare={canSave}
       canTrash={Boolean(form.id)}
@@ -146,6 +148,7 @@ export function WorkOrderStudio({
       }}
       pending={pending}
       error={error}
+      dirty={JSON.stringify(form) !== savedMark}
       files={{ parentType: "work_order", parentId: form.id }}
       templateNames={templates.map((item) => item.name)}
       canStartFromTemplate={canStartFromTemplate}
@@ -208,6 +211,14 @@ export function WorkOrderStudio({
             return
           }
           setSavedPurchaseOrderId(form.purchaseOrderId)
+          const saved = {
+            ...form,
+            id: result.id ?? form.id,
+            documentNo: result.documentNo ?? form.documentNo,
+            verifyToken: result.verifyToken ?? form.verifyToken,
+            version: result.version ?? form.version,
+          }
+          setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
             id: result.id ?? current.id,

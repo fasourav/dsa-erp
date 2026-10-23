@@ -47,6 +47,10 @@ export type PrintDocument = {
   exclusions: string
   notes: string
   signatures: Array<{ label: string; name: string; detail: string }>
+  /** Second amount in words, used by the bill for the net payable. */
+  netWords?: string
+  /** Book amount the printed total must match. */
+  bookAmount?: number | null
 }
 
 export type PricedLines = {
@@ -227,7 +231,7 @@ export function presentWorkOrder(input: {
   return {
     kicker: "Work Order",
     title: printedSubtitle(input.subtitle, defaultSubtitles.workOrder),
-    numberLabel: "Ref",
+    numberLabel: "WO No.",
     documentNo: input.documentNo || "Assigned when saved",
     issuedOn: formatIsoDate(input.issuedOn),
     verifyUrl: input.verifyUrl,
@@ -296,12 +300,21 @@ export function presentInvoice(input: {
   checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
+  bookAmount?: number | null
 }): PrintDocument {
   const priced = priceLines(input.lines)
-  const ait = aitAmount(priced.subtotal, input.aitPercent)
-  const grand = moneyRound(priced.subtotal + ait)
+  const lineAit = aitAmount(priced.subtotal, input.aitPercent)
+  const lineGrand = moneyRound(priced.subtotal + lineAit)
+  const book = input.bookAmount
+  const aligned = book == null || Math.abs(lineGrand - book) < 0.05
+  const grand = book == null ? lineGrand : moneyRound(book)
+  const ait = aligned ? lineAit : 0
+  const subtotal = aligned ? priced.subtotal : grand
   const rate = Number(input.aitPercent)
-  const summary: SummaryRow[] = [{ label: "Sub Total", amount: formatMoney(priced.subtotal) }]
+  const sectionCount = new Set(input.lines.map((line) => line.section.trim()).filter(Boolean)).size
+  const subLabel =
+    sectionCount > 1 ? `Sub Total (Sections A–${String.fromCharCode(64 + Math.min(sectionCount, 26))})` : "Sub Total"
+  const summary: SummaryRow[] = [{ label: subLabel, amount: formatMoney(subtotal) }]
   if (ait > 0) {
     summary.push({ label: `AIT (${trimNumber(rate)}%)`, amount: formatMoney(ait) })
   }
@@ -315,9 +328,10 @@ export function presentInvoice(input: {
     })
   }
   const paid = sumAmounts(input.deductions.map((row) => row.amount))
+  const net = moneyRound(Math.max(0, grand - paid))
   summary.push({
     label: "Net Payable",
-    amount: formatMoney(moneyRound(Math.max(0, grand - paid))),
+    amount: formatMoney(net),
     strong: true,
   })
 
@@ -347,6 +361,8 @@ export function presentInvoice(input: {
     milestones: [],
     wordsLabel: "Amount In Words",
     words: amountInWords(grand),
+    netWords: Math.abs(net - grand) > 0.009 ? amountInWords(net) : undefined,
+    bookAmount: book ?? null,
     summary,
     terms: input.terms.trim(),
     exclusions: "",
@@ -443,7 +459,7 @@ export function presentReceipt(input: {
       checkedByRole: input.checkedByRole,
       authorizedBy: input.authorizedBy ?? "",
       authorizedByRole: input.authorizedByRole ?? "",
-    }),
+    }).map((line) => (line.label === "Prepared By" ? { ...line, label: "Received By (Accounts)" } : line)),
   }
 }
 
@@ -467,13 +483,15 @@ export function presentPurchaseOrder(input: {
   checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
+  bookAmount?: number | null
 }): PrintDocument {
   const priced = priceLines(input.lines)
   const carrying = lineAmount("1", input.carrying)
-  const grand = moneyRound(priced.subtotal + carrying)
+  const lineGrand = moneyRound(priced.subtotal + carrying)
+  const grand = input.bookAmount == null ? lineGrand : moneyRound(input.bookAmount)
   const summary: SummaryRow[] = [{ label: "Sub Total", amount: formatMoney(priced.subtotal) }]
   if (carrying > 0) {
-    summary.push({ label: "Carrying & Unloading", amount: formatMoney(carrying) })
+    summary.push({ label: "Carrying & Unloading at Site", amount: formatMoney(carrying) })
   }
   summary.push({ label: "Grand Total", amount: formatMoney(grand), strong: true })
 

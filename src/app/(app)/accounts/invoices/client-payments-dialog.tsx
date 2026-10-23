@@ -4,6 +4,7 @@ import { savedToast } from "@/lib/saved"
 import { useCan } from "@/components/access-provider"
 
 import { Pencil, Plus, Trash2, Wallet } from "lucide-react"
+import Link from "next/link"
 import { useState, useTransition } from "react"
 
 import {
@@ -223,6 +224,9 @@ export function ClientPaymentsDialog({
                       <RecordAttachments parentType="client_payment" parentId={row.id} collapsed />
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" nativeButton={false} render={<Link href={`/documents/receipts/${row.id}`} />}>
+                        Print / Download
+                      </Button>
                       {canEdit ? (<Button type="button" variant="outline" onClick={() => openForm(row)}>
                         <Pencil aria-hidden="true" data-icon="inline-start" />
                         Edit

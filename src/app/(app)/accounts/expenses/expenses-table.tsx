@@ -214,6 +214,11 @@ export function ExpensesTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              {expense.fromPurchaseOrder ? null : (
+                <DropdownMenuItem nativeButton={false} render={<Link href={`/documents/vouchers/new?expense=${expense.id}`} />}>
+                  Print / Download
+                </DropdownMenuItem>
+              )}
               {expense.fromPurchaseOrder ? (
                 <DropdownMenuItem
                   nativeButton={false}

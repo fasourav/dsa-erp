@@ -59,6 +59,19 @@ export function ProjectDetailPanel({
             </span>
           }
           description={meta || undefined}
+          actions={
+            <>
+              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/certificates/new?project=${project.id}`} />}>
+                Completion Certificate
+              </Button>
+              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/letters/new?project=${project.id}`} />}>
+                Letter
+              </Button>
+              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/challans/new?project=${project.id}`} />}>
+                Delivery Challan
+              </Button>
+            </>
+          }
         />
       </div>
 

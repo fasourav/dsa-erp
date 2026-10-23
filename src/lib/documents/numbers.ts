@@ -1,23 +1,26 @@
-// Document numbers:
-//   Quotation          Q/DDMMYY-CLIENTCODE-PROJECTCODE-VERSION
-//   Purchase / Work    WO/DDMMYY-VENDORCODE-PROJECTCODE
-//   Invoice            INV/DDMMYY-CLIENTCODE-PROJECTCODE
-//   Money receipt      INC/DDMMYY-CLIENTCODE-PROJECTCODE
-// Codes are the uppercase initials of the party or project name.
-// A colliding number keeps the same stem and gains -2, -3, …
+// New documents:
+//   TYPE/DSAE/PROJECTCODE-PARTYCODE/DDMMYYYY
+//   Salary: SAL/DSAE/YYYY-MM/EMPCODE
+//   Letter: DSAE/PROJECT-or-ADM/LTR-or-NTC/DDMM-YYYY
+// A second document with the same stem gains -2, -3, …
+// Quotation revisions add -V2, -V3, …
+// Saved documents keep whatever number they already have.
 
 const NEW_NUMBER =
-  /^(?:Q|WO|INV|INC)\/\d{6}-[A-Z0-9]+-[A-Z0-9]+(?:-V\d+)?(?:-\d+)?$/
+  /^(?:(?:QTN|WO|PO|DC|INV|MR|PV|WCC)\/DSAE\/[A-Z0-9]+-[A-Z0-9]+\/\d{8}(?:-V\d+)?(?:-\d+)?|SAL\/DSAE\/\d{4}-\d{2}\/[A-Z0-9]+(?:-\d+)?|DSAE\/[A-Z0-9]+\/(?:LTR|NTC)\/\d{4}-\d{4}(?:-\d+)?|(?:Q|WO|INV|INC)\/\d{6}-[A-Z0-9]+-[A-Z0-9]+(?:-V\d+)?(?:-\d+)?)$/
 
 export function isNewDocumentNumber(value: string): boolean {
   return NEW_NUMBER.test(value.trim())
 }
 
+const nameTitles = /^(mr|mrs|ms|md|engr|dr|mohammad|mohammed)\.?$/i
+
 export function nameCode(name: string): string {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  while (words.length > 1 && nameTitles.test(words[0]?.replace(/[^A-Za-z.]/g, "") ?? "")) {
+    words.shift()
+  }
+  const initials = words
     .map((word) => word.replace(/[^A-Za-z0-9]/g, "")[0] ?? "")
     .join("")
     .toUpperCase()
@@ -28,8 +31,17 @@ export function nameCode(name: string): string {
 
 export function documentDateCode(iso: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso.trim())
-  if (!match) return "000000"
-  return `${match[3]}${match[2]}${match[1].slice(2)}`
+  if (!match) return "00000000"
+  return `${match[3]}${match[2]}${match[1]}`
+}
+
+function projectCode(projectName: string, operational = false): string {
+  if (projectName.trim()) return nameCode(projectName)
+  return operational ? "OPS" : "NA"
+}
+
+function stem(type: string, project: string, party: string, issuedOn: string): string {
+  return `${type}/DSAE/${project}-${party}/${documentDateCode(issuedOn)}`
 }
 
 export function quotationNumber(
@@ -39,20 +51,49 @@ export function quotationNumber(
   version: number,
 ): string {
   const safe = Number.isFinite(version) && version > 0 ? Math.trunc(version) : 1
-  return `Q/${documentDateCode(issuedOn)}-${nameCode(clientName)}-${nameCode(projectName)}-V${safe}`
+  const base = stem("QTN", projectCode(projectName), nameCode(clientName), issuedOn)
+  return safe > 1 ? `${base}-V${safe}` : base
 }
 
 export function orderNumber(issuedOn: string, vendorName: string, projectName: string): string {
-  const projectCode = projectName.trim() ? nameCode(projectName) : "OPS"
-  return `WO/${documentDateCode(issuedOn)}-${nameCode(vendorName)}-${projectCode}`
+  return stem("WO", projectCode(projectName, true), nameCode(vendorName), issuedOn)
+}
+
+export function purchaseOrderNumber(issuedOn: string, vendorName: string, projectName: string): string {
+  return stem("PO", projectCode(projectName, true), nameCode(vendorName), issuedOn)
+}
+
+export function challanNumber(issuedOn: string, vendorName: string, projectName: string): string {
+  return stem("DC", projectCode(projectName, true), nameCode(vendorName), issuedOn)
 }
 
 export function invoiceNumber(issuedOn: string, clientName: string, projectName: string): string {
-  return `INV/${documentDateCode(issuedOn)}-${nameCode(clientName)}-${nameCode(projectName)}`
+  return stem("INV", projectCode(projectName), nameCode(clientName), issuedOn)
 }
 
 export function receiptNumber(issuedOn: string, clientName: string, projectName: string): string {
-  return `INC/${documentDateCode(issuedOn)}-${nameCode(clientName)}-${nameCode(projectName)}`
+  return stem("MR", projectCode(projectName), nameCode(clientName), issuedOn)
+}
+
+export function voucherNumber(issuedOn: string, vendorName: string, projectName: string): string {
+  return stem("PV", projectCode(projectName, true), nameCode(vendorName), issuedOn)
+}
+
+export function certificateNumber(issuedOn: string, clientName: string, projectName: string): string {
+  return stem("WCC", projectCode(projectName), nameCode(clientName), issuedOn)
+}
+
+export function salaryNumber(periodYear: number, periodMonth: number, employeeCode: string): string {
+  const month = String(periodMonth).padStart(2, "0")
+  const code = employeeCode.trim().replace(/[^A-Za-z0-9]/g, "").toUpperCase()
+  return `SAL/DSAE/${periodYear}-${month}/${code || "NA"}`
+}
+
+export function letterNumber(issuedOn: string, projectName: string, notice: boolean): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(issuedOn.trim())
+  const stamp = match ? `${match[3]}${match[2]}-${match[1]}` : "0000-0000"
+  const project = projectName.trim() ? nameCode(projectName) : "ADM"
+  return `DSAE/${project}/${notice ? "NTC" : "LTR"}/${stamp}`
 }
 
 export function quotationVersion(documentNo: string): number | null {

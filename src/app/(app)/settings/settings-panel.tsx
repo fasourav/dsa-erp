@@ -343,8 +343,10 @@ export function SettingsPanel({
           <CardHeader>
             <CardTitle>Print Margins</CardTitle>
             <CardDescription>
-              Blank Space Above And Below Document Content So It Fits The Pre-Printed Letterhead Pad.
-              Print Output Has No Logo Or Footer.
+              Top Margin Is Where The Writing Starts On Every Page. Bottom Margin Is The Blank Under The Writing.
+              The Letterhead Footer Begins At 243 mm, So A Bottom Margin Under 54 mm Does Not Move That Line;
+              A Larger One Shortens Every Page, Including Page 2. The Set C Page Uses 16 mm Top And 54 mm Bottom
+              When No Saved Margins Are Loaded. Print Has No Letterhead Image. Download PDF Keeps It.
             </CardDescription>
           </CardHeader>
           <div className="border-t border-border">

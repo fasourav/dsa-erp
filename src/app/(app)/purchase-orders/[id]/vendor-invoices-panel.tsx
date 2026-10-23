@@ -221,6 +221,24 @@ export function VendorInvoicesPanel({
             >
               All Purchase Orders
             </Button>
+            {purchaseOrder ? (
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`/documents/purchase-orders/${purchaseOrder.id}`} />}
+              >
+                Print / Download
+              </Button>
+            ) : null}
+            {purchaseOrder ? (
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`/documents/challans/new?po=${purchaseOrder.id}`} />}
+              >
+                Delivery Challan
+              </Button>
+            ) : null}
             {purchaseOrder && workOrderId && canViewWorkOrder ? (
               <Button
                 variant="outline"

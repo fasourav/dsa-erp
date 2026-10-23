@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto"
 
 import { revalidatePath } from "next/cache"
 
+import { formatMoney } from "@/lib/format"
 import { clip, linesToJson, storedLines, storedMilestones } from "@/lib/documents/body"
 import {
   isQuotationStatus,
@@ -17,10 +18,12 @@ import {
   invoiceNumber,
   nextQuotationVersion,
   orderNumber,
+  purchaseOrderNumber,
   quotationNumber,
   receiptNumber,
 } from "@/lib/documents/numbers"
 import { allows, type ModuleKey } from "@/lib/access"
+import type { FormKind } from "@/lib/documents/form-model"
 import { isUuid } from "@/lib/ids"
 import { getAccess } from "@/lib/permissions"
 import { isIsoDate } from "@/lib/project-validation"
@@ -28,7 +31,21 @@ import { createClient } from "@/lib/supabase/server"
 import type { Json } from "@/types/database.types"
 
 type DocumentClient = Awaited<ReturnType<typeof createClient>>
-export type TrashKind = "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order"
+export type TrashKind =
+  | "quotation"
+  | "work_order"
+  | "invoice"
+  | "receipt"
+  | "purchase_order"
+  | FormKind
+
+const formTrashKinds: FormKind[] = [
+  "delivery_challan",
+  "payment_voucher",
+  "completion",
+  "salary_slip",
+  "letter",
+]
 
 export type DocumentSaveResult = {
   error: string | null
@@ -52,12 +69,26 @@ function partyLabel(company: string | null | undefined, person: string | null | 
 }
 
 async function numberTaken(supabase: DocumentClient, value: string): Promise<boolean> {
-  const [quotations, orders, issued] = await Promise.all([
+  const [quotations, orders, issued, forms] = await Promise.all([
     supabase.from("quotations").select("id").eq("document_no", value).limit(1),
     supabase.from("work_orders").select("id").eq("document_no", value).limit(1),
     supabase.from("issued_documents").select("id").eq("document_no", value).limit(1),
+    supabase.from("form_documents").select("id").eq("document_no", value).limit(1),
   ])
-  return Boolean(quotations.data?.length || orders.data?.length || issued.data?.length)
+  const formsMissing =
+    forms.error &&
+    /42P01|PGRST205|schema cache|does not exist|Could not find the table/i.test(
+      `${forms.error.code ?? ""} ${forms.error.message ?? ""}`,
+    )
+  return Boolean(
+    quotations.data?.length || orders.data?.length || issued.data?.length || (!formsMissing && forms.data?.length),
+  )
+}
+
+function amountMismatch(what: string, computed: number, book: number): string {
+  const difference = Math.round((computed - book) * 100) / 100
+  const direction = difference > 0 ? "more" : "less"
+  return `The lines add up to ${formatMoney(computed)}, which is ${formatMoney(Math.abs(difference))} ${direction} than the ${what} of ${formatMoney(book)}.`
 }
 
 async function clientProjectNames(
@@ -93,6 +124,12 @@ async function vendorProjectNames(
     // No project means an operational purchase order. orderNumber codes that as OPS.
     project: projectId ? (project.data?.name?.trim() ?? "") : "",
   }
+}
+
+async function leadQuotationVersion(supabase: DocumentClient, leadId: string): Promise<number> {
+  if (!isUuid(leadId)) return 1
+  const { data } = await supabase.from("quotations").select("document_no").eq("lead_id", leadId)
+  return nextQuotationVersion((data ?? []).map((row) => row.document_no))
 }
 
 async function quotationVersionFor(
@@ -179,14 +216,19 @@ export async function saveInvoicePrint(input: {
 
   const invoice = await supabase
     .from("client_invoices")
-    .select("id, issued_on, status, client_id, project_id")
+    .select("id, issued_on, status, client_id, project_id, amount")
     .eq("id", input.invoiceId)
     .maybeSingle()
   if (invoice.error || !invoice.data || invoice.data.status === "void") {
     return { error: "That invoice could not be found." }
   }
 
-  const total = grandTotal(input.lines, String(ait))
+  const book = Math.max(0, Number(invoice.data.amount) || 0)
+  const computed = grandTotal(input.lines, String(ait))
+  if (Math.abs(computed - book) > 0.05) {
+    return { error: amountMismatch("invoice amount", computed, book) }
+  }
+  const total = book
   const body: Json = {
     dueOn: clip(input.dueOn, 10),
     billToName: clip(input.billToName, 160),
@@ -398,12 +440,17 @@ export async function savePurchaseOrderPrint(input: {
 
   const order = await supabase
     .from("vendor_purchase_orders")
-    .select("id, issued_on, vendor_id, project_id")
+    .select("id, issued_on, vendor_id, project_id, total_value")
     .eq("id", input.purchaseOrderId)
     .maybeSingle()
   if (order.error || !order.data) return { error: "That purchase order could not be found." }
 
-  const total = grandTotal(input.lines, "0", carrying)
+  const book = Math.max(0, Number(order.data.total_value) || 0)
+  const computed = grandTotal(input.lines, "0", carrying)
+  if (Math.abs(computed - book) > 0.05) {
+    return { error: amountMismatch("purchase order amount", computed, book) }
+  }
+  const total = book
   const body: Json = {
     vendorDetail: clip(input.vendorDetail, 500),
     site: clip(input.site, 200),
@@ -441,7 +488,7 @@ export async function savePurchaseOrderPrint(input: {
   }
 
   const names = await vendorProjectNames(supabase, order.data.vendor_id, order.data.project_id)
-  const base = orderNumber(order.data.issued_on.slice(0, 10), names.vendor, names.project)
+  const base = purchaseOrderNumber(order.data.issued_on.slice(0, 10), names.vendor, names.project)
   for (let attempt = 1; attempt <= 8; attempt += 1) {
     const documentNo = collisionNumber(base, attempt)
     if (await numberTaken(supabase, documentNo)) continue
@@ -517,6 +564,7 @@ export async function saveQuotation(input: {
   validUntil: string
   status: string
   clientId: string
+  leadId: string
   projectId: string
   area: string
   subject: string
@@ -534,7 +582,7 @@ export async function saveQuotation(input: {
   const validError = optionalDate(input.validUntil, "valid until date")
   if (validError) return { error: validError }
   if (!isQuotationStatus(input.status)) return { error: "Choose a status." }
-  if (!isUuid(input.clientId)) return { error: "Choose a client." }
+  if (!isUuid(input.clientId) && !isUuid(input.leadId ?? "")) return { error: "Choose a client or a lead." }
   if (input.projectId && !isUuid(input.projectId)) return { error: "Choose a project." }
   const ait = percentOrZero(input.aitPercent)
   if (ait === null) return { error: "Enter an AIT percent from 0 to 100." }
@@ -550,15 +598,29 @@ export async function saveQuotation(input: {
   if (denied) return { error: denied }
   if (input.id && !isUuid(input.id)) return { error: "That quotation could not be found." }
 
-  const client = await supabase.from("clients").select("id").eq("id", input.clientId).maybeSingle()
-  if (client.error || !client.data) return { error: "Choose a client." }
+  let leadName = ""
+  let leadProject = ""
+  if (isUuid(input.clientId)) {
+    const client = await supabase.from("clients").select("id").eq("id", input.clientId).maybeSingle()
+    if (client.error || !client.data) return { error: "Choose a client." }
+  } else if (isUuid(input.leadId ?? "")) {
+    const lead = await supabase
+      .from("leads")
+      .select("id, lead_name, project_name")
+      .eq("id", input.leadId)
+      .maybeSingle()
+    if (lead.error || !lead.data) return { error: "Choose a lead." }
+    leadName = lead.data.lead_name
+    leadProject = lead.data.project_name?.trim() ?? ""
+  }
   if (input.projectId) {
     const project = await supabase
       .from("projects")
       .select("id, client_id")
       .eq("id", input.projectId)
       .maybeSingle()
-    if (project.error || !project.data || project.data.client_id !== input.clientId) {
+    if (project.error || !project.data) return { error: "Choose a project." }
+    if (isUuid(input.clientId) && project.data.client_id !== input.clientId) {
       return { error: "Choose a project for this client." }
     }
   }
@@ -568,7 +630,8 @@ export async function saveQuotation(input: {
     issued_on: input.issuedOn,
     valid_until: input.validUntil || null,
     status: input.status,
-    client_id: input.clientId,
+    client_id: isUuid(input.clientId) ? input.clientId : null,
+    lead_id: isUuid(input.leadId ?? "") ? input.leadId : null,
     project_id: input.projectId || null,
     area: clip(input.area, 120),
     subject: clip(input.subject, 300),
@@ -582,8 +645,17 @@ export async function saveQuotation(input: {
     authorized_by: clip(input.authorizedBy, 120),
   }
 
-  const names = await clientProjectNames(supabase, input.clientId, input.projectId || null)
-  const version = await quotationVersionFor(supabase, input.clientId, input.projectId || null)
+  const names = isUuid(input.clientId)
+    ? await clientProjectNames(supabase, input.clientId, input.projectId || null)
+    : {
+        client: leadName,
+        project: input.projectId
+          ? ((await supabase.from("projects").select("name").eq("id", input.projectId).maybeSingle()).data?.name ?? leadProject)
+          : leadProject,
+      }
+  const version = isUuid(input.clientId)
+    ? await quotationVersionFor(supabase, input.clientId, input.projectId || null)
+    : await leadQuotationVersion(supabase, input.leadId ?? "")
   const base = quotationNumber(input.issuedOn, names.client, names.project, version)
   const saved = await saveDocumentAtomically("quotation", input, fields, base, "Could not save this quotation.")
   if (saved.error || !saved.id) return saved
@@ -712,6 +784,19 @@ function revalidateDocument(kind: TrashKind) {
   if (kind === "invoice") revalidatePath("/documents/invoices")
   if (kind === "receipt") revalidatePath("/documents/receipts")
   if (kind === "purchase_order") revalidatePath("/documents/purchase-orders")
+  if (formTrashKinds.includes(kind as FormKind)) {
+    const slug =
+      kind === "delivery_challan"
+        ? "challans"
+        : kind === "payment_voucher"
+          ? "vouchers"
+          : kind === "completion"
+            ? "certificates"
+            : kind === "salary_slip"
+              ? "salary-slips"
+              : "letters"
+    revalidatePath(`/documents/${slug}`)
+  }
 }
 
 async function requireOwner(): Promise<{ userId: string } | { error: string }> {
@@ -775,6 +860,30 @@ async function applyTrash(
   patch: { deleted_at: string | null; deleted_by: string | null } | null,
 ): Promise<{ error: string | null }> {
   const missing = "That document could not be found."
+  if (formTrashKinds.includes(kind as FormKind)) {
+    if (mode === "delete") {
+      const { data, error } = await supabase
+        .from("form_documents")
+        .delete()
+        .eq("id", id)
+        .eq("kind", kind)
+        .not("deleted_at", "is", null)
+        .select("id")
+      if (error) return { error: writeError(error, "Could not delete this document.") }
+      if (!data?.length) return { error: missing }
+      return { error: null }
+    }
+    const query = supabase
+      .from("form_documents")
+      .update(patch ?? { deleted_at: null, deleted_by: null })
+      .eq("id", id)
+      .eq("kind", kind)
+    const filtered = mode === "trash" ? query.is("deleted_at", null) : query.not("deleted_at", "is", null)
+    const { data, error } = await filtered.select("id")
+    if (error) return { error: writeError(error, "Could not update this document.") }
+    if (!data?.length) return { error: missing }
+    return { error: null }
+  }
   if (kind === "quotation" || kind === "work_order") {
     const table = kind === "quotation" ? "quotations" : "work_orders"
     if (mode === "delete") {
@@ -914,7 +1023,7 @@ async function trashUnprintedDocument(
     issuedOn = order.data.issued_on
     total = Math.max(0, Number(order.data.total_value) || 0)
     const names = await vendorProjectNames(supabase, order.data.vendor_id, order.data.project_id)
-    base = orderNumber(issuedOn.slice(0, 10), names.vendor, names.project)
+    base = purchaseOrderNumber(issuedOn.slice(0, 10), names.vendor, names.project)
   } else if (issuedKind === "invoice") {
     const invoice = await supabase
       .from("client_invoices")

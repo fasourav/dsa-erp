@@ -46,6 +46,7 @@ export function QuotationStudio({
   origin,
   margins,
   templates,
+  leads = [],
 }: {
   draft: QuotationDraft
   clients: NamedOption[]
@@ -54,9 +55,11 @@ export function QuotationStudio({
   origin: string
   margins: PrintMargins
   templates: DocumentTemplate[]
+  leads?: NamedOption[]
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
+  const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("quotations", form.id ? "edit" : "add")
@@ -64,17 +67,19 @@ export function QuotationStudio({
   const canManageTemplates = useCan("document_templates", "add")
   const canSaveAsTemplate = Boolean(form.id) && canManageTemplates
   const client = clients.find((item) => item.id === form.clientId)
+  const lead = leads.find((item) => item.id === form.leadId)
   const clientProjects = projects.filter((project) => project.clientId === form.clientId)
-  const project = clientProjects.find((item) => item.id === form.projectId)
+  const project = projects.find((item) => item.id === form.projectId)
+  const partyName = client ? customerDisplayName(client) : lead?.name || ""
   const preview = presentQuotation({
         documentNo: form.documentNo,
         issuedOn: form.issuedOn,
         validUntil: form.validUntil,
         verifyUrl: verifyUrl(origin, form.verifyToken),
-        preparedForName: client?.personName || client?.name || "",
-        preparedForDetail: client?.detail || "",
-        clientName: customerDisplayName(client),
-        projectName: project?.name || "",
+        preparedForName: client?.personName || client?.name || lead?.name || "",
+        preparedForDetail: client?.detail || lead?.detail || "",
+        clientName: partyName,
+        projectName: project?.name || lead?.companyName || "",
         area: form.area,
         subject: form.subject,
         aitPercent: form.aitPercent,
@@ -96,7 +101,8 @@ export function QuotationStudio({
       title="Quotation"
       description="Prints the quotation only. The letterhead and footer stay on the pad."
       margins={margins}
-      preview={preview}
+      source={{ kind: "print", doc: preview }}
+      record={form.id ? { kind: "quotation", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
       trashName={form.documentNo || "This quotation"}
@@ -110,6 +116,7 @@ export function QuotationStudio({
       }}
       pending={pending}
       error={error}
+      dirty={JSON.stringify(form) !== savedMark}
       files={{ parentType: "quotation", parentId: form.id }}
       templateNames={templates.map((item) => item.name)}
       canStartFromTemplate={canStartFromTemplate}
@@ -152,6 +159,14 @@ export function QuotationStudio({
             setError(result.error ?? "Could not save this quotation.")
             return
           }
+          const saved = {
+            ...form,
+            id: result.id ?? form.id,
+            documentNo: result.documentNo ?? form.documentNo,
+            verifyToken: result.verifyToken ?? form.verifyToken,
+            version: result.version ?? form.version,
+          }
+          setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
             id: result.id ?? current.id,
@@ -170,6 +185,14 @@ export function QuotationStudio({
         disabled={!canSave}
         options={clients.map((item) => ({ value: item.id, label: item.name }))}
         onChange={(clientId) => setForm({ ...form, clientId, projectId: "" })}
+      />
+      <ChoiceField
+        id="lead"
+        label="Lead"
+        value={form.leadId}
+        disabled={!canSave}
+        options={leads.map((item) => ({ value: item.id, label: item.name }))}
+        onChange={(leadId) => setForm({ ...form, leadId })}
       />
       <ChoiceField
         id="project"
