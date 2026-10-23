@@ -1,6 +1,6 @@
 # Documents
 
-Set C is the print design for every business document. The on-screen preview and the downloaded PDF are the same HTML and CSS. Nothing is drawn a second time with pdf-lib except placing the letterhead image under the pages so the 300 dpi PNG is not recompressed.
+Set C is the print design for every business document. The on-screen preview and the downloaded PDF are the same HTML and CSS. The preview is a full page inside the document screen, so the stylesheet, fonts, and letterhead load from this app. An unsaved document shows the Draft watermark in both the preview and the PDF. After a document is saved, Download rebuilds it from the database; if the form has unsaved edits, Download stays disabled until you save. Nothing is drawn a second time with pdf-lib except placing the letterhead image under the pages so the 300 dpi PNG is not recompressed.
 
 ## Templates
 
@@ -29,7 +29,7 @@ New documents use:
 
 TYPE is QTN, WO, PO, DC, INV, MR, PV, or WCC. PARTYCODE is the vendor for WO, PO, DC, and PV, and the client (or lead) for QTN, INV, MR, and WCC. Codes are the initials of the name. An operational purchase order uses OPS as the project code. A second document with the same stem on the same day gets `-2`, `-3`, and so on. A revised quotation gets `-V2`, `-V3`.
 
-Salary slips: `SAL/DSAE/YYYY-MM/EMPCODE`, using the employee code (for example 014), not name initials.
+Salary slips: `SAL/DSAE/YYYY-MM/EMPCODE`, using the employee code (for example 014), not name initials. New employees get the next code (001, 002, …) on the employee form. You can edit it. A blank code on insert is filled in by the database. The code is unique ignoring case and surrounding spaces.
 
 Letters and notices: `DSAE/PROJECTCODE-or-ADM/LTR-or-NTC/DDMM-YYYY`.
 

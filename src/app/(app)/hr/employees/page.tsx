@@ -12,7 +12,7 @@ export default async function EmployeesPage({
 }) {
   await requireModule("employees")
   const params = await searchParams
-  const { employees, departments, error } = await getEmployees()
+  const { employees, departments, nextCode, error } = await getEmployees()
   const initialQuery = firstParam(params.q)
 
   return (
@@ -20,6 +20,7 @@ export default async function EmployeesPage({
       key={initialQuery || "all"}
       employees={employees}
       departments={departments}
+      nextCode={nextCode}
       error={error}
       initialQuery={initialQuery}
     />

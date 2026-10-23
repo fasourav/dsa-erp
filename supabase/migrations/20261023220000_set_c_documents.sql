@@ -49,6 +49,38 @@ create unique index if not exists employees_employee_code_key
   on public.employees (lower(btrim(employee_code)))
   where employee_code is not null and btrim(employee_code) <> '';
 
+grant select (employee_code) on public.employees to authenticated;
+
+create or replace function private.assign_employee_code()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  next_code text;
+begin
+  if new.employee_code is null or btrim(new.employee_code) = '' then
+    perform pg_advisory_xact_lock(hashtext('public.employees.employee_code'));
+    select lpad((coalesce(max(employee_code::integer), 0) + 1)::text, 3, '0')
+      into next_code
+      from public.employees
+      where employee_code ~ '^[0-9]+$';
+    new.employee_code := next_code;
+  else
+    new.employee_code := btrim(new.employee_code);
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function private.assign_employee_code() from public, anon, authenticated;
+
+drop trigger if exists employees_assign_code on public.employees;
+create trigger employees_assign_code
+  before insert on public.employees
+  for each row execute function private.assign_employee_code();
+
 create table public.form_documents (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in (
@@ -63,7 +95,7 @@ create table public.form_documents (
   project_id uuid references public.projects (id) on delete restrict,
   client_id uuid references public.clients (id) on delete restrict,
   vendor_id uuid references public.vendors (id) on delete restrict,
-  purchase_order_id uuid references private.vendor_purchase_orders (id) on delete restrict,
+  purchase_order_id uuid references private.vendor_purchase_orders (id) on delete cascade,
   vendor_payment_id uuid references public.vendor_payments (id) on delete cascade,
   operational_expense_id uuid references public.operational_expenses (id) on delete cascade,
   payroll_line_id uuid references public.payroll_lines (id) on delete cascade,
@@ -381,6 +413,161 @@ begin
       and f.deleted_at is null
   ) found
   limit 1;
+end;
+$$;
+
+-- Keep security definer and search_path. form_documents used to fall through to settings.
+create or replace function private.log_activity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  row_data jsonb;
+  new_row jsonb;
+  old_row jsonb;
+  changed_old jsonb;
+  changed_new jsonb;
+  module_key text;
+  label text;
+  row_id text;
+  verb text;
+begin
+  begin
+    if tg_op = 'DELETE' then
+      verb := 'delete';
+      row_data := to_jsonb(old);
+    elsif tg_op = 'UPDATE' then
+      verb := 'update';
+      row_data := to_jsonb(new);
+    else
+      verb := 'insert';
+      row_data := to_jsonb(new);
+    end if;
+
+    module_key := case tg_table_name
+      when 'leads' then 'leads'
+      when 'clients' then 'clients'
+      when 'projects' then 'projects'
+      when 'vendors' then 'vendors'
+      when 'vendor_purchase_orders' then 'purchase_orders'
+      when 'vendor_invoices' then 'vendor_payments'
+      when 'vendor_payments' then 'vendor_payments'
+      when 'client_invoices' then 'client_invoices'
+      when 'client_payments' then 'client_invoices'
+      when 'bank_accounts' then 'banking'
+      when 'bank_transactions' then 'banking'
+      when 'bank_transfers' then 'banking'
+      when 'operational_expenses' then 'expenses'
+      when 'vat_tax_payments' then 'vat_tax'
+      when 'budgets' then 'budgets'
+      when 'assets' then 'assets'
+      when 'asset_categories' then 'assets'
+      when 'employees' then 'employees'
+      when 'payroll_runs' then 'payroll'
+      when 'payroll_lines' then 'payroll'
+      when 'profiles' then 'users'
+      when 'permission_modules' then 'users'
+      when 'role_templates' then 'users'
+      when 'role_template_permissions' then 'users'
+      when 'user_permissions' then 'users'
+      when 'user_invites' then 'users'
+      when 'quotations' then 'quotations'
+      when 'quotation_lines' then 'quotations'
+      when 'quotation_milestones' then 'quotations'
+      when 'work_orders' then 'work_orders'
+      when 'work_order_lines' then 'work_orders'
+      when 'work_order_milestones' then 'work_orders'
+      when 'issued_documents' then
+        case
+          when coalesce(row_data->>'kind', '') = 'purchase_order' then 'purchase_orders'
+          else 'client_invoices'
+        end
+      when 'form_documents' then
+        case row_data->>'kind'
+          when 'delivery_challan' then
+            case when coalesce(row_data->>'purchase_order_id', '') <> '' then 'purchase_orders' else 'projects' end
+          when 'payment_voucher' then
+            case when coalesce(row_data->>'operational_expense_id', '') <> '' then 'expenses' else 'vendor_payments' end
+          when 'completion' then 'projects'
+          when 'salary_slip' then 'payroll'
+          when 'letter' then
+            case when coalesce(row_data->>'project_id', '') <> '' then 'projects' else 'clients' end
+          else 'projects'
+        end
+      else 'settings'
+    end;
+
+    if tg_table_name = 'user_permissions' then
+      row_id := (row_data->>'user_id') || ':' || (row_data->>'module');
+    elsif tg_table_name = 'role_template_permissions' then
+      row_id := (row_data->>'template_id') || ':' || (row_data->>'module');
+    else
+      row_id := coalesce(row_data->>'id', row_data->>'key', row_data->>'email');
+    end if;
+
+    label := private.audit_label(tg_table_name, row_data);
+
+    if tg_op = 'INSERT' then
+      new_row := to_jsonb(new) - 'updated_at' - 'last_sign_in_at';
+      changed_old := null;
+      changed_new := new_row;
+    elsif tg_op = 'DELETE' then
+      old_row := to_jsonb(old) - 'updated_at' - 'last_sign_in_at';
+      changed_old := old_row;
+      changed_new := null;
+    else
+      new_row := to_jsonb(new) - 'updated_at' - 'last_sign_in_at';
+      old_row := to_jsonb(old) - 'updated_at' - 'last_sign_in_at';
+      if new_row is not distinct from old_row then
+        return new;
+      end if;
+
+      select
+        coalesce(jsonb_object_agg(entry.key, old_row -> entry.key), '{}'::jsonb),
+        coalesce(jsonb_object_agg(entry.key, new_row -> entry.key), '{}'::jsonb)
+      into changed_old, changed_new
+      from jsonb_each(old_row || new_row) as entry(key, value)
+      where (old_row -> entry.key) is distinct from (new_row -> entry.key);
+    end if;
+
+    insert into public.activity_log (
+      actor_id,
+      action,
+      module,
+      table_name,
+      record_id,
+      record_label,
+      summary,
+      old_values,
+      new_values
+    )
+    values (
+      auth.uid(),
+      verb,
+      module_key,
+      tg_table_name,
+      row_id,
+      label,
+      case verb
+        when 'insert' then 'Added'
+        when 'update' then 'Updated'
+        else 'Deleted'
+      end || ' ' || label,
+      changed_old,
+      changed_new
+    );
+  exception
+    when others then
+      null;
+  end;
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+
+  return new;
 end;
 $$;
 

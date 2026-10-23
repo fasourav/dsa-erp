@@ -41,16 +41,19 @@ export function EmployeeFormDialog({
   onOpenChange,
   employee,
   departments,
+  nextCode,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   employee: EmployeeRow | null
   departments: readonly DepartmentOption[]
+  nextCode: string
 }) {
   const showFinancials = useAccess().showFinancials
   const hidePay = Boolean(employee) && !showFinancials
   const employeeId = employee?.id ?? null
   const version = useRecordVersion("employees", employeeId, open)
+  const [employeeCode, setEmployeeCode] = useState(employee?.employeeCode?.trim() || nextCode)
   const [fullName, setFullName] = useState(employee?.fullName ?? "")
   const [departmentId, setDepartmentId] = useState(
     employee?.departmentId ?? "",
@@ -74,6 +77,7 @@ export function EmployeeFormDialog({
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
 
+  const codeError = fieldErrors.employeeCode
   const nameError =
     attempted && !fullName.trim() ? "Enter the employee name." : fieldErrors.fullName
   const salaryError =
@@ -101,6 +105,7 @@ export function EmployeeFormDialog({
     }
 
     const input = {
+      employeeCode: employeeCode.trim(),
       fullName: fullName.trim(),
       departmentId,
       designation: designation.trim(),
@@ -179,6 +184,22 @@ export function EmployeeFormDialog({
                 onChange={(e) => setFullName(e.target.value)}
               />
               {nameError ? <FieldError>{nameError}</FieldError> : null}
+            </Field>
+
+            <Field span="half" data-invalid={Boolean(codeError) || undefined}>
+              <FieldLabel htmlFor="emp-code">Employee Code</FieldLabel>
+              <Input
+                id="emp-code"
+                maxLength={32}
+                value={employeeCode}
+                autoComplete="off"
+                autoCapitalize="characters"
+                enterKeyHint="next"
+                disabled={pending}
+                aria-invalid={Boolean(codeError)}
+                onChange={(e) => setEmployeeCode(e.target.value)}
+              />
+              {codeError ? <FieldError>{codeError}</FieldError> : null}
             </Field>
 
             <Field span="half" data-invalid={Boolean(fieldErrors.departmentId) || undefined}>

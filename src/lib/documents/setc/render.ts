@@ -54,7 +54,7 @@ export function renderDocument(
 ): { pages: string[]; html: string } {
   const box = contentBox(margins)
   const built = build(model, box)
-  const pages = built.bodies.map((body, index) =>
+  const sections = built.bodies.map((body, index) =>
     pageHtml({
       body,
       signs: built.pageSigns?.[index] || (index === built.bodies.length - 1 ? built.signs : ""),
@@ -70,7 +70,10 @@ export function renderDocument(
       documentTitle: built.title,
     }),
   )
-  return { pages, html: shell(pages.join("\n"), built.title, box, mode, inlineCss, draft) }
+  // Each page is a full document so the preview iframe can load the stylesheet.
+  // A bare section has no <link>, which is why the live preview rendered unstyled.
+  const pages = sections.map((section) => shell(section, built.title, box, mode, inlineCss, draft))
+  return { pages, html: shell(sections.join("\n"), built.title, box, mode, inlineCss, draft) }
 }
 
 function build(model: DocumentModel, box: ContentBox): Built {
@@ -434,7 +437,7 @@ function buildCertificate(doc: CertificateModel, box: ContentBox): Built {
       0,
       box,
     )
-    if (tables[0]) tables[0] = { html: `<div class="spaced">${tables[0].html}</div>`, mm: tables[0].mm + 4 }
+    if (tables[0]) tables[0] = { html: `<div class="inspect">${tables[0].html}</div>`, mm: tables[0].mm + 8 }
     chunks.push(...tables)
   }
   if (doc.defect.trim()) chunks.push(chunk(`<div class="words"><span>Defect Liability</span>${esc(doc.defect)}</div>`, 16))
@@ -734,8 +737,9 @@ function head(title: string, subtitle: string, refLines: Array<[string, string]>
     .join("<br>")
   const qr = qrSvg(verifyUrl)
   const qrHtml = qr ? `<div class="qr">${qr}<div class="cap">Scan to verify</div></div>` : ""
+  const compact = title.trim().length > 18 ? " compact" : ""
   return `<div class="head"><div class="hl">${qrHtml}<div class="ref">${refs}</div></div>
-<div class="title"><h1>${esc(title)}</h1>${subtitle ? `<div class="sub">${esc(subtitle)}</div>` : ""}</div></div>`
+<div class="title${compact}"><h1>${esc(title)}</h1>${subtitle ? `<div class="sub">${esc(subtitle)}</div>` : ""}</div></div>`
 }
 
 function cards(doc: PrintDocument): string {

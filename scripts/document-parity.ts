@@ -339,6 +339,11 @@ function checkLayout() {
       if (bottom > floor + 0.4) out.push(`page ${i + 1} bottom ${bottom.toFixed(1)}mm past floor ${floor.toFixed(1)}`)
       if (bottom > 243.2) out.push(`page ${i + 1} crosses 243mm at ${bottom.toFixed(1)}`)
     })
+    pg.querySelectorAll(".head .ref b, .title h1").forEach((el) => {
+      const line = el.getClientRects().length
+      if (line > 1) out.push(`page ${i + 1} header wraps: ${(el.textContent ?? "").slice(0, 48)}`)
+      if (el.scrollWidth > el.clientWidth + 1) out.push(`page ${i + 1} header overflows: ${(el.textContent ?? "").slice(0, 48)}`)
+    })
   })
   if (/\bID\b/.test(document.body.innerText)) out.push("FOUND ID text")
   return { issues: out, pages: document.querySelectorAll(".page").length, top, height }

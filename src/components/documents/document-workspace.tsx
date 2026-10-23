@@ -47,6 +47,7 @@ export function DocumentWorkspace({
   onTrash,
   pending,
   error,
+  dirty = false,
   onSave,
   files,
   templateNames,
@@ -70,6 +71,8 @@ export function DocumentWorkspace({
   onTrash?: () => Promise<string | null>
   pending: boolean
   error: string | null
+  /** Saved document whose form no longer matches what Download would rebuild. */
+  dirty?: boolean
   onSave: () => void
   files?: { parentType: AttachmentParent; parentId: string | null }
   templateNames?: readonly string[]
@@ -175,12 +178,17 @@ export function DocumentWorkspace({
             <Button
               type="button"
               variant="outline"
-              disabled={pdfKind !== null}
-              aria-label="Download PDF"
+              disabled={pdfKind !== null || (Boolean(record?.id) && dirty)}
+              aria-label={Boolean(record?.id) && dirty ? "Save to download" : "Download PDF"}
+              title={Boolean(record?.id) && dirty ? "Save the document, then download it." : undefined}
               onClick={() => openPdf(true)}
             >
               <Download aria-hidden="true" data-icon="inline-start" />
-              {pdfKind === "letterhead" ? "Creating…" : "Download PDF"}
+              {Boolean(record?.id) && dirty
+                ? "Save To Download"
+                : pdfKind === "letterhead"
+                  ? "Creating…"
+                  : "Download PDF"}
             </Button>
             {showTrash ? (
               <Button
@@ -259,7 +267,7 @@ export function DocumentWorkspace({
           </CardContent>
         </Card>
         <div className={cn("min-w-0", pane === "edit" && "hidden md:block")}>
-          <PreviewStage source={source} margins={{ topMm: top, bottomMm: bottom }} />
+          <PreviewStage source={source} margins={{ topMm: top, bottomMm: bottom }} draft={!record?.id} />
         </div>
       </div>
       {showTrash && onTrash ? (
@@ -349,22 +357,24 @@ export function DocumentWorkspace({
 function PreviewStage({
   source,
   margins,
+  draft,
 }: {
   source: DocumentModel
   margins: PrintMargins
+  draft: boolean
 }) {
   const frame = useRef<HTMLDivElement>(null)
   const pager = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState<number | null>(null)
   const [page, setPage] = useState(0)
-  const rendered = useMemo(() => renderDocument(source, margins, "letterhead"), [source, margins])
+  const rendered = useMemo(
+    () => renderDocument(source, margins, "letterhead", undefined, draft),
+    [draft, source, margins],
+  )
   const current = Math.min(page, Math.max(0, rendered.pages.length - 1))
+  // srcdoc keeps this page as the base URL, so /documents/setc.css, the fonts,
+  // and the letterhead load from the app. A blob URL does not.
   const pageHtml = rendered.pages[current] ?? rendered.html
-  const src = useMemo(() => URL.createObjectURL(new Blob([pageHtml], { type: "text/html" })), [pageHtml])
-
-  useEffect(() => {
-    return () => URL.revokeObjectURL(src)
-  }, [src])
 
   useLayoutEffect(() => {
     const frameEl = frame.current
@@ -411,7 +421,7 @@ function PreviewStage({
         >
           <iframe
             title="Document preview"
-            src={src}
+            srcDoc={pageHtml}
             scrolling="no"
             className="absolute top-0 left-0 origin-top-left border-0 bg-white"
             style={{

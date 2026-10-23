@@ -212,11 +212,15 @@ async function linkedFacts(
   if (input.kind === "payment_voucher" && input.operationalExpenseId) {
     const expense = await supabase
       .from("operational_expenses")
-      .select("amount, vendor_id, project_id")
+      .select("amount, vendor_id, project_id, category")
       .eq("id", input.operationalExpenseId)
       .maybeSingle()
     if (!expense.data) return empty("That expense could not be found.")
-    const vendor = expense.data.vendor_id ? await partyName(supabase, "vendors", expense.data.vendor_id) : "Expense"
+    const category = expense.data.category?.trim() ?? ""
+    const payee = input.body.partyName.trim()
+    const vendor = expense.data.vendor_id
+      ? await partyName(supabase, "vendors", expense.data.vendor_id)
+      : payee || category
     const project = expense.data.project_id ? await lookupName(supabase, "projects", expense.data.project_id, "name") : ""
     return empty(null, { total: Number(expense.data.amount) || 0, party: vendor, project })
   }

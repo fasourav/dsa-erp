@@ -33,6 +33,7 @@ export function InvoiceStudio({
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
+  const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("client_invoices", form.exists ? "edit" : "add")
@@ -84,6 +85,7 @@ export function InvoiceStudio({
       }}
       pending={pending}
       error={error}
+      dirty={JSON.stringify(form) !== savedMark}
       files={{ parentType: "client_invoice", parentId: form.id }}
       onSave={() => {
         setError(null)
@@ -93,6 +95,13 @@ export function InvoiceStudio({
             setError(result.error)
             return
           }
+          const saved = {
+            ...form,
+            exists: true,
+            documentNo: result.documentNo ?? form.documentNo,
+            verifyToken: result.verifyToken ?? form.verifyToken,
+          }
+          setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
             exists: true,

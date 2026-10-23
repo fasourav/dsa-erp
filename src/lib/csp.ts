@@ -33,6 +33,9 @@ export function contentSecurityPolicy(): { nonce: string; value: string } {
   const header = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    // Document preview is a srcdoc iframe on the app origin. It loads
+    // /documents/setc.css, /documents/fonts, and /brand/letterhead-300dpi.png,
+    // plus one inline :root rule. Keep 'self' here and 'unsafe-inline' for that rule.
     "style-src 'self' 'unsafe-inline'",
     `img-src ${img}`,
     "font-src 'self' data:",

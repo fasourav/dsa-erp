@@ -59,6 +59,7 @@ export function QuotationStudio({
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
+  const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("quotations", form.id ? "edit" : "add")
@@ -115,6 +116,7 @@ export function QuotationStudio({
       }}
       pending={pending}
       error={error}
+      dirty={JSON.stringify(form) !== savedMark}
       files={{ parentType: "quotation", parentId: form.id }}
       templateNames={templates.map((item) => item.name)}
       canStartFromTemplate={canStartFromTemplate}
@@ -157,6 +159,14 @@ export function QuotationStudio({
             setError(result.error ?? "Could not save this quotation.")
             return
           }
+          const saved = {
+            ...form,
+            id: result.id ?? form.id,
+            documentNo: result.documentNo ?? form.documentNo,
+            verifyToken: result.verifyToken ?? form.verifyToken,
+            version: result.version ?? form.version,
+          }
+          setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
             id: result.id ?? current.id,

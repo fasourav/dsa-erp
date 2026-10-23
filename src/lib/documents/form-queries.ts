@@ -337,6 +337,21 @@ async function fillVendor(supabase: Client, draft: FormDraft, vendorId: string) 
     .join("\n")
 }
 
+function paymentNotAfter(
+  row: { id: string; paid_on: string; created_at: string },
+  current: { id: string; paid_on: string; created_at: string },
+): boolean {
+  const day = row.paid_on.slice(0, 10)
+  const currentDay = current.paid_on.slice(0, 10)
+  if (day < currentDay) return true
+  if (day > currentDay) return false
+  const rowTime = Date.parse(row.created_at)
+  const currentTime = Date.parse(current.created_at)
+  if (rowTime < currentTime) return true
+  if (rowTime > currentTime) return false
+  return row.id < current.id
+}
+
 async function workOrderStatus(
   supabase: Client,
   purchaseOrderId: string,
@@ -346,13 +361,17 @@ async function workOrderStatus(
   const order = await supabase.from("vendor_purchase_orders").select("total_value").eq("id", purchaseOrderId).maybeSingle()
   const total = Number(order.data?.total_value)
   if (!Number.isFinite(total)) return ""
+  const current = thisPaymentId
+    ? await supabase.from("vendor_payments").select("id, paid_on, created_at").eq("id", thisPaymentId).maybeSingle()
+    : { data: null }
   const invoices = await supabase.from("vendor_invoices").select("id").eq("purchase_order_id", purchaseOrderId)
   const ids = (invoices.data ?? []).map((row) => row.id)
   const payments = ids.length
-    ? await supabase.from("vendor_payments").select("id, amount").in("vendor_invoice_id", ids)
-    : { data: [] as Array<{ id: string; amount: number }> }
+    ? await supabase.from("vendor_payments").select("id, amount, paid_on, created_at").in("vendor_invoice_id", ids)
+    : { data: [] as Array<{ id: string; amount: number; paid_on: string; created_at: string }> }
+  const anchor = current.data
   const paidBefore = (payments.data ?? [])
-    .filter((row) => row.id !== thisPaymentId)
+    .filter((row) => (anchor ? paymentNotAfter(row, anchor) : false))
     .reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
   const balance = Math.round((total - paidBefore - thisBill) * 100) / 100
   const money = (value: number) => value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })

@@ -45,6 +45,7 @@ export function FormStudio({
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
+  const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const source = useMemo(() => formToModel(form, origin, employees), [employees, form, origin])
@@ -74,6 +75,7 @@ export function FormStudio({
       }
       pending={pending}
       error={error}
+      dirty={JSON.stringify(form) !== savedMark}
       onSave={() => {
         setError(null)
         startSave(async () => {
@@ -82,6 +84,13 @@ export function FormStudio({
             setError(result.error)
             return
           }
+          const saved = {
+            ...form,
+            id: result.id ?? form.id,
+            documentNo: result.documentNo ?? form.documentNo,
+            verifyToken: result.verifyToken ?? form.verifyToken,
+          }
+          setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
             id: result.id ?? current.id,

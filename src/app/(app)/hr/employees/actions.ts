@@ -4,7 +4,7 @@ import { titleCaseName } from "@/lib/format"
 import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
-import { friendlyDbError, mentions } from "@/lib/db-errors"
+import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { roundMoney } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
@@ -16,6 +16,7 @@ import { denyUnless, getAccess } from "@/lib/permissions"
 
 export type EmployeeInput = {
   version?: string
+  employeeCode: string
   fullName: string
   departmentId: string
   designation: string
@@ -30,6 +31,7 @@ export type EmployeeInput = {
 }
 
 export type EmployeeFieldErrors = {
+  employeeCode?: string
   fullName?: string
   departmentId?: string
   monthlySalary?: string
@@ -113,6 +115,7 @@ async function saveEmployee(
   id: string | null,
   input: EmployeeInput,
 ): Promise<EmployeeResult> {
+  const employeeCode = input.employeeCode.trim()
   const fullName = titleCaseName(input.fullName)
   const designation = input.designation.trim()
   const monthlySalary = parseProjectValue(input.monthlySalary)
@@ -127,6 +130,12 @@ async function saveEmployee(
   const access = await getAccess()
   // People without Show Financials see salaries as blank, so an edit must not write them back.
   const keepPay = Boolean(id) && !access?.showFinancials
+
+  if (id && !employeeCode) {
+    fieldErrors.employeeCode = "Enter an employee code."
+  } else if (employeeCode.length > 32) {
+    fieldErrors.employeeCode = "Use 32 characters or fewer."
+  }
 
   if (!fullName) {
     fieldErrors.fullName = "Enter the employee name."
@@ -174,12 +183,29 @@ async function saveEmployee(
   }
 
   const supabase = await createClient()
+
+  if (employeeCode) {
+    const { data: existing, error: existingError } = await supabase
+      .from("employees")
+      .select("id, employee_code")
+    if (!existingError) {
+      const needle = employeeCode.toLowerCase()
+      const clash = (existing ?? []).some(
+        (row) => row.id !== id && (row.employee_code ?? "").trim().toLowerCase() === needle,
+      )
+      if (clash) {
+        return { error: null, fieldErrors: { employeeCode: "That employee code is already in use." } }
+      }
+    }
+  }
+
   const { data: authData, error: authError } = await supabase.auth.getUser()
   if (authError || !authData.user) {
     return { error: "You must be signed in." }
   }
 
   const details = {
+    ...(employeeCode ? { employee_code: employeeCode } : {}),
     full_name: fullName,
     department_id: departmentId || null,
     designation: designation || null,
@@ -209,6 +235,11 @@ async function saveEmployee(
 
     if (error.code === "23503") {
       return { error: "Choose a valid department." }
+    }
+
+    const issue = dbIssue(error)
+    if (issue?.field === "employeeCode") {
+      return { error: null, fieldErrors: { employeeCode: issue.message } }
     }
 
     if (mentions(error, "employees_leave_after_join") || mentions(error, "leave date")) {

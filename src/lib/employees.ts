@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 
 export type EmployeeRow = {
   id: string
+  employeeCode: string
   fullName: string
   department: string
   designation: string
@@ -26,10 +27,12 @@ export type DepartmentOption = {
 export async function getEmployees(): Promise<{
   employees: EmployeeRow[]
   departments: DepartmentOption[]
+  nextCode: string
   error: string | null
 }> {
   const supabase = await createClient()
   const { active, names } = await loadDepartments(supabase)
+  const { codes, nextCode } = await loadEmployeeCodes(supabase)
 
   try {
     const rows = await fetchAllPages(
@@ -50,6 +53,7 @@ export async function getEmployees(): Promise<{
 
       return [{
         id: row.id,
+        employeeCode: codes.get(row.id) ?? "",
         fullName: row.full_name?.trim() ?? "",
         department: row.department?.trim() || names.get(departmentId) || "",
         designation: row.designation?.trim() ?? "",
@@ -65,13 +69,40 @@ export async function getEmployees(): Promise<{
       }]
     })
 
-    return { employees, departments: active, error: null }
+    return { employees, departments: active, nextCode, error: null }
   } catch {
     return {
       employees: [],
       departments: active,
+      nextCode,
       error: "Could not load employees.",
     }
+  }
+}
+
+async function loadEmployeeCodes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<{ codes: Map<string, string>; nextCode: string }> {
+  try {
+    const rows = await fetchAllPages(
+      (from, to) =>
+        supabase
+          .from("employees")
+          .select("id, employee_code")
+          .order("id", { ascending: true })
+          .range(from, to),
+      "Employee list is larger than expected.",
+    )
+    const codes = new Map<string, string>()
+    let max = 0
+    for (const row of rows) {
+      const code = row.employee_code?.trim() ?? ""
+      if (row.id) codes.set(row.id, code)
+      if (/^[0-9]+$/.test(code)) max = Math.max(max, Number(code))
+    }
+    return { codes, nextCode: String(max + 1).padStart(3, "0") }
+  } catch {
+    return { codes: new Map(), nextCode: "001" }
   }
 }
 

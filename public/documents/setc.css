@@ -27,15 +27,16 @@ body.sheet,body.sheet .page{background:transparent}
 .tk{font-family:"DSA Taka",sans-serif;font-weight:500;margin-right:.5pt}
 .r,.num{font-variant-numeric:tabular-nums}
 
-.head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8mm}
-.hl{display:flex;align-items:flex-start;gap:4mm}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:4mm;margin-bottom:8mm}
+.hl{display:flex;align-items:flex-start;gap:4mm;flex:0 0 auto}
 .qr{width:15mm;text-align:center;background:#fff;padding:1mm;margin:-1mm}
 .qr svg{width:13mm;height:13mm;display:block;margin:0 auto}
 .qr .cap{font-size:5pt;color:var(--muted);letter-spacing:.2pt;margin-top:.8mm;white-space:nowrap}
-.head .ref{font-size:7.8pt;color:var(--muted);line-height:1.7;padding-top:.2mm}
-.head .ref b{color:var(--ink);font-weight:500}
-.title{text-align:right}
-.title h1{font-family:"DSA Taka","Poppins";font-weight:500;font-size:17pt;letter-spacing:2.2pt;color:var(--accent);line-height:1.15;text-transform:uppercase}
+.head .ref{font-size:7.8pt;color:var(--muted);line-height:1.7;padding-top:.2mm;white-space:nowrap}
+.head .ref b{color:var(--ink);font-weight:500;white-space:nowrap}
+.title{flex:1 1 auto;min-width:0;text-align:right}
+.title h1{font-family:"DSA Taka","Poppins";font-weight:500;font-size:17pt;letter-spacing:2.2pt;color:var(--accent);line-height:1.15;text-transform:uppercase;white-space:nowrap}
+.title.compact h1{font-size:13pt;letter-spacing:.4pt}
 .title .sub{font-size:7.8pt;color:var(--muted);margin-top:.6mm;letter-spacing:.3pt}
 
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:12mm;margin-bottom:8mm}
@@ -86,6 +87,7 @@ table.grid.compact th{padding:0 1.6mm 1.3mm}
 .note{font-size:7.5pt;color:var(--muted)}
 .spacer{flex:1;min-height:4mm}
 .spaced{margin-top:4mm}
+.inspect{margin-top:8mm}
 body.draft .page::after{content:"DRAFT";position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) rotate(-24deg);font-family:"Poppins",sans-serif;font-size:42pt;font-weight:600;letter-spacing:6pt;color:rgba(69,99,45,.16);z-index:2;pointer-events:none}
 .addr{font-size:9.4pt;line-height:1.5;margin-top:2mm}
 .intro{font-size:8.5pt;line-height:1.5;margin-bottom:2mm}

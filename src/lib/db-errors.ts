@@ -77,6 +77,10 @@ const constraintMessages: Record<string, { message: string; field?: string }> = 
     message: "Salaries for this month are already paid.",
     field: "month",
   },
+  employees_employee_code_key: {
+    message: "That employee code is already in use.",
+    field: "employeeCode",
+  },
   employees_leave_after_join: {
     message: "Leave date cannot be before the joining date.",
     field: "leaveDate",
