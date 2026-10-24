@@ -4,17 +4,21 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { useAccess } from "@/components/access-provider"
-import { canSeeNav, navItems } from "@/lib/access"
+import { canOpenDocuments, canOpenReports, canSeeNav, navItems } from "@/lib/access"
 import { modulesHref, navIcons, tabHrefs } from "@/lib/nav-icons"
 import { cn } from "@/lib/utils"
 
 const tabLabels: Record<string, string> = {
+  "/documents": "Documents",
+  "/reports": "Reports",
   "/modules": "All Modules",
 }
 
 export function useTabRoots() {
   const access = useAccess()
   const tabs: string[] = tabHrefs.filter((href) => {
+    if (href === "/documents") return canOpenDocuments(access)
+    if (href === "/reports") return canOpenReports(access)
     const item = navItems.find((entry) => entry.href === href)
     return item ? canSeeNav(access, item) : false
   })

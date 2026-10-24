@@ -7,6 +7,7 @@ import {
   Contact,
   FileBarChart,
   FileText,
+  Files,
   FolderKanban,
   HandCoins,
   Landmark,
@@ -30,6 +31,7 @@ import {
 // Modules grid all read this map; never render a dot in place of an icon.
 export const navIcons: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
+  "/documents": Files,
   "/reports": FileBarChart,
   "/leads": UserPlus,
   "/clients": Users,
@@ -56,5 +58,5 @@ export const navIcons: Record<string, LucideIcon> = {
 }
 
 // The phone tab bar: three destinations plus All Modules.
-export const tabHrefs = ["/dashboard", "/projects", "/leads"] as const
+export const tabHrefs = ["/dashboard", "/documents", "/reports"] as const
 export const modulesHref = "/modules"

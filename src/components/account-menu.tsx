@@ -2,10 +2,9 @@
 
 import { useState, useTransition } from "react"
 import Link from "next/link"
-import { ChevronDown, Ellipsis, FileBarChart, Files, LogOut, UserRound } from "lucide-react"
+import { ChevronDown, Ellipsis, LogOut, UserRound } from "lucide-react"
 
 import { signOut } from "@/app/auth/actions"
-import { useAccess } from "@/components/access-provider"
 import {
   applyTheme,
   currentThemePreference,
@@ -24,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { canOpenDocuments, canOpenReports } from "@/lib/access"
 import {
   accountInitials,
   accountSubtitle,
@@ -117,7 +115,6 @@ export function AccountMenu({ account }: { account: AccountIdentity }) {
 
 // Phone nav bar "more" menu: everything the desktop top bar holds.
 export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
-  const access = useAccess()
   const { pending, signOut: handleSignOut } = useSignOut()
   const [theme, setTheme] = useState<ThemePreference | null>(null)
 
@@ -136,18 +133,6 @@ export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
         <AccountHeader account={account} />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          {canOpenDocuments(access) ? (
-            <DropdownMenuItem render={<Link href="/documents" />}>
-              <Files aria-hidden="true" />
-              Documents
-            </DropdownMenuItem>
-          ) : null}
-          {canOpenReports(access) ? (
-            <DropdownMenuItem render={<Link href="/reports" />}>
-              <FileBarChart aria-hidden="true" />
-              Reports
-            </DropdownMenuItem>
-          ) : null}
           <DropdownMenuItem render={<Link href="/profile" />}>
             <UserRound aria-hidden="true" />
             My Profile
