@@ -3,7 +3,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 const mark = { width: 829, height: 1002 }
-const lockup = { width: 2864, height: 1002 }
+const lockup = { width: 837, height: 293 }
 
 export function BrandMark({
   className,
