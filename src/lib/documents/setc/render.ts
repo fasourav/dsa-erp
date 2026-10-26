@@ -350,32 +350,50 @@ function receipt(
 }
 
 function buildRfq(doc: RfqModel, box: ContentBox): Built {
-  const rows = doc.lines.map((line, index) => ({
-    html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${esc(line.item)}${line.specification ? `<span class="spec">${esc(line.specification)}</span>` : ""}</td><td class="c">${esc(line.quantity)}</td><td class="c">${esc(line.unit)}</td><td>${esc(line.remarks)}</td></tr>`,
-    mm: line.specification ? 12 : 8,
-  }))
-  const page1: Chunk[] = [
-    chunk(partyCards("To", doc.toName || "—", doc.toDetail, "RFQ Details", doc.facts), 38),
-  ]
+  const headHtml = `<thead><tr><th class="c" style="width:8mm">S/L</th><th>Item &amp; Specification</th><th class="c" style="width:18mm">Quantity</th><th class="c" style="width:14mm">Unit</th><th style="width:36mm">Remarks</th></tr></thead>`
+  const rows = doc.lines.map((line, index) => {
+    const itemLines = Math.max(1, Math.ceil(line.item.trim().length / 48))
+    const specLines = line.specification.trim() ? Math.max(1, Math.ceil(line.specification.trim().length / 72)) : 0
+    return {
+      html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${esc(line.item)}${line.specification ? `<span class="spec">${esc(line.specification)}</span>` : ""}</td><td class="c">${esc(line.quantity)}</td><td class="c">${esc(line.unit)}</td><td>${esc(line.remarks)}</td></tr>`,
+      mm: 2.3 + itemLines * 4.2 + specLines * 3.4,
+    }
+  })
+  const detailLines = doc.toDetail.split("\n").filter((line) => line.trim()).length
+  const leadParts: string[] = [partyCards("To", doc.toName || "—", doc.toDetail, "RFQ Details", doc.facts)]
+  let leadMm = 33.2 + Math.max(0, detailLines - 3) * 4
   if (doc.subject.trim()) {
-    page1.push(chunk(`<div class="subject"><span>Subject</span>${esc(doc.subject)}</div>`, 14))
+    leadParts.push(`<div class="subject tight"><span>Subject</span>${esc(doc.subject)}</div>`)
+    leadMm += 5.3 + Math.ceil(doc.subject.trim().length / 82) * 4.8
   }
   if (doc.intro.trim()) {
-    page1.push(chunk(`<div class="letter"><p class="intro">${esc(doc.intro)}</p></div>`, estimateText(doc.intro)))
+    leadParts.push(`<p class="intro">${esc(doc.intro)}</p>`)
+    leadMm += 2.2 + Math.ceil(doc.intro.trim().length / 128) * 4.5
   }
-  page1.push(
-    ...tableChunk(
-      `<thead><tr><th class="c" style="width:8mm">S/L</th><th>Item &amp; Specification</th><th class="c" style="width:18mm">Quantity</th><th class="c" style="width:14mm">Unit</th><th style="width:36mm">Remarks</th></tr></thead>`,
-      rows,
-      "",
-      0,
-      box,
-    ),
+
+  const noteHtml = doc.note.trim() ? `<p class="note" style="margin-top:2.5mm">${esc(doc.note)}</p>` : ""
+  const noteMm = doc.note.trim() ? 2.5 + Math.ceil(doc.note.trim().length / 138) * 4 : 0
+  const tailHtml = `${noteHtml}<p class="thanks" style="margin-top:2.5mm">Thanks &amp; Regards,</p>`
+  const tailMm = noteMm + 7.1
+
+  const signHtml = rfqSignBlock(doc.signatures, doc.vendorSignature)
+  const noSignLimit = Math.max(40, box.height - 38)
+  const withSignLimit = Math.max(35, noSignLimit - (signHtml ? 42 : 0))
+  const wrapTable = (batch: typeof rows) =>
+    batch.length
+      ? `<table class="grid compact">${headHtml}<tbody>${batch.map((row) => row.html).join("")}</tbody></table>`
+      : ""
+
+  const firstBodies = rfqBodyPages(
+    leadParts.join("\n"),
+    leadMm,
+    rows,
+    wrapTable,
+    tailHtml,
+    tailMm,
+    noSignLimit,
+    withSignLimit,
   )
-  if (doc.note.trim()) {
-    page1.push(chunk(`<p class="note" style="margin-top:3mm">${esc(doc.note)}</p>`, estimateText(doc.note)))
-  }
-  page1.push(chunk(`<p class="thanks" style="margin-top:3mm">Thanks &amp; Regards,</p>`, 8))
 
   const terms = listBlock(doc.terms, "Terms & Conditions", true)
   const page2: Chunk[] = []
@@ -384,10 +402,8 @@ function buildRfq(doc: RfqModel, box: ContentBox): Built {
     page2.push(chunk(`<p class="thanks">Thank you for your cooperation.</p>`, 6))
   }
 
-  const signHtml = rfqSignBlock(doc.signatures, doc.vendorSignature)
-  const signReserve = signHtml ? SIGN_MM : 0
-  const first = stamp(flow(page1, budget(box, signReserve)), signHtml)
-  const second = page2.length ? stamp(flow(page2, budget(box, signReserve)), signHtml) : { bodies: [], signs: [] }
+  const first = stamp(firstBodies, signHtml)
+  const second = page2.length ? stamp(flow(page2, withSignLimit), signHtml) : { bodies: [], signs: [] }
   const bodies = [...first.bodies, ...second.bodies]
   const subtitle = doc.subtitle || "Vendor / Service Provider"
   const foot = `RFQ No. ${doc.documentNo}`
@@ -408,6 +424,54 @@ function buildRfq(doc: RfqModel, box: ContentBox): Built {
     bodies: bodies.length ? bodies : [""],
     signs: "",
   }
+}
+
+function rfqBodyPages(
+  leadHtml: string,
+  leadMm: number,
+  rows: Array<{ html: string; mm: number }>,
+  wrapTable: (batch: Array<{ html: string; mm: number }>) => string,
+  tailHtml: string,
+  tailMm: number,
+  noSignLimit: number,
+  withSignLimit: number,
+): string[] {
+  const theadMm = 5.5
+  const rowsMm = rows.length ? theadMm + rows.reduce((sum, row) => sum + row.mm, 0) : 0
+  if (leadMm + rowsMm + tailMm <= withSignLimit) {
+    return [[leadHtml, wrapTable(rows), tailHtml].filter(Boolean).join("\n")]
+  }
+  if (!rows.length) {
+    return [leadHtml, tailHtml].filter(Boolean)
+  }
+
+  const batches: Array<Array<{ html: string; mm: number }>> = [[]]
+  let used = leadMm + theadMm
+  for (const row of rows) {
+    const current = batches[batches.length - 1]!
+    if (current.length && used + row.mm > noSignLimit) {
+      batches.push([])
+      used = theadMm
+    }
+    batches[batches.length - 1]!.push(row)
+    used += row.mm
+  }
+
+  if (used + tailMm > withSignLimit) {
+    const last = batches[batches.length - 1]!
+    if (last.length > 1) {
+      const moved = last.pop()!
+      batches.push([moved])
+    } else if (batches.length === 1 && last.length === 1) {
+      return [leadHtml, `${wrapTable(last)}\n${tailHtml}`]
+    }
+  }
+
+  return batches.map((batch, index) => {
+    const prefix = index === 0 ? `${leadHtml}\n` : ""
+    const suffix = index === batches.length - 1 ? `\n${tailHtml}` : ""
+    return `${prefix}${wrapTable(batch)}${suffix}`
+  })
 }
 
 function buildChallan(doc: ChallanModel, box: ContentBox): Built {
