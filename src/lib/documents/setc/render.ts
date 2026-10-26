@@ -384,7 +384,7 @@ function buildRfq(doc: RfqModel, box: ContentBox): Built {
     page2.push(chunk(`<p class="thanks">Thank you for your cooperation.</p>`, 6))
   }
 
-  const signHtml = signBlock(doc.signatures)
+  const signHtml = rfqSignBlock(doc.signatures, doc.vendorSignature)
   const signReserve = signHtml ? SIGN_MM : 0
   const first = stamp(flow(page1, budget(box, signReserve)), signHtml)
   const second = page2.length ? stamp(flow(page2, budget(box, signReserve)), signHtml) : { bodies: [], signs: [] }
@@ -854,6 +854,13 @@ function card(
   return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`
 }
 
+function signCell(line: SignLine): string {
+  return `<div class="sign"><div class="line"><div class="role">${esc(line.label)}</div><div class="who">${esc(line.name)}</div><div class="des">${line.detail
+    .split(/\n/)
+    .map((part) => esc(part))
+    .join("<br>")}</div></div></div>`
+}
+
 function signBlock(lines: SignLine[], layout: "auto" | "half" = "auto"): string {
   const visible = lines.filter((line) => line.label.trim())
   if (!visible.length) return ""
@@ -861,15 +868,15 @@ function signBlock(lines: SignLine[], layout: "auto" | "half" = "auto"): string 
   const cells = visible
     .slice(0, 4)
   const filler = layout === "half" && visible.length < 2 ? "<div></div>" : ""
-  return `<div class="signs s${count}">${cells
-    .map(
-      (line) =>
-        `<div class="sign"><div class="line"><div class="role">${esc(line.label)}</div><div class="who">${esc(line.name)}</div><div class="des">${line.detail
-          .split(/\n/)
-          .map((part) => esc(part))
-          .join("<br>")}</div></div></div>`,
-    )
-    .join("")}${filler}</div>`
+  return `<div class="signs s${count}">${cells.map(signCell).join("")}${filler}</div>`
+}
+
+function rfqSignBlock(staff: SignLine[], vendor?: SignLine | null): string {
+  const left = staff.filter((line) => line.label.trim()).slice(0, 3)
+  const right = vendor && vendor.label.trim() ? vendor : null
+  if (!right) return signBlock(left)
+  const spacers = "<div></div>".repeat(Math.max(0, 3 - left.length))
+  return `<div class="signs s4">${left.map(signCell).join("")}${spacers}${signCell(right)}</div>`
 }
 
 function rich(value: string): string {

@@ -29,6 +29,7 @@ function asBody(value: Json | null): FormBody {
     preparedBy: text("preparedBy") as string,
     checkedBy: text("checkedBy") as string,
     authorizedBy: text("authorizedBy") as string,
+    submittedBy: text("submittedBy") as string,
     partyName: text("partyName") as string,
     partyDetail: text("partyDetail") as string,
     companyName: text("companyName") as string,

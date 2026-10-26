@@ -15,9 +15,17 @@ import {
 } from "@/components/documents/document-fields"
 import { DocumentWorkspace } from "@/components/documents/document-workspace"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { EmployeeChoice, NamedOption, PrintMargins, ProjectChoice } from "@/lib/documents/drafts"
+import {
+  isSignatureEnabled,
+  SIGNATURE_OFF,
+  type EmployeeChoice,
+  type NamedOption,
+  type PrintMargins,
+  type ProjectChoice,
+} from "@/lib/documents/drafts"
 import {
   formTitle,
   formToModel,
@@ -312,6 +320,19 @@ export function FormStudio({
       <EmployeeField id="prepared" label="Prepared By" value={body.preparedBy} employees={employees} disabled={!canSave} onChange={(preparedBy) => setBody({ preparedBy })} />
       <EmployeeField id="checked" label="Checked By" value={body.checkedBy} employees={employees} disabled={!canSave} onChange={(checkedBy) => setBody({ checkedBy })} />
       <EmployeeField id="authorized" label="Authorized By" value={body.authorizedBy} employees={employees} disabled={!canSave} onChange={(authorizedBy) => setBody({ authorizedBy })} />
+      {form.kind === "rfq" ? (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="submitted-enabled"
+            checked={isSignatureEnabled(body.submittedBy)}
+            disabled={!canSave}
+            onCheckedChange={(checked) => setBody({ submittedBy: checked ? "" : SIGNATURE_OFF })}
+          />
+          <Label htmlFor="submitted-enabled" className="cursor-pointer">
+            Quotation Submitted By
+          </Label>
+        </div>
+      ) : null}
     </DocumentWorkspace>
   )
 }

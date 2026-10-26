@@ -56,6 +56,7 @@ export type FormBody = {
   preparedBy: string
   checkedBy: string
   authorizedBy: string
+  submittedBy: string
   partyName: string
   partyDetail: string
   companyName: string
@@ -130,6 +131,7 @@ export function blankBody(): FormBody {
     preparedBy: "",
     checkedBy: "",
     authorizedBy: "",
+    submittedBy: "",
     partyName: "",
     partyDetail: "",
     companyName: "",
@@ -258,21 +260,21 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
         lines: body.rfqLines.filter((line) => line.item.trim()),
         note: body.notes,
         terms: body.terms,
-        signatures: [
-          ...signs(body, employees).map((line) =>
-            line.label === "Authorized Signature"
-              ? {
-                  ...line,
-                  detail: [line.detail, documentCompanyName].filter(Boolean).join("\n"),
-                }
-              : line,
-          ),
-          {
-            label: "Quotation Submitted By (Vendor)",
-            name: body.partyName,
-            detail: vendorSignDetail,
-          },
-        ],
+        signatures: signs(body, employees).map((line) =>
+          line.label === "Authorized Signature"
+            ? {
+                ...line,
+                detail: [line.detail, documentCompanyName].filter(Boolean).join("\n"),
+              }
+            : line,
+        ),
+        vendorSignature: isSignatureEnabled(body.submittedBy)
+          ? {
+              label: "Quotation Submitted By (Vendor)",
+              name: body.partyName,
+              detail: vendorSignDetail,
+            }
+          : null,
       },
     }
   }

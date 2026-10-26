@@ -116,6 +116,7 @@ export type RfqModel = {
   note: string
   terms: string
   signatures: SignLine[]
+  vendorSignature?: SignLine | null
 }
 
 export const savedRecordKinds = [
