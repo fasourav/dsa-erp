@@ -62,6 +62,7 @@ function kindForHref(hrefBase: string): TrashKind | null {
   if (hrefBase.endsWith("/work-orders")) return "work_order"
   if (hrefBase.endsWith("/invoices")) return "invoice"
   if (hrefBase.endsWith("/receipts")) return "receipt"
+  if (hrefBase.endsWith("/rfqs")) return "rfq"
   return null
 }
 

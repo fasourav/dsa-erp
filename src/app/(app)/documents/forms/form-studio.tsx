@@ -17,8 +17,9 @@ import { DocumentWorkspace } from "@/components/documents/document-workspace"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { EmployeeChoice, PrintMargins } from "@/lib/documents/drafts"
+import type { EmployeeChoice, NamedOption, PrintMargins, ProjectChoice } from "@/lib/documents/drafts"
 import {
+  blankRfqRow,
   formTitle,
   formToModel,
   lockedMoneyLabel,
@@ -26,6 +27,7 @@ import {
   type ChallanRow,
   type FormDraft,
   type NoteRow,
+  type RfqRow,
   type TextRow,
 } from "@/lib/documents/form-model"
 import { savedToast } from "@/lib/saved"
@@ -33,12 +35,16 @@ import { savedToast } from "@/lib/saved"
 export function FormStudio({
   draft,
   employees,
+  vendors = [],
+  projects = [],
   origin,
   margins,
   canSave,
 }: {
   draft: FormDraft
   employees: EmployeeChoice[]
+  vendors?: NamedOption[]
+  projects?: ProjectChoice[]
   origin: string
   margins: PrintMargins
   canSave: boolean
@@ -76,6 +82,7 @@ export function FormStudio({
       pending={pending}
       error={error}
       dirty={JSON.stringify(form) !== savedMark}
+      requireSavedToDownload={form.kind === "rfq"}
       onSave={() => {
         setError(null)
         startSave(async () => {
@@ -89,6 +96,7 @@ export function FormStudio({
             id: result.id ?? form.id,
             documentNo: result.documentNo ?? form.documentNo,
             verifyToken: result.verifyToken ?? form.verifyToken,
+            body: result.body ?? form.body,
           }
           setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
@@ -96,13 +104,64 @@ export function FormStudio({
             id: result.id ?? current.id,
             documentNo: result.documentNo ?? current.documentNo,
             verifyToken: result.verifyToken ?? current.verifyToken,
+            body: result.body ?? current.body,
           }))
           if (!form.id && result.id) router.replace(`/documents/${slugForKind(form.kind)}/${result.id}`)
           savedToast("Saved.")
         })
       }}
     >
-      <TextField id="issued-on" label="Date" type="date" value={form.issuedOn} disabled={!canSave} onChange={(issuedOn) => setForm({ ...form, issuedOn })} />
+      <TextField id="issued-on" label={form.kind === "rfq" ? "Issued On" : "Date"} type="date" value={form.issuedOn} disabled={!canSave} onChange={(issuedOn) => setForm({ ...form, issuedOn })} />
+      {form.kind === "rfq" ? (
+        <>
+          <ChoiceField
+            id="vendor"
+            label="Vendor"
+            placeholder="Choose Vendor"
+            value={form.vendorId}
+            disabled={!canSave}
+            options={vendors.map((item) => ({ value: item.id, label: item.name }))}
+            onChange={(vendorId) => {
+              const picked = vendors.find((item) => item.id === vendorId)
+              setForm({
+                ...form,
+                vendorId,
+                body: {
+                  ...body,
+                  partyName: picked ? picked.companyName || picked.personName || picked.name : "",
+                  partyDetail: picked?.detail ?? "",
+                },
+              })
+            }}
+          />
+          <AreaField id="party-detail" label="Vendor Address" value={body.partyDetail} disabled={!canSave} onChange={(partyDetail) => setBody({ partyDetail })} />
+          <ChoiceField
+            id="project"
+            label="Project (Optional)"
+            placeholder="No Project (ADM)"
+            value={form.projectId}
+            disabled={!canSave}
+            options={projects.map((item) => ({ value: item.id, label: item.name }))}
+            onChange={(projectId) => {
+              const picked = projects.find((item) => item.id === projectId)
+              setForm({
+                ...form,
+                projectId,
+                body: {
+                  ...body,
+                  projectName: picked?.name ?? "",
+                  deliveryNote: picked?.location && !body.deliveryNote.trim() ? picked.location : body.deliveryNote,
+                },
+              })
+            }}
+          />
+          <TextField id="subtitle" label="Subtitle" value={body.subtitle} disabled={!canSave} onChange={(subtitle) => setBody({ subtitle })} />
+          <TextField id="subject" label="Subject" value={body.subject} disabled={!canSave} onChange={(subject) => setBody({ subject })} />
+          <TextField id="quote-by" label="Quote Due By" type="date" value={body.quoteBy} disabled={!canSave} onChange={(quoteBy) => setBody({ quoteBy })} />
+          <TextField id="delivery-note" label="Delivery / Site Note" value={body.deliveryNote} disabled={!canSave} onChange={(deliveryNote) => setBody({ deliveryNote })} />
+          <RfqEditor rows={body.rfqLines} disabled={!canSave} onChange={(rfqLines) => setBody({ rfqLines }) } />
+        </>
+      ) : null}
       {form.kind === "payment_voucher" || form.kind === "salary_slip" ? (
         <ReadOnlyField label="Recorded Amount" value={lockedMoneyLabel(form.kind, form.lockedNet)} />
       ) : null}
@@ -119,15 +178,19 @@ export function FormStudio({
           onChange={(letterKind) => setBody({ letterKind: letterKind === "notice" ? "notice" : "letter" })}
         />
       ) : null}
-      <TextField
-        id="party-name"
-        label={form.kind === "salary_slip" ? "Employee Name" : form.kind === "letter" ? "Addressee" : "Name"}
-        value={body.partyName}
-        disabled={!canSave}
-        onChange={(partyName) => setBody({ partyName })}
-      />
-      <AreaField id="party-detail" label="Address" value={body.partyDetail} disabled={!canSave} onChange={(partyDetail) => setBody({ partyDetail })} />
-      <TextField id="project-name" label="Project Name" value={body.projectName} disabled={!canSave} onChange={(projectName) => setBody({ projectName })} />
+      {form.kind !== "rfq" ? (
+        <>
+          <TextField
+            id="party-name"
+            label={form.kind === "salary_slip" ? "Employee Name" : form.kind === "letter" ? "Addressee" : "Name"}
+            value={body.partyName}
+            disabled={!canSave}
+            onChange={(partyName) => setBody({ partyName })}
+          />
+          <AreaField id="party-detail" label="Address" value={body.partyDetail} disabled={!canSave} onChange={(partyDetail) => setBody({ partyDetail })} />
+          <TextField id="project-name" label="Project Name" value={body.projectName} disabled={!canSave} onChange={(projectName) => setBody({ projectName })} />
+        </>
+      ) : null}
       {form.kind === "delivery_challan" ? (
         <>
           <TextField id="wo" label="Client WO No." value={body.clientWoNo} disabled={!canSave} onChange={(clientWoNo) => setBody({ clientWoNo })} />
@@ -185,11 +248,49 @@ export function FormStudio({
           <TextField id="cc" label="Copies" value={body.cc} disabled={!canSave} onChange={(cc) => setBody({ cc })} />
         </>
       ) : null}
-      <AreaField id="notes" label="Notes" value={body.notes} disabled={!canSave} onChange={(notes) => setBody({ notes })} />
+      <AreaField id="notes" label={form.kind === "rfq" ? "Notes / Terms" : "Notes"} value={body.notes} disabled={!canSave} onChange={(notes) => setBody({ notes })} />
       <EmployeeField id="prepared" label="Prepared By" value={body.preparedBy} employees={employees} disabled={!canSave} onChange={(preparedBy) => setBody({ preparedBy })} />
       <EmployeeField id="checked" label="Checked By" value={body.checkedBy} employees={employees} disabled={!canSave} onChange={(checkedBy) => setBody({ checkedBy })} />
       <EmployeeField id="authorized" label="Authorized By" value={body.authorizedBy} employees={employees} disabled={!canSave} onChange={(authorizedBy) => setBody({ authorizedBy })} />
     </DocumentWorkspace>
+  )
+}
+
+function RfqEditor({
+  rows,
+  disabled,
+  onChange,
+}: {
+  rows: RfqRow[]
+  disabled: boolean
+  onChange: (rows: RfqRow[]) => void
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <Label>Items</Label>
+      {rows.map((row, index) => (
+        <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Input className="sm:col-span-2" value={row.item} disabled={disabled} placeholder="Item" aria-label="Item" onChange={(event) => update(rows, index, { item: event.target.value }, onChange)} />
+          <Input className="sm:col-span-2" value={row.specification} disabled={disabled} placeholder="Specification" aria-label="Specification" onChange={(event) => update(rows, index, { specification: event.target.value }, onChange)} />
+          <Input value={row.unit} disabled={disabled} placeholder="Unit" aria-label="Unit" onChange={(event) => update(rows, index, { unit: event.target.value }, onChange)} />
+          <Input value={row.quantity} disabled={disabled} inputMode="decimal" placeholder="Quantity" aria-label="Quantity" onChange={(event) => update(rows, index, { quantity: event.target.value }, onChange)} />
+          <Input value={row.remarks} disabled={disabled} placeholder="Remarks" aria-label="Remarks" onChange={(event) => update(rows, index, { remarks: event.target.value }, onChange)} />
+          <Button type="button" variant="outline" disabled={disabled} onClick={() => onChange(rows.length > 1 ? rows.filter((_, rowIndex) => rowIndex !== index) : [blankRfqRow()])}>
+            <Trash2 aria-hidden="true" data-icon="inline-start" />
+            Remove
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => onChange([...rows, blankRfqRow()])}
+      >
+        <Plus aria-hidden="true" data-icon="inline-start" />
+        Add Row
+      </Button>
+    </div>
   )
 }
 

@@ -45,6 +45,7 @@ const formTrashKinds: FormKind[] = [
   "completion",
   "salary_slip",
   "letter",
+  "rfq",
 ]
 
 export type DocumentSaveResult = {
@@ -794,6 +795,8 @@ function revalidateDocument(kind: TrashKind) {
             ? "certificates"
             : kind === "salary_slip"
               ? "salary-slips"
+              : kind === "rfq"
+                ? "rfqs"
               : "letters"
     revalidatePath(`/documents/${slug}`)
   }

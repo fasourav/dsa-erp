@@ -12,6 +12,7 @@ import {
   challanNumber,
   collisionNumber,
   letterNumber,
+  rfqNumber,
   salaryNumber,
   voucherNumber,
 } from "@/lib/documents/numbers"
@@ -21,9 +22,16 @@ import { isIsoDate } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
 import type { Json } from "@/types/database.types"
 
-export type FormSaveResult = { error: string | null; id?: string; documentNo?: string; verifyToken?: string }
+export type FormSaveResult = {
+  error: string | null
+  id?: string
+  documentNo?: string
+  verifyToken?: string
+  body?: FormBody
+}
 
 function modulesFor(kind: FormKind): ModuleKey[] {
+  if (kind === "rfq") return ["purchase_orders"]
   if (kind === "delivery_challan") return ["purchase_orders", "projects"]
   if (kind === "payment_voucher") return ["vendor_payments", "expenses"]
   if (kind === "completion") return ["projects"]
@@ -41,7 +49,7 @@ async function guard(kind: FormKind, exists: boolean): Promise<string | null> {
   return null
 }
 
-export async function saveFormDocument(input: {
+export async function saveFormDocument(raw: {
   id: string | null
   kind: FormKind
   issuedOn: string
@@ -55,6 +63,19 @@ export async function saveFormDocument(input: {
   employeeId: string
   body: FormBody
 }): Promise<FormSaveResult> {
+  // An RFQ links one vendor and an optional project. Nothing else.
+  const input =
+    raw.kind === "rfq"
+      ? {
+          ...raw,
+          clientId: "",
+          purchaseOrderId: "",
+          vendorPaymentId: "",
+          operationalExpenseId: "",
+          payrollLineId: "",
+          employeeId: "",
+        }
+      : raw
   if (!isIsoDate(input.issuedOn)) return { error: "Enter a date." }
   const denied = await guard(input.kind, Boolean(input.id))
   if (denied) return { error: denied }
@@ -63,6 +84,9 @@ export async function saveFormDocument(input: {
   const supabase = await createClient()
   const linked = await linkedFacts(supabase, input)
   if (linked.error) return { error: linked.error }
+  // The linked vendor and project are the source of truth for the printed names.
+  const body =
+    input.kind === "rfq" ? { ...input.body, partyName: linked.party, projectName: linked.project } : input.body
   const base = numberFor(input.kind, input.issuedOn, linked.project, linked.party, linked.notice, linked.period, linked.employeeCode)
   if (!base) return { error: linked.kindError || "Could not build a document number from the linked record." }
   let documentNo = ""
@@ -83,14 +107,14 @@ export async function saveFormDocument(input: {
         operational_expense_id: input.operationalExpenseId || null,
         payroll_line_id: input.payrollLineId || null,
         employee_id: input.employeeId || null,
-        body: input.body as unknown as Json,
+        body: body as unknown as Json,
         updated_at: new Date().toISOString(),
       })
       .eq("id", input.id)
     if (error) return { error: "Could not save this document." }
     revalidatePath(`/documents/${slugForKind(input.kind)}`)
     revalidatePath(`/documents/${slugForKind(input.kind)}/${input.id}`)
-    return { error: null, id: input.id, documentNo, verifyToken: existing.data.verify_token }
+    return { error: null, id: input.id, documentNo, verifyToken: existing.data.verify_token, body }
   }
 
   for (let attempt = 1; attempt <= 8; attempt += 1) {
@@ -112,13 +136,13 @@ export async function saveFormDocument(input: {
         operational_expense_id: input.operationalExpenseId || null,
         payroll_line_id: input.payrollLineId || null,
         employee_id: input.employeeId || null,
-        body: input.body as unknown as Json,
+        body: body as unknown as Json,
       })
       .select("id")
       .maybeSingle()
     if (!error && data) {
       revalidatePath(`/documents/${slugForKind(input.kind)}`)
-      return { error: null, id: data.id, documentNo, verifyToken }
+      return { error: null, id: data.id, documentNo, verifyToken, body }
     }
     if (error?.code !== "23505") return { error: "Could not save this document." }
   }
@@ -142,6 +166,7 @@ function numberFor(
     return salaryNumber(period.year, period.month, employeeCode)
   }
   if (kind === "letter") return letterNumber(issuedOn, project, notice)
+  if (kind === "rfq") return rfqNumber(issuedOn, party, project)
   return null
 }
 
@@ -259,6 +284,13 @@ async function linkedFacts(
       employeeCode: code,
       period: { year: run.data.period_year, month: run.data.period_month },
     })
+  }
+  if (input.kind === "rfq") {
+    if (!vendorName) return empty("Choose a vendor.")
+    if (input.projectId && !projectName) return empty("That project could not be found.")
+    if (input.body.quoteBy.trim() && !isIsoDate(input.body.quoteBy)) return empty("Enter a valid quote due date.")
+    if (!input.body.rfqLines.some((line) => line.item.trim())) return empty("Add at least one item.")
+    return empty(null, { party: vendorName, project: projectName })
   }
   if (input.kind === "letter" && !input.body.subject.trim()) return empty("Enter a subject.")
   if (input.kind === "letter" && !input.body.paragraphs.trim()) return empty("Enter the letter.")

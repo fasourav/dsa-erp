@@ -10,6 +10,7 @@ export const formSlugs = {
   certificates: "completion",
   "salary-slips": "salary_slip",
   letters: "letter",
+  rfqs: "rfq",
 } as const
 
 export type FormSlug = keyof typeof formSlugs
@@ -34,6 +35,13 @@ export type ChallanRow = {
   remarks: string
 }
 export type CheckRow = { item: string; status: string; remarks: string }
+export type RfqRow = {
+  item: string
+  specification: string
+  unit: string
+  quantity: string
+  remarks: string
+}
 export type DutyRow = { project: string; site: string; person: string; phone: string }
 export type NoteRow = { label: string; value: string }
 
@@ -78,6 +86,9 @@ export type FormBody = {
   narration: string
   paymentMode: string
   challanLines: ChallanRow[]
+  quoteBy: string
+  deliveryNote: string
+  rfqLines: RfqRow[]
   inspections: CheckRow[]
   earnings: TextRow[]
   deductions: TextRow[]
@@ -105,6 +116,10 @@ export type FormDraft = {
   statusNote: string
   employeeCode: string
   body: FormBody
+}
+
+export function blankRfqRow(): RfqRow {
+  return { item: "", specification: "", unit: "", quantity: "", remarks: "" }
 }
 
 export function blankBody(): FormBody {
@@ -149,6 +164,9 @@ export function blankBody(): FormBody {
     narration: "",
     paymentMode: "",
     challanLines: [{ item: "", specification: "", unit: "", ordered: "", delivered: "", remarks: "" }],
+    quoteBy: "",
+    deliveryNote: "",
+    rfqLines: [blankRfqRow()],
     inspections: [{ item: "", status: "", remarks: "" }],
     earnings: [{ label: "", amount: "" }],
     deductions: [{ label: "", amount: "" }],
@@ -236,6 +254,28 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
           { label: "Delivered By", name: body.driverName, detail: "Driver" },
           { label: "Received By", name: "", detail: "Name, Signature & Date" },
         ],
+      },
+    }
+  }
+  if (draft.kind === "rfq") {
+    return {
+      kind: "rfq",
+      doc: {
+        documentNo: draft.documentNo || "Assigned when saved",
+        issuedOn: issued,
+        verifyUrl: url,
+        subtitle: body.subtitle.trim() || "Vendor Price Request",
+        vendorName: body.partyName,
+        vendorDetail: body.partyDetail,
+        facts: [
+          { label: "Project Name", value: body.projectName || "—" },
+          { label: "Quote Due By", value: body.quoteBy ? formatIsoDate(body.quoteBy) : "—" },
+          { label: "Delivery / Site", value: body.deliveryNote || "—" },
+        ],
+        subject: body.subject,
+        lines: body.rfqLines.filter((line) => line.item.trim()),
+        notes: body.notes,
+        signatures: signs(body, employees),
       },
     }
   }
@@ -393,6 +433,7 @@ export function formTitle(kind: FormKind): string {
   if (kind === "payment_voucher") return "Payment Voucher"
   if (kind === "completion") return "Work Completion Certificate"
   if (kind === "salary_slip") return "Salary Slip"
+  if (kind === "rfq") return "Request For Quotation"
   return "Letter / Notice"
 }
 

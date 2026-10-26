@@ -65,6 +65,9 @@ function asBody(value: Json | null): FormBody {
     narration: text("narration") as string,
     paymentMode: text("paymentMode") as string,
     challanLines: Array.isArray(record.challanLines) ? (record.challanLines as FormBody["challanLines"]) : base.challanLines,
+    quoteBy: text("quoteBy") as string,
+    deliveryNote: text("deliveryNote") as string,
+    rfqLines: Array.isArray(record.rfqLines) ? (record.rfqLines as FormBody["rfqLines"]) : base.rfqLines,
     inspections: Array.isArray(record.inspections) ? (record.inspections as FormBody["inspections"]) : base.inspections,
     earnings: Array.isArray(record.earnings) ? (record.earnings as FormBody["earnings"]) : base.earnings,
     deductions: Array.isArray(record.deductions) ? (record.deductions as FormBody["deductions"]) : base.deductions,
@@ -132,7 +135,10 @@ export async function listFormDocuments(kind: FormKind): Promise<{
       return {
         id: row.id,
         title: body.partyName || body.projectName || body.subject || "Document",
-        detail: formatIsoDate(row.issued_on.slice(0, 10)),
+        detail:
+          kind === "rfq"
+            ? [formatIsoDate(row.issued_on.slice(0, 10)), body.projectName || body.subject].filter(Boolean).join(" · ")
+            : formatIsoDate(row.issued_on.slice(0, 10)),
         documentNo: row.document_no,
       }
     }),
@@ -193,7 +199,7 @@ export async function loadFormDraft(
     issuedOn: todayIsoDate(),
     projectId: query.project && isUuid(query.project) ? query.project : "",
     clientId: query.client && isUuid(query.client) ? query.client : "",
-    vendorId: "",
+    vendorId: kind === "rfq" && query.vendor && isUuid(query.vendor) ? query.vendor : "",
     purchaseOrderId: query.po && isUuid(query.po) ? query.po : "",
     vendorPaymentId: query.payment && isUuid(query.payment) ? query.payment : "",
     operationalExpenseId: query.expense && isUuid(query.expense) ? query.expense : "",
@@ -229,6 +235,23 @@ export async function loadFormDraft(
   } else if (kind === "salary_slip" && draft.payrollLineId) {
     const filled = await fillFromPayroll(supabase, draft)
     if (filled) return { draft: null, error: filled }
+  } else if (kind === "rfq") {
+    // Vendor-facing: never pull the client in. Only the vendor and the project name.
+    draft.purchaseOrderId = ""
+    draft.vendorPaymentId = ""
+    draft.operationalExpenseId = ""
+    draft.payrollLineId = ""
+    draft.clientId = ""
+    if (draft.vendorId) await fillVendor(supabase, draft, draft.vendorId)
+    if (draft.projectId) {
+      const project = await supabase.from("projects").select("name, location").eq("id", draft.projectId).maybeSingle()
+      if (project.data) {
+        draft.body.projectName = project.data.name
+        draft.body.deliveryNote = project.data.location?.trim() || ""
+      } else {
+        draft.projectId = ""
+      }
+    }
   } else if (kind === "letter") {
     if (draft.clientId) await fillClient(supabase, draft)
     if (draft.projectId) await fillFromProject(supabase, draft)

@@ -33,6 +33,12 @@ export const documentKinds: Array<{
     detail: "Goods dispatched from a purchase order or a project.",
   },
   {
+    href: "/documents/rfqs",
+    module: "purchase_orders",
+    title: "Request For Quotation",
+    detail: "Ask one vendor to quote for items, with an optional project.",
+  },
+  {
     href: "/documents/invoices",
     module: "client_invoices",
     title: "Bill / Invoice",

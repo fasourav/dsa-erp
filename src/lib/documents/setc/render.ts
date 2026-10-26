@@ -14,6 +14,7 @@ import type {
   ChallanModel,
   DocumentModel,
   LetterModel,
+  RfqModel,
   SalaryModel,
   SignLine,
   VoucherModel,
@@ -82,6 +83,7 @@ function build(model: DocumentModel, box: ContentBox): Built {
   if (model.kind === "voucher") return buildVoucher(model.doc, box)
   if (model.kind === "certificate") return buildCertificate(model.doc, box)
   if (model.kind === "salary") return buildSalary(model.doc, box)
+  if (model.kind === "rfq") return buildRfq(model.doc, box)
   return buildLetter(model.doc, box)
 }
 
@@ -564,6 +566,35 @@ function buildLetter(doc: LetterModel, box: ContentBox): Built {
     { showQr: false, signHtml },
   )
   return built
+}
+
+function buildRfq(doc: RfqModel, box: ContentBox): Built {
+  const rows = doc.lines.map((line, index) => ({
+    html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${esc(line.item)}${line.specification ? `<span class="spec">${esc(line.specification)}</span>` : ""}</td><td class="c">${esc(line.unit)}</td><td class="c">${esc(line.quantity)}</td><td>${esc(line.remarks)}</td></tr>`,
+    mm: line.specification ? 12 : 8,
+  }))
+  const tableRows = rows.length
+    ? rows
+    : [{ html: `<tr><td class="c">01</td><td class="item">—</td><td class="c">—</td><td class="c">—</td><td>—</td></tr>`, mm: 8 }]
+  const due = doc.facts.find((fact) => fact.label === "Quote Due By")?.value ?? ""
+  const dueText = due && due !== "—" ? ` on or before ${due}` : ""
+  const chunks: Chunk[] = [chunk(partyCards("To (Vendor)", doc.vendorName, doc.vendorDetail, "RFQ Details", doc.facts), 40)]
+  if (doc.subject.trim()) chunks.push(chunk(`<div class="subject"><span>Subject</span>${esc(doc.subject)}</div>`, 14))
+  const intro = `Please submit your best quotation for the items listed below${dueText}. Quote unit price, total price, applicable VAT/AIT, delivery time and validity of the offer.`
+  chunks.push(chunk(`<div class="letter"><p class="intro">${esc(intro)}</p></div>`, estimateText(intro)))
+  chunks.push(
+    ...tableChunk(
+      `<thead><tr><th class="c" style="width:8mm">S/L</th><th>Item &amp; Specification</th><th class="c" style="width:14mm">Unit</th><th class="c" style="width:18mm">Quantity</th><th style="width:40mm">Remarks</th></tr></thead>`,
+      tableRows,
+      "",
+      0,
+      box,
+    ),
+  )
+  const notes = listBlock(doc.notes, "Terms & Conditions", true)
+  if (notes) chunks.push(notes)
+  chunks.push(chunk(`<p class="thanks">Thanks &amp; Regards,</p>`, 6))
+  return finish("Request For Quotation", doc.subtitle || "Vendor Price Request", "RFQ No.", doc, chunks, box)
 }
 
 function finish(

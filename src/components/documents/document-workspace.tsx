@@ -48,6 +48,7 @@ export function DocumentWorkspace({
   pending,
   error,
   dirty = false,
+  requireSavedToDownload = false,
   onSave,
   files,
   templateNames,
@@ -73,6 +74,7 @@ export function DocumentWorkspace({
   error: string | null
   /** Saved document whose form no longer matches what Download would rebuild. */
   dirty?: boolean
+  requireSavedToDownload?: boolean
   onSave: () => void
   files?: { parentType: AttachmentParent; parentId: string | null }
   templateNames?: readonly string[]
@@ -97,6 +99,7 @@ export function DocumentWorkspace({
   const [trashError, setTrashError] = useState<string | null>(null)
   const [trashPending, setTrashPending] = useState(false)
   const showTrash = canTrash && access.isOwner && Boolean(onTrash)
+  const mustSaveToDownload = (Boolean(record?.id) && dirty) || (requireSavedToDownload && !record?.id)
 
   useEffect(() => {
     if (!copied) return
@@ -178,13 +181,13 @@ export function DocumentWorkspace({
             <Button
               type="button"
               variant="outline"
-              disabled={pdfKind !== null || (Boolean(record?.id) && dirty)}
-              aria-label={Boolean(record?.id) && dirty ? "Save to download" : "Download PDF"}
-              title={Boolean(record?.id) && dirty ? "Save the document, then download it." : undefined}
+              disabled={pdfKind !== null || mustSaveToDownload}
+              aria-label={mustSaveToDownload ? "Save to download" : "Download PDF"}
+              title={mustSaveToDownload ? "Save the document, then download it." : undefined}
               onClick={() => openPdf(true)}
             >
               <Download aria-hidden="true" data-icon="inline-start" />
-              {Boolean(record?.id) && dirty
+              {mustSaveToDownload
                 ? "Save To Download"
                 : pdfKind === "letterhead"
                   ? "Creating…"

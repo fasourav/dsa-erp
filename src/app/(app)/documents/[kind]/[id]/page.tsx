@@ -34,7 +34,9 @@ export default async function FormDocumentPage({ params }: { params: Promise<{ k
     )
   }
   const canSave =
-    kind === "delivery_challan"
+    kind === "rfq"
+      ? allows(access, "purchase_orders", "edit")
+      : kind === "delivery_challan"
       ? allows(access, "purchase_orders", "edit") || allows(access, "projects", "edit")
       : kind === "payment_voucher"
         ? allows(access, "vendor_payments", "edit") || allows(access, "expenses", "edit")
@@ -47,6 +49,8 @@ export default async function FormDocumentPage({ params }: { params: Promise<{ k
     <FormStudio
       draft={loaded.draft}
       employees={catalog.employees}
+      vendors={catalog.vendors}
+      projects={catalog.projects}
       origin={origin}
       margins={margins}
       canSave={canSave}
@@ -55,6 +59,7 @@ export default async function FormDocumentPage({ params }: { params: Promise<{ k
 }
 
 function canSee(access: NonNullable<Awaited<ReturnType<typeof getAccess>>>, kind: FormKind) {
+  if (kind === "rfq") return allows(access, "purchase_orders", "view")
   if (kind === "delivery_challan") return allows(access, "purchase_orders", "view") || allows(access, "projects", "view")
   if (kind === "payment_voucher") return allows(access, "vendor_payments", "view") || allows(access, "expenses", "view")
   if (kind === "salary_slip") return allows(access, "payroll", "view")

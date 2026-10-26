@@ -39,6 +39,7 @@ const modulesFor: Record<SavedRecordKind, ModuleKey[]> = {
   completion: ["projects"],
   salary_slip: ["payroll"],
   letter: ["projects", "clients"],
+  rfq: ["purchase_orders"],
 }
 
 export async function loadSavedDocument(kind: SavedRecordKind, id: string): Promise<

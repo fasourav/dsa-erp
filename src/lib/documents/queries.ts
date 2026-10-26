@@ -1140,7 +1140,7 @@ export async function workOrderForPurchaseOrder(purchaseOrderId: string): Promis
 
 export type TrashedDocument = {
   id: string
-  kind: "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order" | "delivery_challan" | "payment_voucher" | "completion" | "salary_slip" | "letter"
+  kind: "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order" | "delivery_challan" | "payment_voucher" | "completion" | "salary_slip" | "letter" | "rfq"
   kindLabel: string
   documentNo: string
   detail: string
@@ -1219,6 +1219,8 @@ export async function listTrashedDocuments(): Promise<{
               ? "Work Completion Certificate"
               : row.kind === "salary_slip"
                 ? "Salary Slip"
+                : row.kind === "rfq"
+                  ? "Request For Quotation"
                 : "Letter / Notice",
       documentNo: row.document_no,
       detail: formatIsoDate(dateInputValue(row.issued_on)),

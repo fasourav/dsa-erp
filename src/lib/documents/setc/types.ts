@@ -94,6 +94,29 @@ export type LetterModel = {
   signatures: SignLine[]
 }
 
+export type RfqLine = {
+  item: string
+  specification: string
+  unit: string
+  quantity: string
+  remarks: string
+}
+
+/** Vendor-facing request for a price. No unit price or amount is printed. */
+export type RfqModel = {
+  documentNo: string
+  issuedOn: string
+  verifyUrl: string | null
+  subtitle: string
+  vendorName: string
+  vendorDetail: string
+  facts: Array<{ label: string; value: string }>
+  subject: string
+  lines: RfqLine[]
+  notes: string
+  signatures: SignLine[]
+}
+
 export const savedRecordKinds = [
   "quotation",
   "work_order",
@@ -105,6 +128,7 @@ export const savedRecordKinds = [
   "completion",
   "salary_slip",
   "letter",
+  "rfq",
 ] as const
 
 export type SavedRecordKind = (typeof savedRecordKinds)[number]
@@ -116,6 +140,7 @@ export type DocumentModel =
   | { kind: "certificate"; doc: CertificateModel }
   | { kind: "salary"; doc: SalaryModel }
   | { kind: "letter"; doc: LetterModel }
+  | { kind: "rfq"; doc: RfqModel }
 
 export function documentNumberOf(model: DocumentModel): string {
   return model.doc.documentNo

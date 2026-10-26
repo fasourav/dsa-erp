@@ -1,5 +1,6 @@
 // New documents:
 //   TYPE/DSAE/PROJECTCODE-PARTYCODE/DDMMYYYY
+//   RFQ: RFQ/DSAE/PROJECTCODE-or-ADM-VENDORCODE/DDMMYYYY
 //   Salary: SAL/DSAE/YYYY-MM/EMPCODE
 //   Letter: DSAE/PROJECT-or-ADM/LTR-or-NTC/DDMM-YYYY
 // A second document with the same stem gains -2, -3, …
@@ -7,7 +8,7 @@
 // Saved documents keep whatever number they already have.
 
 const NEW_NUMBER =
-  /^(?:(?:QTN|WO|PO|DC|INV|MR|PV|WCC)\/DSAE\/[A-Z0-9]+-[A-Z0-9]+\/\d{8}(?:-V\d+)?(?:-\d+)?|SAL\/DSAE\/\d{4}-\d{2}\/[A-Z0-9]+(?:-\d+)?|DSAE\/[A-Z0-9]+\/(?:LTR|NTC)\/\d{4}-\d{4}(?:-\d+)?|(?:Q|WO|INV|INC)\/\d{6}-[A-Z0-9]+-[A-Z0-9]+(?:-V\d+)?(?:-\d+)?)$/
+  /^(?:(?:QTN|WO|PO|DC|INV|MR|PV|WCC|RFQ)\/DSAE\/[A-Z0-9]+-[A-Z0-9]+\/\d{8}(?:-V\d+)?(?:-\d+)?|SAL\/DSAE\/\d{4}-\d{2}\/[A-Z0-9]+(?:-\d+)?|DSAE\/[A-Z0-9]+\/(?:LTR|NTC)\/\d{4}-\d{4}(?:-\d+)?|(?:Q|WO|INV|INC)\/\d{6}-[A-Z0-9]+-[A-Z0-9]+(?:-V\d+)?(?:-\d+)?)$/
 
 export function isNewDocumentNumber(value: string): boolean {
   return NEW_NUMBER.test(value.trim())
@@ -81,6 +82,12 @@ export function voucherNumber(issuedOn: string, vendorName: string, projectName:
 
 export function certificateNumber(issuedOn: string, clientName: string, projectName: string): string {
   return stem("WCC", projectCode(projectName), nameCode(clientName), issuedOn)
+}
+
+/** Request for quotation: the vendor is the party. No project uses ADM. */
+export function rfqNumber(issuedOn: string, vendorName: string, projectName: string): string {
+  const project = projectName.trim() ? nameCode(projectName) : "ADM"
+  return stem("RFQ", project, nameCode(vendorName), issuedOn)
 }
 
 export function salaryNumber(periodYear: number, periodMonth: number, employeeCode: string): string {
