@@ -14,6 +14,7 @@ import type {
   ChallanModel,
   DocumentModel,
   LetterModel,
+  RfqModel,
   SalaryModel,
   SignLine,
   VoucherModel,
@@ -78,6 +79,7 @@ export function renderDocument(
 
 function build(model: DocumentModel, box: ContentBox): Built {
   if (model.kind === "print") return buildPrint(model.doc, box)
+  if (model.kind === "rfq") return buildRfq(model.doc, box)
   if (model.kind === "challan") return buildChallan(model.doc, box)
   if (model.kind === "voucher") return buildVoucher(model.doc, box)
   if (model.kind === "certificate") return buildCertificate(model.doc, box)
@@ -345,6 +347,67 @@ function receipt(
   if (notes) chunks.push(notes)
   chunks.push(chunk(`<p class="thanks">Thanks &amp; Regards,</p>`, 6))
   return baseBuilt("Money Receipt", doc, refLines, flow(chunks, budget(box, signReserve)), signs)
+}
+
+function buildRfq(doc: RfqModel, box: ContentBox): Built {
+  const rows = doc.lines.map((line, index) => ({
+    html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${esc(line.item)}${line.specification ? `<span class="spec">${esc(line.specification)}</span>` : ""}</td><td class="c">${esc(line.quantity)}</td><td class="c">${esc(line.unit)}</td><td>${esc(line.remarks)}</td></tr>`,
+    mm: line.specification ? 12 : 8,
+  }))
+  const page1: Chunk[] = [
+    chunk(partyCards("To", doc.toName || "—", doc.toDetail, "RFQ Details", doc.facts), 38),
+  ]
+  if (doc.subject.trim()) {
+    page1.push(chunk(`<div class="subject"><span>Subject</span>${esc(doc.subject)}</div>`, 14))
+  }
+  if (doc.intro.trim()) {
+    page1.push(chunk(`<div class="letter"><p class="intro">${esc(doc.intro)}</p></div>`, estimateText(doc.intro)))
+  }
+  page1.push(
+    ...tableChunk(
+      `<thead><tr><th class="c" style="width:8mm">S/L</th><th>Item &amp; Specification</th><th class="c" style="width:18mm">Quantity</th><th class="c" style="width:14mm">Unit</th><th style="width:36mm">Remarks</th></tr></thead>`,
+      rows,
+      "",
+      0,
+      box,
+    ),
+  )
+  if (doc.note.trim()) {
+    page1.push(chunk(`<p class="note" style="margin-top:3mm">${esc(doc.note)}</p>`, estimateText(doc.note)))
+  }
+  page1.push(chunk(`<p class="thanks" style="margin-top:3mm">Thanks &amp; Regards,</p>`, 8))
+
+  const terms = listBlock(doc.terms, "Terms & Conditions", true)
+  const page2: Chunk[] = []
+  if (terms) {
+    page2.push(terms)
+    page2.push(chunk(`<p class="thanks">Thank you for your cooperation.</p>`, 6))
+  }
+
+  const signHtml = signBlock(doc.signatures)
+  const signReserve = signHtml ? SIGN_MM : 0
+  const first = stamp(flow(page1, budget(box, signReserve)), signHtml)
+  const second = page2.length ? stamp(flow(page2, budget(box, signReserve)), signHtml) : { bodies: [], signs: [] }
+  const bodies = [...first.bodies, ...second.bodies]
+  const subtitle = doc.subtitle || "Vendor / Service Provider"
+  const foot = `RFQ No. ${doc.documentNo}`
+  const refLines: Array<[string, string]> = [
+    ["Ref", doc.documentNo],
+    ["Date", doc.issuedOn],
+  ]
+  return {
+    title: "Request For Quotation",
+    subtitle,
+    ref: foot,
+    refLines,
+    pageRefs: [],
+    pageSubtitles: bodies.map((_, index) => (index < first.bodies.length ? subtitle : "Terms & Conditions")),
+    pageFooters: bodies.map(() => foot),
+    pageSigns: [...first.signs, ...second.signs],
+    verifyUrl: doc.verifyUrl,
+    bodies: bodies.length ? bodies : [""],
+    signs: "",
+  }
 }
 
 function buildChallan(doc: ChallanModel, box: ContentBox): Built {

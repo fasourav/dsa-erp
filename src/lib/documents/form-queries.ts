@@ -34,6 +34,8 @@ function asBody(value: Json | null): FormBody {
     companyName: text("companyName") as string,
     projectName: text("projectName") as string,
     notes: text("notes") as string,
+    terms: text("terms") as string,
+    dueOn: text("dueOn") as string,
     subject: text("subject") as string,
     paragraphs: text("paragraphs") as string,
     cc: text("cc") as string,
@@ -65,6 +67,7 @@ function asBody(value: Json | null): FormBody {
     narration: text("narration") as string,
     paymentMode: text("paymentMode") as string,
     challanLines: Array.isArray(record.challanLines) ? (record.challanLines as FormBody["challanLines"]) : base.challanLines,
+    rfqLines: Array.isArray(record.rfqLines) ? (record.rfqLines as FormBody["rfqLines"]) : base.rfqLines,
     inspections: Array.isArray(record.inspections) ? (record.inspections as FormBody["inspections"]) : base.inspections,
     earnings: Array.isArray(record.earnings) ? (record.earnings as FormBody["earnings"]) : base.earnings,
     deductions: Array.isArray(record.deductions) ? (record.deductions as FormBody["deductions"]) : base.deductions,
@@ -129,10 +132,19 @@ export async function listFormDocuments(kind: FormKind): Promise<{
   return {
     items: (data ?? []).map((row) => {
       const body = asBody(row.body)
+      const date = formatIsoDate(row.issued_on.slice(0, 10))
+      if (kind === "rfq") {
+        return {
+          id: row.id,
+          title: body.companyName || body.partyName || body.projectName || body.subject || "Request For Quotation",
+          detail: [date, body.projectName].filter(Boolean).join(" · "),
+          documentNo: row.document_no,
+        }
+      }
       return {
         id: row.id,
         title: body.partyName || body.projectName || body.subject || "Document",
-        detail: formatIsoDate(row.issued_on.slice(0, 10)),
+        detail: date,
         documentNo: row.document_no,
       }
     }),
@@ -182,6 +194,14 @@ export async function loadFormDraft(
       const employee = await supabase.from("employees").select("employee_code").eq("id", draft.employeeId).maybeSingle()
       draft.employeeCode = employee.data?.employee_code?.trim() ?? ""
     }
+    if (kind === "rfq") {
+      if (draft.vendorId && (!draft.body.partyName || !draft.body.companyName)) {
+        await fillRfqVendor(supabase, draft, draft.vendorId, false)
+      }
+      if (draft.projectId && !draft.body.projectName) {
+        await fillRfqProject(supabase, draft)
+      }
+    }
     return { draft, error: null }
   }
 
@@ -193,7 +213,7 @@ export async function loadFormDraft(
     issuedOn: todayIsoDate(),
     projectId: query.project && isUuid(query.project) ? query.project : "",
     clientId: query.client && isUuid(query.client) ? query.client : "",
-    vendorId: "",
+    vendorId: query.vendor && isUuid(query.vendor) ? query.vendor : "",
     purchaseOrderId: query.po && isUuid(query.po) ? query.po : "",
     vendorPaymentId: query.payment && isUuid(query.payment) ? query.payment : "",
     operationalExpenseId: query.expense && isUuid(query.expense) ? query.expense : "",
@@ -207,7 +227,12 @@ export async function loadFormDraft(
     body: blankBody(),
   }
 
-  if (kind === "delivery_challan" && draft.purchaseOrderId) {
+  if (kind === "rfq") {
+    draft.body.subtitle = "Vendor / Service Provider"
+    draft.clientId = ""
+    if (draft.vendorId) await fillRfqVendor(supabase, draft, draft.vendorId, true)
+    if (draft.projectId) await fillRfqProject(supabase, draft)
+  } else if (kind === "delivery_challan" && draft.purchaseOrderId) {
     await fillFromPurchaseOrder(supabase, draft)
   } else if (kind === "delivery_challan" && draft.projectId) {
     await fillFromProject(supabase, draft)
@@ -335,6 +360,31 @@ async function fillVendor(supabase: Client, draft: FormDraft, vendorId: string) 
     .map((part) => part?.trim() ?? "")
     .filter(Boolean)
     .join("\n")
+}
+
+async function fillRfqVendor(supabase: Client, draft: FormDraft, vendorId: string, overwrite: boolean) {
+  const vendor = await supabase
+    .from("vendors")
+    .select("company_name, person_name, address, phone, email")
+    .eq("id", vendorId)
+    .maybeSingle()
+  if (!vendor.data) return
+  const company = vendor.data.company_name?.trim() ?? ""
+  const person = vendor.data.person_name?.trim() ?? ""
+  const toName = person || company
+  const detail = [person && company ? company : "", vendor.data.address, vendor.data.phone, vendor.data.email]
+    .map((part) => part?.trim() ?? "")
+    .filter((part) => part && part !== toName)
+    .join("\n")
+  if (overwrite || !draft.body.partyName) draft.body.partyName = toName
+  if (overwrite || !draft.body.companyName) draft.body.companyName = company || person
+  if (overwrite || !draft.body.partyDetail) draft.body.partyDetail = detail
+}
+
+async function fillRfqProject(supabase: Client, draft: FormDraft) {
+  const project = await supabase.from("projects").select("name").eq("id", draft.projectId).maybeSingle()
+  if (!project.data?.name) return
+  draft.body.projectName = project.data.name.trim()
 }
 
 function paymentNotAfter(

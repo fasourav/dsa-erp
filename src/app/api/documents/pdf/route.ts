@@ -12,7 +12,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-const draftKinds = new Set(["print", "challan", "voucher", "certificate", "salary", "letter"])
+const draftKinds = new Set(["print", "challan", "voucher", "certificate", "salary", "letter", "rfq"])
 
 function isSavedKind(value: string): value is SavedRecordKind {
   return (savedRecordKinds as readonly string[]).includes(value)

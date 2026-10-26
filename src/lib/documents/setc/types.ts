@@ -94,6 +94,30 @@ export type LetterModel = {
   signatures: SignLine[]
 }
 
+export type RfqLine = {
+  item: string
+  specification: string
+  unit: string
+  quantity: string
+  remarks: string
+}
+
+export type RfqModel = {
+  documentNo: string
+  issuedOn: string
+  verifyUrl: string | null
+  subtitle: string
+  toName: string
+  toDetail: string
+  facts: Array<{ label: string; value: string }>
+  subject: string
+  intro: string
+  lines: RfqLine[]
+  note: string
+  terms: string
+  signatures: SignLine[]
+}
+
 export const savedRecordKinds = [
   "quotation",
   "work_order",
@@ -105,6 +129,7 @@ export const savedRecordKinds = [
   "completion",
   "salary_slip",
   "letter",
+  "rfq",
 ] as const
 
 export type SavedRecordKind = (typeof savedRecordKinds)[number]
@@ -116,6 +141,7 @@ export type DocumentModel =
   | { kind: "certificate"; doc: CertificateModel }
   | { kind: "salary"; doc: SalaryModel }
   | { kind: "letter"; doc: LetterModel }
+  | { kind: "rfq"; doc: RfqModel }
 
 export function documentNumberOf(model: DocumentModel): string {
   return model.doc.documentNo

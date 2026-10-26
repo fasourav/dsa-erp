@@ -58,6 +58,7 @@ function columnText(item: DocumentListItem, id: ColumnId) {
 
 function kindForHref(hrefBase: string): TrashKind | null {
   if (hrefBase.endsWith("/purchase-orders")) return "purchase_order"
+  if (hrefBase.endsWith("/rfqs")) return "rfq"
   if (hrefBase.endsWith("/quotations")) return "quotation"
   if (hrefBase.endsWith("/work-orders")) return "work_order"
   if (hrefBase.endsWith("/invoices")) return "invoice"

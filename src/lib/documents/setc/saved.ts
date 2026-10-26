@@ -34,6 +34,7 @@ const modulesFor: Record<SavedRecordKind, ModuleKey[]> = {
   invoice: ["client_invoices"],
   receipt: ["client_invoices"],
   purchase_order: ["purchase_orders"],
+  rfq: ["purchase_orders"],
   delivery_challan: ["purchase_orders", "projects"],
   payment_voucher: ["vendor_payments", "expenses"],
   completion: ["projects"],

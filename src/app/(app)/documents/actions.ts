@@ -40,6 +40,7 @@ export type TrashKind =
   | FormKind
 
 const formTrashKinds: FormKind[] = [
+  "rfq",
   "delivery_challan",
   "payment_voucher",
   "completion",
@@ -786,15 +787,17 @@ function revalidateDocument(kind: TrashKind) {
   if (kind === "purchase_order") revalidatePath("/documents/purchase-orders")
   if (formTrashKinds.includes(kind as FormKind)) {
     const slug =
-      kind === "delivery_challan"
-        ? "challans"
-        : kind === "payment_voucher"
-          ? "vouchers"
-          : kind === "completion"
-            ? "certificates"
-            : kind === "salary_slip"
-              ? "salary-slips"
-              : "letters"
+      kind === "rfq"
+        ? "rfqs"
+        : kind === "delivery_challan"
+          ? "challans"
+          : kind === "payment_voucher"
+            ? "vouchers"
+            : kind === "completion"
+              ? "certificates"
+              : kind === "salary_slip"
+                ? "salary-slips"
+                : "letters"
     revalidatePath(`/documents/${slug}`)
   }
 }

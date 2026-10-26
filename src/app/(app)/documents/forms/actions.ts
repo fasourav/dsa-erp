@@ -12,6 +12,7 @@ import {
   challanNumber,
   collisionNumber,
   letterNumber,
+  rfqNumber,
   salaryNumber,
   voucherNumber,
 } from "@/lib/documents/numbers"
@@ -24,6 +25,7 @@ import type { Json } from "@/types/database.types"
 export type FormSaveResult = { error: string | null; id?: string; documentNo?: string; verifyToken?: string }
 
 function modulesFor(kind: FormKind): ModuleKey[] {
+  if (kind === "rfq") return ["purchase_orders"]
   if (kind === "delivery_challan") return ["purchase_orders", "projects"]
   if (kind === "payment_voucher") return ["vendor_payments", "expenses"]
   if (kind === "completion") return ["projects"]
@@ -65,6 +67,37 @@ export async function saveFormDocument(input: {
   if (linked.error) return { error: linked.error }
   const base = numberFor(input.kind, input.issuedOn, linked.project, linked.party, linked.notice, linked.period, linked.employeeCode)
   if (!base) return { error: linked.kindError || "Could not build a document number from the linked record." }
+  const isRfq = input.kind === "rfq"
+  const bodyToSave: FormBody = isRfq
+    ? {
+        ...input.body,
+        partyName: input.body.partyName.trim() || linked.vendorPerson || linked.party,
+        companyName: input.body.companyName.trim() || linked.vendorCompany || linked.party,
+        partyDetail: input.body.partyDetail.trim() || linked.vendorDetail,
+        projectName: input.projectId ? input.body.projectName.trim() || linked.project : "",
+      }
+    : input.body
+  const fks = isRfq
+    ? {
+        project_id: input.projectId || null,
+        client_id: null,
+        vendor_id: input.vendorId || null,
+        purchase_order_id: null,
+        vendor_payment_id: null,
+        operational_expense_id: null,
+        payroll_line_id: null,
+        employee_id: null,
+      }
+    : {
+        project_id: input.projectId || null,
+        client_id: input.clientId || null,
+        vendor_id: input.vendorId || null,
+        purchase_order_id: input.purchaseOrderId || null,
+        vendor_payment_id: input.vendorPaymentId || null,
+        operational_expense_id: input.operationalExpenseId || null,
+        payroll_line_id: input.payrollLineId || null,
+        employee_id: input.employeeId || null,
+      }
   let documentNo = ""
   if (input.id) {
     const existing = await supabase.from("form_documents").select("document_no, verify_token").eq("id", input.id).maybeSingle()
@@ -75,15 +108,8 @@ export async function saveFormDocument(input: {
       .update({
         issued_on: input.issuedOn,
         total: linked.total,
-        project_id: input.projectId || null,
-        client_id: input.clientId || null,
-        vendor_id: input.vendorId || null,
-        purchase_order_id: input.purchaseOrderId || null,
-        vendor_payment_id: input.vendorPaymentId || null,
-        operational_expense_id: input.operationalExpenseId || null,
-        payroll_line_id: input.payrollLineId || null,
-        employee_id: input.employeeId || null,
-        body: input.body as unknown as Json,
+        ...fks,
+        body: bodyToSave as unknown as Json,
         updated_at: new Date().toISOString(),
       })
       .eq("id", input.id)
@@ -104,21 +130,17 @@ export async function saveFormDocument(input: {
         issued_on: input.issuedOn,
         total: linked.total,
         verify_token: verifyToken,
-        project_id: input.projectId || null,
-        client_id: input.clientId || null,
-        vendor_id: input.vendorId || null,
-        purchase_order_id: input.purchaseOrderId || null,
-        vendor_payment_id: input.vendorPaymentId || null,
-        operational_expense_id: input.operationalExpenseId || null,
-        payroll_line_id: input.payrollLineId || null,
-        employee_id: input.employeeId || null,
-        body: input.body as unknown as Json,
+        ...fks,
+        body: bodyToSave as unknown as Json,
       })
       .select("id")
       .maybeSingle()
     if (!error && data) {
       revalidatePath(`/documents/${slugForKind(input.kind)}`)
       return { error: null, id: data.id, documentNo, verifyToken }
+    }
+    if (isRfq && error?.code === "23514" && /form_documents_kind_check/i.test(error.message ?? "")) {
+      return { error: "RFQ storage is not available until the RFQ migration is applied." }
     }
     if (error?.code !== "23505") return { error: "Could not save this document." }
   }
@@ -134,6 +156,7 @@ function numberFor(
   period: { year: number; month: number } | null,
   employeeCode: string,
 ): string | null {
+  if (kind === "rfq") return rfqNumber(issuedOn, party, project)
   if (kind === "delivery_challan") return challanNumber(issuedOn, party, project)
   if (kind === "payment_voucher") return voucherNumber(issuedOn, party, project)
   if (kind === "completion") return certificateNumber(issuedOn, party, project)
@@ -151,6 +174,9 @@ type LinkFacts = {
   total: number
   project: string
   party: string
+  vendorPerson: string
+  vendorCompany: string
+  vendorDetail: string
   notice: boolean
   period: { year: number; month: number } | null
   employeeCode: string
@@ -177,6 +203,9 @@ async function linkedFacts(
     total: 0,
     project: "",
     party: "",
+    vendorPerson: "",
+    vendorCompany: "",
+    vendorDetail: "",
     notice: input.body.letterKind === "notice",
     period: null,
     employeeCode: "",
@@ -185,6 +214,49 @@ async function linkedFacts(
   const projectName = await lookupName(supabase, "projects", input.projectId, "name")
   const clientName = await partyName(supabase, "clients", input.clientId)
   const vendorName = await partyName(supabase, "vendors", input.vendorId)
+
+  if (input.kind === "rfq") {
+    if (!isUuid(input.vendorId) || !vendorName) return empty("Choose a vendor.")
+    if (input.projectId && (!isUuid(input.projectId) || !projectName)) {
+      return empty("That project could not be found.")
+    }
+    if (input.body.dueOn && !isIsoDate(input.body.dueOn)) {
+      return empty("Enter a submission deadline.")
+    }
+    if (input.body.startDate && !isIsoDate(input.body.startDate)) {
+      return empty("Enter a valid start date.")
+    }
+    if (input.body.completionDate && !isIsoDate(input.body.completionDate)) {
+      return empty("Enter a valid end date.")
+    }
+    if (!input.body.rfqLines.some((line) => line.item.trim())) {
+      return empty("Add at least one item.")
+    }
+    const vendorRow = await supabase
+      .from("vendors")
+      .select("company_name, person_name, address, phone, email")
+      .eq("id", input.vendorId)
+      .maybeSingle()
+    const vendorCompany = vendorRow.data?.company_name?.trim() ?? ""
+    const vendorPerson = vendorRow.data?.person_name?.trim() ?? ""
+    const toName = vendorPerson || vendorCompany || vendorName
+    const vendorDetail = [
+      vendorPerson && vendorCompany ? vendorCompany : "",
+      vendorRow.data?.address?.trim() ?? "",
+      vendorRow.data?.phone?.trim() ?? "",
+      vendorRow.data?.email?.trim() ?? "",
+    ]
+      .filter((part) => part && part !== toName)
+      .join("\n")
+    return empty(null, {
+      total: 0,
+      party: vendorName,
+      project: projectName,
+      vendorPerson: toName,
+      vendorCompany: vendorCompany || vendorName,
+      vendorDetail,
+    })
+  }
 
   if (input.kind === "payment_voucher" && input.vendorPaymentId) {
     const payment = await supabase

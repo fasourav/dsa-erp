@@ -1140,7 +1140,7 @@ export async function workOrderForPurchaseOrder(purchaseOrderId: string): Promis
 
 export type TrashedDocument = {
   id: string
-  kind: "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order" | "delivery_challan" | "payment_voucher" | "completion" | "salary_slip" | "letter"
+  kind: "quotation" | "work_order" | "invoice" | "receipt" | "purchase_order" | "rfq" | "delivery_challan" | "payment_voucher" | "completion" | "salary_slip" | "letter"
   kindLabel: string
   documentNo: string
   detail: string
@@ -1211,15 +1211,17 @@ export async function listTrashedDocuments(): Promise<{
       id: row.id,
       kind: row.kind as TrashedDocument["kind"],
       kindLabel:
-        row.kind === "delivery_challan"
-          ? "Delivery Challan"
-          : row.kind === "payment_voucher"
-            ? "Payment Voucher"
-            : row.kind === "completion"
-              ? "Work Completion Certificate"
-              : row.kind === "salary_slip"
-                ? "Salary Slip"
-                : "Letter / Notice",
+        row.kind === "rfq"
+          ? "Request For Quotation"
+          : row.kind === "delivery_challan"
+            ? "Delivery Challan"
+            : row.kind === "payment_voucher"
+              ? "Payment Voucher"
+              : row.kind === "completion"
+                ? "Work Completion Certificate"
+                : row.kind === "salary_slip"
+                  ? "Salary Slip"
+                  : "Letter / Notice",
       documentNo: row.document_no,
       detail: formatIsoDate(dateInputValue(row.issued_on)),
       deletedAt: row.deleted_at ?? "",
