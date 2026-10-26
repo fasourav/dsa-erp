@@ -100,20 +100,29 @@ export async function saveFormDocument(input: {
       }
   let documentNo = ""
   if (input.id) {
-    const existing = await supabase.from("form_documents").select("document_no, verify_token").eq("id", input.id).maybeSingle()
+    const existing = await supabase
+      .from("form_documents")
+      .select("document_no, verify_token")
+      .eq("id", input.id)
+      .eq("kind", input.kind)
+      .is("deleted_at", null)
+      .maybeSingle()
     if (existing.error || !existing.data) return { error: "That document could not be found." }
     documentNo = existing.data.document_no
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("form_documents")
       .update({
         issued_on: input.issuedOn,
         total: linked.total,
         ...fks,
         body: bodyToSave as unknown as Json,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", input.id)
-    if (error) return { error: "Could not save this document." }
+      .eq("kind", input.kind)
+      .is("deleted_at", null)
+      .select("id")
+      .maybeSingle()
+    if (error || !updated) return { error: "Could not save this document." }
     revalidatePath(`/documents/${slugForKind(input.kind)}`)
     revalidatePath(`/documents/${slugForKind(input.kind)}/${input.id}`)
     return { error: null, id: input.id, documentNo, verifyToken: existing.data.verify_token }
@@ -138,6 +147,9 @@ export async function saveFormDocument(input: {
     if (!error && data) {
       revalidatePath(`/documents/${slugForKind(input.kind)}`)
       return { error: null, id: data.id, documentNo, verifyToken }
+    }
+    if (/42P01|PGRST205|schema cache|does not exist|Could not find the table/i.test(`${error?.code ?? ""} ${error?.message ?? ""}`)) {
+      return { error: "Document storage is not available until the Set C documents migration is applied." }
     }
     if (isRfq && error?.code === "23514" && /form_documents_kind_check/i.test(error.message ?? "")) {
       return { error: "RFQ storage is not available until the RFQ migration is applied." }

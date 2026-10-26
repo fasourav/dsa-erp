@@ -181,7 +181,10 @@ begin
       row_id := coalesce(row_data->>'id', row_data->>'key', row_data->>'email');
     end if;
 
-    label := private.audit_label(tg_table_name, row_data);
+    label := case
+      when tg_table_name = 'form_documents' then coalesce(nullif(btrim(row_data->>'document_no'), ''), 'Record')
+      else private.audit_label(tg_table_name, row_data)
+    end;
 
     if tg_op = 'INSERT' then
       new_row := to_jsonb(new) - 'updated_at' - 'last_sign_in_at';
