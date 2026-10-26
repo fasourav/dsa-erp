@@ -366,6 +366,39 @@ function sameRendered(
   )
 }
 
+function patchPreviewIframe(iframe: HTMLIFrameElement, nextHtml: string): boolean {
+  const doc = iframe.contentDocument
+  if (!doc || doc.readyState === "loading") return false
+  const livePage = doc.querySelector("section.page")
+  const liveContent = livePage?.querySelector(":scope > .content")
+  if (!livePage || !liveContent) return false
+
+  const parsed = new DOMParser().parseFromString(nextHtml, "text/html")
+  const nextPage = parsed.querySelector("section.page")
+  const nextContent = nextPage?.querySelector(":scope > .content")
+  if (!nextPage || !nextContent) return false
+
+  if (doc.title !== parsed.title) {
+    doc.title = parsed.title
+  }
+  const liveStyle = doc.head.querySelector("style")
+  const nextStyle = parsed.head.querySelector("style")
+  if (liveStyle && nextStyle && liveStyle.textContent !== nextStyle.textContent) {
+    liveStyle.textContent = nextStyle.textContent
+  }
+  if (doc.body.className !== parsed.body.className) {
+    doc.body.className = parsed.body.className
+  }
+  const nextPageStyle = nextPage.getAttribute("style") ?? ""
+  if ((livePage.getAttribute("style") ?? "") !== nextPageStyle) {
+    livePage.setAttribute("style", nextPageStyle)
+  }
+  if (liveContent.innerHTML !== nextContent.innerHTML) {
+    liveContent.innerHTML = nextContent.innerHTML
+  }
+  return true
+}
+
 function PreviewStage({
   source,
   margins,
@@ -378,11 +411,17 @@ function PreviewStage({
   const { topMm, bottomMm } = margins
   const frame = useRef<HTMLDivElement>(null)
   const pager = useRef<HTMLDivElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const [scale, setScale] = useState<number | null>(null)
   const [page, setPage] = useState(0)
   const [rendered, setRendered] = useState(() =>
     renderDocument(source, { topMm, bottomMm }, "letterhead", undefined, draft),
   )
+  // srcdoc keeps this page as the base URL, so /documents/setc.css, the fonts,
+  // and the letterhead load from the app. A blob URL does not.
+  // Keep srcDoc pinned to the initial document and patch .content in place on
+  // updates so typing never reloads the stylesheet, fonts, or letterhead image.
+  const [initialSrcDoc] = useState(() => rendered.pages[0] ?? rendered.html)
   const applied = useRef({
     kind: source.kind,
     doc: source.doc,
@@ -390,6 +429,9 @@ function PreviewStage({
     bottomMm,
     draft,
   })
+  const loadedRef = useRef(false)
+  const appliedHtmlRef = useRef(initialSrcDoc)
+  const desiredHtmlRef = useRef(initialSrcDoc)
 
   useEffect(() => {
     const last = applied.current
@@ -419,9 +461,23 @@ function PreviewStage({
   }, [bottomMm, draft, source, topMm])
 
   const current = Math.min(page, Math.max(0, rendered.pages.length - 1))
-  // srcdoc keeps this page as the base URL, so /documents/setc.css, the fonts,
-  // and the letterhead load from the app. A blob URL does not.
   const pageHtml = rendered.pages[current] ?? rendered.html
+
+  useLayoutEffect(() => {
+    desiredHtmlRef.current = pageHtml
+    if (appliedHtmlRef.current === pageHtml) return
+    const iframeEl = iframeRef.current
+    if (!iframeEl) return
+    if (patchPreviewIframe(iframeEl, pageHtml)) {
+      appliedHtmlRef.current = pageHtml
+      return
+    }
+    if (loadedRef.current) {
+      loadedRef.current = false
+      appliedHtmlRef.current = pageHtml
+      iframeEl.srcdoc = pageHtml
+    }
+  }, [pageHtml])
 
   useLayoutEffect(() => {
     const frameEl = frame.current
@@ -467,9 +523,24 @@ function PreviewStage({
           style={{ width, height, aspectRatio: scale == null ? "210 / 297" : undefined }}
         >
           <iframe
+            ref={iframeRef}
             title="Document preview"
-            srcDoc={pageHtml}
+            srcDoc={initialSrcDoc}
             scrolling="no"
+            onLoad={() => {
+              loadedRef.current = true
+              const target = desiredHtmlRef.current
+              if (appliedHtmlRef.current === target) return
+              const iframeEl = iframeRef.current
+              if (!iframeEl) return
+              if (patchPreviewIframe(iframeEl, target)) {
+                appliedHtmlRef.current = target
+              } else {
+                loadedRef.current = false
+                appliedHtmlRef.current = target
+                iframeEl.srcdoc = target
+              }
+            }}
             className="absolute top-0 left-0 origin-top-left border-0 bg-white"
             style={{
               width: paper.width,
