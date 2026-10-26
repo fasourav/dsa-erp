@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronLeft, ChevronRight, Download, Printer, Share2, Trash2 } from "lucide-react"
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 
 import { useAccess } from "@/components/access-provider"
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 
 const pxPerMm = 96 / 25.4
 const paper = { width: 210 * pxPerMm, height: 297 * pxPerMm }
+const previewDebounceMs = 350
 
 export function DocumentWorkspace({
   title,
@@ -354,6 +355,17 @@ export function DocumentWorkspace({
   )
 }
 
+function sameRendered(
+  a: { pages: string[]; html: string },
+  b: { pages: string[]; html: string },
+) {
+  return (
+    a.html === b.html &&
+    a.pages.length === b.pages.length &&
+    a.pages.every((html, index) => html === b.pages[index])
+  )
+}
+
 function PreviewStage({
   source,
   margins,
@@ -363,14 +375,49 @@ function PreviewStage({
   margins: PrintMargins
   draft: boolean
 }) {
+  const { topMm, bottomMm } = margins
   const frame = useRef<HTMLDivElement>(null)
   const pager = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState<number | null>(null)
   const [page, setPage] = useState(0)
-  const rendered = useMemo(
-    () => renderDocument(source, margins, "letterhead", undefined, draft),
-    [draft, source, margins],
+  const [rendered, setRendered] = useState(() =>
+    renderDocument(source, { topMm, bottomMm }, "letterhead", undefined, draft),
   )
+  const applied = useRef({
+    kind: source.kind,
+    doc: source.doc,
+    topMm,
+    bottomMm,
+    draft,
+  })
+
+  useEffect(() => {
+    const last = applied.current
+    if (
+      last.kind === source.kind &&
+      last.doc === source.doc &&
+      last.topMm === topMm &&
+      last.bottomMm === bottomMm &&
+      last.draft === draft
+    ) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      applied.current = {
+        kind: source.kind,
+        doc: source.doc,
+        topMm,
+        bottomMm,
+        draft,
+      }
+      const next = renderDocument(source, { topMm, bottomMm }, "letterhead", undefined, draft)
+      const maxPage = Math.max(0, next.pages.length - 1)
+      setPage((value) => (value > maxPage ? maxPage : value))
+      setRendered((prev) => (sameRendered(prev, next) ? prev : next))
+    }, previewDebounceMs)
+    return () => window.clearTimeout(timer)
+  }, [bottomMm, draft, source, topMm])
+
   const current = Math.min(page, Math.max(0, rendered.pages.length - 1))
   // srcdoc keeps this page as the base URL, so /documents/setc.css, the fonts,
   // and the letterhead load from the app. A blob URL does not.
