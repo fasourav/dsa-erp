@@ -14,6 +14,7 @@ import type {
   ChallanModel,
   DocumentModel,
   LetterModel,
+  RfqModel,
   SalaryModel,
   SignLine,
   VoucherModel,
@@ -78,6 +79,7 @@ export function renderDocument(
 
 function build(model: DocumentModel, box: ContentBox): Built {
   if (model.kind === "print") return buildPrint(model.doc, box)
+  if (model.kind === "rfq") return buildRfq(model.doc, box)
   if (model.kind === "challan") return buildChallan(model.doc, box)
   if (model.kind === "voucher") return buildVoucher(model.doc, box)
   if (model.kind === "certificate") return buildCertificate(model.doc, box)
@@ -345,6 +347,131 @@ function receipt(
   if (notes) chunks.push(notes)
   chunks.push(chunk(`<p class="thanks">Thanks &amp; Regards,</p>`, 6))
   return baseBuilt("Money Receipt", doc, refLines, flow(chunks, budget(box, signReserve)), signs)
+}
+
+function buildRfq(doc: RfqModel, box: ContentBox): Built {
+  const headHtml = `<thead><tr><th class="c" style="width:8mm">S/L</th><th>Item &amp; Specification</th><th class="c" style="width:18mm">Quantity</th><th class="c" style="width:14mm">Unit</th><th style="width:36mm">Remarks</th></tr></thead>`
+  const rows = doc.lines.map((line, index) => {
+    const itemLines = Math.max(1, Math.ceil(line.item.trim().length / 48))
+    const specLines = line.specification.trim() ? Math.max(1, Math.ceil(line.specification.trim().length / 72)) : 0
+    return {
+      html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${esc(line.item)}${line.specification ? `<span class="spec">${esc(line.specification)}</span>` : ""}</td><td class="c">${esc(line.quantity)}</td><td class="c">${esc(line.unit)}</td><td>${esc(line.remarks)}</td></tr>`,
+      mm: 2.3 + itemLines * 4.2 + specLines * 3.4,
+    }
+  })
+  const detailLines = doc.toDetail.split("\n").filter((line) => line.trim()).length
+  const leadParts: string[] = [partyCards("To", doc.toName || "—", doc.toDetail, "RFQ Details", doc.facts)]
+  let leadMm = 33.2 + Math.max(0, detailLines - 3) * 4
+  if (doc.subject.trim()) {
+    leadParts.push(`<div class="subject tight"><span>Subject</span>${esc(doc.subject)}</div>`)
+    leadMm += 5.3 + Math.ceil(doc.subject.trim().length / 82) * 4.8
+  }
+  if (doc.intro.trim()) {
+    leadParts.push(`<p class="intro">${esc(doc.intro)}</p>`)
+    leadMm += 2.2 + Math.ceil(doc.intro.trim().length / 128) * 4.5
+  }
+
+  const noteHtml = doc.note.trim() ? `<p class="note" style="margin-top:2.5mm">${esc(doc.note)}</p>` : ""
+  const noteMm = doc.note.trim() ? 2.5 + Math.ceil(doc.note.trim().length / 138) * 4 : 0
+  const tailHtml = `${noteHtml}<p class="thanks" style="margin-top:2.5mm">Thanks &amp; Regards,</p>`
+  const tailMm = noteMm + 7.1
+
+  const signHtml = rfqSignBlock(doc.signatures, doc.vendorSignature)
+  const noSignLimit = Math.max(40, box.height - 38)
+  const withSignLimit = Math.max(35, noSignLimit - (signHtml ? 42 : 0))
+  const wrapTable = (batch: typeof rows) =>
+    batch.length
+      ? `<table class="grid compact">${headHtml}<tbody>${batch.map((row) => row.html).join("")}</tbody></table>`
+      : ""
+
+  const firstBodies = rfqBodyPages(
+    leadParts.join("\n"),
+    leadMm,
+    rows,
+    wrapTable,
+    tailHtml,
+    tailMm,
+    noSignLimit,
+    withSignLimit,
+  )
+
+  const terms = listBlock(doc.terms, "Terms & Conditions", true)
+  const page2: Chunk[] = []
+  if (terms) {
+    page2.push(terms)
+    page2.push(chunk(`<p class="thanks">Thank you for your cooperation.</p>`, 6))
+  }
+
+  const first = stamp(firstBodies, signHtml)
+  const second = page2.length ? stamp(flow(page2, withSignLimit), signHtml) : { bodies: [], signs: [] }
+  const bodies = [...first.bodies, ...second.bodies]
+  const subtitle = doc.subtitle || "Vendor / Service Provider"
+  const foot = `RFQ No. ${doc.documentNo}`
+  const refLines: Array<[string, string]> = [
+    ["Ref", doc.documentNo],
+    ["Date", doc.issuedOn],
+  ]
+  return {
+    title: "Request For Quotation",
+    subtitle,
+    ref: foot,
+    refLines,
+    pageRefs: [],
+    pageSubtitles: bodies.map((_, index) => (index < first.bodies.length ? subtitle : "Terms & Conditions")),
+    pageFooters: bodies.map(() => foot),
+    pageSigns: [...first.signs, ...second.signs],
+    verifyUrl: doc.verifyUrl,
+    bodies: bodies.length ? bodies : [""],
+    signs: "",
+  }
+}
+
+function rfqBodyPages(
+  leadHtml: string,
+  leadMm: number,
+  rows: Array<{ html: string; mm: number }>,
+  wrapTable: (batch: Array<{ html: string; mm: number }>) => string,
+  tailHtml: string,
+  tailMm: number,
+  noSignLimit: number,
+  withSignLimit: number,
+): string[] {
+  const theadMm = 5.5
+  const rowsMm = rows.length ? theadMm + rows.reduce((sum, row) => sum + row.mm, 0) : 0
+  if (leadMm + rowsMm + tailMm <= withSignLimit) {
+    return [[leadHtml, wrapTable(rows), tailHtml].filter(Boolean).join("\n")]
+  }
+  if (!rows.length) {
+    return [leadHtml, tailHtml].filter(Boolean)
+  }
+
+  const batches: Array<Array<{ html: string; mm: number }>> = [[]]
+  let used = leadMm + theadMm
+  for (const row of rows) {
+    const current = batches[batches.length - 1]!
+    if (current.length && used + row.mm > noSignLimit) {
+      batches.push([])
+      used = theadMm
+    }
+    batches[batches.length - 1]!.push(row)
+    used += row.mm
+  }
+
+  if (used + tailMm > withSignLimit) {
+    const last = batches[batches.length - 1]!
+    if (last.length > 1) {
+      const moved = last.pop()!
+      batches.push([moved])
+    } else if (batches.length === 1 && last.length === 1) {
+      return [leadHtml, `${wrapTable(last)}\n${tailHtml}`]
+    }
+  }
+
+  return batches.map((batch, index) => {
+    const prefix = index === 0 ? `${leadHtml}\n` : ""
+    const suffix = index === batches.length - 1 ? `\n${tailHtml}` : ""
+    return `${prefix}${wrapTable(batch)}${suffix}`
+  })
 }
 
 function buildChallan(doc: ChallanModel, box: ContentBox): Built {
@@ -791,6 +918,13 @@ function card(
   return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`
 }
 
+function signCell(line: SignLine): string {
+  return `<div class="sign"><div class="line"><div class="role">${esc(line.label)}</div><div class="who">${esc(line.name)}</div><div class="des">${line.detail
+    .split(/\n/)
+    .map((part) => esc(part))
+    .join("<br>")}</div></div></div>`
+}
+
 function signBlock(lines: SignLine[], layout: "auto" | "half" = "auto"): string {
   const visible = lines.filter((line) => line.label.trim())
   if (!visible.length) return ""
@@ -798,15 +932,15 @@ function signBlock(lines: SignLine[], layout: "auto" | "half" = "auto"): string 
   const cells = visible
     .slice(0, 4)
   const filler = layout === "half" && visible.length < 2 ? "<div></div>" : ""
-  return `<div class="signs s${count}">${cells
-    .map(
-      (line) =>
-        `<div class="sign"><div class="line"><div class="role">${esc(line.label)}</div><div class="who">${esc(line.name)}</div><div class="des">${line.detail
-          .split(/\n/)
-          .map((part) => esc(part))
-          .join("<br>")}</div></div></div>`,
-    )
-    .join("")}${filler}</div>`
+  return `<div class="signs s${count}">${cells.map(signCell).join("")}${filler}</div>`
+}
+
+function rfqSignBlock(staff: SignLine[], vendor?: SignLine | null): string {
+  const left = staff.filter((line) => line.label.trim()).slice(0, 3)
+  const right = vendor && vendor.label.trim() ? vendor : null
+  if (!right) return signBlock(left)
+  const spacers = "<div></div>".repeat(Math.max(0, 3 - left.length))
+  return `<div class="signs s4">${left.map(signCell).join("")}${spacers}${signCell(right)}</div>`
 }
 
 function rich(value: string): string {

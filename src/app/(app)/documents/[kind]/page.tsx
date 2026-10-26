@@ -49,6 +49,7 @@ export default async function FormDocumentsPage({ params }: { params: Promise<{ 
 }
 
 function canSee(access: NonNullable<Awaited<ReturnType<typeof getAccess>>>, kind: FormKind) {
+  if (kind === "rfq") return allows(access, "purchase_orders", "view")
   if (kind === "delivery_challan") return allows(access, "purchase_orders", "view") || allows(access, "projects", "view")
   if (kind === "payment_voucher") return allows(access, "vendor_payments", "view") || allows(access, "expenses", "view")
   if (kind === "salary_slip") return allows(access, "payroll", "view")
@@ -57,6 +58,7 @@ function canSee(access: NonNullable<Awaited<ReturnType<typeof getAccess>>>, kind
 }
 
 function canWrite(access: NonNullable<Awaited<ReturnType<typeof getAccess>>>, kind: FormKind) {
+  if (kind === "rfq") return allows(access, "purchase_orders", "add")
   if (kind === "delivery_challan") return allows(access, "purchase_orders", "add") || allows(access, "projects", "add")
   if (kind === "payment_voucher") return allows(access, "vendor_payments", "add") || allows(access, "expenses", "add")
   if (kind === "salary_slip") return allows(access, "payroll", "add")

@@ -15,9 +15,17 @@ import {
 } from "@/components/documents/document-fields"
 import { DocumentWorkspace } from "@/components/documents/document-workspace"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { EmployeeChoice, PrintMargins } from "@/lib/documents/drafts"
+import {
+  isSignatureEnabled,
+  SIGNATURE_OFF,
+  type EmployeeChoice,
+  type NamedOption,
+  type PrintMargins,
+  type ProjectChoice,
+} from "@/lib/documents/drafts"
 import {
   formTitle,
   formToModel,
@@ -26,19 +34,58 @@ import {
   type ChallanRow,
   type FormDraft,
   type NoteRow,
+  type RfqRow,
   type TextRow,
 } from "@/lib/documents/form-model"
 import { savedToast } from "@/lib/saved"
 
+function applyRfqVendor(current: FormDraft, vendorId: string, vendors: NamedOption[]): FormDraft {
+  const vendor = vendors.find((item) => item.id === vendorId)
+  if (!vendor) {
+    return { ...current, vendorId: "" }
+  }
+  const toName = vendor.personName || vendor.companyName || vendor.name
+  const detailLines = vendor.detail
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && line !== toName)
+  return {
+    ...current,
+    vendorId,
+    body: {
+      ...current.body,
+      partyName: toName,
+      companyName: vendor.companyName || vendor.name,
+      partyDetail: detailLines.join("\n"),
+    },
+  }
+}
+
+function applyRfqProject(current: FormDraft, projectId: string, projects: ProjectChoice[]): FormDraft {
+  const project = projects.find((item) => item.id === projectId)
+  return {
+    ...current,
+    projectId,
+    body: {
+      ...current.body,
+      projectName: project?.name ?? "",
+    },
+  }
+}
+
 export function FormStudio({
   draft,
   employees,
+  vendors = [],
+  projects = [],
   origin,
   margins,
   canSave,
 }: {
   draft: FormDraft
   employees: EmployeeChoice[]
+  vendors?: NamedOption[]
+  projects?: ProjectChoice[]
   origin: string
   margins: PrintMargins
   canSave: boolean
@@ -102,7 +149,66 @@ export function FormStudio({
         })
       }}
     >
+      {form.kind === "rfq" ? (
+        <>
+          <ChoiceField
+            id="rfq-vendor"
+            label="Vendor"
+            placeholder="Choose a vendor"
+            value={form.vendorId}
+            disabled={!canSave}
+            options={vendors.map((item) => ({ value: item.id, label: item.name }))}
+            onChange={(vendorId) => setForm((current) => applyRfqVendor(current, vendorId, vendors))}
+          />
+          <ChoiceField
+            id="rfq-project"
+            label="Project"
+            placeholder="Optional (ADM when none)"
+            value={form.projectId}
+            disabled={!canSave}
+            options={projects.map((item) => ({ value: item.id, label: item.name }))}
+            onChange={(projectId) => setForm((current) => applyRfqProject(current, projectId, projects))}
+          />
+        </>
+      ) : null}
       <TextField id="issued-on" label="Date" type="date" value={form.issuedOn} disabled={!canSave} onChange={(issuedOn) => setForm({ ...form, issuedOn })} />
+      {form.kind === "rfq" ? (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <TextField
+              id="due-on"
+              label="Submission Deadline"
+              type="date"
+              value={body.dueOn}
+              disabled={!canSave}
+              onChange={(dueOn) => setBody({ dueOn })}
+            />
+            <TextField
+              id="subtitle"
+              label="Subtitle"
+              value={body.subtitle}
+              disabled={!canSave}
+              onChange={(subtitle) => setBody({ subtitle })}
+            />
+            <TextField
+              id="work-start"
+              label="Tentative Work Start"
+              type="date"
+              value={body.startDate}
+              disabled={!canSave}
+              onChange={(startDate) => setBody({ startDate })}
+            />
+            <TextField
+              id="work-end"
+              label="Tentative Work End"
+              type="date"
+              value={body.completionDate}
+              disabled={!canSave}
+              onChange={(completionDate) => setBody({ completionDate })}
+            />
+          </div>
+        </>
+      ) : null}
       {form.kind === "payment_voucher" || form.kind === "salary_slip" ? (
         <ReadOnlyField label="Recorded Amount" value={lockedMoneyLabel(form.kind, form.lockedNet)} />
       ) : null}
@@ -121,13 +227,38 @@ export function FormStudio({
       ) : null}
       <TextField
         id="party-name"
-        label={form.kind === "salary_slip" ? "Employee Name" : form.kind === "letter" ? "Addressee" : "Name"}
+        label={
+          form.kind === "salary_slip"
+            ? "Employee Name"
+            : form.kind === "letter"
+              ? "Addressee"
+              : form.kind === "rfq"
+                ? "Recipient Name"
+                : "Name"
+        }
         value={body.partyName}
         disabled={!canSave}
         onChange={(partyName) => setBody({ partyName })}
       />
+      {form.kind === "rfq" ? (
+        <TextField
+          id="vendor-company"
+          label="Vendor Name"
+          value={body.companyName}
+          disabled={!canSave}
+          onChange={(companyName) => setBody({ companyName })}
+        />
+      ) : null}
       <AreaField id="party-detail" label="Address" value={body.partyDetail} disabled={!canSave} onChange={(partyDetail) => setBody({ partyDetail })} />
       <TextField id="project-name" label="Project Name" value={body.projectName} disabled={!canSave} onChange={(projectName) => setBody({ projectName })} />
+      {form.kind === "rfq" ? (
+        <>
+          <TextField id="rfq-subject" label="Subject" value={body.subject} disabled={!canSave} onChange={(subject) => setBody({ subject })} />
+          <AreaField id="rfq-intro" label="Introduction" value={body.intro} disabled={!canSave} onChange={(intro) => setBody({ intro })} />
+          <RfqEditor rows={body.rfqLines} disabled={!canSave} onChange={(rfqLines) => setBody({ rfqLines })} />
+          <AreaField id="rfq-terms" label="Terms & Conditions" value={body.terms} disabled={!canSave} onChange={(terms) => setBody({ terms })} />
+        </>
+      ) : null}
       {form.kind === "delivery_challan" ? (
         <>
           <TextField id="wo" label="Client WO No." value={body.clientWoNo} disabled={!canSave} onChange={(clientWoNo) => setBody({ clientWoNo })} />
@@ -185,11 +316,112 @@ export function FormStudio({
           <TextField id="cc" label="Copies" value={body.cc} disabled={!canSave} onChange={(cc) => setBody({ cc })} />
         </>
       ) : null}
-      <AreaField id="notes" label="Notes" value={body.notes} disabled={!canSave} onChange={(notes) => setBody({ notes })} />
+      <AreaField id="notes" label={form.kind === "rfq" ? "Submission Note" : "Notes"} value={body.notes} disabled={!canSave} onChange={(notes) => setBody({ notes })} />
       <EmployeeField id="prepared" label="Prepared By" value={body.preparedBy} employees={employees} disabled={!canSave} onChange={(preparedBy) => setBody({ preparedBy })} />
       <EmployeeField id="checked" label="Checked By" value={body.checkedBy} employees={employees} disabled={!canSave} onChange={(checkedBy) => setBody({ checkedBy })} />
       <EmployeeField id="authorized" label="Authorized By" value={body.authorizedBy} employees={employees} disabled={!canSave} onChange={(authorizedBy) => setBody({ authorizedBy })} />
+      {form.kind === "rfq" ? (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="submitted-enabled"
+            checked={isSignatureEnabled(body.submittedBy)}
+            disabled={!canSave}
+            onCheckedChange={(checked) => setBody({ submittedBy: checked ? "" : SIGNATURE_OFF })}
+          />
+          <Label htmlFor="submitted-enabled" className="cursor-pointer">
+            Quotation Submitted By
+          </Label>
+        </div>
+      ) : null}
     </DocumentWorkspace>
+  )
+}
+
+function RfqEditor({
+  rows,
+  disabled,
+  onChange,
+}: {
+  rows: RfqRow[]
+  disabled: boolean
+  onChange: (rows: RfqRow[]) => void
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <Label>Items</Label>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled || rows.length >= 40}
+          onClick={() =>
+            onChange([...rows, { item: "", specification: "", unit: "", quantity: "", remarks: "" }])
+          }
+        >
+          <Plus aria-hidden="true" data-icon="inline-start" />
+          Add Item
+        </Button>
+      </div>
+      {rows.map((row, index) => (
+        <div key={index} className="flex flex-col gap-3 rounded-card border border-border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-ui font-semibold">Item {String(index + 1).padStart(2, "0")}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={disabled || rows.length === 1}
+              aria-label={`Remove item ${index + 1}`}
+              onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <TextField
+              id={`rfq-item-${index}`}
+              label="Item"
+              value={row.item}
+              disabled={disabled}
+              onChange={(item) => update(rows, index, { item }, onChange)}
+            />
+            <TextField
+              id={`rfq-spec-${index}`}
+              label="Specification"
+              value={row.specification}
+              disabled={disabled}
+              onChange={(specification) => update(rows, index, { specification }, onChange)}
+            />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={`rfq-qty-${index}`}>Quantity</Label>
+              <Input
+                id={`rfq-qty-${index}`}
+                inputMode="decimal"
+                value={row.quantity}
+                disabled={disabled}
+                onChange={(event) => update(rows, index, { quantity: event.target.value }, onChange)}
+              />
+            </div>
+            <TextField
+              id={`rfq-unit-${index}`}
+              label="Unit"
+              value={row.unit}
+              disabled={disabled}
+              onChange={(unit) => update(rows, index, { unit }, onChange)}
+            />
+            <div className="md:col-span-2">
+              <TextField
+                id={`rfq-remarks-${index}`}
+                label="Remarks"
+                value={row.remarks}
+                disabled={disabled}
+                onChange={(remarks) => update(rows, index, { remarks }, onChange)}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
 

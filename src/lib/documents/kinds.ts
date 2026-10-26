@@ -26,6 +26,12 @@ export const documentKinds: Array<{
     detail: "Print a purchase order from an existing order.",
   },
   {
+    href: "/documents/rfqs",
+    module: "purchase_orders",
+    title: "Request For Quotation",
+    detail: "Invite a vendor to quote on items and specifications.",
+  },
+  {
     href: "/documents/challans",
     module: "purchase_orders",
     anyOf: ["purchase_orders", "projects"],

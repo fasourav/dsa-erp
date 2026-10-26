@@ -31,6 +31,7 @@ export default async function NewFormDocumentPage({
       expense: first(query.expense),
       line: first(query.line),
       client: first(query.client),
+      vendor: first(query.vendor),
     }),
     getPrintMargins(),
     requestOrigin(),
@@ -50,6 +51,8 @@ export default async function NewFormDocumentPage({
     <FormStudio
       draft={loaded.draft}
       employees={catalog.employees}
+      vendors={catalog.vendors}
+      projects={catalog.projects}
       origin={origin}
       margins={margins}
       canSave
@@ -58,6 +61,7 @@ export default async function NewFormDocumentPage({
 }
 
 function canAdd(access: NonNullable<Awaited<ReturnType<typeof getAccess>>>, kind: FormKind) {
+  if (kind === "rfq") return allows(access, "purchase_orders", "add")
   if (kind === "delivery_challan") return allows(access, "purchase_orders", "add") || allows(access, "projects", "add")
   if (kind === "payment_voucher") return allows(access, "vendor_payments", "add") || allows(access, "expenses", "add")
   if (kind === "salary_slip") return allows(access, "payroll", "add")

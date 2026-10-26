@@ -2,9 +2,16 @@ import { formatIsoDate, formatMoney } from "@/lib/format"
 import { amountInWords } from "@/lib/documents/money"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import type { DocumentModel, SignLine } from "@/lib/documents/setc/types"
-import { isSignatureEnabled, roleFor, signatureName, type EmployeeChoice } from "@/lib/documents/drafts"
+import {
+  documentCompanyName,
+  isSignatureEnabled,
+  roleFor,
+  signatureName,
+  type EmployeeChoice,
+} from "@/lib/documents/drafts"
 
 export const formSlugs = {
+  rfqs: "rfq",
   challans: "delivery_challan",
   vouchers: "payment_voucher",
   certificates: "completion",
@@ -33,6 +40,13 @@ export type ChallanRow = {
   delivered: string
   remarks: string
 }
+export type RfqRow = {
+  item: string
+  specification: string
+  unit: string
+  quantity: string
+  remarks: string
+}
 export type CheckRow = { item: string; status: string; remarks: string }
 export type DutyRow = { project: string; site: string; person: string; phone: string }
 export type NoteRow = { label: string; value: string }
@@ -42,11 +56,14 @@ export type FormBody = {
   preparedBy: string
   checkedBy: string
   authorizedBy: string
+  submittedBy: string
   partyName: string
   partyDetail: string
   companyName: string
   projectName: string
   notes: string
+  terms: string
+  dueOn: string
   subject: string
   paragraphs: string
   cc: string
@@ -78,6 +95,7 @@ export type FormBody = {
   narration: string
   paymentMode: string
   challanLines: ChallanRow[]
+  rfqLines: RfqRow[]
   inspections: CheckRow[]
   earnings: TextRow[]
   deductions: TextRow[]
@@ -113,11 +131,14 @@ export function blankBody(): FormBody {
     preparedBy: "",
     checkedBy: "",
     authorizedBy: "",
+    submittedBy: "",
     partyName: "",
     partyDetail: "",
     companyName: "",
     projectName: "",
     notes: "",
+    terms: "",
+    dueOn: "",
     subject: "",
     paragraphs: "",
     cc: "",
@@ -149,6 +170,7 @@ export function blankBody(): FormBody {
     narration: "",
     paymentMode: "",
     challanLines: [{ item: "", specification: "", unit: "", ordered: "", delivered: "", remarks: "" }],
+    rfqLines: [{ item: "", specification: "", unit: "", quantity: "", remarks: "" }],
     inspections: [{ item: "", status: "", remarks: "" }],
     earnings: [{ label: "", amount: "" }],
     deductions: [{ label: "", amount: "" }],
@@ -205,6 +227,57 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
   const url = verifyUrl(origin, draft.verifyToken)
   const issued = formatIsoDate(draft.issuedOn)
   const body = draft.body
+  if (draft.kind === "rfq") {
+    const period = [body.startDate, body.completionDate].filter(Boolean)
+    const workPeriod =
+      period.length === 2
+        ? `${formatIsoDate(body.startDate)} – ${formatIsoDate(body.completionDate)}`
+        : period.length === 1
+          ? formatIsoDate(period[0] ?? "")
+          : "—"
+    const vendorDisplay = body.companyName.trim() || body.partyName.trim()
+    const vendorSignDetail =
+      body.companyName.trim() && body.companyName.trim() !== body.partyName.trim()
+        ? `${body.companyName.trim()} - Signature, Seal & Date`
+        : "Signature, Seal & Date"
+    return {
+      kind: "rfq",
+      doc: {
+        documentNo: draft.documentNo || "Assigned when saved",
+        issuedOn: issued,
+        verifyUrl: url,
+        subtitle: body.subtitle.trim() || "Vendor / Service Provider",
+        toName: body.partyName,
+        toDetail: body.partyDetail,
+        facts: [
+          { label: "Vendor Name", value: vendorDisplay || "—" },
+          { label: "Project Name", value: body.projectName || "—" },
+          { label: "Submission Deadline", value: body.dueOn ? formatIsoDate(body.dueOn) : "—" },
+          { label: "Tentative Work Period", value: workPeriod },
+        ],
+        subject: body.subject,
+        intro: body.intro,
+        lines: body.rfqLines.filter((line) => line.item.trim()),
+        note: body.notes,
+        terms: body.terms,
+        signatures: signs(body, employees).map((line) =>
+          line.label === "Authorized Signature"
+            ? {
+                ...line,
+                detail: [line.detail, documentCompanyName].filter(Boolean).join("\n"),
+              }
+            : line,
+        ),
+        vendorSignature: isSignatureEnabled(body.submittedBy)
+          ? {
+              label: "Quotation Submitted By (Vendor)",
+              name: body.partyName,
+              detail: vendorSignDetail,
+            }
+          : null,
+      },
+    }
+  }
   if (draft.kind === "delivery_challan") {
     return {
       kind: "challan",
@@ -389,6 +462,7 @@ function letterStrong(body: FormBody): boolean[] {
 }
 
 export function formTitle(kind: FormKind): string {
+  if (kind === "rfq") return "Request For Quotation"
   if (kind === "delivery_challan") return "Delivery Challan"
   if (kind === "payment_voucher") return "Payment Voucher"
   if (kind === "completion") return "Work Completion Certificate"
