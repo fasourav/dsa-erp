@@ -1,6 +1,7 @@
 "use server"
 
 import type { AccessInput } from "@/app/(app)/settings/users/types"
+import { requestOrigin } from "@/lib/documents/origin"
 import { isUuid } from "@/lib/ids"
 import { denyUnlessOwner, getAccess } from "@/lib/permissions"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -64,11 +65,8 @@ function cleanInput(input: AccessInput): { error: string } | { value: AccessInpu
   }
 }
 
-const defaultSiteUrl = "https://dsa-erp.vercel.app"
-
-function inviteRedirect(): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-  const site = (configured || defaultSiteUrl).replace(/\/+$/, "")
+async function inviteRedirect(): Promise<string> {
+  const site = await requestOrigin()
   return `${site}/auth/accept`
 }
 
@@ -161,7 +159,7 @@ export async function inviteUser(input: AccessInput): Promise<ActionResult> {
     data: {
       display_name: cleaned.value.displayName,
     },
-    redirectTo: inviteRedirect(),
+    redirectTo: await inviteRedirect(),
   })
 
   if (invited.error || !invited.data.user) {
@@ -316,7 +314,7 @@ export async function resendInvite(userId: string): Promise<ActionResult> {
   }
 
   const sent = await admin.auth.admin.inviteUserByEmail(profile.email, {
-    redirectTo: inviteRedirect(),
+    redirectTo: await inviteRedirect(),
   })
   if (sent.error) return { error: friendly(sent.error.message, "Could not resend this invite.") }
 

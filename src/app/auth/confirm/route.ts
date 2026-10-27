@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr"
 import type { EmailOtpType } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
+import { headerRequestUrl, originFromHeaders } from "@/lib/documents/origin"
 import { getSupabaseEnv } from "@/lib/supabase/env"
 import type { Database } from "@/types/database.types"
 
@@ -20,12 +21,34 @@ function isEmailOtpType(value: string): value is EmailOtpType {
   return otpTypes.has(value)
 }
 
-function safeNextPath(value: string | null): string | null {
+function safeNextPath(
+  value: string | null,
+  baseOrigin: string,
+  allowedOrigins: ReadonlySet<string>,
+): string | null {
   if (value == null || value.trim() === "") return "/set-password"
 
-  const next = value.trim()
+  let next = value.trim()
+  if (/[\u0000-\u001F\u007F]/.test(next)) return null
+
+  if (/^https?:\/\//i.test(next)) {
+    try {
+      const full = new URL(next)
+      if (
+        !allowedOrigins.has(full.origin) &&
+        full.pathname !== "/auth/accept" &&
+        full.pathname !== "/set-password"
+      ) {
+        return null
+      }
+      next = `${full.pathname}${full.search}${full.hash}`
+    } catch {
+      return null
+    }
+  }
+
   if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return null
-  if (next.includes("\\") || next.includes("://") || /[\u0000-\u001F\u007F]/.test(next)) {
+  if (next.includes("\\") || next.includes("://")) {
     return null
   }
 
@@ -42,8 +65,9 @@ function safeNextPath(value: string | null): string | null {
   }
 
   try {
-    const url = new URL(decoded, "https://dsa-erp.vercel.app")
-    if (url.origin !== "https://dsa-erp.vercel.app") return null
+    const url = new URL(decoded, baseOrigin)
+    if (url.origin !== baseOrigin) return null
+    if (url.pathname === "/auth/accept") return "/set-password"
     return `${url.pathname}${url.search}${url.hash}`
   } catch {
     return null
@@ -51,6 +75,10 @@ function safeNextPath(value: string | null): string | null {
 }
 
 export async function GET(request: NextRequest) {
+  const baseOrigin = originFromHeaders(request.headers)
+  const reqOrigin = headerRequestUrl(request.headers)?.origin ?? request.nextUrl.origin
+  const allowedOrigins = new Set([baseOrigin, reqOrigin, request.nextUrl.origin])
+
   const pendingCookies: {
     name: string
     value: string
@@ -77,7 +105,7 @@ export async function GET(request: NextRequest) {
     },
   })
 
-  const next = safeNextPath(request.nextUrl.searchParams.get("next"))
+  const next = safeNextPath(request.nextUrl.searchParams.get("next"), baseOrigin, allowedOrigins)
   const tokenHash = request.nextUrl.searchParams.get("token_hash")
   const type = request.nextUrl.searchParams.get("type")
   const code = request.nextUrl.searchParams.get("code")
@@ -95,11 +123,7 @@ export async function GET(request: NextRequest) {
     if (!error) destination = next
   }
 
-  const redirectUrl = request.nextUrl.clone()
-  const parsed = new URL(destination, request.url)
-  redirectUrl.pathname = parsed.pathname
-  redirectUrl.search = parsed.search
-  redirectUrl.hash = parsed.hash
+  const redirectUrl = new URL(destination, baseOrigin)
 
   const redirectResponse = NextResponse.redirect(redirectUrl)
   pendingCookies.forEach(({ name, value, options }) => {

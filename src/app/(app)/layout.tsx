@@ -25,6 +25,10 @@ export default async function AuthenticatedLayout({
     redirect("/login")
   }
 
+  if (access.status === "invited") {
+    redirect("/set-password")
+  }
+
   const account = await getAccountIdentity()
   if (!account) redirect("/login")
 
