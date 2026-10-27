@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
-import { headers } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 
 import { ReportFilters } from "@/app/(app)/reports/report-filters"
 import { PageHeader } from "@/components/page-header"
 import { StatementView } from "@/components/statement-view"
 import { allows } from "@/lib/access"
+import { requestOrigin } from "@/lib/documents/origin"
 import { isUuid } from "@/lib/ids"
 import { reportLaunchDate } from "@/lib/reports/load"
 import { clampPeriod, currentReportPeriod, officeToday } from "@/lib/reports/period"
@@ -71,10 +71,8 @@ export default async function ClientStatementPage({
     )
   }
 
-  const headerList = await headers()
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host")
-  const proto = headerList.get("x-forwarded-proto") ?? "https"
-  const qrUrl = host ? `${proto}://${host}/clients/${id}/statement?${exportQuery.toString()}` : null
+  const origin = await requestOrigin()
+  const qrUrl = `${origin}/clients/${id}/statement?${exportQuery.toString()}`
 
   return (
     <StatementView

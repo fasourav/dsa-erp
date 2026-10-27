@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import { authAlertClassName } from "@/app/login/auth-styles"
@@ -27,16 +26,34 @@ function clearInviteUrl() {
   window.history.replaceState(window.history.state, "", window.location.pathname)
 }
 
-export function AcceptInvite() {
-  const router = useRouter()
+export function AcceptInvite({ origin }: { origin?: string }) {
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
     async function accept() {
+      if (
+        origin &&
+        window.location.hostname.endsWith(".vercel.app") &&
+        window.location.origin !== origin
+      ) {
+        window.location.replace(
+          `${origin}${window.location.pathname}${window.location.search}${window.location.hash}`,
+        )
+        return
+      }
+
+      const search = new URLSearchParams(window.location.search)
+      const tokenHash = search.get("token_hash")
+      const type = search.get("type")
+      if (tokenHash && type) {
+        window.location.replace(`/auth/confirm${window.location.search}`)
+        return
+      }
+
       const hash = hashParams()
-      const code = new URLSearchParams(window.location.search).get("code")
+      const code = search.get("code")
 
       if (hashHasError(hash)) {
         clearInviteUrl()
@@ -64,7 +81,7 @@ export function AcceptInvite() {
           }
         }
         clearInviteUrl()
-        router.replace("/set-password")
+        window.location.replace("/set-password")
         return
       }
 
@@ -81,18 +98,25 @@ export function AcceptInvite() {
           }
         }
         clearInviteUrl()
-        router.replace("/set-password")
+        window.location.replace("/set-password")
         return
       }
 
-      if (!cancelled) setFailed(true)
+      const { data } = await supabase.auth.getUser()
+      if (cancelled) return
+      if (data.user) {
+        window.location.replace("/set-password")
+        return
+      }
+
+      setFailed(true)
     }
 
     void accept()
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [origin])
 
   return failed ? (
     <p role="alert" className={authAlertClassName}>

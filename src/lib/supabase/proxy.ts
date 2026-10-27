@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 import { contentSecurityPolicy } from "@/lib/csp"
+import {
+  headerRequestUrl,
+  isVercelHostname,
+  originFromHeaders,
+} from "@/lib/documents/origin"
 import type { Database } from "@/types/database.types"
 
 import { getSupabaseEnv } from "./env"
@@ -17,10 +22,11 @@ function redirectWithSession(
   request: NextRequest,
   supabaseResponse: NextResponse,
   pathname: string,
+  search = "",
 ) {
   const url = request.nextUrl.clone()
   url.pathname = pathname
-  url.search = ""
+  url.search = search
 
   const redirectResponse = NextResponse.redirect(url)
   for (const cookie of supabaseResponse.cookies.getAll()) {
@@ -43,6 +49,21 @@ export async function updateSession(request: NextRequest) {
   const applyCsp = (response: NextResponse) => {
     response.headers.set("Content-Security-Policy", csp.value)
     return response
+  }
+
+  const { pathname } = request.nextUrl
+  const actualUrl = headerRequestUrl(request.headers)
+  const canonicalOrigin = originFromHeaders(request.headers)
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
+    !pathname.startsWith("/api/") &&
+    process.env.VERCEL_ENV !== "preview" &&
+    actualUrl &&
+    isVercelHostname(actualUrl.hostname) &&
+    actualUrl.origin !== canonicalOrigin
+  ) {
+    const target = new URL(`${pathname}${request.nextUrl.search}`, canonicalOrigin)
+    return applyCsp(NextResponse.redirect(target, 307))
   }
 
   let supabaseResponse = applyCsp(
@@ -81,7 +102,25 @@ export async function updateSession(request: NextRequest) {
   // mistake can make it very hard to debug users being randomly signed out.
   const { data } = await supabase.auth.getClaims()
   const isAuthenticated = Boolean(data?.claims)
-  const { pathname } = request.nextUrl
+
+  if (
+    pathname !== "/auth/confirm" &&
+    request.nextUrl.searchParams.has("token_hash") &&
+    request.nextUrl.searchParams.has("type")
+  ) {
+    return applyCsp(
+      redirectWithSession(request, supabaseResponse, "/auth/confirm", request.nextUrl.search),
+    )
+  }
+
+  if (
+    (pathname === "/" || pathname === "/login" || pathname === "/set-password") &&
+    request.nextUrl.searchParams.has("code")
+  ) {
+    return applyCsp(
+      redirectWithSession(request, supabaseResponse, "/auth/accept", request.nextUrl.search),
+    )
+  }
 
   // Default invites land on /auth/accept with the session in the hash. token_hash
   // links still use /auth/confirm. Both run before a session exists, then

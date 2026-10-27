@@ -1,7 +1,7 @@
 "use client"
 
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react"
-import { useActionState, useState } from "react"
+import { useActionState, useEffect, useState } from "react"
 
 import { signIn, type SignInState } from "@/app/auth/actions"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,21 @@ const initialState: SignInState = {}
 export function LoginForm({ notice }: { notice?: string }) {
   const [state, formAction, pending] = useActionState(signIn, initialState)
   const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    const raw = window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : window.location.hash
+    if (!raw) return
+    const params = new URLSearchParams(raw)
+    const hasTokens = Boolean(params.get("access_token") && params.get("refresh_token"))
+    const hasError = ["error", "error_code", "error_description"].some((key) =>
+      Boolean(params.get(key)?.trim()),
+    )
+    if (hasTokens || hasError) {
+      window.location.replace(`/auth/accept${window.location.hash}`)
+    }
+  }, [])
 
   return (
     <form action={formAction} className="flex w-full flex-col gap-3">
