@@ -17,6 +17,7 @@ import {
   TrendingDown,
   TrendingUp,
   Trophy,
+  Truck,
   Users,
   Wallet,
   type LucideIcon,
@@ -299,6 +300,13 @@ function DashboardSections({
             hint="Open Pipeline"
           />
           <MetricTile
+            icon={Wallet}
+            color="bg-chart-7"
+            label="Project Lead Value"
+            value={<Money value={model.performance.leadValue} />}
+            hint="In Pipeline"
+          />
+          <MetricTile
             icon={Users}
             color="bg-chart-2"
             label="Clients"
@@ -306,11 +314,17 @@ function DashboardSections({
             hint="Active Accounts"
           />
           <MetricTile
-            icon={Wallet}
-            color="bg-chart-7"
-            label="Project Lead Value"
-            value={<Money value={model.performance.leadValue} />}
-            hint="In Pipeline"
+            icon={Truck}
+            color="bg-chart-1"
+            label="Vendors"
+            value={
+              model.performance.vendors == null ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                String(model.performance.vendors)
+              )
+            }
+            hint={model.performance.vendors == null ? "Unavailable" : "Total Vendors"}
           />
           <MetricTile
             icon={Trophy}
@@ -336,16 +350,19 @@ function DashboardSections({
                 {model.performance.backlogValue == null ? (
                   <span className="text-sm font-semibold text-muted-foreground">—</span>
                 ) : model.performance.backlog > 0 ? (
-                  <Money
-                    value={model.performance.backlogValue}
-                    className="text-sm font-semibold text-muted-foreground md:text-label"
-                  />
+                  <>
+                    <span aria-hidden="true" className="text-sm font-semibold text-muted-foreground">/</span>
+                    <Money
+                      value={model.performance.backlogValue}
+                      className="text-sm font-semibold text-muted-foreground md:text-label"
+                    />
+                  </>
                 ) : null}
               </span>
             }
             hint="Expense Exceeds Collection"
             wrap
-            className={showAssets ? "lg:col-span-2" : "col-span-2 lg:col-span-4"}
+            className={showAssets ? "lg:col-span-2" : "lg:col-span-3"}
           />
           {showAssets ? (
             <MetricTile
@@ -360,7 +377,7 @@ function DashboardSections({
                 )
               }
               hint={model.performance.assetValue == null ? "Unavailable" : "Current Value"}
-              className="lg:col-span-2"
+              className="col-span-2 lg:col-span-1"
             />
           ) : null}
         </div>
@@ -1014,6 +1031,7 @@ function downloadDashboard(
     ["Active Projects", model.performance.active],
     ["Projects in Leads", model.performance.openLeads],
     ["Clients", model.performance.clients],
+    ["Vendors", model.performance.vendors ?? "—"],
     ["Project Lead Value", formatExactBdt(model.performance.leadValue)],
     ["Win Rate", model.performance.winRate],
     ["Collection Efficiency", model.performance.collectionEfficiency],

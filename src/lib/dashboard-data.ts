@@ -51,6 +51,7 @@ type PerformanceDetails = {
   lowValue: number | null
   backlogValue: number | null
   assetValue: number | null
+  vendors: number | null
 }
 
 function withPerformance(model: DashboardModel, details: PerformanceDetails): DashboardModel {
@@ -65,6 +66,7 @@ function withPerformance(model: DashboardModel, details: PerformanceDetails): Da
       lowValue: details.lowValue ?? model.performance.lowValue,
       backlogValue: details.backlogValue,
       assetValue: details.assetValue,
+      vendors: details.vendors,
     },
   }
 }
@@ -73,10 +75,11 @@ async function loadPerformanceDetails(
   scopeYear: number | null,
   includeAssets: boolean,
 ): Promise<PerformanceDetails> {
-  const [counts, backlogValue, assetValue] = await Promise.all([
+  const [counts, backlogValue, assetValue, vendors] = await Promise.all([
     loadProjectCounts(scopeYear),
     loadBacklogValue(scopeYear),
     includeAssets ? loadAssetTotal() : Promise.resolve<number | null>(null),
+    loadVendorCount(),
   ])
 
   return {
@@ -84,6 +87,18 @@ async function loadPerformanceDetails(
     lowValue: counts?.lowValue ?? null,
     backlogValue,
     assetValue,
+    vendors,
+  }
+}
+
+async function loadVendorCount(): Promise<number | null> {
+  try {
+    const supabase = await createClient()
+    const result = await supabase.from("vendors").select("id", { count: "exact", head: true })
+    if (result.error) return null
+    return result.count ?? 0
+  } catch {
+    return null
   }
 }
 
@@ -611,6 +626,7 @@ function modelFromScope(data: unknown, now: Date): DashboardModel {
       active: toNumber(asRecord(row.performance).active),
       openLeads: toNumber(asRecord(row.performance).open_leads),
       clients: toNumber(asRecord(row.performance).clients),
+      vendors: null,
       leadValue: toNumber(asRecord(row.performance).lead_value),
       winRate: toNumber(asRecord(row.performance).win_rate),
       collectionEfficiency: toNumber(asRecord(row.performance).collection_efficiency),
