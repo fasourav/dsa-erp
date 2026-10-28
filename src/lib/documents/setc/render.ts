@@ -367,12 +367,12 @@ function buildRfq(doc: RfqModel, box: ContentBox): Built {
     leadMm += 5.3 + Math.ceil(doc.subject.trim().length / 82) * 4.8
   }
   if (doc.intro.trim()) {
-    leadParts.push(`<p class="intro">${esc(doc.intro)}</p>`)
-    leadMm += 2.2 + Math.ceil(doc.intro.trim().length / 128) * 4.5
+    leadParts.push(`<p class="intro">${escLines(doc.intro)}</p>`)
+    leadMm += 2.2 + wrappedLines(doc.intro, 128) * 4.5
   }
 
-  const noteHtml = doc.note.trim() ? `<p class="note" style="margin-top:2.5mm">${esc(doc.note)}</p>` : ""
-  const noteMm = doc.note.trim() ? 2.5 + Math.ceil(doc.note.trim().length / 138) * 4 : 0
+  const noteHtml = doc.note.trim() ? `<p class="note" style="margin-top:2.5mm">${escLines(doc.note)}</p>` : ""
+  const noteMm = doc.note.trim() ? 2.5 + wrappedLines(doc.note, 138) * 4 : 0
   const tailHtml = `${noteHtml}<p class="thanks" style="margin-top:2.5mm">Thanks &amp; Regards,</p>`
   const tailMm = noteMm + 7.1
 
@@ -1107,6 +1107,21 @@ export function esc(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
+}
+
+function escLines(value: string): string {
+  return value
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => esc(line))
+    .join("<br>")
+}
+
+function wrappedLines(value: string, perLine: number): number {
+  return value
+    .trim()
+    .split(/\r?\n/)
+    .reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / perLine)), 0)
 }
 
 export function documentFileName(documentNo: string, letterhead: boolean): string {
