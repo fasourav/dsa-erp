@@ -191,7 +191,7 @@ function workOrder(
   if (intro.subject) {
     page1.push(chunk(`<div class="subject"><span>Subject</span>${esc(intro.subject)}</div>`, 14))
   }
-  if (intro.body) page1.push(chunk(`<div class="letter"><p class="intro">${esc(intro.body)}</p></div>`, estimateText(intro.body)))
+  if (intro.body) page1.push(chunk(`<div class="letter"><p class="intro">${escLines(intro.body)}</p></div>`, estimateText(intro.body)))
   page1.push(...table, chunk(wordsBox(doc.wordsLabel, doc.words), 16), chunk(`<p class="thanks">Thanks &amp; Regards,</p>`, 6))
   const terms = listBlock(doc.terms, "Terms & Conditions", true)
   const pay = doc.milestones.length
@@ -205,7 +205,7 @@ function workOrder(
   if (terms) page2.push(terms)
   if (page2.length) page2.push(chunk(`<p class="thanks">Thank you for your cooperation.</p>`, 6))
   const pageSigns = signBlock(
-    doc.signatures.filter((line) => /authorized|accepted by/i.test(line.label)),
+    doc.signatures,
   )
   const first = stamp(flow(page1, budget(box, pageSigns ? SIGN_MM : 0)), pageSigns)
   const second = page2.length ? stamp(flow(page2, budget(box, pageSigns ? SIGN_MM : 0)), pageSigns) : { bodies: [], signs: [] }
@@ -635,7 +635,7 @@ function buildLetter(doc: LetterModel, box: ContentBox): Built {
   const lead = doc.notice ? paragraphs.slice(0, 1) : paragraphs
   const rest = doc.notice ? paragraphs.slice(1) : []
   for (const paragraph of lead) {
-    chunks.push(chunk(`<div class="letter"><p>${rich(paragraph)}</p></div>`, estimateText(paragraph)))
+    chunks.push(chunk(`<div class="letter"><p>${richLines(paragraph)}</p></div>`, estimateText(paragraph)))
   }
   if (doc.rows.length) {
     chunks.push(
@@ -670,7 +670,7 @@ function buildLetter(doc: LetterModel, box: ContentBox): Built {
     )
   }
   for (const paragraph of rest) {
-    chunks.push(chunk(`<div class="letter"><p>${rich(paragraph)}</p></div>`, estimateText(paragraph)))
+    chunks.push(chunk(`<div class="letter"><p>${richLines(paragraph)}</p></div>`, estimateText(paragraph)))
   }
   if (doc.closing.trim()) chunks.push(chunk(`<div class="letter"><p>${rich(doc.closing)}</p></div>`, estimateText(doc.closing)))
   const signed = doc.notice
@@ -945,6 +945,15 @@ function rfqSignBlock(staff: SignLine[], vendor?: SignLine | null): string {
 
 function rich(value: string): string {
   return esc(value).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+}
+
+/** Like `rich`, but keeps single line breaks typed inside a paragraph. */
+function richLines(value: string): string {
+  return value
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => rich(line))
+    .join("<br>")
 }
 
 function invoiceWords(doc: PrintDocument): string {
