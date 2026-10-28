@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Trash2 } from "lucide-react"
 
@@ -32,6 +32,7 @@ import {
   lockedMoneyLabel,
   slugForKind,
   type ChallanRow,
+  type FormBody,
   type FormDraft,
   type NoteRow,
   type RfqRow,
@@ -39,45 +40,64 @@ import {
 } from "@/lib/documents/form-model"
 import { savedToast } from "@/lib/saved"
 
-function applyRfqVendor(current: FormDraft, vendorId: string, vendors: NamedOption[]): FormDraft {
-  const vendor = vendors.find((item) => item.id === vendorId)
-  if (!vendor) {
-    return { ...current, vendorId: "" }
-  }
-  const toName = vendor.personName || vendor.companyName || vendor.name
-  const detailLines = vendor.detail
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line && line !== toName)
-  return {
-    ...current,
-    vendorId,
-    body: {
-      ...current.body,
-      partyName: toName,
-      companyName: vendor.companyName || vendor.name,
-      partyDetail: detailLines.join("\n"),
-    },
+const subscribeNoop = () => () => {}
+
+function rfqDraftStorageKey(id: string): string {
+  return `dsa-erp:rfq-draft:${id}`
+}
+
+function readLocalRfqRaw(id: string): string | null {
+  try {
+    return window.localStorage.getItem(rfqDraftStorageKey(id))
+  } catch {
+    return null
   }
 }
 
-function applyRfqProject(current: FormDraft, projectId: string, projects: ProjectChoice[]): FormDraft {
-  const project = projects.find((item) => item.id === projectId)
-  return {
-    ...current,
-    projectId,
-    body: {
-      ...current.body,
-      projectName: project?.name ?? "",
-    },
+function hydrateRfqDraft(draft: FormDraft, raw: string | null): FormDraft {
+  if (draft.kind !== "rfq" || !draft.id || !raw) return draft
+  try {
+    const parsed = JSON.parse(raw) as { issuedOn?: string; body?: Partial<FormBody> } | null
+    if (!parsed || typeof parsed !== "object" || !parsed.body) return draft
+    return {
+      ...draft,
+      issuedOn: typeof parsed.issuedOn === "string" && parsed.issuedOn ? parsed.issuedOn : draft.issuedOn,
+      body: {
+        ...draft.body,
+        ...parsed.body,
+        rfqLines:
+          Array.isArray(parsed.body.rfqLines) && parsed.body.rfqLines.length
+            ? parsed.body.rfqLines
+            : draft.body.rfqLines,
+      },
+    }
+  } catch {
+    return draft
+  }
+}
+
+function writeLocalRfqDraft(id: string, draft: FormDraft): void {
+  try {
+    window.localStorage.setItem(
+      rfqDraftStorageKey(id),
+      JSON.stringify({ issuedOn: draft.issuedOn, body: draft.body }),
+    )
+  } catch {
+    // Ignore storage quota or private mode errors.
+  }
+}
+
+function removeLocalRfqDraft(id: string): void {
+  try {
+    window.localStorage.removeItem(rfqDraftStorageKey(id))
+  } catch {
+    // Ignore storage errors.
   }
 }
 
 export function FormStudio({
   draft,
   employees,
-  vendors = [],
-  projects = [],
   origin,
   margins,
   canSave,
@@ -91,12 +111,26 @@ export function FormStudio({
   canSave: boolean
 }) {
   const router = useRouter()
-  const [form, setForm] = useState(draft)
-  const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
+  const storedRfqRaw = useSyncExternalStore(
+    subscribeNoop,
+    () => (draft.kind === "rfq" && draft.id ? readLocalRfqRaw(draft.id) : null),
+    () => null,
+  )
+  const initialDraft = useMemo(() => hydrateRfqDraft(draft, storedRfqRaw), [draft, storedRfqRaw])
+  const [override, setOverride] = useState<FormDraft | null>(null)
+  const [savedDraft, setSavedDraft] = useState<FormDraft | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
+  const form = override ?? initialDraft
+  const baseline = savedDraft ?? initialDraft
   const source = useMemo(() => formToModel(form, origin, employees), [employees, form, origin])
   const body = form.body
+  const setForm = (next: FormDraft | ((current: FormDraft) => FormDraft)) => {
+    setOverride((current) => {
+      const base = current ?? initialDraft
+      return typeof next === "function" ? next(base) : next
+    })
+  }
   const setBody = (patch: Partial<typeof body>) => setForm({ ...form, body: { ...body, ...patch } })
 
   return (
@@ -112,9 +146,11 @@ export function FormStudio({
       onTrash={
         form.id
           ? async () => {
-              const result = await trashSavedDocument({ kind: form.kind, id: form.id ?? "" })
+              const targetId = form.id ?? ""
+              const result = await trashSavedDocument({ kind: form.kind, id: targetId })
               if (result.error) return result.error
-              savedToast("Moved To Trash.")
+              if (form.kind === "rfq" && targetId) removeLocalRfqDraft(targetId)
+              savedToast(form.kind === "rfq" ? "Deleted." : "Moved To Trash.")
               router.push(`/documents/${slugForKind(form.kind)}`)
               return null
             }
@@ -122,10 +158,49 @@ export function FormStudio({
       }
       pending={pending}
       error={error}
-      dirty={JSON.stringify(form) !== savedMark}
+      dirty={JSON.stringify(form) !== JSON.stringify(baseline)}
       onSave={() => {
         setError(null)
         startSave(async () => {
+          if (form.kind === "rfq") {
+            try {
+              const response = await fetch("/api/documents/rfq", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  id: form.id,
+                  issuedOn: form.issuedOn,
+                  vendorName: form.body.companyName.trim() || form.body.partyName.trim(),
+                  projectName: form.body.projectName.trim(),
+                  source,
+                  margins,
+                }),
+              })
+              const result = (await response.json()) as {
+                error: string | null
+                id?: string
+                documentNo?: string
+              }
+              if (!response.ok || result.error) {
+                setError(result.error || "Could not save this document.")
+                return
+              }
+              const saved: FormDraft = {
+                ...form,
+                id: result.id ?? form.id,
+                documentNo: result.documentNo ?? form.documentNo,
+              }
+              if (saved.id) writeLocalRfqDraft(saved.id, saved)
+              setSavedDraft(saved)
+              setOverride(saved)
+              if (!form.id && result.id) router.replace(`/documents/${slugForKind(form.kind)}/${result.id}`)
+              savedToast("Saved.")
+            } catch {
+              setError("Could not save this document.")
+            }
+            return
+          }
+
           const result = await saveFormDocument(form)
           if (result.error) {
             setError(result.error)
@@ -137,13 +212,8 @@ export function FormStudio({
             documentNo: result.documentNo ?? form.documentNo,
             verifyToken: result.verifyToken ?? form.verifyToken,
           }
-          setSavedMark(JSON.stringify(saved))
-          setForm((current) => ({
-            ...current,
-            id: result.id ?? current.id,
-            documentNo: result.documentNo ?? current.documentNo,
-            verifyToken: result.verifyToken ?? current.verifyToken,
-          }))
+          setSavedDraft(saved)
+          setOverride(saved)
           if (!form.id && result.id) router.replace(`/documents/${slugForKind(form.kind)}/${result.id}`)
           savedToast("Saved.")
         })
@@ -151,23 +221,19 @@ export function FormStudio({
     >
       {form.kind === "rfq" ? (
         <>
-          <ChoiceField
-            id="rfq-vendor"
-            label="Vendor"
-            placeholder="Choose a vendor"
-            value={form.vendorId}
+          <TextField
+            id="vendor-company"
+            label="Vendor Name"
+            value={body.companyName}
             disabled={!canSave}
-            options={vendors.map((item) => ({ value: item.id, label: item.name }))}
-            onChange={(vendorId) => setForm((current) => applyRfqVendor(current, vendorId, vendors))}
+            onChange={(companyName) => setBody({ companyName })}
           />
-          <ChoiceField
-            id="rfq-project"
-            label="Project"
-            placeholder="Optional (ADM when none)"
-            value={form.projectId}
+          <TextField
+            id="project-name"
+            label="Project Name"
+            value={body.projectName}
             disabled={!canSave}
-            options={projects.map((item) => ({ value: item.id, label: item.name }))}
-            onChange={(projectId) => setForm((current) => applyRfqProject(current, projectId, projects))}
+            onChange={(projectName) => setBody({ projectName })}
           />
         </>
       ) : null}
@@ -240,17 +306,10 @@ export function FormStudio({
         disabled={!canSave}
         onChange={(partyName) => setBody({ partyName })}
       />
-      {form.kind === "rfq" ? (
-        <TextField
-          id="vendor-company"
-          label="Vendor Name"
-          value={body.companyName}
-          disabled={!canSave}
-          onChange={(companyName) => setBody({ companyName })}
-        />
-      ) : null}
       <AreaField id="party-detail" label="Address" value={body.partyDetail} disabled={!canSave} onChange={(partyDetail) => setBody({ partyDetail })} />
-      <TextField id="project-name" label="Project Name" value={body.projectName} disabled={!canSave} onChange={(projectName) => setBody({ projectName })} />
+      {form.kind !== "rfq" ? (
+        <TextField id="project-name" label="Project Name" value={body.projectName} disabled={!canSave} onChange={(projectName) => setBody({ projectName })} />
+      ) : null}
       {form.kind === "rfq" ? (
         <>
           <TextField id="rfq-subject" label="Subject" value={body.subject} disabled={!canSave} onChange={(subject) => setBody({ subject })} />
@@ -347,7 +406,7 @@ function RfqEditor({
   onChange: (rows: RfqRow[]) => void
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mt-2 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <Label>Items</Label>
         <Button

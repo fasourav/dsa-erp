@@ -247,7 +247,7 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
         issuedOn: issued,
         verifyUrl: url,
         subtitle: body.subtitle.trim() || "Vendor / Service Provider",
-        toName: body.partyName,
+        toName: body.partyName.trim() || body.companyName.trim(),
         toDetail: body.partyDetail,
         facts: [
           { label: "Vendor Name", value: vendorDisplay || "—" },
@@ -271,7 +271,7 @@ export function formToModel(draft: FormDraft, origin: string, employees: Employe
         vendorSignature: isSignatureEnabled(body.submittedBy)
           ? {
               label: "Quotation Submitted By (Vendor)",
-              name: body.partyName,
+              name: body.partyName.trim() || body.companyName.trim(),
               detail: vendorSignDetail,
             }
           : null,

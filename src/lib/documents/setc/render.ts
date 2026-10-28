@@ -372,7 +372,7 @@ function buildRfq(doc: RfqModel, box: ContentBox): Built {
   }
   if (doc.intro.trim()) {
     leadParts.push(`<p class="intro">${escLines(doc.intro)}</p>`)
-    leadMm += 2.2 + wrappedLines(doc.intro, 128) * 4.5
+    leadMm += 4.5 + wrappedLines(doc.intro, 128) * 4.5
   }
 
   const noteHtml = doc.note.trim() ? `<p class="note" style="margin-top:2.5mm">${escLines(doc.note)}</p>` : ""
@@ -854,7 +854,7 @@ function shell(
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title>
 ${css}
-<style>:root{--doc-top:${box.top}mm;--doc-height:${box.height}mm}.page{margin:0}table.grid.rfq-grid{table-layout:fixed}table.grid.rfq-grid th,table.grid.rfq-grid td,table.grid.rfq-grid td .spec{overflow-wrap:anywhere;word-break:break-word}</style>
+<style>:root{--doc-top:${box.top}mm;--doc-height:${box.height}mm}.page{margin:0}.intro{margin-bottom:4.5mm}table.grid.rfq-grid{table-layout:fixed}table.grid.rfq-grid th,table.grid.rfq-grid td,table.grid.rfq-grid td .spec{overflow-wrap:anywhere;word-break:break-word}</style>
 </head>
 <body class="${bodyClass}">
 ${pages}
