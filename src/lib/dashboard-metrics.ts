@@ -172,6 +172,7 @@ export type DashboardModel = {
     active: number
     openLeads: number
     clients: number
+    vendors: number | null
     leadValue: number
     winRate: number
     collectionEfficiency: number
@@ -502,6 +503,7 @@ export function buildDashboard(
       active: projects.filter((project) => project.status === "active").length,
       openLeads: leads.filter((lead) => lead.isOpen).length,
       clients: clientCount,
+      vendors: null,
       leadValue: leads
         .filter((lead) => lead.isOpen)
         .reduce((total, lead) => total + lead.estimatedValue, 0),

@@ -25,7 +25,7 @@ export default async function FormDocumentsPage({ params }: { params: Promise<{ 
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       <PageHeader
         title={formTitle(kind)}
-        description="Same page in the preview, the downloaded PDF, and the print file."
+        description={formDescription(kind)}
         actions={
           <>
             <ListExport grid={documentExportGrid(page.items, slug, formTitle(kind))} />
@@ -46,6 +46,15 @@ export default async function FormDocumentsPage({ params }: { params: Promise<{ 
       <DocumentList items={page.items} hrefBase={`/documents/${slug}`} empty="No Documents Yet." pagingLabel="Documents pagination" />
     </div>
   )
+}
+
+function formDescription(kind: FormKind) {
+  if (kind === "rfq") return "Quotation requests sent to vendors."
+  if (kind === "delivery_challan") return "Delivery challans for goods sent to site."
+  if (kind === "payment_voucher") return "Payment vouchers for vendor payments and expenses."
+  if (kind === "completion") return "Work completion certificates for finished projects."
+  if (kind === "salary_slip") return "Salary slips issued to employees."
+  return "Letters and notices for clients and projects."
 }
 
 function canSee(access: NonNullable<Awaited<ReturnType<typeof getAccess>>>, kind: FormKind) {
