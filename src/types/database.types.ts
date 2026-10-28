@@ -2544,6 +2544,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rfq_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_no: string
+          file_created_at: string
+          file_expires_at: string
+          id: string
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_no: string
+          file_created_at?: string
+          file_expires_at?: string
+          id?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_no?: string
+          file_created_at?: string
+          file_expires_at?: string
+          id?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bank_match_tolerances: {
         Row: {
           days: number

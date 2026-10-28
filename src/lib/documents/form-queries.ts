@@ -1,4 +1,5 @@
 import { formatIsoDate } from "@/lib/format"
+import { listRfqDocuments, loadRfqDocument } from "@/lib/documents/rfq-store"
 import { createClient } from "@/lib/supabase/server"
 import { isUuid } from "@/lib/ids"
 import type { DocumentListItem } from "@/lib/documents/queries"
@@ -118,10 +119,52 @@ function rowToDraft(row: {
   }
 }
 
+async function loadRfqDraft(
+  id: string | null,
+  today: string,
+): Promise<{ draft: FormDraft | null; error: string | null }> {
+  const body = blankBody()
+  body.subtitle = "Vendor / Service Provider"
+  const base: FormDraft = {
+    id: null,
+    kind: "rfq",
+    documentNo: "",
+    verifyToken: "",
+    issuedOn: today,
+    projectId: "",
+    clientId: "",
+    vendorId: "",
+    purchaseOrderId: "",
+    vendorPaymentId: "",
+    operationalExpenseId: "",
+    payrollLineId: "",
+    employeeId: "",
+    lockedNet: 0,
+    lockedGross: 0,
+    lockedDeductions: 0,
+    statusNote: "",
+    employeeCode: "",
+    body,
+  }
+  if (!id) return { draft: base, error: null }
+  const loaded = await loadRfqDocument(id)
+  if (!loaded.record) return { draft: null, error: loaded.error || "That document could not be found." }
+  return {
+    draft: {
+      ...base,
+      id: loaded.record.id,
+      documentNo: loaded.record.documentNo,
+      issuedOn: loaded.record.fileCreatedAt.slice(0, 10) || today,
+    },
+    error: null,
+  }
+}
+
 export async function listFormDocuments(kind: FormKind): Promise<{
   items: DocumentListItem[]
   error: string | null
 }> {
+  if (kind === "rfq") return listRfqDocuments()
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("form_documents")
@@ -134,14 +177,6 @@ export async function listFormDocuments(kind: FormKind): Promise<{
     items: (data ?? []).map((row) => {
       const body = asBody(row.body)
       const date = formatIsoDate(row.issued_on.slice(0, 10))
-      if (kind === "rfq") {
-        return {
-          id: row.id,
-          title: body.companyName || body.partyName || body.projectName || body.subject || "Request For Quotation",
-          detail: [date, body.projectName].filter(Boolean).join(" · "),
-          documentNo: row.document_no,
-        }
-      }
       return {
         id: row.id,
         title: body.partyName || body.projectName || body.subject || "Document",
@@ -159,6 +194,7 @@ export async function loadFormDraft(
   query: Record<string, string | undefined>,
 ): Promise<{ draft: FormDraft | null; error: string | null }> {
   const { todayIsoDate } = await import("@/lib/project-validation")
+  if (kind === "rfq") return loadRfqDraft(id, todayIsoDate())
   const supabase = await createClient()
   if (id) {
     if (!isUuid(id)) return { draft: null, error: "That document could not be found." }
@@ -195,14 +231,6 @@ export async function loadFormDraft(
       const employee = await supabase.from("employees").select("employee_code").eq("id", draft.employeeId).maybeSingle()
       draft.employeeCode = employee.data?.employee_code?.trim() ?? ""
     }
-    if (kind === "rfq") {
-      if (draft.vendorId && (!draft.body.partyName || !draft.body.companyName)) {
-        await fillRfqVendor(supabase, draft, draft.vendorId, false)
-      }
-      if (draft.projectId && !draft.body.projectName) {
-        await fillRfqProject(supabase, draft)
-      }
-    }
     return { draft, error: null }
   }
 
@@ -228,12 +256,7 @@ export async function loadFormDraft(
     body: blankBody(),
   }
 
-  if (kind === "rfq") {
-    draft.body.subtitle = "Vendor / Service Provider"
-    draft.clientId = ""
-    if (draft.vendorId) await fillRfqVendor(supabase, draft, draft.vendorId, true)
-    if (draft.projectId) await fillRfqProject(supabase, draft)
-  } else if (kind === "delivery_challan" && draft.purchaseOrderId) {
+  if (kind === "delivery_challan" && draft.purchaseOrderId) {
     await fillFromPurchaseOrder(supabase, draft)
   } else if (kind === "delivery_challan" && draft.projectId) {
     await fillFromProject(supabase, draft)
@@ -361,31 +384,6 @@ async function fillVendor(supabase: Client, draft: FormDraft, vendorId: string) 
     .map((part) => part?.trim() ?? "")
     .filter(Boolean)
     .join("\n")
-}
-
-async function fillRfqVendor(supabase: Client, draft: FormDraft, vendorId: string, overwrite: boolean) {
-  const vendor = await supabase
-    .from("vendors")
-    .select("company_name, person_name, address, phone, email")
-    .eq("id", vendorId)
-    .maybeSingle()
-  if (!vendor.data) return
-  const company = vendor.data.company_name?.trim() ?? ""
-  const person = vendor.data.person_name?.trim() ?? ""
-  const toName = person || company
-  const detail = [person && company ? company : "", vendor.data.address, vendor.data.phone, vendor.data.email]
-    .map((part) => part?.trim() ?? "")
-    .filter((part) => part && part !== toName)
-    .join("\n")
-  if (overwrite || !draft.body.partyName) draft.body.partyName = toName
-  if (overwrite || !draft.body.companyName) draft.body.companyName = company || person
-  if (overwrite || !draft.body.partyDetail) draft.body.partyDetail = detail
-}
-
-async function fillRfqProject(supabase: Client, draft: FormDraft) {
-  const project = await supabase.from("projects").select("name").eq("id", draft.projectId).maybeSingle()
-  if (!project.data?.name) return
-  draft.body.projectName = project.data.name.trim()
 }
 
 function paymentNotAfter(

@@ -92,7 +92,7 @@ table.grid.rfq-grid th,table.grid.rfq-grid td,table.grid.rfq-grid td .spec{overf
 .inspect{margin-top:8mm}
 body.draft .page::after{content:"DRAFT";position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) rotate(-24deg);font-family:"Poppins",sans-serif;font-size:42pt;font-weight:600;letter-spacing:6pt;color:rgba(69,99,45,.16);z-index:2;pointer-events:none}
 .addr{font-size:9.4pt;line-height:1.5;margin-top:2mm}
-.intro{font-size:8.5pt;line-height:1.5;margin-bottom:2mm}
+.intro{font-size:8.5pt;line-height:1.5;margin-bottom:4.5mm}
 .thanks{font-size:8.6pt}
 .tight{margin-top:0}
 

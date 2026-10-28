@@ -24,6 +24,7 @@ import {
 } from "@/lib/documents/numbers"
 import { allows, type ModuleKey } from "@/lib/access"
 import type { FormKind } from "@/lib/documents/form-model"
+import { RFQ_BUCKET } from "@/lib/documents/rfq-store"
 import { isUuid } from "@/lib/ids"
 import { getAccess } from "@/lib/permissions"
 import { isIsoDate } from "@/lib/project-validation"
@@ -817,6 +818,20 @@ export async function trashSavedDocument(input: {
   const owner = await requireOwner()
   if ("error" in owner) return { error: owner.error }
   const supabase = await createClient()
+  if (input.kind === "rfq") {
+    const { data, error } = await supabase
+      .from("rfq_documents")
+      .delete()
+      .eq("id", input.id)
+      .select("id, storage_path")
+    if (error) return { error: writeError(error, "Could not delete this document.") }
+    if (data?.length) {
+      const paths = data.map((row) => row.storage_path).filter((path): path is string => Boolean(path))
+      if (paths.length) await supabase.storage.from(RFQ_BUCKET).remove(paths)
+      revalidateDocument("rfq")
+      return { error: null }
+    }
+  }
   const patch = { deleted_at: new Date().toISOString(), deleted_by: owner.userId }
   const result = await applyTrash(supabase, input.kind, input.id, "trash", patch)
   if (result.error) return result
