@@ -350,13 +350,17 @@ function receipt(
 }
 
 function buildRfq(doc: RfqModel, box: ContentBox): Built {
-  const headHtml = `<thead><tr><th class="c" style="width:8mm">S/L</th><th>Item &amp; Specification</th><th class="c" style="width:18mm">Quantity</th><th class="c" style="width:14mm">Unit</th><th style="width:36mm">Remarks</th></tr></thead>`
+  const headHtml = `<thead><tr><th class="c" style="width:8mm">S/L</th><th style="width:98mm">Item &amp; Specification</th><th class="c" style="width:18mm">Quantity</th><th class="c" style="width:14mm">Unit</th><th style="width:36mm">Remarks</th></tr></thead>`
   const rows = doc.lines.map((line, index) => {
-    const itemLines = Math.max(1, Math.ceil(line.item.trim().length / 48))
-    const specLines = line.specification.trim() ? Math.max(1, Math.ceil(line.specification.trim().length / 72)) : 0
+    const itemLines = Math.max(1, wrappedLines(line.item, 44))
+    const specLines = line.specification.trim() ? wrappedLines(line.specification, 52) : 0
+    const qtyLines = line.quantity.trim() ? wrappedLines(line.quantity, 8) : 1
+    const unitLines = line.unit.trim() ? wrappedLines(line.unit, 6) : 1
+    const remarkLines = line.remarks.trim() ? wrappedLines(line.remarks, 18) : 1
+    const contentMm = Math.max(itemLines * 4.3 + specLines * 3.5, qtyLines * 4.3, unitLines * 4.3, remarkLines * 4.3)
     return {
-      html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${esc(line.item)}${line.specification ? `<span class="spec">${esc(line.specification)}</span>` : ""}</td><td class="c">${esc(line.quantity)}</td><td class="c">${esc(line.unit)}</td><td>${esc(line.remarks)}</td></tr>`,
-      mm: 2.3 + itemLines * 4.2 + specLines * 3.4,
+      html: `<tr><td class="c">${pad(index + 1)}</td><td class="item">${escLines(line.item)}${line.specification ? `<span class="spec">${escLines(line.specification)}</span>` : ""}</td><td class="c">${esc(line.quantity)}</td><td class="c">${escLines(line.unit)}</td><td>${escLines(line.remarks)}</td></tr>`,
+      mm: 2.3 + contentMm,
     }
   })
   const detailLines = doc.toDetail.split("\n").filter((line) => line.trim()).length
@@ -381,7 +385,7 @@ function buildRfq(doc: RfqModel, box: ContentBox): Built {
   const withSignLimit = Math.max(35, noSignLimit - (signHtml ? 42 : 0))
   const wrapTable = (batch: typeof rows) =>
     batch.length
-      ? `<table class="grid compact">${headHtml}<tbody>${batch.map((row) => row.html).join("")}</tbody></table>`
+      ? `<table class="grid compact rfq-grid">${headHtml}<tbody>${batch.map((row) => row.html).join("")}</tbody></table>`
       : ""
 
   const firstBodies = rfqBodyPages(
@@ -850,7 +854,7 @@ function shell(
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title>
 ${css}
-<style>:root{--doc-top:${box.top}mm;--doc-height:${box.height}mm}.page{margin:0}</style>
+<style>:root{--doc-top:${box.top}mm;--doc-height:${box.height}mm}.page{margin:0}table.grid.rfq-grid{table-layout:fixed}table.grid.rfq-grid th,table.grid.rfq-grid td,table.grid.rfq-grid td .spec{overflow-wrap:anywhere;word-break:break-word}</style>
 </head>
 <body class="${bodyClass}">
 ${pages}

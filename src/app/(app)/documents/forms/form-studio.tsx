@@ -102,7 +102,7 @@ export function FormStudio({
   return (
     <DocumentWorkspace
       title={formTitle(form.kind)}
-      description="The preview and the downloaded PDF use the same Set C page."
+      description=""
       margins={margins}
       source={source}
       record={form.id ? { kind: form.kind, id: form.id } : null}

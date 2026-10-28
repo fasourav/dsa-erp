@@ -70,6 +70,8 @@ table.grid tfoot tr.grand td.r{color:var(--accent)}
 table.grid.compact td{padding:.95mm 1.6mm}
 table.grid.compact td .spec{margin-top:0;line-height:1.3}
 table.grid.compact th{padding:0 1.6mm 1.3mm}
+table.grid.rfq-grid{table-layout:fixed}
+table.grid.rfq-grid th,table.grid.rfq-grid td,table.grid.rfq-grid td .spec{overflow-wrap:anywhere;word-break:break-word}
 .sec-row td{font-weight:600;font-size:7.4pt;color:var(--soft);padding-top:3mm!important;letter-spacing:.3pt;border-bottom:.5pt solid var(--rule-strong)!important}
 
 .words{margin-top:5mm;font-size:8.6pt}
