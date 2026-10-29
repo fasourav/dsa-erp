@@ -154,7 +154,8 @@ async function loadRfqDraft(
       ...base,
       id: loaded.record.id,
       documentNo: loaded.record.documentNo,
-      issuedOn: loaded.record.fileCreatedAt.slice(0, 10) || today,
+      issuedOn: loaded.record.issuedOn || loaded.record.fileCreatedAt.slice(0, 10) || today,
+      body: loaded.record.body ?? base.body,
     },
     error: null,
   }

@@ -54,11 +54,23 @@ function readLocalRfqRaw(id: string): string | null {
   }
 }
 
+function hasRfqContent(body: Partial<FormBody> | null | undefined): boolean {
+  if (!body || typeof body !== "object") return false
+  return Boolean(
+    body.companyName?.trim() ||
+      body.partyName?.trim() ||
+      (Array.isArray(body.rfqLines) &&
+        body.rfqLines.some((line) => typeof line?.item === "string" && Boolean(line.item.trim()))),
+  )
+}
+
 function hydrateRfqDraft(draft: FormDraft, raw: string | null): FormDraft {
-  if (draft.kind !== "rfq" || !draft.id || !raw) return draft
+  if (draft.kind !== "rfq" || !draft.id) return draft
+  if (hasRfqContent(draft.body)) return draft
+  if (!raw) return draft
   try {
     const parsed = JSON.parse(raw) as { issuedOn?: string; body?: Partial<FormBody> } | null
-    if (!parsed || typeof parsed !== "object" || !parsed.body) return draft
+    if (!parsed || typeof parsed !== "object" || !parsed.body || !hasRfqContent(parsed.body)) return draft
     return {
       ...draft,
       issuedOn: typeof parsed.issuedOn === "string" && parsed.issuedOn ? parsed.issuedOn : draft.issuedOn,
@@ -123,6 +135,7 @@ export function FormStudio({
   const [pending, startSave] = useTransition()
   const form = override ?? initialDraft
   const baseline = savedDraft ?? initialDraft
+  const dirty = JSON.stringify(form) !== JSON.stringify(baseline)
   const source = useMemo(() => formToModel(form, origin, employees), [employees, form, origin])
   const body = form.body
   const setForm = (next: FormDraft | ((current: FormDraft) => FormDraft)) => {
@@ -158,9 +171,12 @@ export function FormStudio({
       }
       pending={pending}
       error={error}
-      dirty={JSON.stringify(form) !== JSON.stringify(baseline)}
+      dirty={dirty}
       onSave={() => {
         setError(null)
+        if (form.kind === "rfq" && form.id && !dirty) {
+          return
+        }
         startSave(async () => {
           if (form.kind === "rfq") {
             try {
@@ -172,6 +188,7 @@ export function FormStudio({
                   issuedOn: form.issuedOn,
                   vendorName: form.body.companyName.trim() || form.body.partyName.trim(),
                   projectName: form.body.projectName.trim(),
+                  body: form.body,
                   source,
                   margins,
                 }),
