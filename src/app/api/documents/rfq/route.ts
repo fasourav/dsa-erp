@@ -5,8 +5,19 @@ import { NextResponse } from "next/server"
 
 import { allows } from "@/lib/access"
 import type { PrintMargins } from "@/lib/documents/drafts"
+import type { FormBody } from "@/lib/documents/form-model"
 import { collisionNumber, rfqNumber } from "@/lib/documents/numbers"
-import { RFQ_BUCKET, rfqFileExpiry, rfqRevision, rfqStoragePath } from "@/lib/documents/rfq-store"
+import {
+  embedRfqDraftInPdf,
+  extractRfqDraftFromPdf,
+  issuedOnFromDocumentNo,
+  RFQ_BUCKET,
+  rfqFileExpiry,
+  rfqRevision,
+  rfqStoragePath,
+  sameRfqDraft,
+  sanitizeRfqBody,
+} from "@/lib/documents/rfq-store"
 import { renderDocumentPdf } from "@/lib/documents/setc/pdf"
 import type { RfqModel } from "@/lib/documents/setc/types"
 import { isUuid } from "@/lib/ids"
@@ -18,16 +29,17 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-// Saves an external RFQ. Nothing is read from business tables and the form body is not stored:
-// the server builds the document number, renders the letterhead PDF, uploads it, and keeps
-// only the number and the file path. Saving an existing RFQ replaces its file and gives it
-// the next revision number.
+// Saves an external RFQ. Nothing is read from business tables:
+// the server builds the document number, renders the letterhead PDF with the embedded draft,
+// uploads it, and keeps only the number and the file path in rfq_documents. Saving an existing
+// RFQ when the form has changed replaces its file and gives it the next revision number.
 
 type Payload = {
   id?: string | null
   issuedOn?: string
   vendorName?: string
   projectName?: string
+  body?: Partial<FormBody>
   source?: { kind?: string; doc?: RfqModel }
   margins?: Partial<PrintMargins>
 }
@@ -61,12 +73,54 @@ export async function POST(request: Request) {
   }
   if (!doc.lines.some((line) => typeof line?.item === "string" && line.item.trim())) return fail("Add at least one item.")
 
+  const cleanBody = sanitizeRfqBody({
+    ...payload.body,
+    companyName: typeof payload.body?.companyName === "string" ? payload.body.companyName : vendorName,
+    projectName: typeof payload.body?.projectName === "string" ? payload.body.projectName : projectName,
+    rfqLines:
+      Array.isArray(payload.body?.rfqLines) && payload.body.rfqLines.length
+        ? payload.body.rfqLines
+        : doc.lines.map((line) => ({
+            item: String(line.item ?? ""),
+            specification: String(line.specification ?? ""),
+            unit: String(line.unit ?? ""),
+            quantity: String(line.quantity ?? ""),
+            remarks: String(line.remarks ?? ""),
+          })),
+  })
+
   const supabase = await createClient()
-  let previous: { document_no: string; storage_path: string | null } | null = null
+  let previous: {
+    document_no: string
+    storage_path: string | null
+    file_created_at: string
+    file_expires_at: string
+  } | null = null
   if (id) {
-    const existing = await supabase.from("rfq_documents").select("document_no, storage_path").eq("id", id).maybeSingle()
+    const existing = await supabase
+      .from("rfq_documents")
+      .select("document_no, storage_path, file_created_at, file_expires_at")
+      .eq("id", id)
+      .maybeSingle()
     if (existing.error || !existing.data) return fail("That document could not be found.", 404)
     previous = existing.data
+
+    const hasFile = Boolean(previous.storage_path && Date.parse(previous.file_expires_at) > Date.now())
+    if (hasFile && previous.storage_path) {
+      const downloaded = await supabase.storage.from(RFQ_BUCKET).download(previous.storage_path)
+      if (!downloaded.error && downloaded.data) {
+        const bytes = new Uint8Array(await downloaded.data.arrayBuffer())
+        const fallbackIssuedOn =
+          issuedOnFromDocumentNo(previous.document_no) || previous.file_created_at.slice(0, 10) || issuedOn
+        const existingDraft = await extractRfqDraftFromPdf(bytes, fallbackIssuedOn)
+        if (existingDraft && sameRfqDraft(existingDraft, { issuedOn, body: cleanBody })) {
+          return NextResponse.json(
+            { error: null, id, documentNo: previous.document_no },
+            { headers: { "Cache-Control": "no-store" } },
+          )
+        }
+      }
+    }
   }
 
   const base = rfqNumber(issuedOn, vendorName, projectName)
@@ -80,7 +134,13 @@ export async function POST(request: Request) {
   }
   let pdf: Uint8Array
   try {
-    pdf = await renderDocumentPdf({ kind: "rfq", doc: { ...doc, documentNo, verifyUrl: null } }, margins, true, false)
+    const rendered = await renderDocumentPdf(
+      { kind: "rfq", doc: { ...doc, documentNo, verifyUrl: null } },
+      margins,
+      true,
+      false,
+    )
+    pdf = await embedRfqDraftInPdf(rendered, { issuedOn, body: cleanBody })
   } catch {
     return fail("Could not create the PDF.", 500)
   }
