@@ -3,6 +3,8 @@ import type { ReactNode } from "react"
 import { LoginBackground } from "@/app/login/login-background"
 import { DsaBadge } from "@/components/dsa-badge"
 
+const AUTH_FOOTER = "ERP Portal - DynamicSpace Architects & Engineers"
+
 export function AuthStage({
   title,
   description,
@@ -32,7 +34,7 @@ export function AuthStage({
       </div>
 
       <p className="pointer-events-none absolute inset-x-0 bottom-[max(1.25rem,env(safe-area-inset-bottom,0px))] text-center text-micro text-muted-foreground md:bottom-6 md:text-caption">
-        DSA ERP · DynamicSpace Architects &amp; Engineers
+        {AUTH_FOOTER}
       </p>
     </main>
   )
