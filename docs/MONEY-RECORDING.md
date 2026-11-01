@@ -75,4 +75,4 @@ Apply `supabase/migrations/20261023233000_office_expense_report_group.sql` after
 
 The Operational Expense page also lists payments on operational purchase orders as read-only rows marked From Operational PO, with a link to the purchase order. For one period, those rows plus operational expenses that have no project equal Admin Expense, except payroll outflows, which stay on the bank ledger and in Salary. A duplicate warning shows the vendor's company name when it is set, and otherwise the person name.
 
-To list likely duplicates already in the data, run `docs/duplicate-money-scan.sql` in the SQL editor. It is read-only.
+To list likely duplicates already in the data, run `scripts/sql/duplicate-money-scan.sql` in the SQL editor. It is read-only.
