@@ -20,6 +20,8 @@ This guide is the contract for every page. Phase 1 converted the tokens, the she
 | --- | --- |
 | Desktop mockups (HTML, dark and light) | `docs/atrium/mockups/desktop/dNN-<page>-<theme>.html` |
 | Mobile mockups (HTML, dark and light) | `docs/atrium/mockups/mobile/mNN-<page>-<theme>.html` |
+
+Mockup HTML files are archived on the `archive/atrium-mockups` branch, not on `main`.
 | Tokens (the only place color values live) | `src/app/globals.css` |
 | Class merging and the token scale registry | `src/lib/utils.ts` |
 | Primitives | `src/components/ui/*` |
