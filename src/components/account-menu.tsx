@@ -24,33 +24,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  accountInitials,
-  accountSubtitle,
-  type AccountIdentity,
-} from "@/lib/account-identity"
-
-function Avatar({ account, className }: { account: AccountIdentity; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={
-        className ??
-        "flex size-6 shrink-0 items-center justify-center rounded-full bg-avatar text-micro font-bold text-on-color"
-      }
-    >
-      {accountInitials(account.name, account.email)}
-    </span>
-  )
-}
+import { accountSubtitle, type AccountIdentity } from "@/lib/account-identity"
+import { UserAvatar } from "@/components/user-avatar"
 
 function AccountHeader({ account }: { account: AccountIdentity }) {
   return (
     <DropdownMenuGroup>
     <DropdownMenuLabel className="flex items-center gap-3 px-2.5 py-2">
-      <Avatar
-        account={account}
-        className="flex size-9.5 shrink-0 items-center justify-center rounded-full bg-avatar text-label font-bold text-on-color"
+      <UserAvatar
+        name={account.name}
+        email={account.email}
+        avatarUrl={account.avatarUrl}
+        className="size-9.5 text-label"
       />
       <span className="min-w-0">
         <span className="block truncate text-callout font-semibold text-foreground md:text-ui">
@@ -93,7 +78,12 @@ export function AccountMenu({ account }: { account: AccountIdentity }) {
           />
         }
       >
-        <Avatar account={account} />
+        <UserAvatar
+          name={account.name}
+          email={account.email}
+          avatarUrl={account.avatarUrl}
+          className="size-6 text-micro"
+        />
         <span className="max-w-32 truncate">{firstName}</span>
         <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>

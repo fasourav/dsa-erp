@@ -58,3 +58,12 @@ The verification QR is `https://<origin>/verify/<token>` after the document is s
 Each document uses the module it belongs to (quotations, work orders, purchase orders, projects, client invoices, vendor payments, operational expenses, payroll, or clients). Delete and permanent delete stay owner-only, through the existing trash.
 
 Apply `supabase/migrations/20261023220000_set_c_documents.sql` before creating challans, vouchers, certificates, salary slips, or letters, and before saving a quotation that has a lead and no client, and apply `supabase/migrations/20261027020000_form_documents_rfq.sql` before saving RFQs. Migrations are not applied by the app.
+
+## Digital signatures
+
+- Private profile photo (circle crop) and signature are uploaded on **My Profile** to the private `profile-media` bucket (`avatars/{user_id}/`, `signatures/{user_id}/`).
+- On a saved quotation, work order, invoice, receipt or purchase order, **Place Signature** copies the signer's signature to `document-signatures/{kind}/{record_id}/{slot}.png` and sets that slot's name and designation. Stamps live in `signature_stamps` (jsonb).
+- Owner → Authorized Signature only; staff / accountant / other → Prepared By or Checked By only. Signer or owner can clear.
+- Replacing a Profile signature never changes signed documents; changing a signed slot's person and saving removes that stamp.
+- Preview uses short-lived signed URLs; PDF/Print embed the image server-side. Stamp/clear are in the activity log.
+- Apply `supabase/migrations/20261105090000_profile_media_and_signature_stamps.sql` before using photos or stamps. The app package stays at 1.0.0 until a release is cut.

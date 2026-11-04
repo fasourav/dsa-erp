@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
 import { listActiveDocumentTemplates } from "@/lib/document-templates-data"
+import { previewStampUrls } from "@/lib/documents/signature-loader"
 import { loadDocumentCatalog, loadPurchaseOrderChoices, loadWorkOrderDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
@@ -51,6 +52,7 @@ export default async function WorkOrderPage({
         origin={origin}
         margins={margins}
         templates={templateList.templates}
+        signatureUrls={await previewStampUrls(loaded.draft.signatureStamps)}
       />
     </>
   )

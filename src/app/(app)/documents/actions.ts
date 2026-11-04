@@ -25,6 +25,7 @@ import {
 import { allows, type ModuleKey } from "@/lib/access"
 import type { FormKind } from "@/lib/documents/form-model"
 import { RFQ_BUCKET } from "@/lib/documents/rfq-store"
+import { parseStamps, reconcileStamps } from "@/lib/documents/signature-stamps"
 import { isUuid } from "@/lib/ids"
 import { getAccess } from "@/lib/permissions"
 import { isIsoDate } from "@/lib/project-validation"
@@ -208,7 +209,7 @@ export async function saveInvoicePrint(input: {
   const supabase = await createClient()
   const existing = await supabase
     .from("issued_documents")
-    .select("id, document_no, verify_token")
+    .select("id, document_no, verify_token, signature_stamps")
     .eq("client_invoice_id", input.invoiceId)
     .is("deleted_at", null)
     .maybeSingle()
@@ -255,6 +256,11 @@ export async function saveInvoicePrint(input: {
         total,
         status: invoice.data.status,
         body,
+        signature_stamps: reconcileStamps(parseStamps(existing.data.signature_stamps), {
+          prepared: input.preparedBy,
+          checked: input.checkedBy,
+          authorized: input.authorizedBy,
+        }) as unknown as Json,
       })
       .eq("id", existing.data.id)
     const message = writeError(error, "Could not save this invoice.")
@@ -318,7 +324,7 @@ export async function saveReceiptPrint(input: {
   const supabase = await createClient()
   const existing = await supabase
     .from("issued_documents")
-    .select("id, document_no, verify_token")
+    .select("id, document_no, verify_token, signature_stamps")
     .eq("client_payment_id", input.paymentId)
     .is("deleted_at", null)
     .maybeSingle()
@@ -359,6 +365,11 @@ export async function saveReceiptPrint(input: {
         total,
         status: "received",
         body,
+        signature_stamps: reconcileStamps(parseStamps(existing.data.signature_stamps), {
+          prepared: input.preparedBy,
+          checked: input.checkedBy,
+          authorized: input.authorizedBy ?? "",
+        }) as unknown as Json,
       })
       .eq("id", existing.data.id)
     const message = writeError(error, "Could not save this receipt.")
@@ -432,7 +443,7 @@ export async function savePurchaseOrderPrint(input: {
   const supabase = await createClient()
   const existing = await supabase
     .from("issued_documents")
-    .select("id, document_no, verify_token")
+    .select("id, document_no, verify_token, signature_stamps")
     .eq("purchase_order_id", input.purchaseOrderId)
     .is("deleted_at", null)
     .maybeSingle()
@@ -475,6 +486,11 @@ export async function savePurchaseOrderPrint(input: {
         total,
         status: "issued",
         body,
+        signature_stamps: reconcileStamps(parseStamps(existing.data.signature_stamps), {
+          prepared: input.preparedBy,
+          checked: input.checkedBy,
+          authorized: input.authorizedBy,
+        }) as unknown as Json,
       })
       .eq("id", existing.data.id)
     const message = writeError(error, "Could not save this purchase order.")
@@ -628,6 +644,16 @@ export async function saveQuotation(input: {
   }
 
   const total = grandTotal(input.lines, String(ait))
+  let quotationStamps: Json | undefined
+  if (input.id) {
+    const current = await supabase.from("quotations").select("signature_stamps").eq("id", input.id).maybeSingle()
+    if (current.error) return { error: writeError(current.error, "Could not save this quotation.") }
+    quotationStamps = reconcileStamps(parseStamps(current.data?.signature_stamps), {
+      prepared: input.preparedBy,
+      checked: input.checkedBy,
+      authorized: input.authorizedBy,
+    }) as unknown as Json
+  }
   const fields = {
     issued_on: input.issuedOn,
     valid_until: input.validUntil || null,
@@ -645,6 +671,7 @@ export async function saveQuotation(input: {
     prepared_by: clip(input.preparedBy, 120),
     checked_by: clip(input.checkedBy, 120),
     authorized_by: clip(input.authorizedBy, 120),
+    ...(quotationStamps ? { signature_stamps: quotationStamps } : {}),
   }
 
   const names = isUuid(input.clientId)
@@ -742,6 +769,16 @@ export async function saveWorkOrder(input: {
   if (vendor.error || !vendor.data) return { error: "Choose a vendor." }
 
   const total = priceLines(input.lines).subtotal
+  let workOrderStamps: Json | undefined
+  if (input.id) {
+    const current = await supabase.from("work_orders").select("signature_stamps").eq("id", input.id).maybeSingle()
+    if (current.error) return { error: writeError(current.error, "Could not save this work order.") }
+    workOrderStamps = reconcileStamps(parseStamps(current.data?.signature_stamps), {
+      prepared: input.preparedBy,
+      checked: input.checkedBy,
+      authorized: input.authorizedBy,
+    }) as unknown as Json
+  }
   const fields = {
     issued_on: input.issuedOn,
     status: input.status,
@@ -759,6 +796,7 @@ export async function saveWorkOrder(input: {
     prepared_by: clip(input.preparedBy, 120),
     checked_by: clip(input.checkedBy, 120),
     authorized_by: clip(input.authorizedBy, 120),
+    ...(workOrderStamps ? { signature_stamps: workOrderStamps } : {}),
   }
 
   const names = await vendorProjectNames(supabase, vendorId, projectId || null)

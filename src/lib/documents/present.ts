@@ -9,6 +9,8 @@ import {
   type MilestoneInput,
 } from "@/lib/documents/drafts"
 import { amountInWords, lineAmount, moneyRound, sumAmounts } from "@/lib/documents/money"
+import type { SignatureStamps, StampSlot } from "@/lib/documents/signature-stamps"
+import type { SignLine } from "@/lib/documents/setc/types"
 
 export type SummaryRow = {
   label: string
@@ -46,7 +48,7 @@ export type PrintDocument = {
   terms: string
   exclusions: string
   notes: string
-  signatures: Array<{ label: string; name: string; detail: string }>
+  signatures: SignLine[]
   /** Second amount in words, used by the bill for the net payable. */
   netWords?: string
   /** Book amount the printed total must match. */
@@ -137,6 +139,7 @@ export function presentQuotation(input: {
   checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
+  stamps?: SignatureStamps
 }): PrintDocument {
   const priced = priceLines(input.lines)
   const ait = aitAmount(priced.subtotal, input.aitPercent)
@@ -218,6 +221,7 @@ export function presentWorkOrder(input: {
   checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
+  stamps?: SignatureStamps
 }): PrintDocument {
   const priced = priceLines(input.lines)
   const period = [input.workStart, input.workEnd].filter(Boolean)
@@ -301,6 +305,7 @@ export function presentInvoice(input: {
   authorizedBy: string
   authorizedByRole: string
   bookAmount?: number | null
+  stamps?: SignatureStamps
 }): PrintDocument {
   const priced = priceLines(input.lines)
   const lineAit = aitAmount(priced.subtotal, input.aitPercent)
@@ -401,6 +406,7 @@ export function presentReceipt(input: {
   checkedByRole: string
   authorizedBy?: string
   authorizedByRole?: string
+  stamps?: SignatureStamps
 }): PrintDocument {
   return {
     kicker: "Money Receipt",
@@ -459,6 +465,7 @@ export function presentReceipt(input: {
       checkedByRole: input.checkedByRole,
       authorizedBy: input.authorizedBy ?? "",
       authorizedByRole: input.authorizedByRole ?? "",
+      stamps: input.stamps,
     }).map((line) => (line.label === "Prepared By" ? { ...line, label: "Received By (Accounts)" } : line)),
   }
 }
@@ -484,6 +491,7 @@ export function presentPurchaseOrder(input: {
   authorizedBy: string
   authorizedByRole: string
   bookAmount?: number | null
+  stamps?: SignatureStamps
 }): PrintDocument {
   const priced = priceLines(input.lines)
   const carrying = lineAmount("1", input.carrying)
@@ -537,28 +545,26 @@ function optionalStaffSignatures(input: {
   checkedByRole: string
   authorizedBy: string
   authorizedByRole: string
-}): PrintDocument["signatures"] {
-  const rows: PrintDocument["signatures"] = []
-  if (isSignatureEnabled(input.preparedBy)) {
+  stamps?: SignatureStamps
+}): SignLine[] {
+  const rows: SignLine[] = []
+  const add = (slot: StampSlot, label: string, value: string, role: string, company: boolean) => {
+    const name = signatureName(value)
+    const live = input.stamps?.[slot]
+    const stamped = live && live.name.trim() === name.trim() ? live : undefined
+    const designation = stamped?.designation || role
     rows.push({
-      label: "Prepared By",
-      name: signatureName(input.preparedBy),
-      detail: input.preparedByRole,
+      label,
+      slot,
+      name,
+      imagePath: stamped?.imagePath ?? null,
+      detail: company ? [designation, documentCompanyName].filter(Boolean).join("\n") : designation,
     })
   }
-  if (isSignatureEnabled(input.checkedBy)) {
-    rows.push({
-      label: "Checked By",
-      name: signatureName(input.checkedBy),
-      detail: input.checkedByRole,
-    })
-  }
+  if (isSignatureEnabled(input.preparedBy)) add("prepared", "Prepared By", input.preparedBy, input.preparedByRole, false)
+  if (isSignatureEnabled(input.checkedBy)) add("checked", "Checked By", input.checkedBy, input.checkedByRole, false)
   if (isSignatureEnabled(input.authorizedBy)) {
-    rows.push({
-      label: "Authorized Signature",
-      name: signatureName(input.authorizedBy),
-      detail: [input.authorizedByRole, documentCompanyName].filter(Boolean).join("\n"),
-    })
+    add("authorized", "Authorized Signature", input.authorizedBy, input.authorizedByRole, true)
   }
   return rows
 }

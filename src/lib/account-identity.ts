@@ -4,6 +4,7 @@ export type AccountIdentity = {
   role: string
   roleLabel: string
   designation: string | null
+  avatarUrl: string | null
 }
 
 export function roleLabel(role: string): string {

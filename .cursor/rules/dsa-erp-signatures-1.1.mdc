@@ -1,0 +1,26 @@
+---
+description: DSA ERP profile avatar and document signatures only. No unrelated edits, no visual QA, no pull request unless the user asks.
+alwaysApply: true
+---
+
+# Profile avatar and document signatures
+
+Scope is only:
+
+- My Profile avatar (private, circle crop/zoom) and signature upload
+- Role-based Place / Clear stamp on Set C documents (quotation, work order, invoice, receipt, purchase order)
+- Bake a signature copy into the document
+- Stamp sets the slot name and designation
+- Preview, PDF, and print show the baked image
+
+Do not:
+
+- Redesign Excel, clone Q5, overdue Q4, approvals, or other unrelated work
+- Refactor, rename, or lint files this feature does not touch
+- Upgrade dependencies unless this feature cannot work without it
+- Take screenshots, screen recordings, or any visual browser QA
+- Open, update, or merge a pull request unless the user asks
+
+Prefer additive migrations. Match existing patterns. Keep diffs minimal.
+
+Stop when this feature is implemented and checked (typecheck, lint on touched files, unit tests). Do not bump the package version to 1.1.0 unless the user asks to release it.

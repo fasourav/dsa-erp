@@ -646,6 +646,7 @@ export type Database = {
           kind: string
           old_number: string | null
           purchase_order_id: string | null
+          signature_stamps: Json
           status: string
           total: number
           updated_at: string
@@ -664,6 +665,7 @@ export type Database = {
           kind: string
           old_number?: string | null
           purchase_order_id?: string | null
+          signature_stamps?: Json
           status: string
           total: number
           updated_at?: string
@@ -682,6 +684,7 @@ export type Database = {
           kind?: string
           old_number?: string | null
           purchase_order_id?: string | null
+          signature_stamps?: Json
           status?: string
           total?: number
           updated_at?: string
@@ -836,6 +839,7 @@ export type Database = {
           old_number: string | null
           prepared_by: string
           project_id: string | null
+          signature_stamps: Json
           status: string
           subject: string
           subtitle: string
@@ -862,6 +866,7 @@ export type Database = {
           old_number?: string | null
           prepared_by?: string
           project_id?: string | null
+          signature_stamps?: Json
           status?: string
           subject?: string
           subtitle?: string
@@ -888,6 +893,7 @@ export type Database = {
           old_number?: string | null
           prepared_by?: string
           project_id?: string | null
+          signature_stamps?: Json
           status?: string
           subject?: string
           subtitle?: string
@@ -975,6 +981,7 @@ export type Database = {
           project_id: string | null
           proposal_on: string | null
           purchase_order_id: string | null
+          signature_stamps: Json
           status: string
           subject: string
           subtitle: string
@@ -1001,6 +1008,7 @@ export type Database = {
           project_id?: string | null
           proposal_on?: string | null
           purchase_order_id?: string | null
+          signature_stamps?: Json
           status?: string
           subject?: string
           subtitle?: string
@@ -1027,6 +1035,7 @@ export type Database = {
           project_id?: string | null
           proposal_on?: string | null
           purchase_order_id?: string | null
+          signature_stamps?: Json
           status?: string
           subject?: string
           subtitle?: string
@@ -1690,6 +1699,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
+          avatar_updated_at: string | null
           created_at: string
           designation: string | null
           display_name: string | null
@@ -1698,9 +1709,13 @@ export type Database = {
           last_sign_in_at: string | null
           role: string
           show_financials: boolean
+          signature_path: string | null
+          signature_updated_at: string | null
           status: string
         }
         Insert: {
+          avatar_path?: string | null
+          avatar_updated_at?: string | null
           created_at?: string
           designation?: string | null
           display_name?: string | null
@@ -1709,9 +1724,13 @@ export type Database = {
           last_sign_in_at?: string | null
           role?: string
           show_financials?: boolean
+          signature_path?: string | null
+          signature_updated_at?: string | null
           status?: string
         }
         Update: {
+          avatar_path?: string | null
+          avatar_updated_at?: string | null
           created_at?: string
           designation?: string | null
           display_name?: string | null
@@ -1720,6 +1739,8 @@ export type Database = {
           last_sign_in_at?: string | null
           role?: string
           show_financials?: boolean
+          signature_path?: string | null
+          signature_updated_at?: string | null
           status?: string
         }
         Relationships: []
@@ -3678,6 +3699,7 @@ export type Database = {
         }[]
       }
       set_own_display_name: { Args: { next_name: string }; Returns: undefined }
+      set_own_profile_media: { Args: { media: string; next_path: string | null }; Returns: undefined }
       save_business_document: {
         Args: {
           p_fields: Json

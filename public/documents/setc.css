@@ -101,7 +101,8 @@ body.draft .page::after{content:"DRAFT";position:absolute;left:50%;top:46%;trans
 .signs.s2{grid-template-columns:repeat(4,1fr);gap:7mm}
 .signs.s3{grid-template-columns:1fr 1fr 1fr}
 .signs.s4{grid-template-columns:repeat(4,1fr);gap:7mm}
-.sign{padding-top:12mm}
+.sign{position:relative;padding-top:12mm}
+.sign .img{position:absolute;left:0;top:.5mm;height:11mm;max-width:100%;object-fit:contain;object-position:left bottom}
 .sign .line{border-top:.6pt solid var(--rule-strong);padding-top:1.5mm}
 .sign .role{font-size:6.8pt;font-weight:600;letter-spacing:1.1pt;text-transform:uppercase;color:var(--muted)}
 .sign .who{font-size:8.3pt;font-weight:600;margin-top:.4mm}

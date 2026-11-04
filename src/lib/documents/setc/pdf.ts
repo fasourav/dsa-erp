@@ -4,6 +4,7 @@ import path from "node:path"
 import { PDFDocument } from "pdf-lib"
 
 import type { PrintMargins } from "@/lib/documents/drafts"
+import { inlineSignatureImages } from "@/lib/documents/signature-loader"
 import { renderDocument, type DocumentMode } from "@/lib/documents/setc/render"
 import type { DocumentModel } from "@/lib/documents/setc/types"
 
@@ -115,7 +116,8 @@ export async function renderDocumentPdf(
 ): Promise<Uint8Array> {
   const css = await loadPrintCss()
   const mode: DocumentMode = letterhead ? "letterhead" : "print"
-  let { html } = renderDocument(model, margins, mode, css, draft)
+  const withImages = await inlineSignatureImages(model)
+  let { html } = renderDocument(withImages, margins, mode, css, draft)
   if (letterhead) {
     const png = await letterheadPng()
     const uri = `data:image/png;base64,${Buffer.from(png).toString("base64")}`

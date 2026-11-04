@@ -2,6 +2,7 @@ import { ReceiptStudio } from "@/app/(app)/documents/receipts/[id]/receipt-studi
 import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
+import { previewStampUrls } from "@/lib/documents/signature-loader"
 import { loadDocumentCatalog, loadReceiptDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
@@ -45,6 +46,7 @@ export default async function ReceiptDocumentPage({
         paymentMethods={catalog.paymentMethods}
         origin={origin}
         margins={margins}
+        signatureUrls={await previewStampUrls(loaded.draft.signatureStamps)}
       />
     </>
   )

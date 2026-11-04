@@ -91,6 +91,7 @@ export async function loadSavedDocument(kind: SavedRecordKind, id: string): Prom
         checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
+        stamps: form.signatureStamps,
       }),
     }
     return { model, margins, filenameNo: form.documentNo }
@@ -126,6 +127,7 @@ export async function loadSavedDocument(kind: SavedRecordKind, id: string): Prom
         checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
+        stamps: form.signatureStamps,
       }),
     }
     return { model, margins, filenameNo: form.documentNo }
@@ -160,6 +162,7 @@ export async function loadSavedDocument(kind: SavedRecordKind, id: string): Prom
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
         bookAmount: form.bookAmount,
+        stamps: form.signatureStamps,
       }),
     }
     return { model, margins, filenameNo: form.documentNo || "Invoice" }
@@ -194,6 +197,7 @@ export async function loadSavedDocument(kind: SavedRecordKind, id: string): Prom
         checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
+        stamps: form.signatureStamps,
       }),
     }
     return { model, margins, filenameNo: form.documentNo || "Receipt" }
@@ -226,6 +230,7 @@ export async function loadSavedDocument(kind: SavedRecordKind, id: string): Prom
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
         bookAmount: form.bookAmount,
+        stamps: form.signatureStamps,
       }),
     }
     return { model, margins, filenameNo: form.documentNo || "Purchase Order" }

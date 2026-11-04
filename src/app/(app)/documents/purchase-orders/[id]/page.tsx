@@ -2,6 +2,7 @@ import { PurchaseOrderStudio } from "@/app/(app)/documents/purchase-orders/[id]/
 import { PageHeader } from "@/components/page-header"
 import { getPrintMargins } from "@/lib/company-settings"
 import { requestOrigin } from "@/lib/documents/origin"
+import { previewStampUrls } from "@/lib/documents/signature-loader"
 import { loadDocumentCatalog, loadPurchaseOrderDraft } from "@/lib/documents/queries"
 import { requireModule } from "@/lib/permissions"
 
@@ -44,6 +45,7 @@ export default async function PurchaseOrderDocumentPage({
         employees={catalog.employees}
         origin={origin}
         margins={margins}
+        signatureUrls={await previewStampUrls(loaded.draft.signatureStamps)}
       />
     </>
   )

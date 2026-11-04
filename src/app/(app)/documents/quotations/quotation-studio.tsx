@@ -16,6 +16,7 @@ import {
   TextField,
 } from "@/components/documents/document-fields"
 import { DocumentWorkspace } from "@/components/documents/document-workspace"
+import { SignatureStampPanel, type StampChange } from "@/components/documents/signature-stamp-panel"
 import type { QuotationDraft } from "@/lib/documents/queries"
 import {
   customerDisplayName,
@@ -28,6 +29,8 @@ import {
 } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentQuotation } from "@/lib/documents/present"
+import { reconcileStamps } from "@/lib/documents/signature-stamps"
+import { attachSignatureUrls } from "@/lib/documents/signature-urls"
 import {
   draftLinesFromTemplate,
   draftMilestonesFromTemplate,
@@ -47,6 +50,7 @@ export function QuotationStudio({
   margins,
   templates,
   leads = [],
+  signatureUrls,
 }: {
   draft: QuotationDraft
   clients: NamedOption[]
@@ -56,10 +60,12 @@ export function QuotationStudio({
   margins: PrintMargins
   templates: DocumentTemplate[]
   leads?: NamedOption[]
+  signatureUrls: Record<string, string>
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
   const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
+  const [urls, setUrls] = useState(signatureUrls)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("quotations", form.id ? "edit" : "add")
@@ -94,14 +100,24 @@ export function QuotationStudio({
         checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
+        stamps: form.signatureStamps,
       })
+  const unsaved = JSON.stringify(form) !== savedMark
+  const slotField = { prepared: "preparedBy", checked: "checkedBy", authorized: "authorizedBy" } as const
+  function applyStamp(change: StampChange) {
+    const next = { ...form, [slotField[change.slot]]: change.name, signatureStamps: change.stamps }
+    setForm(next)
+    setSavedMark(JSON.stringify(next))
+    const path = change.stamps[change.slot]?.imagePath
+    if (path && change.imageUrl) setUrls((current) => ({ ...current, [path]: change.imageUrl! }))
+  }
 
   return (
     <DocumentWorkspace
       title="Quotation"
       description="Prints the quotation only. The letterhead and footer stay on the pad."
       margins={margins}
-      source={{ kind: "print", doc: preview }}
+      source={attachSignatureUrls({ kind: "print", doc: preview }, urls)}
       record={form.id ? { kind: "quotation", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
@@ -116,7 +132,7 @@ export function QuotationStudio({
       }}
       pending={pending}
       error={error}
-      dirty={JSON.stringify(form) !== savedMark}
+      dirty={unsaved}
       files={{ parentType: "quotation", parentId: form.id }}
       templateNames={templates.map((item) => item.name)}
       canStartFromTemplate={canStartFromTemplate}
@@ -159,8 +175,14 @@ export function QuotationStudio({
             setError(result.error ?? "Could not save this quotation.")
             return
           }
+          const signatureStamps = reconcileStamps(form.signatureStamps, {
+            prepared: form.preparedBy,
+            checked: form.checkedBy,
+            authorized: form.authorizedBy,
+          })
           const saved = {
             ...form,
+            signatureStamps,
             id: result.id ?? form.id,
             documentNo: result.documentNo ?? form.documentNo,
             verifyToken: result.verifyToken ?? form.verifyToken,
@@ -169,6 +191,7 @@ export function QuotationStudio({
           setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
+            signatureStamps,
             id: result.id ?? current.id,
             documentNo: result.documentNo ?? current.documentNo,
             verifyToken: result.verifyToken ?? current.verifyToken,
@@ -304,6 +327,14 @@ export function QuotationStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(authorizedBy) => setForm({ ...form, authorizedBy })}
+      />
+      <SignatureStampPanel
+        kind="quotation"
+        id={form.id}
+        stamps={form.signatureStamps}
+        names={{ prepared: form.preparedBy, checked: form.checkedBy, authorized: form.authorizedBy }}
+        blockedReason={!form.id ? "Save the document before signing." : unsaved ? "Save your changes before signing." : null}
+        onChange={applyStamp}
       />
     </DocumentWorkspace>
   )
