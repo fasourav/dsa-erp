@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { canSeeNav, navItems } from "@/lib/access"
+import { APP_VERSION_LABEL } from "@/lib/app-version"
 import { navIcons } from "@/lib/nav-icons"
 import { cn } from "@/lib/utils"
 
@@ -34,7 +35,7 @@ export function AppSidebar({
     <aside
       data-collapsed={collapsed}
       className={cn(
-        "group/sidebar relative z-30 m-3.5 hidden w-18 shrink-0 flex-col items-center rounded-sidebar px-2.5 pt-3.5 pb-3 text-sidebar-foreground glass-chrome print:hidden md:flex",
+        "group/sidebar relative z-30 m-3.5 hidden max-h-[calc(100svh-1.75rem)] min-h-0 w-18 shrink-0 flex-col items-center rounded-sidebar px-2.5 pt-3.5 pb-3 text-sidebar-foreground glass-chrome print:hidden md:flex",
         !collapsed && "lg:w-63 lg:items-stretch",
       )}
     >
@@ -87,6 +88,14 @@ export function AppSidebar({
           ))}
         </nav>
       </TooltipProvider>
+      <p
+        className={cn(
+          "hidden shrink-0 px-3 pt-1 text-micro text-muted-foreground",
+          !collapsed && "lg:block",
+        )}
+      >
+        {APP_VERSION_LABEL}
+      </p>
     </aside>
   )
 }

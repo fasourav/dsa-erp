@@ -12,6 +12,7 @@ import {
   ThemeIcon,
   themeLabel,
 } from "@/components/theme-toggle"
+import { APP_VERSION_LABEL } from "@/lib/app-version"
 import type { ThemePreference } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
 import {
@@ -153,6 +154,9 @@ export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
           <LogOut aria-hidden="true" />
           Sign Out
         </DropdownMenuItem>
+        <p className="px-2.5 pt-2 pb-1 text-center text-micro text-muted-foreground">
+          {APP_VERSION_LABEL}
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   )
