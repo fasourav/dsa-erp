@@ -76,6 +76,7 @@ export async function getOperationalExpenses(
   options: { q?: string; page?: number } = {},
 ): Promise<{
   expenses: OperationalExpenseRow[]
+  poExpenses: OperationalExpenseRow[]
   categories: OfficeCategoryGroup[]
   departments: NamedOption[]
   paymentMethods: string[]
@@ -87,6 +88,7 @@ export async function getOperationalExpenses(
 }> {
   const empty = {
     expenses: [] as OperationalExpenseRow[],
+    poExpenses: [] as OperationalExpenseRow[],
     categories: [] as OfficeCategoryGroup[],
     departments: [] as NamedOption[],
     paymentMethods: [] as string[],
@@ -177,21 +179,20 @@ export async function getOperationalExpenses(
     }))
     const expenses = await mapExpenseRows(supabase, expenseSlice.rows)
 
-    const pageExpenses =
-      expenseSlice.page === 1
-        ? [...expenses, ...matchingPoPayments]
-        : expenses
-
     return {
-      expenses: pageExpenses,
+      expenses,
+      poExpenses: matchingPoPayments,
       categories,
       departments,
       paymentMethods: mergeCategorySuggestions(
         methodRows.map((row) => row.name),
-        expenses.map((expense) => expense.paymentMethod),
+        [
+          ...expenses.map((expense) => expense.paymentMethod),
+          ...matchingPoPayments.map((expense) => expense.paymentMethod),
+        ],
       ),
       bankAccounts,
-      total: expenseSlice.total + matchingPoPayments.length,
+      total: expenseSlice.total,
       page: expenseSlice.page,
       pageCount: expenseSlice.pageCount,
       error: null,

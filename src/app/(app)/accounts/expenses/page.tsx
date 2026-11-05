@@ -20,6 +20,7 @@ export default async function OperationalExpensesPage({
     <div className="flex flex-col gap-3.5">
       <ExpensesTable
         expenses={data.expenses}
+        poExpenses={data.poExpenses}
         categories={data.categories}
         departments={data.departments}
         paymentMethods={data.paymentMethods}
@@ -29,13 +30,15 @@ export default async function OperationalExpensesPage({
         pageCount={data.pageCount}
         error={data.error}
         initialQuery={q}
-      />
-      <ListPager
-        basePath="/accounts/expenses"
-        page={data.page}
-        pageCount={data.pageCount}
-        params={{ q }}
-        label="Operational Expenses pages"
+        pager={
+          <ListPager
+            basePath="/accounts/expenses"
+            page={data.page}
+            pageCount={data.pageCount}
+            params={{ q }}
+            label="Operational Expenses pages"
+          />
+        }
       />
     </div>
   )
