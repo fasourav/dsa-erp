@@ -6,6 +6,7 @@ import { cookies, headers } from "next/headers"
 import { PwaSplash } from "@/components/pwa-splash"
 import { ServiceWorker } from "@/components/service-worker"
 import { Toaster } from "@/components/ui/sonner"
+import { WebVitals } from "@/components/web-vitals"
 import { APP_DESCRIPTION, APP_NAME, startupImages } from "@/lib/pwa"
 import { parseTheme, parseThemePreference, systemThemeScript, THEME_COOKIE, themeColors } from "@/lib/theme"
 import { cn } from "@/lib/utils"
@@ -106,6 +107,7 @@ export default async function RootLayout({
         {children}
         <Toaster />
         <ServiceWorker />
+        <WebVitals />
       </body>
     </html>
   )

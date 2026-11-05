@@ -50,3 +50,6 @@ next-env.d.ts
 
 # local Set C parity screenshots and PDFs
 /artifacts/set-c/
+
+# local Lighthouse performance outputs
+/perf/
