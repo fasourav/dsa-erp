@@ -134,9 +134,9 @@ The following items remain above target budgets on `/login` or require post-depl
 
 ---
 
-## Release Note (Speed Package — Pre-`1.1.0`)
+## Release Note (Speed Package — `1.1.0`)
 
-- **Versioning:** `package.json` intentionally remains at `"version": "1.0.0"` until the full `1.1.0` feature set ships.
+- **Versioning:** `package.json` is `"version": "1.1.0"`. The quiet sidebar footer and the mobile account menu render `APP_VERSION_LABEL` from `src/lib/app-version.ts`, which reads `package.json`.
 - **Summary of speed changes:**
   - Service worker upgraded to `atrium-v3` with an 80-entry FIFO cap on static assets (`/_next/static/*`, icons, fonts), registered after `window` `load`; HTML navigations, `/api/*`, and Supabase/financial requests are never cached, with `/offline.html` fallback for offline navigations.
   - `recharts` split out of the initial `/dashboard` and project summary bundles via `next/dynamic(..., { ssr: false })`, and shell header menus/search (`GlobalSearch`, `DocumentsMenu`, `ReportsMenu`) lazy-loaded alongside `optimizePackageImports: ["lucide-react", "recharts"]`, cutting `/dashboard` initial entry JS from `402.6 kB` to `281.9 kB` gzip (`-30.0%`).
