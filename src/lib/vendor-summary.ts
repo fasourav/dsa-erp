@@ -1,5 +1,17 @@
 export const PAGE_SIZE = 10
 
+export const ONLY_OWNERS_CATEGORY_MESSAGE =
+  "Only owners can add new vendor categories. Choose an existing category."
+
+export const MISSING_VENDOR_VERSION_MESSAGE =
+  "Could not verify the current version of this vendor. Reload and try again."
+
+export const VENDOR_EDIT_DENIED_MESSAGE =
+  "You do not have permission to edit vendors."
+
+export const VENDOR_ADD_DENIED_MESSAGE =
+  "You do not have permission to add vendors."
+
 export type VendorKind = "private" | "company"
 
 export function isVendorKind(value: string): value is VendorKind {
@@ -24,6 +36,7 @@ export type VendorSummary = {
 
 export type ColumnId =
   | "displayName"
+  | "vendorField"
   | "contact"
   | "totalProjectValue"
   | "totalPaid"
@@ -44,6 +57,7 @@ export type DataColumn = {
 
 export const dataColumns: readonly DataColumn[] = [
   { id: "displayName", label: "Vendor Name", align: "left" },
+  { id: "vendorField", label: "Category", align: "left" },
   { id: "contact", label: "Contact", align: "left" },
   { id: "totalProjectValue", label: "Total Project Value", align: "right" },
   { id: "totalPaid", label: "Total Paid", align: "right" },
@@ -81,6 +95,10 @@ function compareVendors(
   switch (key) {
     case "displayName":
       return a.displayName.localeCompare(b.displayName, "en", {
+        sensitivity: "base",
+      })
+    case "vendorField":
+      return (a.vendorField ?? "").localeCompare(b.vendorField ?? "", "en", {
         sensitivity: "base",
       })
     case "contact":
@@ -164,6 +182,19 @@ export function vendorRangeLabel(
   }
 
   return `Showing ${start}–${end} of ${total} ${noun}`
+}
+
+export function catalogCategoryOptions(
+  catalogNames: readonly string[],
+): string[] {
+  const seen = new Set<string>()
+  const options: string[] = []
+
+  for (const value of catalogNames) {
+    pushSuggestion(options, seen, value)
+  }
+
+  return options
 }
 
 export function mergeCategorySuggestions(

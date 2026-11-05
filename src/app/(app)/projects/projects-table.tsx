@@ -170,7 +170,7 @@ export function ProjectsTable({
   }
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex min-w-0 flex-col gap-3.5">
       <PageHeader
         title="Projects"
         className="mb-0 md:mb-2"
@@ -289,6 +289,7 @@ export function ProjectsTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Projects pagination"
+        subtleScrollbar
         mobileItem={(project) => ({
           title: (
             <Link
@@ -378,11 +379,11 @@ function CellValue({
   switch (columnId) {
     case "name":
       return (
-        <span className="flex flex-wrap items-center gap-1.5">
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Link
             href={`/projects/${project.id}`}
             className={cn(
-              "rounded-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+              "max-w-full truncate rounded-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
               !project.name && "text-muted-foreground",
             )}
           >
@@ -399,7 +400,7 @@ function CellValue({
       )
     case "location":
       return project.location ? (
-        <span className="block">{project.location}</span>
+        <span className="block truncate">{project.location}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -411,7 +412,7 @@ function CellValue({
       )
     case "status":
       return (
-        <span className="inline-flex flex-wrap items-center gap-1.5">
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           <StatusBadge status={project.status} />
           {project.budgetStatus ? <BudgetStatusBadge status={project.budgetStatus} /> : null}
         </span>

@@ -149,6 +149,7 @@ export function VendorsTable({
                 title: "Vendors",
                 columns: [
                   { header: "Vendor Name", kind: "text" },
+                  { header: "Category", kind: "text" },
                   { header: "Contact", kind: "text" },
                   { header: "Total Project Value", kind: "money" },
                   { header: "Total Paid", kind: "money" },
@@ -156,6 +157,7 @@ export function VendorsTable({
                 ],
                 rows: filtered.map((vendor) => [
                   vendor.displayName,
+                  vendor.vendorField || "—",
                   [formatPhoneDisplay(vendor.phone ?? ""), vendor.email].map((value) => value?.trim()).filter(Boolean).join(" · ") || "—",
                   seesMoney ? vendor.totalProjectValue : "Hidden",
                   seesMoney ? vendor.totalPaid : "Hidden",
@@ -283,23 +285,24 @@ function CellValue({
   switch (columnId) {
     case "displayName":
       return (
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="link"
-            className={cn(
-              "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
-              !vendor.displayName && "text-muted-foreground",
-            )}
-            aria-label={`Open contact card for ${vendor.displayName || "vendor"}`}
-            onClick={() => onOpenContact(vendor)}
-          >
-            {vendor.displayName || "—"}
-          </Button>
-          {vendor.vendorField ? (
-            <Badge variant="outline">{vendor.vendorField}</Badge>
-          ) : null}
-        </div>
+        <Button
+          type="button"
+          variant="link"
+          className={cn(
+            "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
+            !vendor.displayName && "text-muted-foreground",
+          )}
+          aria-label={`Open contact card for ${vendor.displayName || "vendor"}`}
+          onClick={() => onOpenContact(vendor)}
+        >
+          {vendor.displayName || "—"}
+        </Button>
+      )
+    case "vendorField":
+      return vendor.vendorField ? (
+        <Badge variant="secondary">{vendor.vendorField}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
       )
     case "contact":
       return <ContactValue vendor={vendor} />

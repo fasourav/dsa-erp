@@ -313,7 +313,7 @@ function DashboardSections({
             color="bg-chart-2"
             label="Clients"
             value={String(model.performance.clients)}
-            hint="Active Accounts"
+            hint="Total Clients"
           />
           <MetricTile
             icon={Truck}

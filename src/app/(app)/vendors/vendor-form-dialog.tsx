@@ -10,6 +10,7 @@ import {
   updateVendor,
   type VendorFormFieldErrors,
 } from "@/app/(app)/vendors/actions"
+import { useAccess } from "@/components/access-provider"
 import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -42,7 +44,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { escapeLikePattern, isValidEmail } from "@/lib/client-validation"
 import { phoneErrorForStored, phoneMatchKey } from "@/lib/phone"
 import { createClient } from "@/lib/supabase/client"
-import type { VendorKind, VendorSummary } from "@/lib/vendor-summary"
+import {
+  MISSING_VENDOR_VERSION_MESSAGE,
+  ONLY_OWNERS_CATEGORY_MESSAGE,
+  type VendorKind,
+  type VendorSummary,
+} from "@/lib/vendor-summary"
 
 const DUPLICATE_CHECK_DELAY_MS = 350
 
@@ -67,8 +74,10 @@ export function VendorFormDialog({
   vendor: VendorSummary | null
   categories: readonly string[]
 }) {
+  const { isOwner } = useAccess()
   const vendorId = vendor?.id ?? null
   const version = useRecordVersion("vendors", vendorId, open)
+  const versionReady = !vendorId || Boolean(version)
   const [supabase] = useState(() => createClient())
   const [kind, setKind] = useState<VendorKind | null>(vendor?.kind ?? null)
   const [personName, setPersonName] = useState(vendor?.personName ?? "")
@@ -85,6 +94,9 @@ export function VendorFormDialog({
   const [attempted, setAttempted] = useState(false)
   const [nameCheck, setNameCheck] = useState<KeyedCheck>(noCheck)
   const [serverKindError, setServerKindError] = useState<string | null>(null)
+  const [serverCategoryError, setServerCategoryError] = useState<string | null>(
+    null,
+  )
   const [serverEmailError, setServerEmailError] = useState<string | null>(null)
   const [serverPhoneError, setServerPhoneError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -92,8 +104,23 @@ export function VendorFormDialog({
 
   const activeName = kind === "company" ? companyName : personName
   const trimmedActiveName = activeName.trim()
+  const trimmedCategory = category.trim()
   const trimmedEmail = email.trim()
   const trimmedPhone = phone.trim()
+
+  const initialCategoryKey = vendor?.vendorField?.trim().toLowerCase() ?? ""
+  const categoryKey = trimmedCategory.toLowerCase()
+  const isExistingOrUnchangedCategory =
+    !categoryKey ||
+    categoryKey === initialCategoryKey ||
+    categoryOptions.some(
+      (option) => option.trim().toLowerCase() === categoryKey,
+    )
+  const nonOwnerCategoryError =
+    !isOwner && !isExistingOrUnchangedCategory
+      ? ONLY_OWNERS_CATEGORY_MESSAGE
+      : null
+  const categoryError = nonOwnerCategoryError ?? serverCategoryError
 
   const nameKey =
     kind && trimmedActiveName
@@ -131,8 +158,14 @@ export function VendorFormDialog({
       try {
         const result = await loadVendorCategoryOptions()
 
-        if (!cancelled && result.categories !== null) {
+        if (cancelled) {
+          return
+        }
+
+        if (result.categories !== null) {
           setCategoryOptions(result.categories)
+        } else if (result.error) {
+          setFormError(result.error)
         }
       } catch {
         // Keep the list from the page if this refresh fails.
@@ -209,6 +242,7 @@ export function VendorFormDialog({
     details: { reason: string; cancel: () => void },
   ) {
     if (details.reason === "input-change" || details.reason === "item-press") {
+      setServerCategoryError(null)
       setCategory(next)
       return
     }
@@ -222,13 +256,20 @@ export function VendorFormDialog({
     setAttempted(true)
     setFormError(null)
     setServerKindError(null)
+    setServerCategoryError(null)
     setServerEmailError(null)
     setServerPhoneError(null)
+
+    if (vendorId && !version) {
+      setFormError(MISSING_VENDOR_VERSION_MESSAGE)
+      return
+    }
 
     if (
       !kind ||
       !trimmedActiveName ||
       nameDuplicateError ||
+      nonOwnerCategoryError ||
       emailFormatError ||
       phoneDigitError
     ) {
@@ -238,11 +279,11 @@ export function VendorFormDialog({
     const input = {
       kind,
       name: trimmedActiveName,
-      vendorField: category.trim(),
+      vendorField: trimmedCategory,
       email: trimmedEmail,
       phone: trimmedPhone,
       address: address.trim(),
-        notes: notes.trim(),
+      notes: notes.trim(),
     }
 
     startSubmit(async () => {
@@ -275,6 +316,9 @@ export function VendorFormDialog({
     }
     if (fieldErrors.name && nameKey) {
       setNameCheck({ key: nameKey, message: fieldErrors.name })
+    }
+    if (fieldErrors.vendorField) {
+      setServerCategoryError(fieldErrors.vendorField)
     }
     if (fieldErrors.email) {
       setServerEmailError(fieldErrors.email)
@@ -366,7 +410,7 @@ export function VendorFormDialog({
               </Field>
             ) : null}
 
-            <Field>
+            <Field data-invalid={Boolean(categoryError) || undefined}>
               <FieldLabel htmlFor="vendor-category">Vendor Category</FieldLabel>
               <Combobox
                 autoComplete="off"
@@ -375,6 +419,7 @@ export function VendorFormDialog({
                 onInputValueChange={handleCategoryInput}
                 onValueChange={(value) => {
                   if (typeof value === "string") {
+                    setServerCategoryError(null)
                     setCategory(value)
                   }
                 }}
@@ -383,6 +428,7 @@ export function VendorFormDialog({
                   id="vendor-category"
                   className="w-full"
                   disabled={pending}
+                  aria-invalid={Boolean(categoryError)}
                 />
                 <ComboboxContent className="data-empty:hidden">
                   <ComboboxList>
@@ -394,6 +440,12 @@ export function VendorFormDialog({
                   </ComboboxList>
                 </ComboboxContent>
               </Combobox>
+              {!isOwner ? (
+                <FieldDescription>
+                  Choose an existing category. Only owners can add new categories.
+                </FieldDescription>
+              ) : null}
+              {categoryError ? <FieldError>{categoryError}</FieldError> : null}
             </Field>
 
             <Field span="half" data-invalid={Boolean(emailError) || undefined}>
@@ -469,7 +521,11 @@ export function VendorFormDialog({
           >
             Cancel
           </DialogClose>
-          <Button type="button" disabled={pending} onClick={handleSubmit}>
+          <Button
+            type="button"
+            disabled={pending || !versionReady}
+            onClick={handleSubmit}
+          >
             {pending ? "Saving…" : vendorId ? "Save Changes" : "Save Vendor"}
           </Button>
         </DialogFooter>
@@ -477,4 +533,3 @@ export function VendorFormDialog({
     </Dialog>
   )
 }
-

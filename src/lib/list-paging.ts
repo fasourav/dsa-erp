@@ -13,6 +13,167 @@ export type ListColumn<Id extends string> = {
   align: "left" | "right" | "center"
   locked: boolean
   sortable?: boolean
+  width?: string
+  minWidth?: number
+}
+
+export type TableColumnLayout = {
+  columnMinWidthsPx: number[]
+  columnWidths: string[]
+  actionsWidthPx: number
+  minWidthPx: number
+}
+
+export function computeTableColumnLayout<Id extends string>(
+  columns: readonly ListColumn<Id>[],
+  options: { dense: boolean; hasActions: boolean },
+): TableColumnLayout {
+  const { dense, hasActions } = options
+  const compactActions = dense || columns.length >= 6
+  const actionsWidthPx = hasActions ? (compactActions ? 56 : 76) : 0
+
+  if (columns.length === 0) {
+    return {
+      columnMinWidthsPx: [],
+      columnWidths: [],
+      actionsWidthPx,
+      minWidthPx: actionsWidthPx,
+    }
+  }
+
+  const specs = columns.map((column, index) => {
+    const previous = columns[index - 1]?.align ?? null
+    const next = columns[index + 1]?.align ?? null
+    const padPx = dense
+      ? 20 +
+        (index === 0 ? 10 : 0) +
+        (!hasActions && index === columns.length - 1 ? 10 : 0) +
+        (column.align === "right" && next !== null && next !== "right" ? 6 : 0) +
+        (previous === "right" && column.align !== "right" ? 6 : 0)
+      : 24 +
+        (index === 0 ? 12 : 0) +
+        (!hasActions && index === columns.length - 1 ? 8 : 0) +
+        (column.align === "right" && next !== null && next !== "right" ? 12 : 0) +
+        (previous === "right" && column.align !== "right" ? 12 : 0)
+
+    const labelFloor =
+      Math.ceil(column.label.length * 7.2) +
+      (column.sortable !== false ? 18 : 0) +
+      padPx
+
+    const explicitPx = parseExplicitPx(column.width)
+    const purposePx = defaultColumnWidthPx(column, index, dense)
+    const minPx =
+      column.minWidth ??
+      (explicitPx !== null ? Math.ceil(explicitPx) : Math.max(purposePx, labelFloor))
+
+    return {
+      explicitWidth: column.width,
+      minPx,
+      flexPx: column.width ? 0 : minPx,
+    }
+  })
+
+  const totalFlexPx = specs.reduce((sum, spec) => sum + spec.flexPx, 0)
+  const columnWidths = specs.map((spec) => {
+    if (spec.explicitWidth) {
+      return spec.explicitWidth
+    }
+    if (totalFlexPx <= 0) {
+      return `${(100 / columns.length).toFixed(4)}%`
+    }
+    return `${((spec.flexPx / totalFlexPx) * 100).toFixed(4)}%`
+  })
+
+  const columnMinWidthsPx = specs.map((spec) => spec.minPx)
+  const minWidthPx =
+    columnMinWidthsPx.reduce((sum, px) => sum + px, 0) + actionsWidthPx
+
+  return {
+    columnMinWidthsPx,
+    columnWidths,
+    actionsWidthPx,
+    minWidthPx,
+  }
+}
+
+function parseExplicitPx(width: string | undefined): number | null {
+  if (!width) {
+    return null
+  }
+  const match = /^\s*(\d+(?:\.\d+)?)px\s*$/i.exec(width)
+  return match ? Number(match[1]) : null
+}
+
+function defaultColumnWidthPx<Id extends string>(
+  column: ListColumn<Id>,
+  index: number,
+  dense: boolean,
+): number {
+  const id = column.id
+
+  if (id === "when" || id === "lastLogin") {
+    return dense ? 164 : 176
+  }
+
+  const isDate =
+    /date/i.test(id) ||
+    /date/i.test(column.label) ||
+    /(?:On|At)$/.test(id) ||
+    /^(?:month|period)$/i.test(id)
+
+  if (isDate) {
+    return dense ? 120 : 122
+  }
+
+  if (/^progress/i.test(id)) {
+    return dense ? 116 : 116
+  }
+
+  if (column.align === "center") {
+    return dense ? 112 : 120
+  }
+
+  if (column.align === "right") {
+    if (/(?:pct|percent|probability|rate|qty|quantity|count|employees)$/i.test(id)) {
+      return dense ? 108 : 114
+    }
+    return dense ? 132 : 136
+  }
+
+  if (/^(?:currency|code|documentNo|number)$/i.test(id)) {
+    return dense ? 124 : 132
+  }
+
+  if (/^(?:kind|type|direction|role)$/i.test(id)) {
+    return dense ? 136 : 144
+  }
+
+  if (/^(?:status|isActive)$/i.test(id)) {
+    return dense ? 148 : 156
+  }
+
+  if (
+    /(?:phase|stage|currentStage|category|vendorField|source|sourceKind|paymentMethod|bankingChannel|method|department|designation|workType|projectType|who)$/i.test(
+      id,
+    )
+  ) {
+    return dense ? 176 : 172
+  }
+
+  if (
+    /(?:location|address|contact|email|description|notes|recoveryPlan|record|reference|detail|action)$/i.test(
+      id,
+    )
+  ) {
+    return dense ? 208 : 198
+  }
+
+  if (index === 0) {
+    return dense ? 248 : 236
+  }
+
+  return dense ? 196 : 192
 }
 
 export function toggleSort<Id extends string>(

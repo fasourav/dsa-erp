@@ -1,7 +1,7 @@
 import { toNumber } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 import {
-  mergeCategorySuggestions,
+  catalogCategoryOptions,
   type VendorSummary,
 } from "@/lib/vendor-summary"
 
@@ -31,6 +31,14 @@ export async function getVendors(): Promise<{
 
     if (summariesResult.error || detailsResult.error) {
       return { vendors: [], categories: [], error: "Could not load vendors." }
+    }
+
+    if (categoriesResult.error) {
+      return {
+        vendors: [],
+        categories: [],
+        error: "Could not load vendor categories.",
+      }
     }
 
     const details = new Map(
@@ -64,16 +72,11 @@ export async function getVendors(): Promise<{
       ]
     })
 
-    const catalogNames = categoriesResult.error
-      ? []
-      : (categoriesResult.data ?? []).map((row) => row.name)
+    const catalogNames = (categoriesResult.data ?? []).map((row) => row.name)
 
     return {
       vendors,
-      categories: mergeCategorySuggestions(
-        catalogNames,
-        vendors.map((vendor) => vendor.vendorField),
-      ),
+      categories: catalogCategoryOptions(catalogNames),
       error: null,
     }
   } catch {
