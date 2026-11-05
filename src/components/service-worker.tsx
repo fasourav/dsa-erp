@@ -5,7 +5,18 @@ import { useEffect } from "react"
 export function ServiceWorker() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {})
+
+    const register = () => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {})
+    }
+
+    if (document.readyState === "complete") {
+      register()
+      return
+    }
+
+    window.addEventListener("load", register, { once: true })
+    return () => window.removeEventListener("load", register)
   }, [])
 
   return null
