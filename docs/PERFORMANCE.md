@@ -69,6 +69,11 @@ Measured from `.next/build-manifest.json` (`rootMainFiles`) + each route's `page
 | `/accounts/invoices` | Final (Task 12) | 21 | 1072.9 | 316.5 | -0.7 kB (-0.2%) |
 | `/accounts/bank` | Final (Task 12) | 23 | 1115.9 | 329.3 | 0.0 kB (0.0%) |
 | `/accounts/expenses` | Final (Task 12) | 21 | 1072.7 | 317.6 | -0.6 kB (-0.2%) |
+| `/login` | Post-Fixes (Fixes A–F) | 11 | 712.8 | 194.8 | -0.2 kB (-0.1%) |
+| `/dashboard` | Post-Fixes (Fixes A–F) | 19 | 966.6 | 281.9 | -120.7 kB (-30.0%) |
+| `/accounts/invoices` | Post-Fixes (Fixes A–F) | 21 | 1073.3 | 316.6 | -0.6 kB (-0.2%) |
+| `/accounts/bank` | Post-Fixes (Fixes A–F) | 23 | 1116.3 | 329.4 | +0.1 kB (+0.0%) |
+| `/accounts/expenses` | Post-Fixes (Fixes A–F) | 21 | 1074.3 | 317.9 | -0.3 kB (-0.1%) |
 
 ---
 
@@ -108,15 +113,15 @@ The following items remain above target budgets on `/login` or require post-depl
      where schemaname = 'public'
        and indexname in (
          'client_invoices_issued_on_idx',
-         'client_invoices_client_issued_idx',
-         'client_invoices_project_issued_idx',
+         'client_invoices_client_id_idx',
+         'client_invoices_project_id_idx',
          'vendor_invoices_issued_on_idx',
-         'vendor_invoices_status_issued_idx',
+         'vendor_invoices_status_idx',
          'operational_expenses_expense_date_idx',
          'bank_transactions_account_date_idx',
          'bank_transactions_transaction_date_idx',
          'leads_added_on_idx',
-         'leads_status_added_on_idx',
+         'leads_status_idx',
          'projects_year_idx',
          'projects_status_idx'
        );
@@ -124,8 +129,8 @@ The following items remain above target budgets on `/login` or require post-depl
    - Re-run `EXPLAIN ANALYZE` on date-ordered list/range queries (`client_invoices`, `bank_transactions`, `operational_expenses`) and confirm `Index Scan` / `Bitmap Index Scan` replaces `Seq Scan`.
 
 2. **`supabase/migrations/20261105121000_dashboard_details_rpc.sql` (`public.dashboard_details`):**
-   - Consolidates the four secondary dashboard performance queries (`operational_expenses` monthly categories, `projects` counts, `leads` pipeline counts, and `assets` depreciated book value) into a single `security definer` RPC (`search_path = public, pg_temp`, `authenticated` only).
-   - `getDashboard` (`src/lib/dashboard-data.ts`) automatically falls back to the 4-query TypeScript loader if `dashboard_details` has not been applied yet, and fails closed if `dashboard_scope` is missing unless `DASHBOARD_TABLE_FALLBACK=1` is explicitly set. Leave `DASHBOARD_TABLE_FALLBACK` **unset** in production once RPCs are live.
+   - Consolidates the secondary `loadPerformanceDetails` queries in `src/lib/dashboard-data.ts` into a single `security definer` RPC (`search_path = public, pg_temp`, `authenticated` only, gated by `auth.uid()`, `private.sees_financials()`, and module `private.can(...)` checks), returning `{ highValue, lowValue, backlogValue, assetValue, vendors }` (`projects` high/low value counts at `>= 50000` vs `< 50000`, year-scoped `project_backlogs` sum, `vendors` total count, and optional `assets` depreciated book value when `p_include_assets` is true).
+   - `getDashboard` (`src/lib/dashboard-data.ts`) automatically falls back to the 4-query TypeScript loader (`loadProjectCounts`, `loadBacklogValue`, `loadAssetTotal`, `loadVendorCount`) if `dashboard_details` has not been applied yet, and fails closed if `dashboard_scope` is missing unless `DASHBOARD_TABLE_FALLBACK=1` is explicitly set. Leave `DASHBOARD_TABLE_FALLBACK` **unset** in production once RPCs are live.
 
 ---
 
@@ -136,16 +141,16 @@ The following items remain above target budgets on `/login` or require post-depl
   - Service worker upgraded to `atrium-v3` with an 80-entry FIFO cap on static assets (`/_next/static/*`, icons, fonts), registered after `window` `load`; HTML navigations, `/api/*`, and Supabase/financial requests are never cached, with `/offline.html` fallback for offline navigations.
   - `recharts` split out of the initial `/dashboard` and project summary bundles via `next/dynamic(..., { ssr: false })`, and shell header menus/search (`GlobalSearch`, `DocumentsMenu`, `ReportsMenu`) lazy-loaded alongside `optimizePackageImports: ["lucide-react", "recharts"]`, cutting `/dashboard` initial entry JS from `402.6 kB` to `281.9 kB` gzip (`-30.0%`).
   - `/dashboard` streams behind `<Suspense>` with `DashboardSkeleton` and parallel cached auth (`getCurrentUser` + `requireModule` + `getAccess`), backed by the new `dashboard_details` RPC and fail-closed `dashboard_scope` handling.
-  - Client invoices (`/accounts/invoices`), bank transactions (`/accounts/bank`), and operational expenses (`/accounts/expenses`) now use server-side pagination (`LIST_PAGE_SIZE = 50`, `count: "exact"`, `PGRST103` out-of-range clamping), `<ListPager prefetch={false}>`, and 300ms debounced URL search (`?q=...`), while preserving exact bank account closing/running balances and statement/reconcile report views.
+  - Client invoices (`/accounts/invoices`), bank transactions (`/accounts/bank`), and operational expenses (`/accounts/expenses`) now use server-side pagination (`LIST_PAGE_SIZE = 50`, `count: "exact"`, `PGRST103` out-of-range clamping), a single URL-driven `<ListPager prefetch={false}>` (`DataList` internal pager hidden via `hidePagination`), 300ms debounced multi-column server search (`?q=...`, preserving apostrophes), server-side status chip filtering (`?status=...` on invoices), server-side column sorting (`?sort=&dir=`), a dedicated non-paged Operational Purchase Order Payments section on `/accounts/expenses`, and full-list on-demand Excel/CSV exports via server actions — while preserving exact bank account closing/running balances and statement/reconcile report views.
 
 ### Owner Click-Test Checklist
 
 - [ ] **Dashboard streaming:** Navigate to `/dashboard` (and switch `?year=` scope); verify `DashboardSkeleton` renders immediately and transitions cleanly into KPI cards and summary sections without layout shift.
 - [ ] **Lazy charts:** Verify sparklines, weekly cashflow, expense donut, annual chart, and project summary trend chart render after their dimension-matched skeletons.
 - [ ] **Deferred shell controls:** Open Global Search (`Ctrl+K` / `Cmd+K` and header button), Documents menu, and Reports menu; verify each loads on demand and navigates normally.
-- [ ] **Client invoices paging & search (`/accounts/invoices`):** Verify 50-row pages, `<ListPager>` links (`?page=2`), debounced `?q=` URL search without losing input focus, project filter (`?project=`), and status filter chips.
-- [ ] **Bank transactions paging, search & balances (`/accounts/bank`):** Verify 50-row transaction pages, `?account=` filter, debounced `?q=` search on notes, **unchanged account balance cards and per-row running balances**, and unchanged Statement / Reconcile views.
-- [ ] **Operational expenses paging & search (`/accounts/expenses`):** Verify 50-row pages, debounced `?q=` search across category/notes/payment method, and non-project Operational PO rows still appearing accurately.
+- [ ] **Client invoices paging, status, search & sort (`/accounts/invoices`):** Verify 50-row pages with a single `<ListPager>` control (`?page=2`), debounced multi-column `?q=` search (description, client/project name including apostrophes, status, ISO date, exact amount), `?project=` filter, server-filtered status chips (`?status=`) with accurate multi-page totals, and server column sorting (`Issued`, `Amount`, `Status`; joined/computed columns non-sortable).
+- [ ] **Bank transactions paging, search, sort & balances (`/accounts/bank`):** Verify 50-row transaction pages with a single `<ListPager>` control, `?account=` filter, debounced multi-column `?q=` search (notes, payment method, account, project, direction, source, ISO date, exact amount), server column sorting (`Date`, `Direction`, `Source`, `Amount`; `Account` and `Balance` non-sortable), **unchanged account balance cards and per-row running balances**, and unchanged Statement / Reconcile views.
+- [ ] **Operational expenses paging, PO section, search & sort (`/accounts/expenses`):** Verify 50-row pages for operational expenses with a single `<ListPager>` control, debounced multi-column `?q=` search (category, notes, payment method, department, vendor, bank account, ISO date, exact amount), server column sorting (`Date`, `Category`, `Amount`, `Payment`), and non-project Operational Purchase Order Payments rendered in their dedicated non-paged section below the pager without inflating operational expense page counts.
 - [ ] **Offline fallback:** In DevTools Network → Offline, trigger a page navigation and confirm `/offline.html` renders cleanly; reconnect and confirm live pages load normally.
 - [ ] **No stale financials:** Record or edit a test transaction/invoice/expense, refresh or navigate back to `/dashboard` and `/accounts/bank`, and confirm updated figures appear immediately (never served from SW cache).
-- [ ] **Full-list Excel & CSV exports:** Trigger `ListExport` (Excel + CSV) on multi-page `/accounts/invoices`, `/accounts/bank`, and `/accounts/expenses` with active search/filters and confirm every matching row across all pages is exported (not just the visible 50-row slice), while PDF/statement exports continue to match pre-change behavior.
+- [ ] **Full-list Excel & CSV exports:** Trigger `ListExport` (Excel + CSV) on multi-page `/accounts/invoices`, `/accounts/bank`, and `/accounts/expenses` with active search/status/sort filters and confirm every matching row across all pages is exported (not just the visible 50-row slice), while PDF/statement exports continue to match pre-change behavior.
