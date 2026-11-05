@@ -384,10 +384,10 @@ export function buildDashboard(
   const receivables = receivablesAsOf(input, windowEnd, asOfToday)
   const payables = payablesAsOf(input, windowEnd, asOfToday)
 
-  const cashBalance = balanceAsOf(bank, windowEnd, input.openingBalance)
+  const cashBalance = operatingCashAsOf(bank, windowEnd, input.openingBalance)
   const cashDelta = changePercent(
     cashBalance,
-    balanceAsOf(bank, previousMonthEnd(windowEnd), input.openingBalance),
+    operatingCashAsOf(bank, previousMonthEnd(windowEnd), input.openingBalance),
   )
 
   const projects = input.projects.filter(
@@ -470,7 +470,7 @@ export function buildDashboard(
       ? monthEnds(scopeYear, windowEnd, bank, input.openingBalance)
       : annualYears.map((year) => ({
           label: String(year),
-          value: balanceAsOf(
+          value: operatingCashAsOf(
             bank,
             year === currentYear ? today : `${year}-12-31`,
             input.openingBalance,
@@ -1022,7 +1022,7 @@ function monthSpark(
 function monthEnds(
   year: number,
   today: string,
-  bank: (Dated & { direction: "inflow" | "outflow" })[],
+  bank: (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[],
   openingBalance: number,
 ): ChartPoint[] {
   const lastMonth = Number(today.slice(5, 7))
@@ -1031,14 +1031,28 @@ function monthEnds(
     const end = monthEndIso(year, month)
     points.push({
       label: MONTHS[month - 1],
-      value: balanceAsOf(bank, end < today ? end : today, openingBalance),
+      value: operatingCashAsOf(bank, end < today ? end : today, openingBalance),
     })
   }
   return points
 }
 
+export function operatingCashAsOf(
+  bank: readonly (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[],
+  end: string,
+  openingBalance: number,
+): number {
+  // Dashboard Cash Balance excludes manual bank deposits and withdrawals;
+  // Banking ledger balances still use the full ledger.
+  return balanceAsOf(
+    bank.filter((row) => row.sourceKind !== "deposit" && row.sourceKind !== "withdrawal"),
+    end,
+    openingBalance,
+  )
+}
+
 function balanceAsOf(
-  bank: (Dated & { direction: "inflow" | "outflow" })[],
+  bank: readonly (Dated & { direction: "inflow" | "outflow" })[],
   end: string,
   openingBalance: number,
 ): number {
