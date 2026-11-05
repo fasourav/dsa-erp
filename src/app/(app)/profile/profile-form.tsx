@@ -7,13 +7,15 @@ import {
   updateDisplayName,
   type ProfileState,
 } from "@/app/(app)/profile/actions"
+import { AvatarCard } from "@/app/(app)/profile/avatar-card"
+import { SignatureCard } from "@/app/(app)/profile/signature-card"
+import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { savedToast } from "@/lib/saved"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { accountInitials } from "@/lib/account-identity"
 
 const initialState: ProfileState = {}
 
@@ -22,11 +24,15 @@ export function ProfileForm({
   email,
   roleLabel,
   designation,
+  avatarUrl,
+  signatureUrl,
 }: {
   name: string
   email: string
   roleLabel: string
   designation: string | null
+  avatarUrl: string | null
+  signatureUrl: string | null
 }) {
   const [nameState, nameAction, namePending] = useActionState(updateDisplayName, initialState)
   const [passwordState, passwordAction, passwordPending] = useActionState(
@@ -52,9 +58,7 @@ export function ProfileForm({
     <div className="flex flex-col gap-4">
       <Card>
         <CardContent className="flex items-center gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-avatar text-base font-semibold text-on-color">
-            {accountInitials(name, email)}
-          </span>
+          <UserAvatar name={name} email={email} avatarUrl={avatarUrl} className="size-12 text-base" />
           <div className="min-w-0">
             <p className="truncate text-ui font-semibold">{name || "—"}</p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -66,6 +70,9 @@ export function ProfileForm({
           </div>
         </CardContent>
       </Card>
+
+      <AvatarCard name={name} email={email} avatarUrl={avatarUrl} />
+      <SignatureCard signatureUrl={signatureUrl} />
 
       <form action={nameAction}>
         <Card>

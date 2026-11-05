@@ -4,6 +4,7 @@ import { allows } from "@/lib/access"
 import { getAccess } from "@/lib/permissions"
 import type { PrintMargins } from "@/lib/documents/drafts"
 import { RFQ_BUCKET } from "@/lib/documents/rfq-store"
+import { stripSignatureImages } from "@/lib/documents/signature-urls"
 import { renderDocumentPdf } from "@/lib/documents/setc/pdf"
 import { documentFileName } from "@/lib/documents/setc/render"
 import { loadSavedDocument } from "@/lib/documents/setc/saved"
@@ -74,8 +75,9 @@ export async function POST(request: Request) {
       topMm: Number(body.margins?.topMm ?? 16),
       bottomMm: Number(body.margins?.bottomMm ?? 54),
     }
-    const pdf = await renderDocumentPdf(body.source, margins, letterhead, true)
-    const filename = documentFileName(documentNumberOf(body.source), letterhead)
+    const source = stripSignatureImages(body.source)
+    const pdf = await renderDocumentPdf(source, margins, letterhead, true)
+    const filename = documentFileName(documentNumberOf(source), letterhead)
     return pdfResponse(pdf, filename)
   } catch {
     return NextResponse.json({ error: "Could not create the PDF." }, { status: 500 })

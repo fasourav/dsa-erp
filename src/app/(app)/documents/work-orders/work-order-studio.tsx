@@ -15,6 +15,7 @@ import {
   TextField,
 } from "@/components/documents/document-fields"
 import { DocumentWorkspace } from "@/components/documents/document-workspace"
+import { SignatureStampPanel, type StampChange } from "@/components/documents/signature-stamp-panel"
 import {
   roleFor,
   workOrderStatuses,
@@ -25,6 +26,8 @@ import {
 } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentWorkOrder } from "@/lib/documents/present"
+import { reconcileStamps } from "@/lib/documents/signature-stamps"
+import { attachSignatureUrls } from "@/lib/documents/signature-urls"
 import {
   draftLinesFromTemplate,
   draftMilestonesFromTemplate,
@@ -71,6 +74,7 @@ export function WorkOrderStudio({
   origin,
   margins,
   templates,
+  signatureUrls,
 }: {
   draft: WorkOrderDraft
   purchaseOrders: PurchaseOrderChoice[]
@@ -80,6 +84,7 @@ export function WorkOrderStudio({
   origin: string
   margins: PrintMargins
   templates: DocumentTemplate[]
+  signatureUrls: Record<string, string>
 }) {
   const router = useRouter()
   const initialForm =
@@ -88,6 +93,7 @@ export function WorkOrderStudio({
       : draft
   const [form, setForm] = useState(initialForm)
   const [savedMark, setSavedMark] = useState(() => JSON.stringify(initialForm))
+  const [urls, setUrls] = useState(signatureUrls)
   // The PO link as last saved. Once saved with a PO, the link can switch but never be cleared.
   const [savedPurchaseOrderId, setSavedPurchaseOrderId] = useState(() => (draft.id ? draft.purchaseOrderId : ""))
   const linked = Boolean(form.purchaseOrderId || savedPurchaseOrderId)
@@ -123,16 +129,26 @@ export function WorkOrderStudio({
         checkedByRole: roleFor(employees, form.checkedBy),
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
+        stamps: form.signatureStamps,
       }),
     [employees, form, origin, project, vendor],
   )
+  const unsaved = JSON.stringify(form) !== savedMark
+  const slotField = { prepared: "preparedBy", checked: "checkedBy", authorized: "authorizedBy" } as const
+  function applyStamp(change: StampChange) {
+    const next = { ...form, [slotField[change.slot]]: change.name, signatureStamps: change.stamps }
+    setForm(next)
+    setSavedMark(JSON.stringify(next))
+    const path = change.stamps[change.slot]?.imagePath
+    if (path && change.imageUrl) setUrls((current) => ({ ...current, [path]: change.imageUrl! }))
+  }
 
   return (
     <DocumentWorkspace
       title="Work Order"
       description="Printable work order for a purchase order. The letterhead and footer stay on the pad."
       margins={margins}
-      source={{ kind: "print", doc: preview }}
+      source={attachSignatureUrls({ kind: "print", doc: preview }, urls)}
       record={form.id ? { kind: "work_order", id: form.id } : null}
       canSave={canSave}
       canShare={canSave}
@@ -148,7 +164,7 @@ export function WorkOrderStudio({
       }}
       pending={pending}
       error={error}
-      dirty={JSON.stringify(form) !== savedMark}
+      dirty={unsaved}
       files={{ parentType: "work_order", parentId: form.id }}
       templateNames={templates.map((item) => item.name)}
       canStartFromTemplate={canStartFromTemplate}
@@ -211,8 +227,14 @@ export function WorkOrderStudio({
             return
           }
           setSavedPurchaseOrderId(form.purchaseOrderId)
+          const signatureStamps = reconcileStamps(form.signatureStamps, {
+            prepared: form.preparedBy,
+            checked: form.checkedBy,
+            authorized: form.authorizedBy,
+          })
           const saved = {
             ...form,
+            signatureStamps,
             id: result.id ?? form.id,
             documentNo: result.documentNo ?? form.documentNo,
             verifyToken: result.verifyToken ?? form.verifyToken,
@@ -221,6 +243,7 @@ export function WorkOrderStudio({
           setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
+            signatureStamps,
             id: result.id ?? current.id,
             documentNo: result.documentNo ?? current.documentNo,
             verifyToken: result.verifyToken ?? current.verifyToken,
@@ -366,6 +389,14 @@ export function WorkOrderStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(authorizedBy) => setForm({ ...form, authorizedBy })}
+      />
+      <SignatureStampPanel
+        kind="work_order"
+        id={form.id}
+        stamps={form.signatureStamps}
+        names={{ prepared: form.preparedBy, checked: form.checkedBy, authorized: form.authorizedBy }}
+        blockedReason={!form.id ? "Save the document before signing." : unsaved ? "Save your changes before signing." : null}
+        onChange={applyStamp}
       />
     </DocumentWorkspace>
   )

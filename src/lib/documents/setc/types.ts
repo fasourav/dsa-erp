@@ -1,6 +1,14 @@
+import type { StampSlot } from "@/lib/documents/signature-stamps"
 import type { PrintDocument } from "@/lib/documents/present"
 
-export type SignLine = { label: string; name: string; detail: string }
+export type SignLine = {
+  label: string
+  name: string
+  detail: string
+  slot?: StampSlot
+  imagePath?: string | null
+  imageUrl?: string | null
+}
 
 export type ChallanLine = {
   item: string

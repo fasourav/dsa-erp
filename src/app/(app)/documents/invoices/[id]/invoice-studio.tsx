@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { saveInvoicePrint, trashSavedDocument } from "@/app/(app)/documents/actions"
 import { useCan } from "@/components/access-provider"
 import { DocumentWorkspace } from "@/components/documents/document-workspace"
+import { SignatureStampPanel, type StampChange } from "@/components/documents/signature-stamp-panel"
 import {
   AreaField,
   EmployeeField,
@@ -16,6 +17,8 @@ import {
 import { roleFor, type EmployeeChoice, type PrintMargins } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentInvoice } from "@/lib/documents/present"
+import { reconcileStamps } from "@/lib/documents/signature-stamps"
+import { attachSignatureUrls } from "@/lib/documents/signature-urls"
 import { Money } from "@/components/money"
 import { savedToast } from "@/lib/saved"
 import type { InvoiceDraft } from "@/lib/documents/queries"
@@ -25,15 +28,18 @@ export function InvoiceStudio({
   employees,
   origin,
   margins,
+  signatureUrls,
 }: {
   draft: InvoiceDraft
   employees: EmployeeChoice[]
   origin: string
   margins: PrintMargins
+  signatureUrls: Record<string, string>
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
   const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
+  const [urls, setUrls] = useState(signatureUrls)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("client_invoices", form.exists ? "edit" : "add")
@@ -62,16 +68,26 @@ export function InvoiceStudio({
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
         bookAmount: form.bookAmount,
+        stamps: form.signatureStamps,
       }),
     [employees, form, origin],
   )
+  const unsaved = JSON.stringify(form) !== savedMark
+  const slotField = { prepared: "preparedBy", checked: "checkedBy", authorized: "authorizedBy" } as const
+  function applyStamp(change: StampChange) {
+    const next = { ...form, [slotField[change.slot]]: change.name, signatureStamps: change.stamps }
+    setForm(next)
+    setSavedMark(JSON.stringify(next))
+    const path = change.stamps[change.slot]?.imagePath
+    if (path && change.imageUrl) setUrls((current) => ({ ...current, [path]: change.imageUrl! }))
+  }
 
   return (
     <DocumentWorkspace
       title="Client Invoice"
       description="Prints the bill only. The letterhead and footer stay on the pad."
       margins={margins}
-      source={{ kind: "print", doc: preview }}
+      source={attachSignatureUrls({ kind: "print", doc: preview }, urls)}
       record={form.exists ? { kind: "invoice", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
@@ -85,7 +101,7 @@ export function InvoiceStudio({
       }}
       pending={pending}
       error={error}
-      dirty={JSON.stringify(form) !== savedMark}
+      dirty={unsaved}
       files={{ parentType: "client_invoice", parentId: form.id }}
       onSave={() => {
         setError(null)
@@ -95,8 +111,14 @@ export function InvoiceStudio({
             setError(result.error)
             return
           }
+          const signatureStamps = reconcileStamps(form.signatureStamps, {
+            prepared: form.preparedBy,
+            checked: form.checkedBy,
+            authorized: form.authorizedBy,
+          })
           const saved = {
             ...form,
+            signatureStamps,
             exists: true,
             documentNo: result.documentNo ?? form.documentNo,
             verifyToken: result.verifyToken ?? form.verifyToken,
@@ -104,6 +126,7 @@ export function InvoiceStudio({
           setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
+            signatureStamps,
             exists: true,
             documentNo: result.documentNo ?? current.documentNo,
             verifyToken: result.verifyToken ?? current.verifyToken,
@@ -213,6 +236,14 @@ export function InvoiceStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(authorizedBy) => setForm({ ...form, authorizedBy })}
+      />
+      <SignatureStampPanel
+        kind="invoice"
+        id={form.exists ? form.id : null}
+        stamps={form.signatureStamps}
+        names={{ prepared: form.preparedBy, checked: form.checkedBy, authorized: form.authorizedBy }}
+        blockedReason={!form.exists ? "Save the document before signing." : unsaved ? "Save your changes before signing." : null}
+        onChange={applyStamp}
       />
     </DocumentWorkspace>
   )

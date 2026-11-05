@@ -40,6 +40,7 @@ export default async function NewQuotationPage() {
       margins={margins}
       templates={templateList.templates}
       leads={leads}
+      signatureUrls={{}}
     />
   )
 }

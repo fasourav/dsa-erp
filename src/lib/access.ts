@@ -44,6 +44,8 @@ export type AccessSnapshot = {
   displayName: string
   email: string
   designation: string | null
+  avatarPath: string | null
+  signaturePath: string | null
   grants: Record<string, ModuleGrant>
   ownersOnly: string[]
 }

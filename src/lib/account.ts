@@ -2,6 +2,7 @@ import { cache } from "react"
 
 import { roleLabel, type AccountIdentity } from "@/lib/account-identity"
 import { getAccess } from "@/lib/permissions"
+import { signedMediaUrl } from "@/lib/profile-media"
 
 export type { AccountIdentity } from "@/lib/account-identity"
 
@@ -16,5 +17,6 @@ export const getAccountIdentity = cache(async (): Promise<AccountIdentity | null
     role: access.role,
     roleLabel: roleLabel(access.role),
     designation: access.designation,
+    avatarUrl: await signedMediaUrl(access.avatarPath, 3600),
   }
 })

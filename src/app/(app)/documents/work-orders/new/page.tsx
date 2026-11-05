@@ -49,6 +49,7 @@ export default async function NewWorkOrderPage({
       origin={origin}
       margins={margins}
       templates={templateList.templates}
+      signatureUrls={{}}
     />
   )
 }

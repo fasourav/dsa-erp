@@ -40,6 +40,8 @@ export const getAccess = cache(async (): Promise<AccessSnapshot | null> => {
     displayName: profile.display_name?.trim() || profile.email?.trim() || "User",
     email: profile.email ?? "",
     designation: profile.designation?.trim() || null,
+    avatarPath: profile.avatar_path ?? null,
+    signaturePath: profile.signature_path ?? null,
     ownersOnly: (modules ?? []).filter((row) => row.owners_only).map((row) => row.key),
     grants: Object.fromEntries(
       (grants ?? []).map((row) => [
@@ -91,27 +93,29 @@ type ProfileRow = {
   display_name: string | null
   email: string | null
   designation: string | null
+  avatar_path: string | null
+  signature_path: string | null
 }
 
-/** One profile read for access and the shell identity. Retries without designation if that column is absent. */
+/** One profile read for access and the shell identity. Retries without newer columns if they are absent. */
 async function loadProfile(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
 ): Promise<ProfileRow | null> {
   const rich = await supabase
     .from("profiles")
-    .select("role, status, show_financials, display_name, email, designation")
+    .select("role, status, show_financials, display_name, email, designation, avatar_path, signature_path")
     .eq("id", userId)
     .maybeSingle()
 
-  if (rich.error && /designation/i.test(rich.error.message)) {
+  if (rich.error && /designation|avatar_path|signature_path/i.test(rich.error.message)) {
     const basic = await supabase
       .from("profiles")
       .select("role, status, show_financials, display_name, email")
       .eq("id", userId)
       .maybeSingle()
     if (basic.error || !basic.data) return null
-    return { ...basic.data, designation: null }
+    return { ...basic.data, designation: null, avatar_path: null, signature_path: null }
   }
 
   if (rich.error || !rich.data) return null

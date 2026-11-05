@@ -22,6 +22,7 @@ import {
   type NamedOption,
   type ProjectChoice,
 } from "@/lib/documents/drafts"
+import { parseStamps, type SignatureStamps } from "@/lib/documents/signature-stamps"
 
 export type DocumentListItem = {
   id: string
@@ -66,6 +67,7 @@ export type InvoiceDraft = {
   preparedBy: string
   checkedBy: string
   authorizedBy: string
+  signatureStamps: SignatureStamps
   lines: LineInput[]
   deductions: MoneyDeduction[]
   receivedNote: string
@@ -94,6 +96,7 @@ export type ReceiptDraft = {
   preparedBy: string
   checkedBy: string
   authorizedBy: string
+  signatureStamps: SignatureStamps
 }
 
 export type PurchaseOrderDraft = {
@@ -116,6 +119,7 @@ export type PurchaseOrderDraft = {
   preparedBy: string
   checkedBy: string
   authorizedBy: string
+  signatureStamps: SignatureStamps
 }
 
 export type QuotationDraft = {
@@ -138,6 +142,7 @@ export type QuotationDraft = {
   preparedBy: string
   checkedBy: string
   authorizedBy: string
+  signatureStamps: SignatureStamps
   lines: LineInput[]
   milestones: MilestoneInput[]
 }
@@ -162,6 +167,7 @@ export type WorkOrderDraft = {
   preparedBy: string
   checkedBy: string
   authorizedBy: string
+  signatureStamps: SignatureStamps
   lines: LineInput[]
   milestones: MilestoneInput[]
 }
@@ -508,7 +514,7 @@ export async function loadInvoiceDraft(id: string): Promise<{
       .order("paid_on", { ascending: true }),
     supabase
       .from("issued_documents")
-      .select("document_no, verify_token, body, issued_on")
+      .select("document_no, verify_token, body, issued_on, signature_stamps")
       .eq("client_invoice_id", id)
       .is("deleted_at", null)
       .maybeSingle(),
@@ -552,6 +558,7 @@ export async function loadInvoiceDraft(id: string): Promise<{
       preparedBy: readText(printResult.data?.body, "preparedBy"),
       checkedBy: readText(printResult.data?.body, "checkedBy"),
       authorizedBy: readText(printResult.data?.body, "authorizedBy"),
+      signatureStamps: parseStamps(printResult.data?.signature_stamps),
       lines:
         savedLines.length > 0
           ? savedLines
@@ -669,7 +676,7 @@ export async function loadReceiptDraft(id: string): Promise<{
       .maybeSingle(),
     supabase
       .from("issued_documents")
-      .select("document_no, verify_token, body")
+      .select("document_no, verify_token, body, signature_stamps")
       .eq("client_payment_id", id)
       .is("deleted_at", null)
       .maybeSingle(),
@@ -713,6 +720,7 @@ export async function loadReceiptDraft(id: string): Promise<{
       preparedBy: readText(body, "preparedBy"),
       checkedBy: readText(body, "checkedBy"),
       authorizedBy: readText(body, "authorizedBy"),
+      signatureStamps: parseStamps(printResult.data?.signature_stamps),
     },
     error: storageError(printResult.error),
   }
@@ -801,7 +809,7 @@ export async function loadPurchaseOrderDraft(id: string): Promise<{
   const order = orderResult.data
   const printResult = await supabase
     .from("issued_documents")
-    .select("document_no, verify_token, body")
+    .select("document_no, verify_token, body, signature_stamps")
     .eq("purchase_order_id", id)
     .is("deleted_at", null)
     .maybeSingle()
@@ -830,6 +838,7 @@ export async function loadPurchaseOrderDraft(id: string): Promise<{
       preparedBy: readText(body, "preparedBy"),
       checkedBy: readText(body, "checkedBy"),
       authorizedBy: readText(body, "authorizedBy"),
+      signatureStamps: parseStamps(printResult.data?.signature_stamps),
       lines:
         savedLines.length > 0
           ? savedLines
@@ -926,6 +935,7 @@ export async function loadQuotationDraft(id: string | null): Promise<{
         preparedBy: "",
         checkedBy: "",
         authorizedBy: "",
+        signatureStamps: {},
         lines: [blankLine()],
         milestones: [],
       },
@@ -974,6 +984,7 @@ export async function loadQuotationDraft(id: string | null): Promise<{
       preparedBy: row.prepared_by,
       checkedBy: row.checked_by,
       authorizedBy: row.authorized_by,
+      signatureStamps: parseStamps(row.signature_stamps),
       lines: (lines.data ?? []).map(rowToLine),
       milestones: (milestones.data ?? []).map(rowToMilestone),
     },
@@ -1031,6 +1042,7 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
         preparedBy: "",
         checkedBy: "",
         authorizedBy: "",
+        signatureStamps: {},
         lines: [blankLine()],
         milestones: [],
       },
@@ -1078,6 +1090,7 @@ export async function loadWorkOrderDraft(id: string | null): Promise<{
       preparedBy: row.prepared_by,
       checkedBy: row.checked_by,
       authorizedBy: row.authorized_by,
+      signatureStamps: parseStamps(row.signature_stamps),
       lines: (lines.data ?? []).map(rowToLine),
       milestones: (milestones.data ?? []).map(rowToMilestone),
     },

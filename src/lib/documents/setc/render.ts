@@ -923,7 +923,11 @@ function card(
 }
 
 function signCell(line: SignLine): string {
-  return `<div class="sign"><div class="line"><div class="role">${esc(line.label)}</div><div class="who">${esc(line.name)}</div><div class="des">${line.detail
+  const url = line.imageUrl ?? ""
+  const img = /^(https:\/\/|data:image\/(png|webp);base64,)/.test(url)
+    ? `<img class="img" src="${esc(url)}" alt="">`
+    : ""
+  return `<div class="sign">${img}<div class="line"><div class="role">${esc(line.label)}</div><div class="who">${esc(line.name)}</div><div class="des">${line.detail
     .split(/\n/)
     .map((part) => esc(part))
     .join("<br>")}</div></div></div>`

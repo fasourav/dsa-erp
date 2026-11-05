@@ -13,9 +13,12 @@ import {
   TextField,
 } from "@/components/documents/document-fields"
 import { DocumentWorkspace } from "@/components/documents/document-workspace"
+import { SignatureStampPanel, type StampChange } from "@/components/documents/signature-stamp-panel"
 import { roleFor, type EmployeeChoice, type PrintMargins } from "@/lib/documents/drafts"
 import { verifyUrl } from "@/lib/documents/verify-url"
 import { presentPurchaseOrder } from "@/lib/documents/present"
+import { reconcileStamps } from "@/lib/documents/signature-stamps"
+import { attachSignatureUrls } from "@/lib/documents/signature-urls"
 import { savedToast } from "@/lib/saved"
 import type { PurchaseOrderDraft } from "@/lib/documents/queries"
 
@@ -24,15 +27,18 @@ export function PurchaseOrderStudio({
   employees,
   origin,
   margins,
+  signatureUrls,
 }: {
   draft: PurchaseOrderDraft
   employees: EmployeeChoice[]
   origin: string
   margins: PrintMargins
+  signatureUrls: Record<string, string>
 }) {
   const router = useRouter()
   const [form, setForm] = useState(draft)
   const [savedMark, setSavedMark] = useState(() => JSON.stringify(draft))
+  const [urls, setUrls] = useState(signatureUrls)
   const [error, setError] = useState<string | null>(null)
   const [pending, startSave] = useTransition()
   const canSave = useCan("purchase_orders", form.exists ? "edit" : "add")
@@ -59,16 +65,26 @@ export function PurchaseOrderStudio({
         authorizedBy: form.authorizedBy,
         authorizedByRole: roleFor(employees, form.authorizedBy),
         bookAmount: form.bookAmount,
+        stamps: form.signatureStamps,
       }),
     [employees, form, origin],
   )
+  const unsaved = JSON.stringify(form) !== savedMark
+  const slotField = { prepared: "preparedBy", checked: "checkedBy", authorized: "authorizedBy" } as const
+  function applyStamp(change: StampChange) {
+    const next = { ...form, [slotField[change.slot]]: change.name, signatureStamps: change.stamps }
+    setForm(next)
+    setSavedMark(JSON.stringify(next))
+    const path = change.stamps[change.slot]?.imagePath
+    if (path && change.imageUrl) setUrls((current) => ({ ...current, [path]: change.imageUrl! }))
+  }
 
   return (
     <DocumentWorkspace
       title="Purchase Order"
       description="Prints the order only. The letterhead and footer stay on the pad."
       margins={margins}
-      source={{ kind: "print", doc: preview }}
+      source={attachSignatureUrls({ kind: "print", doc: preview }, urls)}
       record={form.exists ? { kind: "purchase_order", id: form.id } : null}
       canSave={canSave}
       canTrash={Boolean(form.id)}
@@ -82,7 +98,7 @@ export function PurchaseOrderStudio({
       }}
       pending={pending}
       error={error}
-      dirty={JSON.stringify(form) !== savedMark}
+      dirty={unsaved}
       files={{ parentType: "purchase_order", parentId: form.id }}
       onSave={() => {
         setError(null)
@@ -95,8 +111,14 @@ export function PurchaseOrderStudio({
             setError(result.error)
             return
           }
+          const signatureStamps = reconcileStamps(form.signatureStamps, {
+            prepared: form.preparedBy,
+            checked: form.checkedBy,
+            authorized: form.authorizedBy,
+          })
           const saved = {
             ...form,
+            signatureStamps,
             exists: true,
             documentNo: result.documentNo ?? form.documentNo,
             verifyToken: result.verifyToken ?? form.verifyToken,
@@ -104,6 +126,7 @@ export function PurchaseOrderStudio({
           setSavedMark(JSON.stringify(saved))
           setForm((current) => ({
             ...current,
+            signatureStamps,
             exists: true,
             documentNo: result.documentNo ?? current.documentNo,
             verifyToken: result.verifyToken ?? current.verifyToken,
@@ -191,6 +214,14 @@ export function PurchaseOrderStudio({
         employees={employees}
         disabled={!canSave}
         onChange={(authorizedBy) => setForm({ ...form, authorizedBy })}
+      />
+      <SignatureStampPanel
+        kind="purchase_order"
+        id={form.exists ? form.id : null}
+        stamps={form.signatureStamps}
+        names={{ prepared: form.preparedBy, checked: form.checkedBy, authorized: form.authorizedBy }}
+        blockedReason={!form.exists ? "Save the document before signing." : unsaved ? "Save your changes before signing." : null}
+        onChange={applyStamp}
       />
     </DocumentWorkspace>
   )
