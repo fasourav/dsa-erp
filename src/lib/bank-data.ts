@@ -20,6 +20,134 @@ import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 const TRANSACTION_SELECT =
   "id, bank_account_id, transaction_date, created_at, direction, amount, source_kind, payment_method, project_id, notes, income_id, vendor_payment_id, operational_expense_id, vat_tax_payment_id, payroll_line_id, transfer_id"
 
+type RawBankTransactionRow = {
+  id: string | null
+  bank_account_id: string | null
+  transaction_date: string | null
+  created_at: string | null
+  direction: string | null
+  amount: number | null
+  source_kind: string | null
+  payment_method: string | null
+  project_id: string | null
+  notes: string | null
+  income_id: string | null
+  vendor_payment_id: string | null
+  operational_expense_id: string | null
+  vat_tax_payment_id: string | null
+  payroll_line_id: string | null
+  transfer_id: string | null
+}
+
+function mapTransactionRow(
+  row: RawBankTransactionRow,
+  accountsById: ReadonlyMap<string, BankAccountRow>,
+  projectsById: ReadonlyMap<string, string>,
+  balanceById: ReadonlyMap<string, number>,
+): BankTransactionRow[] {
+  if (!row.id || !row.direction || !row.source_kind) return []
+  if (!isBankDirection(row.direction) || !isBankSourceKind(row.source_kind)) {
+    return []
+  }
+  const account = row.bank_account_id
+    ? accountsById.get(row.bank_account_id)
+    : undefined
+  return [
+    {
+      id: row.id,
+      bankAccountId: row.bank_account_id ?? "",
+      accountName: account?.name ?? "",
+      transactionDate: dateInputValue(row.transaction_date ?? ""),
+      createdAt: row.created_at ?? "",
+      direction: row.direction,
+      amount: toNumber(row.amount),
+      sourceKind: row.source_kind,
+      paymentMethod: row.payment_method?.trim() ?? "",
+      projectId: row.project_id ?? "",
+      projectName: row.project_id ? projectsById.get(row.project_id) ?? "" : "",
+      notes: row.notes ?? "",
+      balance: balanceById.get(row.id) ?? 0,
+      linked: Boolean(
+        row.income_id ||
+          row.vendor_payment_id ||
+          row.operational_expense_id ||
+          row.vat_tax_payment_id ||
+          row.payroll_line_id,
+      ),
+      transferId: row.transfer_id ?? "",
+    },
+  ]
+}
+
+function computeBalances(
+  accounts: readonly BankAccountRow[],
+  balanceRows: ReadonlyArray<{
+    id: string | null
+    bank_account_id: string | null
+    transaction_date: string | null
+    created_at: string | null
+    direction: string | null
+    amount: number | null
+    source_kind: string | null
+  }>,
+) {
+  const openingByAccount = new Map(
+    accounts.map((account) => [account.id, account.openingBalance]),
+  )
+  const accountBalances: Record<string, number> = Object.fromEntries(
+    accounts.map((account) => [account.id, account.openingBalance]),
+  )
+  const balanceById = new Map<string, number>()
+
+  const groupedNarrow = new Map<
+    string,
+    Array<{
+      id: string
+      bankAccountId: string
+      transactionDate: string
+      createdAt: string
+      direction: "inflow" | "outflow"
+      amount: number
+    }>
+  >()
+
+  for (const row of balanceRows) {
+    if (!row.id || !row.direction || !row.source_kind) continue
+    if (!isBankDirection(row.direction) || !isBankSourceKind(row.source_kind)) continue
+    const item = {
+      id: row.id,
+      bankAccountId: row.bank_account_id ?? "",
+      transactionDate: dateInputValue(row.transaction_date ?? ""),
+      createdAt: row.created_at ?? "",
+      direction: row.direction,
+      amount: toNumber(row.amount),
+    }
+    const key = item.bankAccountId || item.id
+    const list = groupedNarrow.get(key) ?? []
+    list.push(item)
+    groupedNarrow.set(key, list)
+  }
+
+  for (const group of groupedNarrow.values()) {
+    const ordered = [...group].sort(compareLedgerOrder)
+    const accId = ordered[0]?.bankAccountId ?? ""
+    let cents = moneyCents(openingByAccount.get(accId) ?? 0)
+    for (const item of ordered) {
+      const signed =
+        item.direction === "inflow"
+          ? moneyCents(item.amount)
+          : -moneyCents(item.amount)
+      cents += signed
+      balanceById.set(item.id, cents / 100)
+    }
+    if (accId) {
+      accountBalances[accId] = cents / 100
+    }
+  }
+
+  return { openingByAccount, accountBalances, balanceById }
+}
+
 export async function getBankPage(
   accountId: string | null,
   options: {
@@ -134,59 +262,10 @@ export async function getBankPage(
       )
     const projectsById = new Map(projects.map((project) => [project.id, project.name]))
 
-    const openingByAccount = new Map(
-      accounts.map((account) => [account.id, account.openingBalance]),
+    const { openingByAccount, accountBalances, balanceById } = computeBalances(
+      accounts,
+      balanceRows,
     )
-    const accountBalances: Record<string, number> = Object.fromEntries(
-      accounts.map((account) => [account.id, account.openingBalance]),
-    )
-    const balanceById = new Map<string, number>()
-
-    const groupedNarrow = new Map<
-      string,
-      Array<{
-        id: string
-        bankAccountId: string
-        transactionDate: string
-        createdAt: string
-        direction: "inflow" | "outflow"
-        amount: number
-      }>
-    >()
-
-    for (const row of balanceRows) {
-      if (!row.id || !row.direction || !row.source_kind) continue
-      if (!isBankDirection(row.direction) || !isBankSourceKind(row.source_kind)) continue
-      const item = {
-        id: row.id,
-        bankAccountId: row.bank_account_id ?? "",
-        transactionDate: dateInputValue(row.transaction_date ?? ""),
-        createdAt: row.created_at ?? "",
-        direction: row.direction,
-        amount: toNumber(row.amount),
-      }
-      const key = item.bankAccountId || item.id
-      const list = groupedNarrow.get(key) ?? []
-      list.push(item)
-      groupedNarrow.set(key, list)
-    }
-
-    for (const group of groupedNarrow.values()) {
-      const ordered = [...group].sort(compareLedgerOrder)
-      const accId = ordered[0]?.bankAccountId ?? ""
-      let cents = moneyCents(openingByAccount.get(accId) ?? 0)
-      for (const item of ordered) {
-        const signed =
-          item.direction === "inflow"
-            ? moneyCents(item.amount)
-            : -moneyCents(item.amount)
-        cents += signed
-        balanceById.set(item.id, cents / 100)
-      }
-      if (accId) {
-        accountBalances[accId] = cents / 100
-      }
-    }
 
     if (accountId && !requestedId) {
       return {
@@ -221,58 +300,6 @@ export async function getBankPage(
       }
     }
 
-    const mapRow = (row: {
-      id: string | null
-      bank_account_id: string | null
-      transaction_date: string | null
-      created_at: string | null
-      direction: string | null
-      amount: number | null
-      source_kind: string | null
-      payment_method: string | null
-      project_id: string | null
-      notes: string | null
-      income_id: string | null
-      vendor_payment_id: string | null
-      operational_expense_id: string | null
-      vat_tax_payment_id: string | null
-      payroll_line_id: string | null
-      transfer_id: string | null
-    }): BankTransactionRow[] => {
-      if (!row.id || !row.direction || !row.source_kind) return []
-      if (!isBankDirection(row.direction) || !isBankSourceKind(row.source_kind)) {
-        return []
-      }
-      const account = row.bank_account_id
-        ? accountsById.get(row.bank_account_id)
-        : undefined
-      return [
-        {
-          id: row.id,
-          bankAccountId: row.bank_account_id ?? "",
-          accountName: account?.name ?? "",
-          transactionDate: dateInputValue(row.transaction_date ?? ""),
-          createdAt: row.created_at ?? "",
-          direction: row.direction,
-          amount: toNumber(row.amount),
-          sourceKind: row.source_kind,
-          paymentMethod: row.payment_method?.trim() ?? "",
-          projectId: row.project_id ?? "",
-          projectName: row.project_id ? projectsById.get(row.project_id) ?? "" : "",
-          notes: row.notes ?? "",
-          balance: balanceById.get(row.id) ?? 0,
-          linked: Boolean(
-            row.income_id ||
-              row.vendor_payment_id ||
-              row.operational_expense_id ||
-              row.vat_tax_payment_id ||
-              row.payroll_line_id,
-          ),
-          transferId: row.transfer_id ?? "",
-        },
-      ]
-    }
-
     const txSlice = await fetchPage(
       (from, to) => {
         let query = supabase
@@ -296,7 +323,9 @@ export async function getBankPage(
       LIST_PAGE_SIZE,
     )
 
-    const transactions = txSlice.rows.flatMap(mapRow)
+    const transactions = txSlice.rows.flatMap((row) =>
+      mapTransactionRow(row, accountsById, projectsById, balanceById),
+    )
 
     let reportTransactions: BankTransactionRow[] = []
     if (options.includeReportRows) {
@@ -312,10 +341,14 @@ export async function getBankPage(
         "Bank statement report is larger than expected.",
       )
       reportTransactions = withRunningBalances(
-        reportRows.flatMap(mapRow).map(({ balance: _unused, ...rest }) => {
-          void _unused
-          return rest
-        }),
+        reportRows
+          .flatMap((row) =>
+            mapTransactionRow(row, accountsById, projectsById, balanceById),
+          )
+          .map(({ balance: _unused, ...rest }) => {
+            void _unused
+            return rest
+          }),
         openingByAccount,
       )
     }
@@ -338,5 +371,118 @@ export async function getBankPage(
     }
   } catch {
     return empty
+  }
+}
+
+export async function getAllBankTransactionsForExport(
+  accountId: string | null,
+  options: { q?: string } = {},
+): Promise<{
+  transactions: BankTransactionRow[]
+  error: string | null
+}> {
+  const supabase = await createClient()
+  const requestedId = accountId && isUuid(accountId) ? accountId : null
+  if (accountId && !requestedId) {
+    return { transactions: [], error: "That bank account could not be found." }
+  }
+  const term = sanitizeSearch(options.q ?? "")
+
+  try {
+    const [accountRows, balanceRows, projectRows] = await Promise.all([
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("bank_accounts_readable")
+            .select(
+              "id, name, account_holder_name, account_number, bank_name, routing_number, address, opening_balance, currency, is_active, sort_order",
+            )
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Bank account list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("bank_transactions_readable")
+            .select(
+              "id, bank_account_id, transaction_date, created_at, direction, amount, source_kind",
+            )
+            .order("transaction_date", { ascending: true })
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Bank balance ledger is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("projects")
+            .select("id, name")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Project list is larger than expected.",
+      ),
+    ])
+
+    const accounts = accountRows.flatMap((row) => {
+      if (!row.id) return []
+      return [
+        {
+          id: row.id,
+          name: row.name?.trim() ?? "",
+          accountHolderName: row.account_holder_name?.trim() ?? "",
+          accountNumber: row.account_number?.trim() ?? "",
+          bankName: row.bank_name?.trim() ?? "",
+          routingNumber: row.routing_number?.trim() ?? "",
+          address: row.address?.trim() ?? "",
+          openingBalance: toNumber(row.opening_balance),
+          currency: row.currency?.trim() ?? "",
+          isActive: row.is_active ?? true,
+          sortOrder: row.sort_order ?? 0,
+        },
+      ]
+    })
+    const accountsById = new Map(accounts.map((account) => [account.id, account]))
+    if (requestedId && !accountsById.has(requestedId)) {
+      return { transactions: [], error: "That bank account could not be found." }
+    }
+    const projectsById = new Map(
+      projectRows.map((row) => [row.id, row.name?.trim() ?? ""]),
+    )
+    const { balanceById } = computeBalances(accounts, balanceRows)
+
+    const txRows = await fetchAllPages(
+      (from, to) => {
+        let query = supabase
+          .from("bank_transactions_readable")
+          .select(TRANSACTION_SELECT)
+
+        if (requestedId) {
+          query = query.eq("bank_account_id", requestedId)
+        }
+        if (term) {
+          query = query.ilike("notes", `%${term}%`)
+        }
+
+        return query
+          .order("transaction_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+      },
+      "Bank transaction export is larger than expected.",
+    )
+
+    return {
+      transactions: txRows.flatMap((row) =>
+        mapTransactionRow(row, accountsById, projectsById, balanceById),
+      ),
+      error: null,
+    }
+  } catch {
+    return { transactions: [], error: "Could not export bank transactions." }
   }
 }

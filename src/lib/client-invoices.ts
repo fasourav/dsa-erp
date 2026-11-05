@@ -23,6 +23,85 @@ export type InvoiceProjectFilter = {
   name: string
 }
 
+type InvoiceRawRow = {
+  id: string
+  project_id: string
+  client_id: string
+  issued_on: string
+  due_on: string | null
+  amount: number
+  status: string
+  description: string | null
+}
+
+async function hydrateInvoices(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: readonly InvoiceRawRow[],
+  projectsById: ReadonlyMap<string, InvoiceProjectOption>,
+  clientsById: ReadonlyMap<string, string>,
+  bankAccounts: readonly BankAccountChoice[],
+): Promise<ClientInvoiceRow[]> {
+  const invoiceIds = rows.map((row) => row.id)
+  const paymentRows =
+    invoiceIds.length === 0
+      ? []
+      : await fetchByIds(invoiceIds, (ids) =>
+          supabase
+            .from("client_payments")
+            .select(
+              "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks, bank_account_id",
+            )
+            .in("client_invoice_id", ids)
+            .order("id", { ascending: true }),
+        )
+
+  const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
+  const paymentsByInvoice = new Map<string, ClientPaymentRow[]>()
+
+  for (const row of paymentRows) {
+    const payment: ClientPaymentRow = {
+      id: row.id,
+      paidOn: dateInputValue(row.paid_on),
+      amount: toNumber(row.amount),
+      method: row.method?.trim() ?? "",
+      reference: row.reference?.trim() ?? "",
+      notes: row.notes ?? "",
+      remarks: row.remarks ?? "",
+      bankAccountId: row.bank_account_id,
+      bankAccountName: accountsById.get(row.bank_account_id) ?? "",
+    }
+    const current = paymentsByInvoice.get(row.client_invoice_id) ?? []
+    current.push(payment)
+    paymentsByInvoice.set(row.client_invoice_id, current)
+  }
+
+  return rows.map((row) => {
+    const project = projectsById.get(row.project_id)
+    const payments = paymentsByInvoice.get(row.id) ?? []
+    const paid = sumAmounts(payments.map((payment) => payment.amount))
+    const balance = Math.max(
+      0,
+      (moneyCents(toNumber(row.amount)) - moneyCents(paid)) / 100,
+    )
+
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      projectName: project?.name ?? "",
+      clientId: row.client_id,
+      clientName: clientsById.get(row.client_id) ?? project?.clientName ?? "",
+      issuedOn: dateInputValue(row.issued_on),
+      dueOn: row.due_on ? dateInputValue(row.due_on) : "",
+      amount: toNumber(row.amount),
+      status: clientInvoiceStatusFromPayments(toNumber(row.amount), paid),
+      description: row.description ?? "",
+      paid,
+      balance,
+      payments,
+    } satisfies ClientInvoiceRow
+  })
+}
+
 export async function getClientInvoices(
   projectId: string | null,
   options: { q?: string; page?: number } = {},
@@ -164,66 +243,13 @@ export async function getClientInvoices(
       LIST_PAGE_SIZE,
     )
 
-    const pageInvoiceIds = invoiceSlice.rows.map((row) => row.id)
-    const paymentRows =
-      pageInvoiceIds.length === 0
-        ? []
-        : await fetchByIds(pageInvoiceIds, (ids) =>
-            supabase
-              .from("client_payments")
-              .select(
-                "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks, bank_account_id",
-              )
-              .in("client_invoice_id", ids)
-              .order("id", { ascending: true }),
-          )
-
-    const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
-    const paymentsByInvoice = new Map<string, ClientPaymentRow[]>()
-
-    for (const row of paymentRows) {
-      const payment: ClientPaymentRow = {
-        id: row.id,
-        paidOn: dateInputValue(row.paid_on),
-        amount: toNumber(row.amount),
-        method: row.method?.trim() ?? "",
-        reference: row.reference?.trim() ?? "",
-        notes: row.notes ?? "",
-        remarks: row.remarks ?? "",
-        bankAccountId: row.bank_account_id,
-        bankAccountName: accountsById.get(row.bank_account_id) ?? "",
-      }
-      const current = paymentsByInvoice.get(row.client_invoice_id) ?? []
-      current.push(payment)
-      paymentsByInvoice.set(row.client_invoice_id, current)
-    }
-
-    const invoices = invoiceSlice.rows.map((row) => {
-      const project = projectsById.get(row.project_id)
-      const payments = paymentsByInvoice.get(row.id) ?? []
-      const paid = sumAmounts(payments.map((payment) => payment.amount))
-      const balance = Math.max(
-        0,
-        (moneyCents(toNumber(row.amount)) - moneyCents(paid)) / 100,
-      )
-
-      return {
-        id: row.id,
-        projectId: row.project_id,
-        projectName: project?.name ?? "",
-        clientId: row.client_id,
-        clientName:
-          clientsById.get(row.client_id) ?? project?.clientName ?? "",
-        issuedOn: dateInputValue(row.issued_on),
-        dueOn: row.due_on ? dateInputValue(row.due_on) : "",
-        amount: toNumber(row.amount),
-        status: clientInvoiceStatusFromPayments(toNumber(row.amount), paid),
-        description: row.description ?? "",
-        paid,
-        balance,
-        payments,
-      } satisfies ClientInvoiceRow
-    })
+    const invoices = await hydrateInvoices(
+      supabase,
+      invoiceSlice.rows,
+      projectsById,
+      clientsById,
+      bankAccounts,
+    )
 
     return {
       invoices,
@@ -245,5 +271,101 @@ export async function getClientInvoices(
     }
   } catch {
     return empty
+  }
+}
+
+export async function getAllClientInvoicesForExport(
+  projectId: string | null,
+  options: { q?: string } = {},
+): Promise<{
+  invoices: ClientInvoiceRow[]
+  error: string | null
+}> {
+  const supabase = await createClient()
+  const requestedId = projectId && isUuid(projectId) ? projectId : null
+  if (projectId && !requestedId) {
+    return { invoices: [], error: "That project could not be found." }
+  }
+  const term = sanitizeSearch(options.q ?? "")
+
+  try {
+    const [projectRows, clientRows, bankAccounts] = await Promise.all([
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("projects")
+            .select("id, name, client_id")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Project list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("client_summaries")
+            .select("client_id, display_name")
+            .order("client_id", { ascending: true })
+            .range(from, to),
+        "Client list is larger than expected.",
+      ),
+      listBankAccounts(),
+    ])
+
+    const clientsById = new Map(
+      clientRows.flatMap((row) =>
+        row.client_id ? [[row.client_id, row.display_name?.trim() ?? ""] as const] : [],
+      ),
+    )
+    const projectsById = new Map(
+      projectRows.map((row) => [
+        row.id,
+        {
+          id: row.id,
+          name: row.name?.trim() ?? "",
+          clientId: row.client_id,
+          clientName: clientsById.get(row.client_id) ?? "",
+        } satisfies InvoiceProjectOption,
+      ]),
+    )
+
+    if (requestedId && !projectsById.has(requestedId)) {
+      return { invoices: [], error: "That project could not be found." }
+    }
+
+    const invoiceRows = await fetchAllPages(
+      (from, to) => {
+        let query = supabase
+          .from("client_invoices")
+          .select(
+            "id, project_id, client_id, issued_on, due_on, amount, status, description",
+          )
+          .neq("status", "void")
+
+        if (requestedId) {
+          query = query.eq("project_id", requestedId)
+        }
+        if (term) {
+          query = query.ilike("description", `%${term}%`)
+        }
+
+        return query
+          .order("issued_on", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+      },
+      "Client invoice export is larger than expected.",
+    )
+
+    const invoices = await hydrateInvoices(
+      supabase,
+      invoiceRows,
+      projectsById,
+      clientsById,
+      bankAccounts,
+    )
+
+    return { invoices, error: null }
+  } catch {
+    return { invoices: [], error: "Could not export client invoices." }
   }
 }

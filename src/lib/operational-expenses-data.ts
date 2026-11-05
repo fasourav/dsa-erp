@@ -19,6 +19,59 @@ import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 
 type Embedded<T> = T | T[] | null
 
+const EXPENSE_SELECT =
+  "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, created_at, created_by, departments(name), vendors(person_name, company_name)"
+
+type RawExpenseRow = {
+  id: string
+  expense_date: string
+  category: string
+  amount: number
+  payment_method: string | null
+  department_id: string | null
+  vendor_id: string | null
+  notes: string | null
+  bank_account_id: string
+  created_at: string
+  created_by: string | null
+  departments: Embedded<{ name: string | null }>
+  vendors: Embedded<{ person_name: string | null; company_name: string | null }>
+}
+
+async function mapExpenseRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: readonly RawExpenseRow[],
+): Promise<OperationalExpenseRow[]> {
+  const creators = await creatorNames(
+    supabase,
+    "operational_expenses",
+    rows.map((row) => ({ id: row.id, createdBy: row.created_by })),
+  )
+
+  return rows.map((row) => {
+    const department = one(row.departments)
+    const vendor = one(row.vendors)
+
+    return {
+      id: row.id,
+      expenseDate: dateInputValue(row.expense_date),
+      category: row.category?.trim() ?? "",
+      amount: toNumber(row.amount),
+      paymentMethod: row.payment_method?.trim() ?? "",
+      departmentId: row.department_id ?? "",
+      departmentName: department?.name?.trim() ?? "",
+      vendorId: row.vendor_id ?? "",
+      vendorName: vendor ? partyName(vendor.person_name, vendor.company_name) : "",
+      notes: row.notes ?? "",
+      bankAccountId: row.bank_account_id,
+      createdByName: creators.get(row.id) ?? "Unknown",
+      createdAt: row.created_at,
+      fromPurchaseOrder: false,
+      purchaseOrderId: "",
+    }
+  })
+}
+
 export async function getOperationalExpenses(
   options: { q?: string; page?: number } = {},
 ): Promise<{
@@ -54,10 +107,7 @@ export async function getOperationalExpenses(
           (from, to) => {
             let query = supabase
               .from("operational_expenses")
-              .select(
-                "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, created_at, created_by, departments(name), vendors(person_name, company_name)",
-                { count: "exact" },
-              )
+              .select(EXPENSE_SELECT, { count: "exact" })
 
             if (term) {
               const like = `%${term}%`
@@ -119,47 +169,13 @@ export async function getOperationalExpenses(
       supabase,
       officeCategoryNames,
     )
-    const matchingPoPayments = term
-      ? purchaseOrderPayments.filter((row) => {
-          const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.notes}`.toLowerCase()
-          return haystack.includes(term.toLowerCase())
-        })
-      : purchaseOrderPayments
+    const matchingPoPayments = filterPoPayments(purchaseOrderPayments, term)
 
     const departments = departmentRows.map((row) => ({
       id: row.id,
       name: row.name?.trim() ?? "",
     }))
-    const creators = await creatorNames(
-      supabase,
-      "operational_expenses",
-      expenseSlice.rows.map((row) => ({ id: row.id, createdBy: row.created_by })),
-    )
-
-    const expenses = expenseSlice.rows.map((row) => {
-      const department = one(row.departments)
-      const vendor = one(row.vendors)
-
-      return {
-        id: row.id,
-        expenseDate: dateInputValue(row.expense_date),
-        category: row.category?.trim() ?? "",
-        amount: toNumber(row.amount),
-        paymentMethod: row.payment_method?.trim() ?? "",
-        departmentId: row.department_id ?? "",
-        departmentName: department?.name?.trim() ?? "",
-        vendorId: row.vendor_id ?? "",
-        vendorName: vendor
-          ? partyName(vendor.person_name, vendor.company_name)
-          : "",
-        notes: row.notes ?? "",
-        bankAccountId: row.bank_account_id,
-        createdByName: creators.get(row.id) ?? "Unknown",
-        createdAt: row.created_at,
-        fromPurchaseOrder: false,
-        purchaseOrderId: "",
-      }
-    })
+    const expenses = await mapExpenseRows(supabase, expenseSlice.rows)
 
     const pageExpenses =
       expenseSlice.page === 1
@@ -183,6 +199,82 @@ export async function getOperationalExpenses(
   } catch {
     return empty
   }
+}
+
+export async function getAllOperationalExpensesForExport(
+  options: { q?: string } = {},
+): Promise<{
+  expenses: OperationalExpenseRow[]
+  error: string | null
+}> {
+  const supabase = await createClient()
+  const term = sanitizeSearch(options.q ?? "")
+
+  try {
+    const [expenseRows, categoryRows] = await Promise.all([
+      fetchAllPages(
+        (from, to) => {
+          let query = supabase
+            .from("operational_expenses")
+            .select(EXPENSE_SELECT)
+
+          if (term) {
+            const like = `%${term}%`
+            query = query.or(
+              `category.ilike.${like},notes.ilike.${like},payment_method.ilike.${like}`,
+            )
+          }
+
+          return query
+            .order("expense_date", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to)
+        },
+        "Operational expense export is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("office_expense_categories")
+            .select("id, name, sort_order, report_group")
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true })
+            .range(from, to),
+        "Office expense category list is larger than expected.",
+      ),
+    ])
+
+    const officeCategoryNames = new Map(
+      categoryRows.flatMap((row) => {
+        const name = row.name?.trim() ?? ""
+        return name ? [[row.id, name] as const] : []
+      }),
+    )
+    const [expenses, purchaseOrderPayments] = await Promise.all([
+      mapExpenseRows(supabase, expenseRows),
+      operationalPurchaseOrderPayments(supabase, officeCategoryNames),
+    ])
+    const matchingPoPayments = filterPoPayments(purchaseOrderPayments, term)
+
+    return {
+      expenses: [...expenses, ...matchingPoPayments],
+      error: null,
+    }
+  } catch {
+    return { expenses: [], error: "Could not export operational expenses." }
+  }
+}
+
+function filterPoPayments(
+  rows: readonly OperationalExpenseRow[],
+  term: string,
+): OperationalExpenseRow[] {
+  if (!term) return [...rows]
+  const lower = term.toLowerCase()
+  return rows.filter((row) => {
+    const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.notes}`.toLowerCase()
+    return haystack.includes(lower)
+  })
 }
 
 async function operationalPurchaseOrderPayments(

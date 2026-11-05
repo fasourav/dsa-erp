@@ -7,6 +7,7 @@ import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
+import { exportOperationalExpensesGrid } from "@/app/(app)/accounts/export-actions"
 import { deleteOperationalExpense } from "@/app/(app)/accounts/expenses/actions"
 import { ExpenseFormDialog } from "@/app/(app)/accounts/expenses/expense-form-dialog"
 import { DataList } from "@/components/data-list"
@@ -23,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { formatIsoDate } from "@/lib/format"
 import { formatRecordedAt } from "@/lib/recorded-at"
 import {
   rangeLabel,
@@ -136,28 +137,13 @@ export function ExpensesTable({
         actions={
           <>
             <ListExport
-              grid={{
-                filename: "operational-expenses",
-                title: "Operational Expenses",
-                columns: [
-                  { header: "Date", kind: "text" },
-                  { header: "Category", kind: "text" },
-                  { header: "Amount", kind: "money" },
-                  { header: "Payment Method", kind: "text" },
-                  { header: "Department", kind: "text" },
-                  { header: "Vendor", kind: "text" },
-                ],
-                rows: sorted.map((row) => [
-                  formatDayMonYear(row.expenseDate),
-                  row.fromPurchaseOrder
-                    ? `${row.category} · From Operational PO`
-                    : row.category,
-                  row.amount,
-                  row.paymentMethod,
-                  row.departmentName || "—",
-                  row.vendorName || "—",
-                ]),
-              }}
+              loadGrid={() =>
+                exportOperationalExpensesGrid({
+                  q: query,
+                  sortKey: sort.key,
+                  sortDir: sort.direction,
+                })
+              }
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>

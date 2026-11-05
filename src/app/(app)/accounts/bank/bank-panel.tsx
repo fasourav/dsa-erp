@@ -8,6 +8,7 @@ import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
+import { exportBankTransactionsGrid } from "@/app/(app)/accounts/export-actions"
 import { deleteBankTransaction } from "@/app/(app)/accounts/bank/actions"
 import { ManualEntriesDialog } from "@/app/(app)/accounts/bank/manual-entries-dialog"
 import { BankReconcileView } from "@/app/(app)/accounts/bank/bank-reconcile-view"
@@ -32,7 +33,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  bankFlowLabel,
   bankSourceLabel,
   bankTransactionColumns,
   sortBankTransactions,
@@ -42,7 +42,7 @@ import {
   type BankTransactionRow,
 } from "@/lib/bank"
 import { bankTransactionColumnStore } from "@/lib/bank-column-store"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { formatIsoDate } from "@/lib/format"
 import {
   rangeLabel,
   toggleSort,
@@ -231,26 +231,14 @@ export function BankPanel({
         className="mb-0 md:mb-2"
         actions={
           <ListExport
-            grid={{
-              filename: "bank-transactions",
-              title: "Bank Transactions",
-              columns: [
-                { header: "Date", kind: "text" },
-                { header: "Account", kind: "text" },
-                { header: "Direction", kind: "text" },
-                { header: "Source", kind: "text" },
-                { header: "Amount", kind: "money" },
-                { header: "Balance", kind: "money" },
-              ],
-              rows: sorted.map((transaction) => [
-                formatDayMonYear(transaction.transactionDate),
-                transaction.accountName,
-                bankFlowLabel(transaction.direction),
-                bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId }),
-                showFinancials ? transaction.amount : "Hidden",
-                showFinancials ? transaction.balance : "Hidden",
-              ]),
-            }}
+            loadGrid={() =>
+              exportBankTransactionsGrid({
+                accountId: accountFilter?.id ?? null,
+                q: query,
+                sortKey: sort.key,
+                sortDir: sort.direction,
+              })
+            }
           />
         }
       />

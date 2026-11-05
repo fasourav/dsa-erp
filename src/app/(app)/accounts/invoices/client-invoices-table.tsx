@@ -8,6 +8,7 @@ import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
+import { exportClientInvoicesGrid } from "@/app/(app)/accounts/export-actions"
 import { deleteClientInvoice } from "@/app/(app)/accounts/invoices/actions"
 import { ClientInvoiceFormDialog } from "@/app/(app)/accounts/invoices/client-invoice-form-dialog"
 import { ClientPaymentsDialog } from "@/app/(app)/accounts/invoices/client-payments-dialog"
@@ -34,8 +35,7 @@ import {
 } from "@/lib/client-invoice-summary"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import type { InvoiceProjectFilter } from "@/lib/client-invoices"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
-import { paymentStatusLabel } from "@/lib/payment-status"
+import { formatIsoDate } from "@/lib/format"
 import {
   rangeLabel,
   toggleSort,
@@ -172,26 +172,15 @@ export function ClientInvoicesTable({
         actions={
           <>
             <ListExport
-              grid={{
-                filename: "client-invoices",
-                title: "Client Invoices",
-                columns: [
-                  { header: "Issue Date", kind: "text" },
-                  { header: "Project", kind: "text" },
-                  { header: "Client", kind: "text" },
-                  { header: "Amount", kind: "money" },
-                  { header: "Paid", kind: "money" },
-                  { header: "Status", kind: "text" },
-                ],
-                rows: filtered.map((invoice) => [
-                  formatDayMonYear(invoice.issuedOn),
-                  invoice.projectName,
-                  invoice.clientName,
-                  invoice.amount,
-                  invoice.paid,
-                  paymentStatusLabel(invoice.status),
-                ]),
-              }}
+              loadGrid={() =>
+                exportClientInvoicesGrid({
+                  projectId: projectFilter?.id ?? null,
+                  q: query,
+                  status: listFilter,
+                  sortKey: sort.key,
+                  sortDir: sort.direction,
+                })
+              }
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>

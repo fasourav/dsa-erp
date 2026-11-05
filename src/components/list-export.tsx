@@ -12,30 +12,68 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { ListExportGrid } from "@/lib/reports/workbook"
 
-export function ListExport({ grid }: { grid: ListExportGrid }) {
+export type ListExportLoaderResult = {
+  grid?: ListExportGrid | null
+  error?: string | null
+}
+
+type ListExportProps =
+  | {
+      grid: ListExportGrid
+      loadGrid?: never
+    }
+  | {
+      loadGrid: () => Promise<ListExportLoaderResult>
+      grid?: never
+    }
+
+export function ListExport(props: ListExportProps) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  function downloadCsv() {
+  async function resolveGrid(): Promise<ListExportGrid | null> {
+    if (props.grid) {
+      return props.grid
+    }
+    const result = await props.loadGrid()
+    if (result.error || !result.grid) {
+      setError(result.error || "Could not export this list.")
+      return null
+    }
+    return result.grid
+  }
+
+  async function downloadCsv() {
     setError(null)
-    const lines = [
-      grid.columns.map((column) => csvCell(column.header)).join(","),
-      ...grid.rows.map((row) =>
-        row
-          .map((cell, index) => csvCell(cell, grid.columns[index]?.kind === "text"))
-          .join(","),
-      ),
-    ]
-    const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], {
-      type: "text/csv;charset=utf-8",
-    })
-    saveBlob(blob, `${grid.filename}.csv`)
+    setPending(true)
+    try {
+      const grid = await resolveGrid()
+      if (!grid) return
+      const lines = [
+        grid.columns.map((column) => csvCell(column.header)).join(","),
+        ...grid.rows.map((row) =>
+          row
+            .map((cell, index) => csvCell(cell, grid.columns[index]?.kind === "text"))
+            .join(","),
+        ),
+      ]
+      const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], {
+        type: "text/csv;charset=utf-8",
+      })
+      saveBlob(blob, `${grid.filename}.csv`)
+    } catch {
+      setError("Could not export this list.")
+    } finally {
+      setPending(false)
+    }
   }
 
   async function downloadExcel() {
     setError(null)
     setPending(true)
     try {
+      const grid = await resolveGrid()
+      if (!grid) return
       const response = await fetch("/reports/list-export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,7 +104,7 @@ export function ListExport({ grid }: { grid: ListExportGrid }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => void downloadExcel()}>Excel</DropdownMenuItem>
-          <DropdownMenuItem onClick={downloadCsv}>CSV</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => void downloadCsv()}>CSV</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       {error ? (
