@@ -1,7 +1,7 @@
 "use client"
 
 import { ListExport } from "@/components/list-export"
-import { filterRows, ListSearch, rowText } from "@/components/list-search"
+import { ListSearch } from "@/components/list-search"
 import { useAccess, useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
@@ -35,7 +35,6 @@ import {
   bankFlowLabel,
   bankSourceLabel,
   bankTransactionColumns,
-  compareLedgerOrder,
   sortBankTransactions,
   type AccountFilter,
   type BankAccountRow,
@@ -45,12 +44,13 @@ import {
 import { bankTransactionColumnStore } from "@/lib/bank-column-store"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
-  paginateRows,
   rangeLabel,
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
+import { LIST_PAGE_SIZE } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useUrlSearch } from "@/lib/use-url-search"
 import type { ReconciliationBundle } from "@/lib/bank-reconcile"
 import { cn } from "@/lib/utils"
 
@@ -61,9 +61,14 @@ function signedFlow(direction: BankTransactionRow["direction"], amount: number) 
 
 export function BankPanel({
   accounts,
+  accountBalances,
   transactions,
+  reportTransactions = [],
   paymentMethods,
   accountFilter,
+  total,
+  page,
+  pageCount,
   error,
   fiscalYearStartMonth,
   view,
@@ -73,9 +78,14 @@ export function BankPanel({
   periodTo,
 }: {
   accounts: BankAccountRow[]
+  accountBalances: Record<string, number>
   transactions: BankTransactionRow[]
+  reportTransactions?: BankTransactionRow[]
   paymentMethods: string[]
   accountFilter: AccountFilter | null
+  total: number
+  page: number
+  pageCount: number
   error: string | null
   fiscalYearStartMonth: number
   view: "ledger" | "statement" | "reconcile"
@@ -94,8 +104,7 @@ export function BankPanel({
     key: "transactionDate",
     direction: "desc",
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
+  const { query, setQuery, setPage } = useUrlSearch(initialQuery)
   const [movementOpen, setMovementOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [movementKind, setMovementKind] = useState<"deposit" | "withdrawal">("deposit")
@@ -111,16 +120,21 @@ export function BankPanel({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const visibleTransactions = accountFilter
-    ? transactions.filter((row) => row.bankAccountId === accountFilter.id)
-    : transactions
   const sorted = useMemo(
-    () => sortBankTransactions(visibleTransactions, sort),
-    [visibleTransactions, sort],
+    () => sortBankTransactions(transactions, sort),
+    [transactions, sort],
   )
-  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
-  const manualEntries = visibleTransactions.filter(
+  const effectiveTotal = error ? 0 : total
+  const rangeStart =
+    effectiveTotal === 0 || sorted.length === 0
+      ? 0
+      : (page - 1) * LIST_PAGE_SIZE + 1
+  const rangeEnd =
+    effectiveTotal === 0 || sorted.length === 0
+      ? 0
+      : rangeStart + sorted.length - 1
+
+  const manualEntries = sorted.filter(
     (row) => row.sourceKind === "deposit" || row.sourceKind === "withdrawal",
   )
 
@@ -159,22 +173,18 @@ export function BankPanel({
   const shownAccounts = accountFilter
     ? accounts.filter((account) => account.id === accountFilter.id)
     : accounts
-  const balances = shownAccounts.map((account) => {
-    const rows = transactions.filter((row) => row.bankAccountId === account.id)
-    if (rows.length === 0) {
-      return { id: account.id, name: account.name, balance: account.openingBalance }
-    }
-    const latest = [...rows].sort(compareLedgerOrder).at(-1)
-    return {
-      id: account.id,
-      name: account.name,
-      balance: latest?.balance ?? account.openingBalance,
-    }
-  })
+  const balances = shownAccounts.map((account) => ({
+    id: account.id,
+    name: account.name,
+    balance: accountBalances[account.id] ?? account.openingBalance,
+  }))
 
   const reconcileAccount = accountFilter
     ? accounts.find((row) => row.id === accountFilter.id) ?? null
     : null
+
+  const fullReportRows =
+    reportTransactions.length > 0 ? reportTransactions : transactions
 
   if (view === "statement") {
     return (
@@ -205,7 +215,7 @@ export function BankPanel({
         />
         <BankStatementView
           accounts={accounts}
-          transactions={transactions}
+          transactions={fullReportRows}
           fiscalYearStartMonth={fiscalYearStartMonth}
           accountId={accountFilter?.id ?? null}
         />
@@ -232,7 +242,7 @@ export function BankPanel({
                 { header: "Amount", kind: "money" },
                 { header: "Balance", kind: "money" },
               ],
-              rows: filtered.map((transaction) => [
+              rows: sorted.map((transaction) => [
                 formatDayMonYear(transaction.transactionDate),
                 transaction.accountName,
                 bankFlowLabel(transaction.direction),
@@ -295,59 +305,71 @@ export function BankPanel({
       ) : null}
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search transactions"
       />
       <DataList
-          columns={bankTransactionColumns}
-          rows={error ? [] : pageResult.rows}
-          rowKey={(transaction) => transaction.id}
-          sort={sort}
-          onSort={(key) => {
-            setSort((current) => toggleSort(current, key))
-            setPage(1)
-          }}
-          visibility={visibility}
-          error={error}
-          emptyMessage={
-            accountFilter
-              ? "No Transactions For This Account."
-              : "No Bank Transactions Yet."
-          }
-          rangeText={rangeLabel(
-            pageResult.rangeStart,
-            pageResult.rangeEnd,
-            error ? 0 : pageResult.total,
-            "transaction",
-            "transactions",
-          )}
-          currentPage={pageResult.currentPage}
-          pageCount={pageResult.pageCount}
-          onPageChange={setPage}
-          pagingLabel="Bank transactions pagination"
-          mobileItem={(transaction) => ({
-            title: bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId }),
-            value: <StatusBadge status={transaction.direction} />,
-            subtitle: [
-              transaction.accountName,
-              transaction.transactionDate ? formatIsoDate(transaction.transactionDate) : null,
-            ]
-              .filter(Boolean)
-              .join(" · "),
-            meta: showFinancials ? (
-              <Money
-                value={signedFlow(transaction.direction, transaction.amount)}
-                className={transaction.direction === "outflow" ? "text-destructive" : "text-success"}
-              />
-            ) : (
-              "Hidden"
-            ),
-          })}
-          toolbar={
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+        columns={bankTransactionColumns}
+        rows={error ? [] : sorted}
+        rowKey={(transaction) => transaction.id}
+        sort={sort}
+        onSort={(key) => {
+          setSort((current) => toggleSort(current, key))
+        }}
+        visibility={visibility}
+        error={error}
+        emptyMessage={
+          accountFilter
+            ? "No Transactions For This Account."
+            : "No Bank Transactions Yet."
+        }
+        rangeText={rangeLabel(
+          rangeStart,
+          rangeEnd,
+          effectiveTotal,
+          "transaction",
+          "transactions",
+        )}
+        currentPage={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        pagingLabel="Bank transactions pagination"
+        mobileItem={(transaction) => ({
+          title: bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId }),
+          value: <StatusBadge status={transaction.direction} />,
+          subtitle: [
+            transaction.accountName,
+            transaction.transactionDate ? formatIsoDate(transaction.transactionDate) : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          meta: showFinancials ? (
+            <Money
+              value={signedFlow(transaction.direction, transaction.amount)}
+              className={transaction.direction === "outflow" ? "text-destructive" : "text-success"}
+            />
+          ) : (
+            "Hidden"
+          ),
+        })}
+        toolbar={
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={
+                <Link
+                  href={
+                    accountFilter
+                      ? `/accounts/bank?view=statement&account=${accountFilter.id}`
+                      : "/accounts/bank?view=statement"
+                  }
+                />
+              }
+            >
+              Statement
+            </Button>
+            {showFinancials ? (
               <Button
                 variant="outline"
                 nativeButton={false}
@@ -355,105 +377,89 @@ export function BankPanel({
                   <Link
                     href={
                       accountFilter
-                        ? `/accounts/bank?view=statement&account=${accountFilter.id}`
-                        : "/accounts/bank?view=statement"
-                    }
-                  />
-                }
-              >
-                Statement
-              </Button>
-              {showFinancials ? (
-                <Button
-                  variant="outline"
-                  nativeButton={false}
-                  render={
-                    <Link
-                      href={
-                        accountFilter
-                          ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
-                          : "/accounts/bank?view=reconcile"
-                      }
-                    />
+                        ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
+                        : "/accounts/bank?view=reconcile"
                   }
-                >
-                  Reconcile
-                </Button>
-              ) : null}
-              {canAdd ? (
-                <Button type="button" variant="outline" onClick={() => setManualOpen(true)}>
-                  Deposits & Withdrawals
-                </Button>
-              ) : null}
-              {canAdd ? (
-                <span
-                  className="inline-flex"
-                  title={accounts.length < 2 ? "Add a second bank account to transfer." : undefined}
-                >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={accounts.length < 2}
-                    aria-describedby={accounts.length < 2 ? "bank-transfer-hint" : undefined}
-                    onClick={() => setTransferOpen(true)}
-                  >
-                    Transfer
-                  </Button>
-                  {accounts.length < 2 ? (
-                    <span id="bank-transfer-hint" className="sr-only">
-                      Add a second bank account to transfer.
-                    </span>
-                  ) : null}
-                </span>
-              ) : null}
-              {canAdd ? (
+                />
+              }
+              >
+                Reconcile
+              </Button>
+            ) : null}
+            {canAdd ? (
+              <Button type="button" variant="outline" onClick={() => setManualOpen(true)}>
+                Deposits & Withdrawals
+              </Button>
+            ) : null}
+            {canAdd ? (
+              <span
+                className="inline-flex"
+                title={accounts.length < 2 ? "Add a second bank account to transfer." : undefined}
+              >
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={accounts.length === 0}
-                  onClick={() => openMovement("withdrawal", null)}
+                  disabled={accounts.length < 2}
+                  aria-describedby={accounts.length < 2 ? "bank-transfer-hint" : undefined}
+                  onClick={() => setTransferOpen(true)}
                 >
-                  Withdrawal
+                  Transfer
                 </Button>
-              ) : null}
-              {canAdd ? (
+                {accounts.length < 2 ? (
+                  <span id="bank-transfer-hint" className="sr-only">
+                    Add a second bank account to transfer.
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+            {canAdd ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={accounts.length === 0}
+                onClick={() => openMovement("withdrawal", null)}
+              >
+                Withdrawal
+              </Button>
+            ) : null}
+            {canAdd ? (
+              <Button
+                type="button"
+                disabled={accounts.length === 0}
+                onClick={() => openMovement("deposit", null)}
+              >
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Deposit
+              </Button>
+            ) : null}
+          </div>
+        }
+        renderCell={(transaction, columnId) => (
+          <TransactionCell transaction={transaction} columnId={columnId} />
+        )}
+        renderActions={(transaction) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
                 <Button
                   type="button"
-                  disabled={accounts.length === 0}
-                  onClick={() => openMovement("deposit", null)}
-                >
-                  <Plus aria-hidden="true" data-icon="inline-start" />
-                  Deposit
-                </Button>
-              ) : null}
-            </div>
-          }
-          renderCell={(transaction, columnId) => (
-            <TransactionCell transaction={transaction} columnId={columnId} />
-          )}
-          renderActions={(transaction) => (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Actions for transaction on ${transaction.transactionDate || "an unknown date"}`}
-                  />
-                }
-              >
-                <MoreHorizontal aria-hidden="true" className="size-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {transaction.linked ? (
-                  <DropdownMenuItem disabled>
-                    {transaction.sourceKind === "payroll"
-                      ? "From Monthly Salary"
-                      : "From A Payment Or Expense"}
-                  </DropdownMenuItem>
-                ) : transaction.transferId ? (
-                  canDelete ? (
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Actions for transaction on ${transaction.transactionDate || "an unknown date"}`}
+                />
+              }
+            >
+              <MoreHorizontal aria-hidden="true" className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {transaction.linked ? (
+                <DropdownMenuItem disabled>
+                  {transaction.sourceKind === "payroll"
+                    ? "From Monthly Salary"
+                    : "From A Payment Or Expense"}
+                </DropdownMenuItem>
+              ) : transaction.transferId ? (
+                canDelete ? (
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={() => {
@@ -465,10 +471,11 @@ export function BankPanel({
                     <Trash2 aria-hidden="true" />
                     Delete Transfer
                   </DropdownMenuItem>
-                  ) : null
-                ) : (
-                  <>
-                    {canEdit ? (<DropdownMenuItem
+                ) : null
+              ) : (
+                <>
+                  {canEdit ? (
+                    <DropdownMenuItem
                       onClick={() =>
                         openMovement(
                           transaction.direction === "outflow" ? "withdrawal" : "deposit",
@@ -478,9 +485,11 @@ export function BankPanel({
                     >
                       <Pencil aria-hidden="true" />
                       Edit
-                    </DropdownMenuItem>) : null}
-                    <DropdownMenuSeparator />
-                    {canDelete ? (<DropdownMenuItem
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuSeparator />
+                  {canDelete ? (
+                    <DropdownMenuItem
                       variant="destructive"
                       onClick={() => {
                         setDeleteError(null)
@@ -490,13 +499,14 @@ export function BankPanel({
                     >
                       <Trash2 aria-hidden="true" />
                       Delete
-                    </DropdownMenuItem>) : null}
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        />
+                    </DropdownMenuItem>
+                  ) : null}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      />
       <ManualEntriesDialog
         open={manualOpen}
         onOpenChange={setManualOpen}
@@ -557,7 +567,7 @@ export function BankPanel({
         <BankReconcileView
           accounts={accounts}
           account={reconcileAccount}
-          transactions={transactions}
+          transactions={fullReportRows}
           reconciliation={reconciliation}
           periodFrom={periodFrom}
           periodTo={periodTo}
