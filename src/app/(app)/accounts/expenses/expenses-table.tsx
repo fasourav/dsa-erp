@@ -1,6 +1,6 @@
 "use client"
 
-import { filterRows, ListSearch, rowText } from "@/components/list-search"
+import { ListSearch } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
@@ -26,7 +26,6 @@ import type { BankAccountChoice } from "@/lib/bank-account"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { formatRecordedAt } from "@/lib/recorded-at"
 import {
-  paginateRows,
   rangeLabel,
   toggleSort,
   type SortState,
@@ -39,7 +38,9 @@ import {
   type NamedOption,
   type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
+import { LIST_PAGE_SIZE } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useUrlSearch } from "@/lib/use-url-search"
 import type { OfficeCategoryGroup } from "@/lib/report-cost-group"
 import { cn } from "@/lib/utils"
 
@@ -49,14 +50,22 @@ export function ExpensesTable({
   departments,
   paymentMethods,
   bankAccounts,
+  total,
+  page,
+  pageCount,
   error,
+  initialQuery = "",
 }: {
   expenses: OperationalExpenseRow[]
   categories: OfficeCategoryGroup[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
+  total: number
+  page: number
+  pageCount: number
   error: string | null
+  initialQuery?: string
 }) {
   const canAdd = useCan("expenses", "add")
   const canEdit = useCan("expenses", "edit")
@@ -67,8 +76,7 @@ export function ExpensesTable({
     key: "expenseDate",
     direction: "desc",
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const { query, setQuery, setPage } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formExpense, setFormExpense] = useState<OperationalExpenseRow | null>(
     null,
@@ -80,9 +88,17 @@ export function ExpensesTable({
   )
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
+
   const sorted = useMemo(() => sortExpenses(expenses, sort), [expenses, sort])
-  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const effectiveTotal = error ? 0 : total
+  const rangeStart =
+    effectiveTotal === 0 || sorted.length === 0
+      ? 0
+      : (page - 1) * LIST_PAGE_SIZE + 1
+  const rangeEnd =
+    effectiveTotal === 0 || sorted.length === 0
+      ? 0
+      : Math.min(effectiveTotal, rangeStart + sorted.length - 1)
 
   function openForm(expense: OperationalExpenseRow | null) {
     setFormExpense(expense)
@@ -131,7 +147,7 @@ export function ExpensesTable({
                   { header: "Department", kind: "text" },
                   { header: "Vendor", kind: "text" },
                 ],
-                rows: filtered.map((row) => [
+                rows: sorted.map((row) => [
                   formatDayMonYear(row.expenseDate),
                   row.fromPurchaseOrder
                     ? `${row.category} · From Operational PO`
@@ -154,33 +170,29 @@ export function ExpensesTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search expenses"
       />
       <DataList
         columns={expenseColumns}
-        rows={error ? [] : pageResult.rows}
+        rows={error ? [] : sorted}
         rowKey={(expense) => expense.id}
         sort={sort}
         onSort={(key) => {
           setSort((current) => toggleSort(current, key))
-          setPage(1)
         }}
         visibility={visibility}
         error={error}
         emptyMessage="No Operational Expenses Yet."
         rangeText={rangeLabel(
-          pageResult.rangeStart,
-          pageResult.rangeEnd,
-          error ? 0 : pageResult.total,
+          rangeStart,
+          rangeEnd,
+          effectiveTotal,
           "expense",
           "expenses",
         )}
-        currentPage={pageResult.currentPage}
-        pageCount={pageResult.pageCount}
+        currentPage={page}
+        pageCount={pageCount}
         onPageChange={setPage}
         pagingLabel="Operational Expenses pagination"
         mobileItem={(expense) => ({
@@ -229,24 +241,28 @@ export function ExpensesTable({
                   View Purchase Order
                 </DropdownMenuItem>
               ) : null}
-              {!expense.fromPurchaseOrder && canEdit ? (<DropdownMenuItem onClick={() => openForm(expense)}>
-                <Pencil aria-hidden="true" />
-                Edit
-              </DropdownMenuItem>) : null}
+              {!expense.fromPurchaseOrder && canEdit ? (
+                <DropdownMenuItem onClick={() => openForm(expense)}>
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
               {!expense.fromPurchaseOrder && canEdit && canDelete ? (
                 <DropdownMenuSeparator />
               ) : null}
-              {!expense.fromPurchaseOrder && canDelete ? (<DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setDeleteError(null)
-                  setPendingDelete(expense)
-                  setDeleteOpen(true)
-                }}
-              >
-                <Trash2 aria-hidden="true" />
-                Delete
-              </DropdownMenuItem>) : null}
+              {!expense.fromPurchaseOrder && canDelete ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteError(null)
+                    setPendingDelete(expense)
+                    setDeleteOpen(true)
+                  }}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

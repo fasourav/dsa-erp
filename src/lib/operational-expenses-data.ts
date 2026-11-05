@@ -1,29 +1,35 @@
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { listBankAccounts } from "@/lib/bank-accounts"
-import { fetchAllPages, fetchByIds } from "@/lib/fetch-pages"
+import { fetchAllPages, fetchByIds, fetchPage } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
-import { creatorNames } from "@/lib/record-audit"
 import type {
   NamedOption,
   OperationalExpenseRow,
 } from "@/lib/operational-expenses"
+import { LIST_PAGE_SIZE, sanitizeSearch } from "@/lib/page-query"
 import { dateInputValue } from "@/lib/project-validation"
-import { createClient } from "@/lib/supabase/server"
+import { creatorNames } from "@/lib/record-audit"
 import {
   isReportGroup,
   keywordReportGroup,
   type OfficeCategoryGroup,
 } from "@/lib/report-cost-group"
+import { createClient } from "@/lib/supabase/server"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 
 type Embedded<T> = T | T[] | null
 
-export async function getOperationalExpenses(): Promise<{
+export async function getOperationalExpenses(
+  options: { q?: string; page?: number } = {},
+): Promise<{
   expenses: OperationalExpenseRow[]
   categories: OfficeCategoryGroup[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
+  total: number
+  page: number
+  pageCount: number
   error: string | null
 }> {
   const empty = {
@@ -32,23 +38,41 @@ export async function getOperationalExpenses(): Promise<{
     departments: [] as NamedOption[],
     paymentMethods: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
+    total: 0,
+    page: 1,
+    pageCount: 1,
     error: "Could not load operational expenses.",
   }
   const supabase = await createClient()
+  const requestedPage = options.page ?? 1
+  const term = sanitizeSearch(options.q ?? "")
 
   try {
-    const [expenseRows, categoryRows, departmentRows, methodRows, bankAccounts] =
+    const [expenseSlice, categoryRows, departmentRows, methodRows, bankAccounts] =
       await Promise.all([
-        fetchAllPages(
-          (from, to) =>
-            supabase
+        fetchPage(
+          (from, to) => {
+            let query = supabase
               .from("operational_expenses")
               .select(
                 "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, created_at, created_by, departments(name), vendors(person_name, company_name)",
+                { count: "exact" },
               )
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Operational expense list is larger than expected.",
+
+            if (term) {
+              const like = `%${term}%`
+              query = query.or(
+                `category.ilike.${like},notes.ilike.${like},payment_method.ilike.${like}`,
+              )
+            }
+
+            return query
+              .order("expense_date", { ascending: false })
+              .order("id", { ascending: false })
+              .range(from, to)
+          },
+          requestedPage,
+          LIST_PAGE_SIZE,
         ),
         fetchAllPages(
           (from, to) =>
@@ -95,6 +119,13 @@ export async function getOperationalExpenses(): Promise<{
       supabase,
       officeCategoryNames,
     )
+    const matchingPoPayments = term
+      ? purchaseOrderPayments.filter((row) => {
+          const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.notes}`.toLowerCase()
+          return haystack.includes(term.toLowerCase())
+        })
+      : purchaseOrderPayments
+
     const departments = departmentRows.map((row) => ({
       id: row.id,
       name: row.name?.trim() ?? "",
@@ -102,10 +133,10 @@ export async function getOperationalExpenses(): Promise<{
     const creators = await creatorNames(
       supabase,
       "operational_expenses",
-      expenseRows.map((row) => ({ id: row.id, createdBy: row.created_by })),
+      expenseSlice.rows.map((row) => ({ id: row.id, createdBy: row.created_by })),
     )
 
-    const expenses = expenseRows.map((row) => {
+    const expenses = expenseSlice.rows.map((row) => {
       const department = one(row.departments)
       const vendor = one(row.vendors)
 
@@ -130,8 +161,13 @@ export async function getOperationalExpenses(): Promise<{
       }
     })
 
+    const pageExpenses =
+      expenseSlice.page === 1
+        ? [...expenses, ...matchingPoPayments]
+        : expenses
+
     return {
-      expenses: [...expenses, ...purchaseOrderPayments],
+      expenses: pageExpenses,
       categories,
       departments,
       paymentMethods: mergeCategorySuggestions(
@@ -139,6 +175,9 @@ export async function getOperationalExpenses(): Promise<{
         expenses.map((expense) => expense.paymentMethod),
       ),
       bankAccounts,
+      total: expenseSlice.total + matchingPoPayments.length,
+      page: expenseSlice.page,
+      pageCount: expenseSlice.pageCount,
       error: null,
     }
   } catch {
