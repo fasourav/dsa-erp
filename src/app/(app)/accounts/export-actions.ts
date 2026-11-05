@@ -4,12 +4,14 @@ import type { ListExportLoaderResult } from "@/components/list-export"
 import {
   bankFlowLabel,
   bankSourceLabel,
-  sortBankTransactions,
+  defaultBankTransactionSort,
+  sortableBankTransactionColumns,
   type BankTransactionColumnId,
 } from "@/lib/bank"
 import { getAllBankTransactionsForExport } from "@/lib/bank-data"
 import {
-  sortClientInvoices,
+  defaultClientInvoiceSort,
+  sortableClientInvoiceColumns,
   type ClientInvoiceColumnId,
 } from "@/lib/client-invoice-summary"
 import {
@@ -19,10 +21,13 @@ import {
 import { formatDayMonYear } from "@/lib/format"
 import type { SortDirection } from "@/lib/list-paging"
 import {
+  defaultExpenseSort,
+  sortableExpenseColumns,
   sortExpenses,
   type ExpenseColumnId,
 } from "@/lib/operational-expenses"
 import { getAllOperationalExpensesForExport } from "@/lib/operational-expenses-data"
+import { parseSortParams } from "@/lib/page-query"
 import { paymentStatusLabel } from "@/lib/payment-status"
 import { denyUnless, getAccess } from "@/lib/permissions"
 
@@ -37,16 +42,16 @@ export async function exportClientInvoicesGrid(input: {
   if (denied) return { error: denied }
 
   const status = parseInvoiceStatusFilter(input.status)
+  const sort = parseSortParams<ClientInvoiceColumnId>(
+    { sort: input.sortKey, dir: input.sortDir },
+    sortableClientInvoiceColumns,
+    defaultClientInvoiceSort,
+  )
   const { invoices, error } = await getAllClientInvoicesForExport(
     input.projectId,
-    { q: input.q, status },
+    { q: input.q, status, sort },
   )
   if (error) return { error }
-
-  const sorted = sortClientInvoices(invoices, {
-    key: input.sortKey,
-    direction: input.sortDir,
-  })
 
   return {
     grid: {
@@ -60,7 +65,7 @@ export async function exportClientInvoicesGrid(input: {
         { header: "Paid", kind: "money" },
         { header: "Status", kind: "text" },
       ],
-      rows: sorted.map((invoice) => [
+      rows: invoices.map((invoice) => [
         formatDayMonYear(invoice.issuedOn),
         invoice.projectName,
         invoice.clientName,
@@ -83,17 +88,17 @@ export async function exportBankTransactionsGrid(input: {
 
   const access = await getAccess()
   const showFinancials = Boolean(access?.showFinancials)
+  const sort = parseSortParams<BankTransactionColumnId>(
+    { sort: input.sortKey, dir: input.sortDir },
+    sortableBankTransactionColumns,
+    defaultBankTransactionSort,
+  )
 
   const { transactions, error } = await getAllBankTransactionsForExport(
     input.accountId,
-    { q: input.q },
+    { q: input.q, sort },
   )
   if (error) return { error }
-
-  const sorted = sortBankTransactions(transactions, {
-    key: input.sortKey,
-    direction: input.sortDir,
-  })
 
   return {
     grid: {
@@ -107,7 +112,7 @@ export async function exportBankTransactionsGrid(input: {
         { header: "Amount", kind: "money" },
         { header: "Balance", kind: "money" },
       ],
-      rows: sorted.map((transaction) => [
+      rows: transactions.map((transaction) => [
         formatDayMonYear(transaction.transactionDate),
         transaction.accountName,
         bankFlowLabel(transaction.direction),
@@ -129,15 +134,19 @@ export async function exportOperationalExpensesGrid(input: {
   const denied = await denyUnless("expenses", "view")
   if (denied) return { error: denied }
 
+  const sort = parseSortParams<ExpenseColumnId>(
+    { sort: input.sortKey, dir: input.sortDir },
+    sortableExpenseColumns,
+    defaultExpenseSort,
+  )
+
   const { expenses, error } = await getAllOperationalExpensesForExport({
     q: input.q,
+    sort,
   })
   if (error) return { error }
 
-  const sorted = sortExpenses(expenses, {
-    key: input.sortKey,
-    direction: input.sortDir,
-  })
+  const sorted = sortExpenses(expenses, sort)
 
   return {
     grid: {

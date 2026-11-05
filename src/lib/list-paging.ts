@@ -12,6 +12,7 @@ export type ListColumn<Id extends string> = {
   label: string
   align: "left" | "right" | "center"
   locked: boolean
+  sortable?: boolean
 }
 
 export function toggleSort<Id extends string>(

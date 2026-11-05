@@ -5,13 +5,16 @@ import {
   bankSourceKinds,
   bankSourceLabel,
   compareLedgerOrder,
+  defaultBankTransactionSort,
   isBankDirection,
   isBankSourceKind,
   withRunningBalances,
   type AccountFilter,
   type BankAccountRow,
+  type BankTransactionColumnId,
   type BankTransactionRow,
 } from "@/lib/bank"
+import type { SortState } from "@/lib/list-paging"
 import { fetchAllPages, fetchPage } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
@@ -234,6 +237,7 @@ export async function getBankPage(
   options: {
     q?: string
     page?: number
+    sort?: SortState<BankTransactionColumnId>
     includeReportRows?: boolean
   } = {},
 ): Promise<{
@@ -267,6 +271,8 @@ export async function getBankPage(
   const requestedPage = options.page ?? 1
   const rawQuery = options.q ?? ""
   const term = sanitizeSearch(rawQuery)
+  const sort = options.sort ?? defaultBankTransactionSort
+  const ascending = sort.direction === "asc"
 
   try {
     const [accountRows, balanceRows, projectRows, methodRows] = await Promise.all([
@@ -397,11 +403,37 @@ export async function getBankPage(
           query = query.or(orFilter)
         }
 
-        return query
-          .order("transaction_date", { ascending: false })
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to)
+        switch (sort.key) {
+          case "direction":
+            query = query
+              .order("direction", { ascending })
+              .order("transaction_date", { ascending: false })
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "sourceKind":
+            query = query
+              .order("source_kind", { ascending })
+              .order("transaction_date", { ascending: false })
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "amount":
+            query = query
+              .order("amount", { ascending })
+              .order("transaction_date", { ascending: false })
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          default:
+            query = query
+              .order("transaction_date", { ascending })
+              .order("created_at", { ascending })
+              .order("id", { ascending })
+            break
+        }
+
+        return query.range(from, to)
       },
       requestedPage,
       LIST_PAGE_SIZE,
@@ -460,7 +492,10 @@ export async function getBankPage(
 
 export async function getAllBankTransactionsForExport(
   accountId: string | null,
-  options: { q?: string } = {},
+  options: {
+    q?: string
+    sort?: SortState<BankTransactionColumnId>
+  } = {},
 ): Promise<{
   transactions: BankTransactionRow[]
   error: string | null
@@ -472,6 +507,8 @@ export async function getAllBankTransactionsForExport(
   }
   const rawQuery = options.q ?? ""
   const term = sanitizeSearch(rawQuery)
+  const sort = options.sort ?? defaultBankTransactionSort
+  const ascending = sort.direction === "asc"
 
   try {
     const [accountRows, balanceRows, projectRows] = await Promise.all([
@@ -557,11 +594,37 @@ export async function getAllBankTransactionsForExport(
           query = query.or(orFilter)
         }
 
-        return query
-          .order("transaction_date", { ascending: false })
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to)
+        switch (sort.key) {
+          case "direction":
+            query = query
+              .order("direction", { ascending })
+              .order("transaction_date", { ascending: false })
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "sourceKind":
+            query = query
+              .order("source_kind", { ascending })
+              .order("transaction_date", { ascending: false })
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "amount":
+            query = query
+              .order("amount", { ascending })
+              .order("transaction_date", { ascending: false })
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          default:
+            query = query
+              .order("transaction_date", { ascending })
+              .order("created_at", { ascending })
+              .order("id", { ascending })
+            break
+        }
+
+        return query.range(from, to)
       },
       "Bank transaction export is larger than expected.",
     )

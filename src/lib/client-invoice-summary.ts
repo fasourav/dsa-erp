@@ -58,13 +58,24 @@ export type ClientInvoiceColumnVisibility = Record<
   boolean
 >
 
+export const sortableClientInvoiceColumns = [
+  "issuedOn",
+  "amount",
+  "status",
+] as const
+
+export const defaultClientInvoiceSort: SortState<ClientInvoiceColumnId> = {
+  key: "issuedOn",
+  direction: "desc",
+}
+
 export const clientInvoiceColumns: readonly ListColumn<ClientInvoiceColumnId>[] =
   [
     { id: "issuedOn", label: "Issue Date", align: "left", locked: true },
-    { id: "projectName", label: "Project", align: "left", locked: true },
-    { id: "clientName", label: "Client", align: "left", locked: true },
+    { id: "projectName", label: "Project", align: "left", locked: true, sortable: false },
+    { id: "clientName", label: "Client", align: "left", locked: true, sortable: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
-    { id: "paid", label: "Paid", align: "right", locked: false },
+    { id: "paid", label: "Paid", align: "right", locked: false, sortable: false },
     { id: "status", label: "Status", align: "left", locked: false },
   ]
 

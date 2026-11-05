@@ -6,7 +6,7 @@ import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 
 import { exportClientInvoicesGrid } from "@/app/(app)/accounts/export-actions"
 import { deleteClientInvoice } from "@/app/(app)/accounts/invoices/actions"
@@ -28,7 +28,7 @@ import {
 import { clientInvoiceColumnStore } from "@/lib/client-invoice-column-store"
 import {
   clientInvoiceColumns,
-  sortClientInvoices,
+  defaultClientInvoiceSort,
   type ClientInvoiceColumnId,
   type ClientInvoiceRow,
   type InvoiceProjectOption,
@@ -44,7 +44,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { LIST_PAGE_SIZE } from "@/lib/page-query"
+import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useUrlSearch } from "@/lib/use-url-search"
 
@@ -59,6 +59,7 @@ export function ClientInvoicesTable({
   error,
   initialQuery = "",
   statusFilter = "all",
+  sort = defaultClientInvoiceSort,
 }: {
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
@@ -71,16 +72,13 @@ export function ClientInvoicesTable({
   error: string | null
   initialQuery?: string
   statusFilter?: InvoiceStatusFilter
+  sort?: SortState<ClientInvoiceColumnId>
 }) {
   const canAdd = useCan("client_invoices", "add")
   const canEdit = useCan("client_invoices", "edit")
   const canDelete = useCan("client_invoices", "delete")
 
   const visibility = useColumnVisibility(clientInvoiceColumnStore)
-  const [sort, setSort] = useState<SortState<ClientInvoiceColumnId>>({
-    key: "issuedOn",
-    direction: "desc",
-  })
   const { query, setQuery, setParams } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
@@ -92,10 +90,6 @@ export function ClientInvoicesTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const sorted = useMemo(
-    () => sortClientInvoices(invoices, sort),
-    [invoices, sort],
-  )
   const filterOptions = [
     { value: "all", label: "All Statuses" },
     { value: "unpaid", label: "Unpaid" },
@@ -105,13 +99,13 @@ export function ClientInvoicesTable({
 
   const effectiveTotal = error ? 0 : total
   const rangeStart =
-    effectiveTotal === 0 || sorted.length === 0
+    effectiveTotal === 0 || invoices.length === 0
       ? 0
       : (page - 1) * LIST_PAGE_SIZE + 1
   const rangeEnd =
-    effectiveTotal === 0 || sorted.length === 0
+    effectiveTotal === 0 || invoices.length === 0
       ? 0
-      : rangeStart + sorted.length - 1
+      : rangeStart + invoices.length - 1
 
   const paymentsInvoice =
     invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
@@ -197,11 +191,12 @@ export function ClientInvoicesTable({
       />
       <DataList
         columns={clientInvoiceColumns}
-        rows={error ? [] : sorted}
+        rows={error ? [] : invoices}
         rowKey={(invoice) => invoice.id}
         sort={sort}
         onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
+          const next = toggleSort(sort, key)
+          setParams(sortQueryParams(next, defaultClientInvoiceSort))
         }}
         visibility={visibility}
         error={error}

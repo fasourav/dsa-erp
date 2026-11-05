@@ -9,7 +9,9 @@ import {
   parsePageParams,
   parseSearchAmount,
   parseSearchIsoDate,
+  parseSortParams,
   sanitizeSearch,
+  sortQueryParams,
 } from "../src/lib/page-query.ts"
 
 test("LIST_PAGE_SIZE is 50", () => {
@@ -48,6 +50,30 @@ test("parseSearchIsoDate and parseSearchAmount validate structured search tokens
   assert.equal(parseSearchAmount("50,000.50"), 50000.5)
   assert.equal(parseSearchAmount("৳ 12500"), 12500)
   assert.equal(parseSearchAmount("abc"), null)
+})
+
+test("parseSortParams and sortQueryParams validate keys and omit defaults", () => {
+  const allowed = ["issuedOn", "amount", "status"] as const
+  const def = { key: "issuedOn", direction: "desc" } as const
+
+  assert.deepEqual(parseSortParams({}, allowed, def), def)
+  assert.deepEqual(parseSortParams({ sort: "unknown", dir: "asc" }, allowed, def), {
+    key: "issuedOn",
+    direction: "asc",
+  })
+  assert.deepEqual(parseSortParams({ sort: "amount" }, allowed, def), {
+    key: "amount",
+    direction: "asc",
+  })
+  assert.deepEqual(parseSortParams({ sort: "amount", dir: "desc" }, allowed, def), {
+    key: "amount",
+    direction: "desc",
+  })
+  assert.deepEqual(sortQueryParams(def, def), { sort: null, dir: null })
+  assert.deepEqual(sortQueryParams({ key: "amount", direction: "desc" }, def), {
+    sort: "amount",
+    dir: "desc",
+  })
 })
 
 test("buildPageHref preserves non-empty params and omits page=1", () => {

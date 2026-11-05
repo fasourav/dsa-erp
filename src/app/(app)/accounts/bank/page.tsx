@@ -1,10 +1,19 @@
 import { BankPanel } from "@/app/(app)/accounts/bank/bank-panel"
 import { ListPager } from "@/components/list-pager"
+import {
+  defaultBankTransactionSort,
+  sortableBankTransactionColumns,
+  type BankTransactionColumnId,
+} from "@/lib/bank"
 import { getBankPage } from "@/lib/bank-data"
 import { getReconciliation } from "@/lib/bank-reconcile-data"
 import { getFiscalYearStartMonth } from "@/lib/company-settings"
 import { dhakaToday } from "@/lib/dashboard-metrics"
-import { parsePageParams } from "@/lib/page-query"
+import {
+  parsePageParams,
+  parseSortParams,
+  sortQueryParams,
+} from "@/lib/page-query"
 import { isIsoDate } from "@/lib/project-validation"
 import { requireModule } from "@/lib/permissions"
 import { firstParam } from "@/lib/search"
@@ -29,11 +38,18 @@ export default async function BankPage({
         ? "reconcile"
         : "ledger"
   const { page: requestedPage, q } = parsePageParams(params)
+  const sort = parseSortParams<BankTransactionColumnId>(
+    params,
+    sortableBankTransactionColumns,
+    defaultBankTransactionSort,
+  )
+  const sortParams = sortQueryParams(sort, defaultBankTransactionSort)
   const period = reconcileWindow(firstParam(params.from), firstParam(params.to))
   const [data, fiscalYearStartMonth, reconciliation] = await Promise.all([
     getBankPage(accountParam ?? null, {
       q,
       page: requestedPage,
+      sort,
       includeReportRows: view !== "ledger",
     }),
     getFiscalYearStartMonth(),
@@ -54,11 +70,11 @@ export default async function BankPage({
         accountFilter={data.accountFilter}
         total={data.total}
         page={data.page}
-        pageCount={data.pageCount}
         error={data.error}
         fiscalYearStartMonth={fiscalYearStartMonth}
         view={view}
         initialQuery={q}
+        sort={sort}
         reconciliation={reconciliation}
         periodFrom={period.from}
         periodTo={period.to}
@@ -68,7 +84,12 @@ export default async function BankPage({
           basePath="/accounts/bank"
           page={data.page}
           pageCount={data.pageCount}
-          params={{ account: data.accountFilter?.id, q }}
+          params={{
+            account: data.accountFilter?.id,
+            q,
+            sort: sortParams.sort,
+            dir: sortParams.dir,
+          }}
           label="Bank transactions pages"
         />
       ) : null}

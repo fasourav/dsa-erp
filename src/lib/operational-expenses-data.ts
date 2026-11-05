@@ -2,9 +2,12 @@ import type { BankAccountChoice } from "@/lib/bank-account"
 import { listBankAccounts } from "@/lib/bank-accounts"
 import { fetchAllPages, fetchByIds, fetchPage } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
-import type {
-  NamedOption,
-  OperationalExpenseRow,
+import type { SortState } from "@/lib/list-paging"
+import {
+  defaultExpenseSort,
+  type ExpenseColumnId,
+  type NamedOption,
+  type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
 import {
   LIST_PAGE_SIZE,
@@ -148,7 +151,11 @@ async function mapExpenseRows(
 }
 
 export async function getOperationalExpenses(
-  options: { q?: string; page?: number } = {},
+  options: {
+    q?: string
+    page?: number
+    sort?: SortState<ExpenseColumnId>
+  } = {},
 ): Promise<{
   expenses: OperationalExpenseRow[]
   poExpenses: OperationalExpenseRow[]
@@ -177,6 +184,8 @@ export async function getOperationalExpenses(
   const requestedPage = options.page ?? 1
   const rawQuery = options.q ?? ""
   const term = sanitizeSearch(rawQuery)
+  const sort = options.sort ?? defaultExpenseSort
+  const ascending = sort.direction === "asc"
 
   try {
     const [categoryRows, departmentRows, methodRows, bankAccounts, matchingVendorIds] =
@@ -246,10 +255,33 @@ export async function getOperationalExpenses(
             query = query.or(orFilter)
           }
 
-          return query
-            .order("expense_date", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to)
+          switch (sort.key) {
+            case "category":
+              query = query
+                .order("category", { ascending })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
+            case "amount":
+              query = query
+                .order("amount", { ascending })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
+            case "paymentMethod":
+              query = query
+                .order("payment_method", { ascending })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
+            default:
+              query = query
+                .order("expense_date", { ascending })
+                .order("id", { ascending })
+              break
+          }
+
+          return query.range(from, to)
         },
         requestedPage,
         LIST_PAGE_SIZE,
@@ -288,7 +320,10 @@ export async function getOperationalExpenses(
 }
 
 export async function getAllOperationalExpensesForExport(
-  options: { q?: string } = {},
+  options: {
+    q?: string
+    sort?: SortState<ExpenseColumnId>
+  } = {},
 ): Promise<{
   expenses: OperationalExpenseRow[]
   error: string | null
@@ -296,6 +331,8 @@ export async function getAllOperationalExpensesForExport(
   const supabase = await createClient()
   const rawQuery = options.q ?? ""
   const term = sanitizeSearch(rawQuery)
+  const sort = options.sort ?? defaultExpenseSort
+  const ascending = sort.direction === "asc"
 
   try {
     const [categoryRows, departmentRows, bankAccounts, matchingVendorIds] =
@@ -354,10 +391,33 @@ export async function getAllOperationalExpensesForExport(
             query = query.or(orFilter)
           }
 
-          return query
-            .order("expense_date", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to)
+          switch (sort.key) {
+            case "category":
+              query = query
+                .order("category", { ascending })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
+            case "amount":
+              query = query
+                .order("amount", { ascending })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
+            case "paymentMethod":
+              query = query
+                .order("payment_method", { ascending })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
+            default:
+              query = query
+                .order("expense_date", { ascending })
+                .order("id", { ascending })
+              break
+          }
+
+          return query.range(from, to)
         },
         "Operational expense export is larger than expected.",
       ),

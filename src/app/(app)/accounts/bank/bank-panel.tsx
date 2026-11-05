@@ -6,7 +6,7 @@ import { useAccess, useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 
 import { exportBankTransactionsGrid } from "@/app/(app)/accounts/export-actions"
 import { deleteBankTransaction } from "@/app/(app)/accounts/bank/actions"
@@ -35,7 +35,7 @@ import {
 import {
   bankSourceLabel,
   bankTransactionColumns,
-  sortBankTransactions,
+  defaultBankTransactionSort,
   type AccountFilter,
   type BankAccountRow,
   type BankTransactionColumnId,
@@ -48,7 +48,7 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { LIST_PAGE_SIZE } from "@/lib/page-query"
+import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useUrlSearch } from "@/lib/use-url-search"
 import type { ReconciliationBundle } from "@/lib/bank-reconcile"
@@ -72,6 +72,7 @@ export function BankPanel({
   fiscalYearStartMonth,
   view,
   initialQuery = "",
+  sort = defaultBankTransactionSort,
   reconciliation = null,
   periodFrom,
   periodTo,
@@ -89,6 +90,7 @@ export function BankPanel({
   fiscalYearStartMonth: number
   view: "ledger" | "statement" | "reconcile"
   initialQuery?: string
+  sort?: SortState<BankTransactionColumnId>
   reconciliation?: ReconciliationBundle | null
   periodFrom: string
   periodTo: string
@@ -99,11 +101,7 @@ export function BankPanel({
   const canDelete = useCan("banking", "delete")
 
   const visibility = useColumnVisibility(bankTransactionColumnStore)
-  const [sort, setSort] = useState<SortState<BankTransactionColumnId>>({
-    key: "transactionDate",
-    direction: "desc",
-  })
-  const { query, setQuery } = useUrlSearch(initialQuery)
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
   const [movementOpen, setMovementOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [movementKind, setMovementKind] = useState<"deposit" | "withdrawal">("deposit")
@@ -119,21 +117,17 @@ export function BankPanel({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const sorted = useMemo(
-    () => sortBankTransactions(transactions, sort),
-    [transactions, sort],
-  )
   const effectiveTotal = error ? 0 : total
   const rangeStart =
-    effectiveTotal === 0 || sorted.length === 0
+    effectiveTotal === 0 || transactions.length === 0
       ? 0
       : (page - 1) * LIST_PAGE_SIZE + 1
   const rangeEnd =
-    effectiveTotal === 0 || sorted.length === 0
+    effectiveTotal === 0 || transactions.length === 0
       ? 0
-      : rangeStart + sorted.length - 1
+      : rangeStart + transactions.length - 1
 
-  const manualEntries = sorted.filter(
+  const manualEntries = transactions.filter(
     (row) => row.sourceKind === "deposit" || row.sourceKind === "withdrawal",
   )
 
@@ -297,11 +291,12 @@ export function BankPanel({
       />
       <DataList
         columns={bankTransactionColumns}
-        rows={error ? [] : sorted}
+        rows={error ? [] : transactions}
         rowKey={(transaction) => transaction.id}
         sort={sort}
         onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
+          const next = toggleSort(sort, key)
+          setParams(sortQueryParams(next, defaultBankTransactionSort))
         }}
         visibility={visibility}
         error={error}

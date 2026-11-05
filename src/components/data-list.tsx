@@ -243,7 +243,8 @@ export function DataList<T, Id extends string>({
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {visibleColumns.map((column, index) => {
-                const active = sort.key === column.id
+                const isSortable = column.sortable !== false
+                const active = isSortable && sort.key === column.id
                 const previous = visibleColumns[index - 1]?.align ?? null
                 const next = visibleColumns[index + 1]?.align ?? null
                 const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
@@ -251,11 +252,13 @@ export function DataList<T, Id extends string>({
                   <TableHead
                     key={column.id}
                     aria-sort={
-                      active
-                        ? sort.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
+                      isSortable
+                        ? active
+                          ? sort.direction === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                        : undefined
                     }
                     className={cn(
                       "py-2 align-middle",
@@ -263,25 +266,36 @@ export function DataList<T, Id extends string>({
                       insetClass(column.align, previous, next, dense),
                     )}
                   >
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "h-auto min-h-8 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
-                        column.align === "right" && "flex-row-reverse",
-                        active && "text-foreground",
-                      )}
-                      aria-label={
-                        active
-                          ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                          : `Sort by ${column.label}`
-                      }
-                      onClick={() => onSort(column.id)}
-                    >
-                      {column.label}
-                      {active ? <SortIcon aria-hidden="true" className="size-3" strokeWidth={2.4} /> : null}
-                    </Button>
+                    {isSortable ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "h-auto min-h-8 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
+                          column.align === "right" && "flex-row-reverse",
+                          active && "text-foreground",
+                        )}
+                        aria-label={
+                          active
+                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
+                            : `Sort by ${column.label}`
+                        }
+                        onClick={() => onSort(column.id)}
+                      >
+                        {column.label}
+                        {active ? <SortIcon aria-hidden="true" className="size-3" strokeWidth={2.4} /> : null}
+                      </Button>
+                    ) : (
+                      <span
+                        className={cn(
+                          "inline-flex min-h-8 items-center text-caption font-label text-muted-foreground",
+                          column.align === "right" && "justify-end",
+                        )}
+                      >
+                        {column.label}
+                      </span>
+                    )}
                   </TableHead>
                 )
               })}

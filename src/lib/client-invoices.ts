@@ -21,11 +21,14 @@ import {
 } from "@/lib/payment-status"
 import { createClient } from "@/lib/supabase/server"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
-import type {
-  ClientInvoiceRow,
-  ClientPaymentRow,
-  InvoiceProjectOption,
+import {
+  defaultClientInvoiceSort,
+  type ClientInvoiceColumnId,
+  type ClientInvoiceRow,
+  type ClientPaymentRow,
+  type InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
+import type { SortState } from "@/lib/list-paging"
 
 export type InvoiceProjectFilter = {
   id: string
@@ -183,7 +186,12 @@ async function hydrateInvoices(
 
 export async function getClientInvoices(
   projectId: string | null,
-  options: { q?: string; page?: number; status?: InvoiceStatusFilter } = {},
+  options: {
+    q?: string
+    page?: number
+    status?: InvoiceStatusFilter
+    sort?: SortState<ClientInvoiceColumnId>
+  } = {},
 ): Promise<{
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
@@ -216,6 +224,8 @@ export async function getClientInvoices(
     options.status && isClientInvoiceStatus(options.status)
       ? options.status
       : "all"
+  const sort = options.sort ?? defaultClientInvoiceSort
+  const ascending = sort.direction === "asc"
 
   try {
     const [projectRows, clientRows, methodRows, bankAccounts] = await Promise.all([
@@ -325,10 +335,27 @@ export async function getClientInvoices(
           query = query.or(orFilter)
         }
 
-        return query
-          .order("issued_on", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to)
+        switch (sort.key) {
+          case "amount":
+            query = query
+              .order("amount", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "status":
+            query = query
+              .order("status", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          default:
+            query = query
+              .order("issued_on", { ascending })
+              .order("id", { ascending })
+            break
+        }
+
+        return query.range(from, to)
       },
       requestedPage,
       LIST_PAGE_SIZE,
@@ -367,7 +394,11 @@ export async function getClientInvoices(
 
 export async function getAllClientInvoicesForExport(
   projectId: string | null,
-  options: { q?: string; status?: InvoiceStatusFilter } = {},
+  options: {
+    q?: string
+    status?: InvoiceStatusFilter
+    sort?: SortState<ClientInvoiceColumnId>
+  } = {},
 ): Promise<{
   invoices: ClientInvoiceRow[]
   error: string | null
@@ -383,6 +414,8 @@ export async function getAllClientInvoicesForExport(
     options.status && isClientInvoiceStatus(options.status)
       ? options.status
       : "all"
+  const sort = options.sort ?? defaultClientInvoiceSort
+  const ascending = sort.direction === "asc"
 
   try {
     const [projectRows, clientRows, bankAccounts] = await Promise.all([
@@ -447,10 +480,27 @@ export async function getAllClientInvoicesForExport(
           query = query.or(orFilter)
         }
 
-        return query
-          .order("issued_on", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to)
+        switch (sort.key) {
+          case "amount":
+            query = query
+              .order("amount", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "status":
+            query = query
+              .order("status", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          default:
+            query = query
+              .order("issued_on", { ascending })
+              .order("id", { ascending })
+            break
+        }
+
+        return query.range(from, to)
       },
       "Client invoice export is larger than expected.",
     )

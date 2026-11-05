@@ -5,6 +5,52 @@ export type PageParams = {
   q: string
 }
 
+export type ServerSortDirection = "asc" | "desc"
+
+export type ServerSort<K extends string> = {
+  key: K
+  direction: ServerSortDirection
+}
+
+export function parseSortParams<K extends string>(
+  params: Record<string, string | string[] | undefined>,
+  allowedKeys: readonly K[],
+  defaultSort: ServerSort<K>,
+): ServerSort<K> {
+  const rawSort = (
+    Array.isArray(params.sort) ? params.sort[0] : params.sort
+  )?.trim()
+  const rawDir = (
+    Array.isArray(params.dir) ? params.dir[0] : params.dir
+  )?.trim()
+
+  const key =
+    rawSort && allowedKeys.some((candidate) => candidate === rawSort)
+      ? (rawSort as K)
+      : defaultSort.key
+  const direction: ServerSortDirection =
+    rawDir === "asc" || rawDir === "desc"
+      ? rawDir
+      : key === defaultSort.key
+        ? defaultSort.direction
+        : "asc"
+
+  return { key, direction }
+}
+
+export function sortQueryParams<K extends string>(
+  sort: ServerSort<K>,
+  defaultSort: ServerSort<K>,
+): { sort: string | null; dir: string | null } {
+  if (
+    sort.key === defaultSort.key &&
+    sort.direction === defaultSort.direction
+  ) {
+    return { sort: null, dir: null }
+  }
+  return { sort: sort.key, dir: sort.direction }
+}
+
 export function parsePageParams(
   params: Record<string, string | string[] | undefined>,
   maxQueryLength = 100,

@@ -1,10 +1,19 @@
 import { ClientInvoicesTable } from "@/app/(app)/accounts/invoices/client-invoices-table"
 import { ListPager } from "@/components/list-pager"
 import {
+  defaultClientInvoiceSort,
+  sortableClientInvoiceColumns,
+  type ClientInvoiceColumnId,
+} from "@/lib/client-invoice-summary"
+import {
   getClientInvoices,
   parseInvoiceStatusFilter,
 } from "@/lib/client-invoices"
-import { parsePageParams } from "@/lib/page-query"
+import {
+  parsePageParams,
+  parseSortParams,
+  sortQueryParams,
+} from "@/lib/page-query"
 import { requireModule } from "@/lib/permissions"
 
 export const metadata = { title: "Client Invoices" }
@@ -21,10 +30,17 @@ export default async function ClientInvoicesPage({
     : params.project
   const status = parseInvoiceStatusFilter(params.status)
   const { page: requestedPage, q } = parsePageParams(params)
+  const sort = parseSortParams<ClientInvoiceColumnId>(
+    params,
+    sortableClientInvoiceColumns,
+    defaultClientInvoiceSort,
+  )
+  const sortParams = sortQueryParams(sort, defaultClientInvoiceSort)
   const data = await getClientInvoices(projectParam ?? null, {
     q,
     page: requestedPage,
     status,
+    sort,
   })
 
   return (
@@ -38,10 +54,10 @@ export default async function ClientInvoicesPage({
         projectFilter={data.projectFilter}
         total={data.total}
         page={data.page}
-        pageCount={data.pageCount}
         error={data.error}
         initialQuery={q}
         statusFilter={status}
+        sort={sort}
       />
       <ListPager
         basePath="/accounts/invoices"
@@ -51,6 +67,8 @@ export default async function ClientInvoicesPage({
           project: data.projectFilter?.id,
           q,
           status: status === "all" ? undefined : status,
+          sort: sortParams.sort,
+          dir: sortParams.dir,
         }}
         label="Client Invoices pages"
       />

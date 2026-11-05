@@ -33,13 +33,14 @@ import {
 } from "@/lib/list-paging"
 import { expenseColumnStore } from "@/lib/operational-expense-column-store"
 import {
+  defaultExpenseSort,
   expenseColumns,
   sortExpenses,
   type ExpenseColumnId,
   type NamedOption,
   type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
-import { LIST_PAGE_SIZE } from "@/lib/page-query"
+import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useUrlSearch } from "@/lib/use-url-search"
 import type { OfficeCategoryGroup } from "@/lib/report-cost-group"
@@ -56,6 +57,7 @@ export function ExpensesTable({
   page,
   error,
   initialQuery = "",
+  sort = defaultExpenseSort,
   pager,
 }: {
   expenses: OperationalExpenseRow[]
@@ -69,6 +71,7 @@ export function ExpensesTable({
   pageCount?: number
   error: string | null
   initialQuery?: string
+  sort?: SortState<ExpenseColumnId>
   pager?: ReactNode
 }) {
   const canAdd = useCan("expenses", "add")
@@ -76,11 +79,7 @@ export function ExpensesTable({
   const canDelete = useCan("expenses", "delete")
 
   const visibility = useColumnVisibility(expenseColumnStore)
-  const [sort, setSort] = useState<SortState<ExpenseColumnId>>({
-    key: "expenseDate",
-    direction: "desc",
-  })
-  const { query, setQuery } = useUrlSearch(initialQuery)
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formExpense, setFormExpense] = useState<OperationalExpenseRow | null>(
     null,
@@ -93,7 +92,6 @@ export function ExpensesTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const sorted = useMemo(() => sortExpenses(expenses, sort), [expenses, sort])
   const sortedPo = useMemo(
     () => sortExpenses(poExpenses, sort),
     [poExpenses, sort],
@@ -101,13 +99,13 @@ export function ExpensesTable({
 
   const effectiveTotal = error ? 0 : total
   const rangeStart =
-    effectiveTotal === 0 || sorted.length === 0
+    effectiveTotal === 0 || expenses.length === 0
       ? 0
       : (page - 1) * LIST_PAGE_SIZE + 1
   const rangeEnd =
-    effectiveTotal === 0 || sorted.length === 0
+    effectiveTotal === 0 || expenses.length === 0
       ? 0
-      : Math.min(effectiveTotal, rangeStart + sorted.length - 1)
+      : Math.min(effectiveTotal, rangeStart + expenses.length - 1)
 
   function openForm(expense: OperationalExpenseRow | null) {
     setFormExpense(expense)
@@ -169,11 +167,12 @@ export function ExpensesTable({
       />
       <DataList
         columns={expenseColumns}
-        rows={error ? [] : sorted}
+        rows={error ? [] : expenses}
         rowKey={(expense) => expense.id}
         sort={sort}
         onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
+          const next = toggleSort(sort, key)
+          setParams(sortQueryParams(next, defaultExpenseSort))
         }}
         visibility={visibility}
         error={error}
@@ -260,7 +259,8 @@ export function ExpensesTable({
             rowKey={(expense) => expense.id}
             sort={sort}
             onSort={(key) => {
-              setSort((current) => toggleSort(current, key))
+              const next = toggleSort(sort, key)
+              setParams(sortQueryParams(next, defaultExpenseSort))
             }}
             visibility={visibility}
             error={null}
