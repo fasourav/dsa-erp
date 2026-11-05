@@ -7,8 +7,10 @@ import { LIST_PAGE_SIZE, sanitizeSearch } from "@/lib/page-query"
 import { dateInputValue } from "@/lib/project-validation"
 import {
   clientInvoiceStatusFromPayments,
+  isClientInvoiceStatus,
   moneyCents,
   sumAmounts,
+  type ClientInvoiceStatus,
 } from "@/lib/payment-status"
 import { createClient } from "@/lib/supabase/server"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
@@ -21,6 +23,15 @@ import type {
 export type InvoiceProjectFilter = {
   id: string
   name: string
+}
+
+export type InvoiceStatusFilter = "all" | ClientInvoiceStatus
+
+export function parseInvoiceStatusFilter(
+  raw: string | string[] | undefined,
+): InvoiceStatusFilter {
+  const value = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? ""
+  return isClientInvoiceStatus(value) ? value : "all"
 }
 
 type InvoiceRawRow = {
@@ -104,7 +115,7 @@ async function hydrateInvoices(
 
 export async function getClientInvoices(
   projectId: string | null,
-  options: { q?: string; page?: number } = {},
+  options: { q?: string; page?: number; status?: InvoiceStatusFilter } = {},
 ): Promise<{
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
@@ -132,6 +143,10 @@ export async function getClientInvoices(
   const requestedId = projectId && isUuid(projectId) ? projectId : null
   const requestedPage = options.page ?? 1
   const term = sanitizeSearch(options.q ?? "")
+  const statusFilter =
+    options.status && isClientInvoiceStatus(options.status)
+      ? options.status
+      : "all"
 
   try {
     const [projectRows, clientRows, methodRows, bankAccounts] = await Promise.all([
@@ -225,7 +240,11 @@ export async function getClientInvoices(
             "id, project_id, client_id, issued_on, due_on, amount, status, description",
             { count: "exact" },
           )
-          .neq("status", "void")
+        if (statusFilter !== "all") {
+          query = query.eq("status", statusFilter)
+        } else {
+          query = query.neq("status", "void")
+        }
 
         if (matchedProject) {
           query = query.eq("project_id", matchedProject.id)
@@ -276,7 +295,7 @@ export async function getClientInvoices(
 
 export async function getAllClientInvoicesForExport(
   projectId: string | null,
-  options: { q?: string } = {},
+  options: { q?: string; status?: InvoiceStatusFilter } = {},
 ): Promise<{
   invoices: ClientInvoiceRow[]
   error: string | null
@@ -287,6 +306,10 @@ export async function getAllClientInvoicesForExport(
     return { invoices: [], error: "That project could not be found." }
   }
   const term = sanitizeSearch(options.q ?? "")
+  const statusFilter =
+    options.status && isClientInvoiceStatus(options.status)
+      ? options.status
+      : "all"
 
   try {
     const [projectRows, clientRows, bankAccounts] = await Promise.all([
@@ -339,7 +362,11 @@ export async function getAllClientInvoicesForExport(
           .select(
             "id, project_id, client_id, issued_on, due_on, amount, status, description",
           )
-          .neq("status", "void")
+        if (statusFilter !== "all") {
+          query = query.eq("status", statusFilter)
+        } else {
+          query = query.neq("status", "void")
+        }
 
         if (requestedId) {
           query = query.eq("project_id", requestedId)

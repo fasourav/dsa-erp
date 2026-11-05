@@ -1,6 +1,9 @@
 import { ClientInvoicesTable } from "@/app/(app)/accounts/invoices/client-invoices-table"
 import { ListPager } from "@/components/list-pager"
-import { getClientInvoices } from "@/lib/client-invoices"
+import {
+  getClientInvoices,
+  parseInvoiceStatusFilter,
+} from "@/lib/client-invoices"
 import { parsePageParams } from "@/lib/page-query"
 import { requireModule } from "@/lib/permissions"
 
@@ -16,10 +19,12 @@ export default async function ClientInvoicesPage({
   const projectParam = Array.isArray(params.project)
     ? params.project[0]
     : params.project
+  const status = parseInvoiceStatusFilter(params.status)
   const { page: requestedPage, q } = parsePageParams(params)
   const data = await getClientInvoices(projectParam ?? null, {
     q,
     page: requestedPage,
+    status,
   })
 
   return (
@@ -36,12 +41,17 @@ export default async function ClientInvoicesPage({
         pageCount={data.pageCount}
         error={data.error}
         initialQuery={q}
+        statusFilter={status}
       />
       <ListPager
         basePath="/accounts/invoices"
         page={data.page}
         pageCount={data.pageCount}
-        params={{ project: data.projectFilter?.id, q }}
+        params={{
+          project: data.projectFilter?.id,
+          q,
+          status: status === "all" ? undefined : status,
+        }}
         label="Client Invoices pages"
       />
     </div>

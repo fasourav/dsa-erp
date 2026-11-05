@@ -34,7 +34,10 @@ import {
   type InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import type { InvoiceProjectFilter } from "@/lib/client-invoices"
+import type {
+  InvoiceProjectFilter,
+  InvoiceStatusFilter,
+} from "@/lib/client-invoices"
 import { formatIsoDate } from "@/lib/format"
 import {
   rangeLabel,
@@ -56,6 +59,7 @@ export function ClientInvoicesTable({
   pageCount,
   error,
   initialQuery = "",
+  statusFilter = "all",
 }: {
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
@@ -67,6 +71,7 @@ export function ClientInvoicesTable({
   pageCount: number
   error: string | null
   initialQuery?: string
+  statusFilter?: InvoiceStatusFilter
 }) {
   const canAdd = useCan("client_invoices", "add")
   const canEdit = useCan("client_invoices", "edit")
@@ -77,8 +82,7 @@ export function ClientInvoicesTable({
     key: "issuedOn",
     direction: "desc",
   })
-  const { query, setQuery, setPage } = useUrlSearch(initialQuery)
-  const [listFilter, setListFilter] = useState("all")
+  const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -99,26 +103,16 @@ export function ClientInvoicesTable({
     { value: "partial", label: "Partially Paid" },
     { value: "paid", label: "Paid" },
   ]
-  const filtered = useMemo(
-    () =>
-      listFilter === "all"
-        ? sorted
-        : sorted.filter((invoice) => invoice.status === listFilter),
-    [listFilter, sorted],
-  )
 
-  const isStatusFiltered = listFilter !== "all"
-  const effectiveTotal = error ? 0 : isStatusFiltered ? filtered.length : total
+  const effectiveTotal = error ? 0 : total
   const rangeStart =
-    effectiveTotal === 0 || filtered.length === 0
+    effectiveTotal === 0 || sorted.length === 0
       ? 0
-      : isStatusFiltered
-        ? 1
-        : (page - 1) * LIST_PAGE_SIZE + 1
+      : (page - 1) * LIST_PAGE_SIZE + 1
   const rangeEnd =
-    effectiveTotal === 0 || filtered.length === 0
+    effectiveTotal === 0 || sorted.length === 0
       ? 0
-      : rangeStart + filtered.length - 1
+      : rangeStart + sorted.length - 1
 
   const paymentsInvoice =
     invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
@@ -176,7 +170,7 @@ export function ClientInvoicesTable({
                 exportClientInvoicesGrid({
                   projectId: projectFilter?.id ?? null,
                   q: query,
-                  status: listFilter,
+                  status: statusFilter,
                   sortKey: sort.key,
                   sortDir: sort.direction,
                 })
@@ -196,13 +190,15 @@ export function ClientInvoicesTable({
         onQueryChange={setQuery}
         placeholder="Search invoices"
         filterLabel="Status"
-        filter={listFilter}
-        onFilterChange={setListFilter}
+        filter={statusFilter}
+        onFilterChange={(next) =>
+          setParams({ status: next === "all" ? null : next })
+        }
         options={filterOptions}
       />
       <DataList
         columns={clientInvoiceColumns}
-        rows={error ? [] : filtered}
+        rows={error ? [] : sorted}
         rowKey={(invoice) => invoice.id}
         sort={sort}
         onSort={(key) => {
@@ -211,9 +207,11 @@ export function ClientInvoicesTable({
         visibility={visibility}
         error={error}
         emptyMessage={
-          projectFilter
-            ? "No Client Invoices For This Project."
-            : "No Client Invoices Yet."
+          statusFilter !== "all" || Boolean(query.trim())
+            ? "No Matching Client Invoices."
+            : projectFilter
+              ? "No Client Invoices For This Project."
+              : "No Client Invoices Yet."
         }
         rangeText={rangeLabel(
           rangeStart,
@@ -222,8 +220,8 @@ export function ClientInvoicesTable({
           "invoice",
           "invoices",
         )}
-        currentPage={isStatusFiltered ? 1 : page}
-        pageCount={isStatusFiltered ? 1 : pageCount}
+        currentPage={page}
+        pageCount={pageCount}
         onPageChange={setPage}
         pagingLabel="Client Invoices pagination"
         mobileItem={(invoice) => ({

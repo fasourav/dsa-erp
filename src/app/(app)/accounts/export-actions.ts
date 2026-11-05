@@ -12,7 +12,10 @@ import {
   sortClientInvoices,
   type ClientInvoiceColumnId,
 } from "@/lib/client-invoice-summary"
-import { getAllClientInvoicesForExport } from "@/lib/client-invoices"
+import {
+  getAllClientInvoicesForExport,
+  parseInvoiceStatusFilter,
+} from "@/lib/client-invoices"
 import { formatDayMonYear } from "@/lib/format"
 import type { SortDirection } from "@/lib/list-paging"
 import {
@@ -20,7 +23,7 @@ import {
   type ExpenseColumnId,
 } from "@/lib/operational-expenses"
 import { getAllOperationalExpensesForExport } from "@/lib/operational-expenses-data"
-import { isClientInvoiceStatus, paymentStatusLabel } from "@/lib/payment-status"
+import { paymentStatusLabel } from "@/lib/payment-status"
 import { denyUnless, getAccess } from "@/lib/permissions"
 
 export async function exportClientInvoicesGrid(input: {
@@ -33,16 +36,14 @@ export async function exportClientInvoicesGrid(input: {
   const denied = await denyUnless("client_invoices", "view")
   if (denied) return { error: denied }
 
+  const status = parseInvoiceStatusFilter(input.status)
   const { invoices, error } = await getAllClientInvoicesForExport(
     input.projectId,
-    { q: input.q },
+    { q: input.q, status },
   )
   if (error) return { error }
 
-  const statusFiltered = isClientInvoiceStatus(input.status)
-    ? invoices.filter((invoice) => invoice.status === input.status)
-    : invoices
-  const sorted = sortClientInvoices(statusFiltered, {
+  const sorted = sortClientInvoices(invoices, {
     key: input.sortKey,
     direction: input.sortDir,
   })

@@ -71,5 +71,27 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
     [pathname, router],
   )
 
-  return { query, setQuery, setPage }
+  const setParams = useCallback(
+    (updates: Record<string, string | null | undefined>) => {
+      const params = new URLSearchParams(window.location.search)
+      for (const [key, value] of Object.entries(updates)) {
+        const trimmed = value?.trim()
+        if (trimmed) {
+          params.set(key, trimmed)
+        } else {
+          params.delete(key)
+        }
+      }
+      if (!("page" in updates)) {
+        params.delete("page")
+      }
+      const qs = params.toString()
+      startTransition(() => {
+        router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+      })
+    },
+    [pathname, router],
+  )
+
+  return { query, setQuery, setPage, setParams }
 }
