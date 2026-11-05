@@ -9,7 +9,11 @@ import {
   Columns3,
   Inbox,
 } from "lucide-react"
-import type { ReactNode } from "react"
+import type {
+  FocusEvent as ReactFocusEvent,
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+} from "react"
 
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -63,7 +67,11 @@ function insetClass(
   dense: boolean,
 ) {
   if (dense) {
-    return "px-1.5 first:pl-3.5"
+    return cn(
+      "px-2.5 first:pl-5",
+      align === "right" && next && next !== "right" && "pr-4",
+      previous === "right" && align !== "right" && "pl-4",
+    )
   }
   return cn(
     "px-3",
@@ -86,6 +94,34 @@ function staysOnOneLine(column: {
     /date/i.test(column.label) ||
     /On$/.test(column.id)
   )
+}
+
+function syncCellTitle(
+  event: ReactMouseEvent<HTMLElement> | ReactFocusEvent<HTMLElement>,
+) {
+  const root = event.currentTarget
+  if (root.querySelector("[title]")) {
+    return
+  }
+
+  const candidates = [
+    root,
+    ...root.querySelectorAll<HTMLElement>("a, button, span, div, p"),
+  ]
+  const clipped = candidates.some(
+    (node) => node.clientWidth > 0 && node.scrollWidth > node.clientWidth + 1,
+  )
+
+  if (clipped) {
+    const text = root.textContent?.replace(/\s+/g, " ").trim() ?? ""
+    if (text) {
+      root.title = text
+      root.dataset.autoTitle = "1"
+    }
+  } else if (root.dataset.autoTitle === "1") {
+    root.removeAttribute("title")
+    delete root.dataset.autoTitle
+  }
 }
 
 export type DataListMobileItem = {
@@ -146,7 +182,9 @@ export function DataList<T, Id extends string>({
     columnVisible(column, visibility),
   )
   const dense = visibleColumns.length >= 10
+  const compactActions = dense || visibleColumns.length >= 6
   const hasActions = renderActions !== undefined
+  const hasRows = !error && rows.length > 0
   const layout = computeTableColumnLayout(visibleColumns, { dense, hasActions })
   const pages = hidePagination ? [] : paginationItems(currentPage, pageCount)
 
@@ -238,6 +276,7 @@ export function DataList<T, Id extends string>({
       <div
         className={cn(
           "min-w-0 overflow-hidden rounded-card glass-panel",
+          !hasRows && "[&_[data-slot=table-container]]:overflow-x-hidden",
           mobileItem && "hidden md:block",
         )}
       >
@@ -322,8 +361,8 @@ export function DataList<T, Id extends string>({
               {hasActions ? (
                 <TableHead
                   className={cn(
-                    "sticky right-0 z-10 bg-muted text-right align-middle whitespace-nowrap",
-                    dense ? "w-13 px-1 last:pr-2.5" : "w-20 pr-3 pl-1.5 last:pr-4",
+                    "sticky right-0 z-10 border-l border-border-subtle bg-muted text-right align-middle whitespace-nowrap",
+                    compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
                   )}
                 >
                   <span className="sr-only">Actions</span>
@@ -352,11 +391,13 @@ export function DataList<T, Id extends string>({
                         )}
                       >
                         <span
+                          onMouseEnter={syncCellTitle}
+                          onFocus={syncCellTitle}
                           className={cn(
-                            "max-w-full min-w-0 [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:justify-start [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:min-w-0 [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0",
+                            "max-w-full min-w-0 [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:min-w-0 [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:min-w-0 [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0 [&_[data-slot=checkbox]]:shrink-0",
                             oneLine
                               ? "inline-flex items-center overflow-hidden"
-                              : "block w-full truncate leading-snug [&_.flex>*]:min-w-0 [&_.flex-col>*:not([data-slot=badge])]:max-w-full [&_.flex-col>*:not([data-slot=badge])]:truncate [&_a]:max-w-full [&_a]:truncate [&_[data-slot=button]]:inline-block [&_[data-slot=button]]:truncate [&_[data-slot=button]]:text-left [&_[data-slot=button]]:leading-8 [&_[data-slot=button]]:align-middle [&_span.block]:truncate",
+                              : "block w-full leading-snug [&:not(:has(.flex-col,.flex-wrap,.line-clamp-2))]:truncate [&_.flex>*:not([data-slot=badge]):not([data-slot=checkbox])]:min-w-0 [&_.flex-col>*:not([data-slot=badge])]:max-w-full [&_.flex-col>*:not([data-slot=badge])]:truncate [&_a]:max-w-full [&_a]:truncate [&_[data-slot=button]]:inline-block [&_[data-slot=button]]:truncate [&_[data-slot=button]]:text-left [&_[data-slot=button]]:leading-8 [&_[data-slot=button]]:align-middle [&_span.block]:truncate",
                           )}
                         >
                           {renderCell(row, column.id)}
@@ -367,8 +408,8 @@ export function DataList<T, Id extends string>({
                   {hasActions ? (
                     <TableCell
                       className={cn(
-                        "sticky right-0 z-10 bg-card py-2 text-right align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint",
-                        dense ? "w-13 px-1 last:pr-2.5" : "w-20 pr-3 pl-1.5 last:pr-4",
+                        "sticky right-0 z-10 border-l border-border-subtle bg-card py-2 text-right align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint",
+                        compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
                       )}
                     >
                       <span className="inline-flex items-center justify-end [&_[data-slot=button]:not([class*='size-'])]:h-8 [&_[data-slot=button]:not([class*='size-'])]:px-2 [&_[data-slot=button]:not([class*='size-'])]:text-xs">

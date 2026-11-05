@@ -284,7 +284,7 @@ function MilestoneCell({
             aria-label={`Mark ${milestone.label} done`}
             onCheckedChange={(checked) => onToggle(checked === true)}
           />
-          <span className={cn(milestone.doneOn && "text-muted-foreground")}>{milestone.label}</span>
+          <span className={cn("min-w-0 truncate", milestone.doneOn && "text-muted-foreground")}>{milestone.label}</span>
           {milestone.workOrderMilestoneId ? <Badge variant="outline">Work Order</Badge> : null}
         </span>
       )

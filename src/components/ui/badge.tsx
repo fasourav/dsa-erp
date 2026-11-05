@@ -36,15 +36,26 @@ function Badge({
   className,
   variant = "default",
   render,
+  children,
   ...props
 }: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
+  const content =
+    typeof children === "string" || typeof children === "number" ? (
+      <span className="truncate">{children}</span>
+    ) : (
+      children
+    )
+
   return useRender({
     defaultTagName: "span",
     props: mergeProps<"span">(
       {
         className: cn(badgeVariants({ variant }), className),
       },
-      props
+      {
+        ...props,
+        children: content,
+      }
     ),
     render,
     state: {
