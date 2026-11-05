@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table"
 import {
   columnVisible,
+  computeTableColumnLayout,
   paginationItems,
   type ListColumn,
   type SortState,
@@ -146,6 +147,7 @@ export function DataList<T, Id extends string>({
   )
   const dense = visibleColumns.length >= 10
   const hasActions = renderActions !== undefined
+  const layout = computeTableColumnLayout(visibleColumns, { dense, hasActions })
   const pages = hidePagination ? [] : paginationItems(currentPage, pageCount)
 
   return (
@@ -239,7 +241,25 @@ export function DataList<T, Id extends string>({
           mobileItem && "hidden md:block",
         )}
       >
-        <Table>
+        <Table
+          className="table-fixed"
+          style={
+            layout.minWidthPx > 0
+              ? { minWidth: `${layout.minWidthPx}px` }
+              : undefined
+          }
+        >
+          <colgroup>
+            {visibleColumns.map((column, index) => (
+              <col
+                key={column.id}
+                style={{ width: layout.columnWidths[index] }}
+              />
+            ))}
+            {hasActions ? (
+              <col style={{ width: `${layout.actionsWidthPx}px` }} />
+            ) : null}
+          </colgroup>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {visibleColumns.map((column, index) => {
@@ -261,7 +281,7 @@ export function DataList<T, Id extends string>({
                         : undefined
                     }
                     className={cn(
-                      "py-2 align-middle",
+                      "overflow-hidden py-2 align-middle",
                       alignClass(column.align),
                       insetClass(column.align, previous, next, dense),
                     )}
@@ -272,7 +292,7 @@ export function DataList<T, Id extends string>({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          "h-auto min-h-8 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
+                          "h-auto max-w-full min-h-8 min-w-0 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
                           column.align === "right" && "flex-row-reverse",
                           active && "text-foreground",
                         )}
@@ -283,17 +303,17 @@ export function DataList<T, Id extends string>({
                         }
                         onClick={() => onSort(column.id)}
                       >
-                        {column.label}
-                        {active ? <SortIcon aria-hidden="true" className="size-3" strokeWidth={2.4} /> : null}
+                        <span className="truncate">{column.label}</span>
+                        {active ? <SortIcon aria-hidden="true" className="size-3 shrink-0" strokeWidth={2.4} /> : null}
                       </Button>
                     ) : (
                       <span
                         className={cn(
-                          "inline-flex min-h-8 items-center text-caption font-label text-muted-foreground",
+                          "inline-flex max-w-full min-h-8 min-w-0 items-center text-caption font-label text-muted-foreground",
                           column.align === "right" && "justify-end",
                         )}
                       >
-                        {column.label}
+                        <span className="truncate">{column.label}</span>
                       </span>
                     )}
                   </TableHead>
@@ -302,8 +322,8 @@ export function DataList<T, Id extends string>({
               {hasActions ? (
                 <TableHead
                   className={cn(
-                    "sticky right-0 z-10 w-px bg-muted align-middle whitespace-nowrap",
-                    dense ? "px-1 last:pr-2.5" : "px-3 last:pr-4",
+                    "sticky right-0 z-10 bg-muted text-right align-middle whitespace-nowrap",
+                    dense ? "w-13 px-1 last:pr-2.5" : "w-20 pr-3 pl-1.5 last:pr-4",
                   )}
                 >
                   <span className="sr-only">Actions</span>
@@ -323,8 +343,8 @@ export function DataList<T, Id extends string>({
                       <TableCell
                         key={column.id}
                         className={cn(
-                          "align-middle",
-                          oneLine ? "whitespace-nowrap" : "whitespace-normal wrap-break-word",
+                          "overflow-hidden align-middle",
+                          oneLine ? "whitespace-nowrap" : "whitespace-normal",
                           dense && "text-caption",
                           alignClass(column.align),
                           insetClass(column.align, previous, next, dense),
@@ -333,10 +353,10 @@ export function DataList<T, Id extends string>({
                       >
                         <span
                           className={cn(
-                            "max-w-full [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0",
+                            "max-w-full min-w-0 [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:justify-start [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:min-w-0 [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0",
                             oneLine
-                              ? "inline-flex items-center"
-                              : "block w-full min-w-0 leading-snug",
+                              ? "inline-flex items-center overflow-hidden"
+                              : "block w-full truncate leading-snug [&_.flex>*]:min-w-0 [&_.flex-col>*:not([data-slot=badge])]:max-w-full [&_.flex-col>*:not([data-slot=badge])]:truncate [&_a]:max-w-full [&_a]:truncate [&_[data-slot=button]]:inline-block [&_[data-slot=button]]:truncate [&_[data-slot=button]]:text-left [&_[data-slot=button]]:leading-8 [&_[data-slot=button]]:align-middle [&_span.block]:truncate",
                           )}
                         >
                           {renderCell(row, column.id)}
@@ -347,11 +367,11 @@ export function DataList<T, Id extends string>({
                   {hasActions ? (
                     <TableCell
                       className={cn(
-                        "sticky right-0 z-10 w-px bg-card py-2 align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint",
-                        dense ? "px-1 last:pr-2.5" : "px-3 last:pr-4",
+                        "sticky right-0 z-10 bg-card py-2 text-right align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint",
+                        dense ? "w-13 px-1 last:pr-2.5" : "w-20 pr-3 pl-1.5 last:pr-4",
                       )}
                     >
-                      <span className="inline-flex items-center">
+                      <span className="inline-flex items-center justify-end [&_[data-slot=button]:not([class*='size-'])]:h-8 [&_[data-slot=button]:not([class*='size-'])]:px-2 [&_[data-slot=button]:not([class*='size-'])]:text-xs">
                         {renderActions(row)}
                       </span>
                     </TableCell>
