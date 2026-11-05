@@ -54,3 +54,52 @@ export async function fetchByIds<T>(
 
   return rows
 }
+
+export type PageSlice<T> = {
+  rows: T[]
+  total: number
+  page: number
+  pageCount: number
+}
+
+export async function fetchPage<T>(
+  queryRange: (from: number, to: number) => PromiseLike<{
+    data: T[] | null
+    error: { code?: string; message: string } | null
+    count: number | null
+  }>,
+  requestedPage: number,
+  pageSize = 50,
+): Promise<PageSlice<T>> {
+  const safeSize = Math.max(1, Math.floor(pageSize) || 50)
+  const safeRequested = Math.max(1, Math.floor(requestedPage) || 1)
+  const bounds = (target: number) => {
+    const from = (target - 1) * safeSize
+    return { from, to: from + safeSize - 1 }
+  }
+
+  const initial = bounds(safeRequested)
+  let result = await queryRange(initial.from, initial.to)
+
+  // Past the end (PostgREST answers PGRST103): reload page 1 for count, then last page.
+  if (safeRequested > 1 && result.error?.code === "PGRST103") {
+    const first = bounds(1)
+    result = await queryRange(first.from, first.to)
+    const lastPage = Math.max(1, Math.ceil((result.count ?? 0) / safeSize))
+    if (!result.error && lastPage > 1) {
+      const last = bounds(lastPage)
+      result = await queryRange(last.from, last.to)
+    }
+  }
+
+  if (result.error) {
+    throw result.error
+  }
+
+  const rows = result.data ?? []
+  const total = result.count ?? rows.length
+  const pageCount = Math.max(1, Math.ceil(total / safeSize))
+  const page = Math.min(safeRequested, pageCount)
+
+  return { rows, total, page, pageCount }
+}
