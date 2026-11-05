@@ -1,7 +1,7 @@
 "use client"
 
 import { ListExport } from "@/components/list-export"
-import { filterRows, ListSearch, rowText } from "@/components/list-search"
+import { ListSearch } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
@@ -37,12 +37,13 @@ import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { paymentStatusLabel } from "@/lib/payment-status"
 import {
-  paginateRows,
   rangeLabel,
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
+import { LIST_PAGE_SIZE } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useUrlSearch } from "@/lib/use-url-search"
 
 export function ClientInvoicesTable({
   invoices,
@@ -50,6 +51,9 @@ export function ClientInvoicesTable({
   paymentMethods,
   bankAccounts,
   projectFilter,
+  total,
+  page,
+  pageCount,
   error,
   initialQuery = "",
 }: {
@@ -58,6 +62,9 @@ export function ClientInvoicesTable({
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
   projectFilter: InvoiceProjectFilter | null
+  total: number
+  page: number
+  pageCount: number
   error: string | null
   initialQuery?: string
 }) {
@@ -70,8 +77,7 @@ export function ClientInvoicesTable({
     key: "issuedOn",
     direction: "desc",
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
+  const { query, setQuery, setPage } = useUrlSearch(initialQuery)
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
@@ -94,10 +100,26 @@ export function ClientInvoicesTable({
     { value: "paid", label: "Paid" },
   ]
   const filtered = useMemo(
-    () => filterRows(sorted, query, rowText, listFilter, (invoice) => invoice.status),
-    [listFilter, query, sorted],
+    () =>
+      listFilter === "all"
+        ? sorted
+        : sorted.filter((invoice) => invoice.status === listFilter),
+    [listFilter, sorted],
   )
-  const pageResult = paginateRows(filtered, page)
+
+  const isStatusFiltered = listFilter !== "all"
+  const effectiveTotal = error ? 0 : isStatusFiltered ? filtered.length : total
+  const rangeStart =
+    effectiveTotal === 0 || filtered.length === 0
+      ? 0
+      : isStatusFiltered
+        ? 1
+        : (page - 1) * LIST_PAGE_SIZE + 1
+  const rangeEnd =
+    effectiveTotal === 0 || filtered.length === 0
+      ? 0
+      : rangeStart + filtered.length - 1
+
   const paymentsInvoice =
     invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
 
@@ -182,27 +204,20 @@ export function ClientInvoicesTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search invoices"
         filterLabel="Status"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
         columns={clientInvoiceColumns}
-        rows={error ? [] : pageResult.rows}
+        rows={error ? [] : filtered}
         rowKey={(invoice) => invoice.id}
         sort={sort}
         onSort={(key) => {
           setSort((current) => toggleSort(current, key))
-          setPage(1)
         }}
         visibility={visibility}
         error={error}
@@ -212,21 +227,20 @@ export function ClientInvoicesTable({
             : "No Client Invoices Yet."
         }
         rangeText={rangeLabel(
-          pageResult.rangeStart,
-          pageResult.rangeEnd,
-          error ? 0 : pageResult.total,
+          rangeStart,
+          rangeEnd,
+          effectiveTotal,
           "invoice",
           "invoices",
         )}
-        currentPage={pageResult.currentPage}
-        pageCount={pageResult.pageCount}
+        currentPage={isStatusFiltered ? 1 : page}
+        pageCount={isStatusFiltered ? 1 : pageCount}
         onPageChange={setPage}
         pagingLabel="Client Invoices pagination"
         mobileItem={(invoice) => ({
           title: projectTitle(invoice.projectName),
           value: <StatusBadge status={invoice.status} />,
           subtitle: [
-            // Date first so a long client name truncates instead of the date.
             invoice.issuedOn ? formatIsoDate(invoice.issuedOn) : "",
             invoice.clientName,
           ]
@@ -252,10 +266,12 @@ export function ClientInvoicesTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              {canEdit ? (<DropdownMenuItem onClick={() => openForm(invoice)}>
-                <Pencil aria-hidden="true" />
-                Edit
-              </DropdownMenuItem>) : null}
+              {canEdit ? (
+                <DropdownMenuItem onClick={() => openForm(invoice)}>
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() => {
                   setPaymentsInvoiceId(invoice.id)
@@ -269,17 +285,19 @@ export function ClientInvoicesTable({
                 Print / Download
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {canDelete ? (<DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setDeleteError(null)
-                  setPendingDelete(invoice)
-                  setDeleteOpen(true)
-                }}
-              >
-                <Trash2 aria-hidden="true" />
-                Delete
-              </DropdownMenuItem>) : null}
+              {canDelete ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteError(null)
+                    setPendingDelete(invoice)
+                    setDeleteOpen(true)
+                  }}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
