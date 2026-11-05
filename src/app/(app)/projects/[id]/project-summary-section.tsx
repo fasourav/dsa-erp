@@ -7,8 +7,8 @@ import { useMemo, useState, type ReactNode } from "react"
 import {
   ExpenseDonut,
   WeeklyChart,
-  expenseSliceStyle,
-} from "@/app/(app)/dashboard/dashboard-charts"
+} from "@/app/(app)/dashboard/dashboard-charts-lazy"
+import { expenseSliceStyle } from "@/app/(app)/dashboard/dashboard-chart-primitives"
 import { BudgetTab } from "@/app/(app)/projects/[id]/budget-tab"
 import { DataList, type DataListMobileItem } from "@/components/data-list"
 import { Money } from "@/components/money"

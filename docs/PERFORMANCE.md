@@ -56,6 +56,7 @@ Measured from `.next/build-manifest.json` (`rootMainFiles`) + each route's `page
 | `/accounts/invoices` | Baseline (Task 1) | 20 | 1075.1 | 317.2 | — |
 | `/accounts/bank` | Baseline (Task 1) | 21 | 1118.1 | 329.3 | — |
 | `/accounts/expenses` | Baseline (Task 1) | 20 | 1075.0 | 318.2 | — |
+| `/dashboard` | Lazy Recharts (Task 3) | 19 | 1007.8 | 294.4 | -108.2 kB (-26.9%) |
 
 ---
 

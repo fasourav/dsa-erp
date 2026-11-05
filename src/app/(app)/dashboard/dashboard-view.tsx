@@ -26,13 +26,15 @@ import {
 import {
   AnnualChart,
   ExpenseDonut,
-  expenseSliceStyle,
-  LegendDot,
-  Ring,
   Sparkline,
   TrendChart,
   WeeklyChart,
-} from "@/app/(app)/dashboard/dashboard-charts"
+} from "@/app/(app)/dashboard/dashboard-charts-lazy"
+import {
+  expenseSliceStyle,
+  LegendDot,
+  Ring,
+} from "@/app/(app)/dashboard/dashboard-chart-primitives"
 import { useAccess } from "@/components/access-provider"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
