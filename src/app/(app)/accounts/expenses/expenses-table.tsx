@@ -54,7 +54,6 @@ export function ExpensesTable({
   bankAccounts,
   total,
   page,
-  pageCount,
   error,
   initialQuery = "",
   pager,
@@ -67,7 +66,7 @@ export function ExpensesTable({
   bankAccounts: BankAccountChoice[]
   total: number
   page: number
-  pageCount: number
+  pageCount?: number
   error: string | null
   initialQuery?: string
   pager?: ReactNode
@@ -81,7 +80,7 @@ export function ExpensesTable({
     key: "expenseDate",
     direction: "desc",
   })
-  const { query, setQuery, setPage } = useUrlSearch(initialQuery)
+  const { query, setQuery } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formExpense, setFormExpense] = useState<OperationalExpenseRow | null>(
     null,
@@ -190,10 +189,7 @@ export function ExpensesTable({
           "expense",
           "expenses",
         )}
-        currentPage={page}
-        pageCount={pageCount}
-        onPageChange={setPage}
-        pagingLabel="Operational Expenses pagination"
+        hidePagination
         mobileItem={(expense) => ({
           title: expense.category || "—",
           subtitle: [
@@ -276,10 +272,7 @@ export function ExpensesTable({
               "PO payment",
               "PO payments",
             )}
-            currentPage={1}
-            pageCount={1}
-            onPageChange={() => {}}
-            pagingLabel="Operational Purchase Order Payments"
+            hidePagination
             mobileItem={(expense) => ({
               title: expense.category || "—",
               subtitle: [

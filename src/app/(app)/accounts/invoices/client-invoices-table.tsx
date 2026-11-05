@@ -56,7 +56,6 @@ export function ClientInvoicesTable({
   projectFilter,
   total,
   page,
-  pageCount,
   error,
   initialQuery = "",
   statusFilter = "all",
@@ -68,7 +67,7 @@ export function ClientInvoicesTable({
   projectFilter: InvoiceProjectFilter | null
   total: number
   page: number
-  pageCount: number
+  pageCount?: number
   error: string | null
   initialQuery?: string
   statusFilter?: InvoiceStatusFilter
@@ -82,7 +81,7 @@ export function ClientInvoicesTable({
     key: "issuedOn",
     direction: "desc",
   })
-  const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -220,10 +219,7 @@ export function ClientInvoicesTable({
           "invoice",
           "invoices",
         )}
-        currentPage={page}
-        pageCount={pageCount}
-        onPageChange={setPage}
-        pagingLabel="Client Invoices pagination"
+        hidePagination
         mobileItem={(invoice) => ({
           title: projectTitle(invoice.projectName),
           value: <StatusBadge status={invoice.status} />,

@@ -68,7 +68,6 @@ export function BankPanel({
   accountFilter,
   total,
   page,
-  pageCount,
   error,
   fiscalYearStartMonth,
   view,
@@ -85,7 +84,7 @@ export function BankPanel({
   accountFilter: AccountFilter | null
   total: number
   page: number
-  pageCount: number
+  pageCount?: number
   error: string | null
   fiscalYearStartMonth: number
   view: "ledger" | "statement" | "reconcile"
@@ -104,7 +103,7 @@ export function BankPanel({
     key: "transactionDate",
     direction: "desc",
   })
-  const { query, setQuery, setPage } = useUrlSearch(initialQuery)
+  const { query, setQuery } = useUrlSearch(initialQuery)
   const [movementOpen, setMovementOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [movementKind, setMovementKind] = useState<"deposit" | "withdrawal">("deposit")
@@ -318,10 +317,7 @@ export function BankPanel({
           "transaction",
           "transactions",
         )}
-        currentPage={page}
-        pageCount={pageCount}
-        onPageChange={setPage}
-        pagingLabel="Bank transactions pagination"
+        hidePagination
         mobileItem={(transaction) => ({
           title: bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId }),
           value: <StatusBadge status={transaction.direction} />,

@@ -96,6 +96,8 @@ export type DataListMobileItem = {
   meta?: ReactNode
 }
 
+const noopPageChange = () => {}
+
 export function DataList<T, Id extends string>({
   columns,
   rows,
@@ -106,10 +108,11 @@ export function DataList<T, Id extends string>({
   error,
   emptyMessage,
   rangeText,
-  currentPage,
-  pageCount,
-  onPageChange,
-  pagingLabel,
+  currentPage = 1,
+  pageCount = 1,
+  onPageChange = noopPageChange,
+  pagingLabel = "Pagination",
+  hidePagination = false,
   renderCell,
   renderActions,
   mobileItem,
@@ -124,10 +127,11 @@ export function DataList<T, Id extends string>({
   error: string | null
   emptyMessage: string
   rangeText: string
-  currentPage: number
-  pageCount: number
-  onPageChange: (page: number) => void
-  pagingLabel: string
+  currentPage?: number
+  pageCount?: number
+  onPageChange?: (page: number) => void
+  pagingLabel?: string
+  hidePagination?: boolean
   renderCell: (row: T, columnId: Id) => ReactNode
   renderActions?: (row: T) => ReactNode
   /**
@@ -142,7 +146,7 @@ export function DataList<T, Id extends string>({
   )
   const dense = visibleColumns.length >= 10
   const hasActions = renderActions !== undefined
-  const pages = paginationItems(currentPage, pageCount)
+  const pages = hidePagination ? [] : paginationItems(currentPage, pageCount)
 
   return (
     <div className="flex flex-col gap-2.5 md:gap-3.5">
@@ -200,29 +204,33 @@ export function DataList<T, Id extends string>({
               </ul>
             )}
           </div>
-          <div className="flex items-center justify-between gap-3 px-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled={currentPage <= 1}
-              aria-label="Go to previous page"
-              onClick={() => onPageChange(currentPage - 1)}
-            >
-              <ChevronLeft aria-hidden="true" />
-            </Button>
-            <p className="text-label text-muted-foreground">{rangeText}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled={currentPage >= pageCount}
-              aria-label="Go to next page"
-              onClick={() => onPageChange(currentPage + 1)}
-            >
-              <ChevronRight aria-hidden="true" />
-            </Button>
-          </div>
+          {hidePagination ? (
+            <p className="px-1 text-label text-muted-foreground">{rangeText}</p>
+          ) : (
+            <div className="flex items-center justify-between gap-3 px-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={currentPage <= 1}
+                aria-label="Go to previous page"
+                onClick={() => onPageChange(currentPage - 1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </Button>
+              <p className="text-label text-muted-foreground">{rangeText}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={currentPage >= pageCount}
+                aria-label="Go to next page"
+                onClick={() => onPageChange(currentPage + 1)}
+              >
+                <ChevronRight aria-hidden="true" />
+              </Button>
+            </div>
+          )}
         </div>
       ) : null}
       <div
@@ -348,60 +356,62 @@ export function DataList<T, Id extends string>({
         ) : null}
         <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
           <p className="text-label text-muted-foreground">{rangeText}</p>
-          <Pagination
-            aria-label={pagingLabel}
-            className="mx-0 w-auto justify-start sm:justify-end"
-          >
-            <PaginationContent className="flex-wrap gap-1">
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  aria-label="Go to previous page"
-                  onClick={() => onPageChange(currentPage - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" data-icon="inline-start" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-              </PaginationItem>
-              {pages.map((item, index) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Page ${item}`}
-                      aria-current={item === currentPage ? "page" : undefined}
-                      className="font-label text-muted-foreground aria-[current=page]:bg-solid aria-[current=page]:text-foreground aria-[current=page]:shadow-segment md:size-8"
-                      onClick={() => onPageChange(item)}
-                    >
-                      {item}
-                    </Button>
-                  </PaginationItem>
-                ),
-              )}
-              <PaginationItem>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={currentPage >= pageCount}
-                  aria-label="Go to next page"
-                  onClick={() => onPageChange(currentPage + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          {hidePagination ? null : (
+            <Pagination
+              aria-label={pagingLabel}
+              className="mx-0 w-auto justify-start sm:justify-end"
+            >
+              <PaginationContent className="flex-wrap gap-1">
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={currentPage <= 1}
+                    aria-label="Go to previous page"
+                    onClick={() => onPageChange(currentPage - 1)}
+                  >
+                    <ChevronLeft aria-hidden="true" data-icon="inline-start" />
+                    <span className="hidden sm:inline">Previous</span>
+                  </Button>
+                </PaginationItem>
+                {pages.map((item, index) =>
+                  item === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Page ${item}`}
+                        aria-current={item === currentPage ? "page" : undefined}
+                        className="font-label text-muted-foreground aria-[current=page]:bg-solid aria-[current=page]:text-foreground aria-[current=page]:shadow-segment md:size-8"
+                        onClick={() => onPageChange(item)}
+                      >
+                        {item}
+                      </Button>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={currentPage >= pageCount}
+                    aria-label="Go to next page"
+                    onClick={() => onPageChange(currentPage + 1)}
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight aria-hidden="true" data-icon="inline-end" />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       </div>
     </div>
