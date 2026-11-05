@@ -24,6 +24,7 @@ export type VendorSummary = {
 
 export type ColumnId =
   | "displayName"
+  | "vendorField"
   | "contact"
   | "totalProjectValue"
   | "totalPaid"
@@ -44,6 +45,7 @@ export type DataColumn = {
 
 export const dataColumns: readonly DataColumn[] = [
   { id: "displayName", label: "Vendor Name", align: "left" },
+  { id: "vendorField", label: "Category", align: "left" },
   { id: "contact", label: "Contact", align: "left" },
   { id: "totalProjectValue", label: "Total Project Value", align: "right" },
   { id: "totalPaid", label: "Total Paid", align: "right" },
@@ -81,6 +83,10 @@ function compareVendors(
   switch (key) {
     case "displayName":
       return a.displayName.localeCompare(b.displayName, "en", {
+        sensitivity: "base",
+      })
+    case "vendorField":
+      return (a.vendorField ?? "").localeCompare(b.vendorField ?? "", "en", {
         sensitivity: "base",
       })
     case "contact":
