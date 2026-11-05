@@ -6,7 +6,12 @@ import type {
   NamedOption,
   OperationalExpenseRow,
 } from "@/lib/operational-expenses"
-import { LIST_PAGE_SIZE, sanitizeSearch } from "@/lib/page-query"
+import {
+  LIST_PAGE_SIZE,
+  parseSearchAmount,
+  parseSearchIsoDate,
+  sanitizeSearch,
+} from "@/lib/page-query"
 import { dateInputValue } from "@/lib/project-validation"
 import { creatorNames } from "@/lib/record-audit"
 import {
@@ -21,6 +26,76 @@ type Embedded<T> = T | T[] | null
 
 const EXPENSE_SELECT =
   "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, created_at, created_by, departments(name), vendors(person_name, company_name)"
+
+// Searchable operational expense columns: category (ILIKE), notes (ILIKE),
+// payment_method (ILIKE), department name (via department_id), vendor name / company
+// (via vendor_id), bank account name / bank name (via bank_account_id),
+// expense_date (ISO date), and exact expense amount.
+function buildExpenseOrFilter(
+  rawQuery: string,
+  term: string,
+  departments: readonly NamedOption[],
+  bankAccounts: readonly BankAccountChoice[],
+  matchingVendorIds: readonly string[],
+): string | null {
+  const clauses: string[] = []
+  const lower = term.toLowerCase()
+
+  if (term) {
+    const like = `%${term}%`
+    clauses.push(
+      `category.ilike.${like}`,
+      `notes.ilike.${like}`,
+      `payment_method.ilike.${like}`,
+    )
+
+    const matchingDeptIds = departments
+      .filter((dept) => dept.name.toLowerCase().includes(lower))
+      .slice(0, 200)
+      .map((dept) => dept.id)
+    if (matchingDeptIds.length > 0) {
+      clauses.push(`department_id.in.(${matchingDeptIds.join(",")})`)
+    }
+
+    if (matchingVendorIds.length > 0) {
+      clauses.push(`vendor_id.in.(${matchingVendorIds.slice(0, 200).join(",")})`)
+    }
+
+    const matchingAccountIds = bankAccounts
+      .filter((account) => account.name.toLowerCase().includes(lower))
+      .slice(0, 200)
+      .map((account) => account.id)
+    if (matchingAccountIds.length > 0) {
+      clauses.push(`bank_account_id.in.(${matchingAccountIds.join(",")})`)
+    }
+
+    const isoDate = parseSearchIsoDate(term)
+    if (isoDate) {
+      clauses.push(`expense_date.eq.${isoDate}`)
+    }
+  }
+
+  const amount = parseSearchAmount(rawQuery)
+  if (amount !== null) {
+    clauses.push(`amount.eq.${amount}`)
+  }
+
+  return clauses.length > 0 ? clauses.join(",") : null
+}
+
+async function findMatchingVendorIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  term: string,
+): Promise<string[]> {
+  if (!term) return []
+  const like = `%${term}%`
+  const { data } = await supabase
+    .from("vendors")
+    .select("id")
+    .or(`company_name.ilike.${like},person_name.ilike.${like}`)
+    .limit(200)
+  return (data ?? []).map((row) => row.id)
+}
 
 type RawExpenseRow = {
   id: string
@@ -100,32 +175,12 @@ export async function getOperationalExpenses(
   }
   const supabase = await createClient()
   const requestedPage = options.page ?? 1
-  const term = sanitizeSearch(options.q ?? "")
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
 
   try {
-    const [expenseSlice, categoryRows, departmentRows, methodRows, bankAccounts] =
+    const [categoryRows, departmentRows, methodRows, bankAccounts, matchingVendorIds] =
       await Promise.all([
-        fetchPage(
-          (from, to) => {
-            let query = supabase
-              .from("operational_expenses")
-              .select(EXPENSE_SELECT, { count: "exact" })
-
-            if (term) {
-              const like = `%${term}%`
-              query = query.or(
-                `category.ilike.${like},notes.ilike.${like},payment_method.ilike.${like}`,
-              )
-            }
-
-            return query
-              .order("expense_date", { ascending: false })
-              .order("id", { ascending: false })
-              .range(from, to)
-          },
-          requestedPage,
-          LIST_PAGE_SIZE,
-        ),
         fetchAllPages(
           (from, to) =>
             supabase
@@ -158,6 +213,7 @@ export async function getOperationalExpenses(
           "Payment method list is larger than expected.",
         ),
         listBankAccounts(),
+        findMatchingVendorIds(supabase, term),
       ])
 
     const categories = officeCategoryChoices(categoryRows)
@@ -167,16 +223,45 @@ export async function getOperationalExpenses(
         return name ? [[row.id, name] as const] : []
       }),
     )
-    const purchaseOrderPayments = await operationalPurchaseOrderPayments(
-      supabase,
-      officeCategoryNames,
-    )
-    const matchingPoPayments = filterPoPayments(purchaseOrderPayments, term)
-
     const departments = departmentRows.map((row) => ({
       id: row.id,
       name: row.name?.trim() ?? "",
     }))
+    const orFilter = buildExpenseOrFilter(
+      rawQuery,
+      term,
+      departments,
+      bankAccounts,
+      matchingVendorIds,
+    )
+
+    const [expenseSlice, purchaseOrderPayments] = await Promise.all([
+      fetchPage(
+        (from, to) => {
+          let query = supabase
+            .from("operational_expenses")
+            .select(EXPENSE_SELECT, { count: "exact" })
+
+          if (orFilter) {
+            query = query.or(orFilter)
+          }
+
+          return query
+            .order("expense_date", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to)
+        },
+        requestedPage,
+        LIST_PAGE_SIZE,
+      ),
+      operationalPurchaseOrderPayments(supabase, officeCategoryNames),
+    ])
+
+    const matchingPoPayments = filterPoPayments(
+      purchaseOrderPayments,
+      rawQuery,
+      term,
+    )
     const expenses = await mapExpenseRows(supabase, expenseSlice.rows)
 
     return {
@@ -209,21 +294,64 @@ export async function getAllOperationalExpensesForExport(
   error: string | null
 }> {
   const supabase = await createClient()
-  const term = sanitizeSearch(options.q ?? "")
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
 
   try {
-    const [expenseRows, categoryRows] = await Promise.all([
+    const [categoryRows, departmentRows, bankAccounts, matchingVendorIds] =
+      await Promise.all([
+        fetchAllPages(
+          (from, to) =>
+            supabase
+              .from("office_expense_categories")
+              .select("id, name, sort_order, report_group")
+              .order("sort_order", { ascending: true })
+              .order("name", { ascending: true })
+              .range(from, to),
+          "Office expense category list is larger than expected.",
+        ),
+        fetchAllPages(
+          (from, to) =>
+            supabase
+              .from("departments")
+              .select("id, name, is_active")
+              .eq("is_active", true)
+              .order("sort_order", { ascending: true })
+              .order("name", { ascending: true })
+              .range(from, to),
+          "Department list is larger than expected.",
+        ),
+        listBankAccounts(),
+        findMatchingVendorIds(supabase, term),
+      ])
+
+    const officeCategoryNames = new Map(
+      categoryRows.flatMap((row) => {
+        const name = row.name?.trim() ?? ""
+        return name ? [[row.id, name] as const] : []
+      }),
+    )
+    const departments = departmentRows.map((row) => ({
+      id: row.id,
+      name: row.name?.trim() ?? "",
+    }))
+    const orFilter = buildExpenseOrFilter(
+      rawQuery,
+      term,
+      departments,
+      bankAccounts,
+      matchingVendorIds,
+    )
+
+    const [expenseRows, purchaseOrderPayments] = await Promise.all([
       fetchAllPages(
         (from, to) => {
           let query = supabase
             .from("operational_expenses")
             .select(EXPENSE_SELECT)
 
-          if (term) {
-            const like = `%${term}%`
-            query = query.or(
-              `category.ilike.${like},notes.ilike.${like},payment_method.ilike.${like}`,
-            )
+          if (orFilter) {
+            query = query.or(orFilter)
           }
 
           return query
@@ -233,29 +361,15 @@ export async function getAllOperationalExpensesForExport(
         },
         "Operational expense export is larger than expected.",
       ),
-      fetchAllPages(
-        (from, to) =>
-          supabase
-            .from("office_expense_categories")
-            .select("id, name, sort_order, report_group")
-            .order("sort_order", { ascending: true })
-            .order("name", { ascending: true })
-            .range(from, to),
-        "Office expense category list is larger than expected.",
-      ),
-    ])
-
-    const officeCategoryNames = new Map(
-      categoryRows.flatMap((row) => {
-        const name = row.name?.trim() ?? ""
-        return name ? [[row.id, name] as const] : []
-      }),
-    )
-    const [expenses, purchaseOrderPayments] = await Promise.all([
-      mapExpenseRows(supabase, expenseRows),
       operationalPurchaseOrderPayments(supabase, officeCategoryNames),
     ])
-    const matchingPoPayments = filterPoPayments(purchaseOrderPayments, term)
+
+    const expenses = await mapExpenseRows(supabase, expenseRows)
+    const matchingPoPayments = filterPoPayments(
+      purchaseOrderPayments,
+      rawQuery,
+      term,
+    )
 
     return {
       expenses: [...expenses, ...matchingPoPayments],
@@ -268,12 +382,16 @@ export async function getAllOperationalExpensesForExport(
 
 function filterPoPayments(
   rows: readonly OperationalExpenseRow[],
+  rawQuery: string,
   term: string,
 ): OperationalExpenseRow[] {
-  if (!term) return [...rows]
+  const amount = parseSearchAmount(rawQuery)
+  if (!term && amount === null) return [...rows]
   const lower = term.toLowerCase()
   return rows.filter((row) => {
-    const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.notes}`.toLowerCase()
+    if (amount !== null && row.amount === amount) return true
+    if (!term) return false
+    const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.notes} ${row.expenseDate} ${row.createdByName}`.toLowerCase()
     return haystack.includes(lower)
   })
 }

@@ -3,12 +3,19 @@ import type { BankAccountChoice } from "@/lib/bank-account"
 import { fetchAllPages, fetchByIds, fetchPage } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
-import { LIST_PAGE_SIZE, sanitizeSearch } from "@/lib/page-query"
+import {
+  LIST_PAGE_SIZE,
+  parseSearchAmount,
+  parseSearchIsoDate,
+  sanitizeSearch,
+} from "@/lib/page-query"
 import { dateInputValue } from "@/lib/project-validation"
 import {
+  clientInvoiceStatuses,
   clientInvoiceStatusFromPayments,
   isClientInvoiceStatus,
   moneyCents,
+  paymentStatusLabel,
   sumAmounts,
   type ClientInvoiceStatus,
 } from "@/lib/payment-status"
@@ -43,6 +50,67 @@ type InvoiceRawRow = {
   amount: number
   status: string
   description: string | null
+}
+
+// Searchable invoice columns: description (ILIKE), project name (via project_id),
+// client display name (via client_id), status key/label, issued_on / due_on (ISO date),
+// and exact invoice amount.
+function buildInvoiceOrFilter(
+  rawQuery: string,
+  term: string,
+  projects: readonly InvoiceProjectOption[],
+  clientsById: ReadonlyMap<string, string>,
+): string | null {
+  const clauses: string[] = []
+  const lower = term.toLowerCase()
+
+  if (term) {
+    clauses.push(`description.ilike.%${term}%`)
+
+    const matchingProjectIds = projects
+      .filter(
+        (project) =>
+          project.name.toLowerCase().includes(lower) ||
+          project.clientName.toLowerCase().includes(lower),
+      )
+      .slice(0, 200)
+      .map((project) => project.id)
+    if (matchingProjectIds.length > 0) {
+      clauses.push(`project_id.in.(${matchingProjectIds.join(",")})`)
+    }
+
+    const matchingClientIds: string[] = []
+    for (const [clientId, displayName] of clientsById.entries()) {
+      if (displayName.toLowerCase().includes(lower)) {
+        matchingClientIds.push(clientId)
+        if (matchingClientIds.length >= 200) break
+      }
+    }
+    if (matchingClientIds.length > 0) {
+      clauses.push(`client_id.in.(${matchingClientIds.join(",")})`)
+    }
+
+    const matchingStatuses = clientInvoiceStatuses.filter(
+      (status) =>
+        status.includes(lower) ||
+        paymentStatusLabel(status).toLowerCase().includes(lower),
+    )
+    if (matchingStatuses.length > 0) {
+      clauses.push(`status.in.(${matchingStatuses.join(",")})`)
+    }
+
+    const isoDate = parseSearchIsoDate(term)
+    if (isoDate) {
+      clauses.push(`issued_on.eq.${isoDate}`, `due_on.eq.${isoDate}`)
+    }
+  }
+
+  const amount = parseSearchAmount(rawQuery)
+  if (amount !== null) {
+    clauses.push(`amount.eq.${amount}`)
+  }
+
+  return clauses.length > 0 ? clauses.join(",") : null
 }
 
 async function hydrateInvoices(
@@ -142,7 +210,8 @@ export async function getClientInvoices(
   const supabase = await createClient()
   const requestedId = projectId && isUuid(projectId) ? projectId : null
   const requestedPage = options.page ?? 1
-  const term = sanitizeSearch(options.q ?? "")
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
   const statusFilter =
     options.status && isClientInvoiceStatus(options.status)
       ? options.status
@@ -232,6 +301,8 @@ export async function getClientInvoices(
       }
     }
 
+    const orFilter = buildInvoiceOrFilter(rawQuery, term, projects, clientsById)
+
     const invoiceSlice = await fetchPage(
       (from, to) => {
         let query = supabase
@@ -240,6 +311,7 @@ export async function getClientInvoices(
             "id, project_id, client_id, issued_on, due_on, amount, status, description",
             { count: "exact" },
           )
+
         if (statusFilter !== "all") {
           query = query.eq("status", statusFilter)
         } else {
@@ -249,8 +321,8 @@ export async function getClientInvoices(
         if (matchedProject) {
           query = query.eq("project_id", matchedProject.id)
         }
-        if (term) {
-          query = query.ilike("description", `%${term}%`)
+        if (orFilter) {
+          query = query.or(orFilter)
         }
 
         return query
@@ -305,7 +377,8 @@ export async function getAllClientInvoicesForExport(
   if (projectId && !requestedId) {
     return { invoices: [], error: "That project could not be found." }
   }
-  const term = sanitizeSearch(options.q ?? "")
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
   const statusFilter =
     options.status && isClientInvoiceStatus(options.status)
       ? options.status
@@ -339,21 +412,19 @@ export async function getAllClientInvoicesForExport(
         row.client_id ? [[row.client_id, row.display_name?.trim() ?? ""] as const] : [],
       ),
     )
-    const projectsById = new Map(
-      projectRows.map((row) => [
-        row.id,
-        {
-          id: row.id,
-          name: row.name?.trim() ?? "",
-          clientId: row.client_id,
-          clientName: clientsById.get(row.client_id) ?? "",
-        } satisfies InvoiceProjectOption,
-      ]),
-    )
+    const projects = projectRows.map((row) => ({
+      id: row.id,
+      name: row.name?.trim() ?? "",
+      clientId: row.client_id,
+      clientName: clientsById.get(row.client_id) ?? "",
+    }))
+    const projectsById = new Map(projects.map((project) => [project.id, project]))
 
     if (requestedId && !projectsById.has(requestedId)) {
       return { invoices: [], error: "That project could not be found." }
     }
+
+    const orFilter = buildInvoiceOrFilter(rawQuery, term, projects, clientsById)
 
     const invoiceRows = await fetchAllPages(
       (from, to) => {
@@ -362,6 +433,7 @@ export async function getAllClientInvoicesForExport(
           .select(
             "id, project_id, client_id, issued_on, due_on, amount, status, description",
           )
+
         if (statusFilter !== "all") {
           query = query.eq("status", statusFilter)
         } else {
@@ -371,8 +443,8 @@ export async function getAllClientInvoicesForExport(
         if (requestedId) {
           query = query.eq("project_id", requestedId)
         }
-        if (term) {
-          query = query.ilike("description", `%${term}%`)
+        if (orFilter) {
+          query = query.or(orFilter)
         }
 
         return query

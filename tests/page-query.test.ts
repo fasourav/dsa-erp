@@ -7,6 +7,8 @@ import {
   LIST_PAGE_SIZE,
   pageRange,
   parsePageParams,
+  parseSearchAmount,
+  parseSearchIsoDate,
   sanitizeSearch,
 } from "../src/lib/page-query.ts"
 
@@ -32,9 +34,20 @@ test("pageRange computes zero-based inclusive PostgREST bounds", () => {
   assert.deepEqual(pageRange(0, 25), { from: 0, to: 24 })
 })
 
-test("sanitizeSearch strips PostgREST wildcard and filter metacharacters", () => {
-  assert.equal(sanitizeSearch(`100%_test\\,("ok")'now'`), "100 test ok now")
+test("sanitizeSearch strips PostgREST metacharacters while preserving apostrophes", () => {
+  assert.equal(sanitizeSearch(`100%_test\\,("ok")`), "100 test ok")
+  assert.equal(sanitizeSearch(`O'Brien’s Construction`), `O'Brien’s Construction`)
   assert.equal(sanitizeSearch("   "), "")
+})
+
+test("parseSearchIsoDate and parseSearchAmount validate structured search tokens", () => {
+  assert.equal(parseSearchIsoDate("2026-05-14"), "2026-05-14")
+  assert.equal(parseSearchIsoDate("2026-02-30"), null)
+  assert.equal(parseSearchIsoDate("not-a-date"), null)
+
+  assert.equal(parseSearchAmount("50,000.50"), 50000.5)
+  assert.equal(parseSearchAmount("৳ 12500"), 12500)
+  assert.equal(parseSearchAmount("abc"), null)
 })
 
 test("buildPageHref preserves non-empty params and omits page=1", () => {

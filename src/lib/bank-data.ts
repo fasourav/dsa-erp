@@ -1,4 +1,9 @@
 import {
+  bankDirectionLabel,
+  bankDirections,
+  bankFlowLabel,
+  bankSourceKinds,
+  bankSourceLabel,
   compareLedgerOrder,
   isBankDirection,
   isBankSourceKind,
@@ -11,7 +16,12 @@ import { fetchAllPages, fetchPage } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import type { NamedOption } from "@/lib/operational-expenses"
-import { LIST_PAGE_SIZE, sanitizeSearch } from "@/lib/page-query"
+import {
+  LIST_PAGE_SIZE,
+  parseSearchAmount,
+  parseSearchIsoDate,
+  sanitizeSearch,
+} from "@/lib/page-query"
 import { moneyCents } from "@/lib/payment-status"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -19,6 +29,77 @@ import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 
 const TRANSACTION_SELECT =
   "id, bank_account_id, transaction_date, created_at, direction, amount, source_kind, payment_method, project_id, notes, income_id, vendor_payment_id, operational_expense_id, vat_tax_payment_id, payroll_line_id, transfer_id"
+
+// Searchable bank transaction columns: notes (ILIKE), payment_method (ILIKE),
+// account name / bank name / account number / holder (via bank_account_id),
+// project name (via project_id), direction key/label, source_kind key/label,
+// transaction_date (ISO date), and exact transaction amount.
+function buildBankOrFilter(
+  rawQuery: string,
+  term: string,
+  accounts: readonly BankAccountRow[],
+  projects: readonly NamedOption[],
+): string | null {
+  const clauses: string[] = []
+  const lower = term.toLowerCase()
+
+  if (term) {
+    clauses.push(`notes.ilike.%${term}%`, `payment_method.ilike.%${term}%`)
+
+    const matchingAccountIds = accounts
+      .filter((account) => {
+        const haystack = `${account.name} ${account.bankName} ${account.accountNumber} ${account.accountHolderName}`.toLowerCase()
+        return haystack.includes(lower)
+      })
+      .slice(0, 200)
+      .map((account) => account.id)
+    if (matchingAccountIds.length > 0) {
+      clauses.push(`bank_account_id.in.(${matchingAccountIds.join(",")})`)
+    }
+
+    const matchingProjectIds = projects
+      .filter((project) => project.name.toLowerCase().includes(lower))
+      .slice(0, 200)
+      .map((project) => project.id)
+    if (matchingProjectIds.length > 0) {
+      clauses.push(`project_id.in.(${matchingProjectIds.join(",")})`)
+    }
+
+    const matchingDirections = bankDirections.filter(
+      (dir) =>
+        dir.includes(lower) ||
+        bankDirectionLabel(dir).toLowerCase().includes(lower) ||
+        bankFlowLabel(dir).toLowerCase().includes(lower),
+    )
+    if (matchingDirections.length > 0) {
+      clauses.push(`direction.in.(${matchingDirections.join(",")})`)
+    }
+
+    const matchingSources = bankSourceKinds.filter(
+      (kind) =>
+        kind.replace(/_/g, " ").includes(lower) ||
+        kind.includes(lower) ||
+        bankSourceLabel(kind).toLowerCase().includes(lower) ||
+        (kind === "vendor_expense" &&
+          "operational expense (po)".includes(lower)),
+    )
+    if (matchingSources.length > 0) {
+      clauses.push(`source_kind.in.(${matchingSources.join(",")})`)
+    }
+
+    const isoDate = parseSearchIsoDate(term)
+    if (isoDate) {
+      clauses.push(`transaction_date.eq.${isoDate}`)
+    }
+  }
+
+  const amount = parseSearchAmount(rawQuery)
+  if (amount !== null) {
+    clauses.push(`amount.eq.${amount}`)
+  }
+
+  return clauses.length > 0 ? clauses.join(",") : null
+}
 
 type RawBankTransactionRow = {
   id: string | null
@@ -184,7 +265,8 @@ export async function getBankPage(
   const supabase = await createClient()
   const requestedId = accountId && isUuid(accountId) ? accountId : null
   const requestedPage = options.page ?? 1
-  const term = sanitizeSearch(options.q ?? "")
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
 
   try {
     const [accountRows, balanceRows, projectRows, methodRows] = await Promise.all([
@@ -300,6 +382,8 @@ export async function getBankPage(
       }
     }
 
+    const orFilter = buildBankOrFilter(rawQuery, term, accounts, projects)
+
     const txSlice = await fetchPage(
       (from, to) => {
         let query = supabase
@@ -309,8 +393,8 @@ export async function getBankPage(
         if (matched) {
           query = query.eq("bank_account_id", matched.id)
         }
-        if (term) {
-          query = query.ilike("notes", `%${term}%`)
+        if (orFilter) {
+          query = query.or(orFilter)
         }
 
         return query
@@ -386,7 +470,8 @@ export async function getAllBankTransactionsForExport(
   if (accountId && !requestedId) {
     return { transactions: [], error: "That bank account could not be found." }
   }
-  const term = sanitizeSearch(options.q ?? "")
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
 
   try {
     const [accountRows, balanceRows, projectRows] = await Promise.all([
@@ -449,10 +534,15 @@ export async function getAllBankTransactionsForExport(
     if (requestedId && !accountsById.has(requestedId)) {
       return { transactions: [], error: "That bank account could not be found." }
     }
+    const projects = projectRows.map((row) => ({
+      id: row.id,
+      name: row.name?.trim() ?? "",
+    }))
     const projectsById = new Map(
-      projectRows.map((row) => [row.id, row.name?.trim() ?? ""]),
+      projects.map((project) => [project.id, project.name]),
     )
     const { balanceById } = computeBalances(accounts, balanceRows)
+    const orFilter = buildBankOrFilter(rawQuery, term, accounts, projects)
 
     const txRows = await fetchAllPages(
       (from, to) => {
@@ -463,8 +553,8 @@ export async function getAllBankTransactionsForExport(
         if (requestedId) {
           query = query.eq("bank_account_id", requestedId)
         }
-        if (term) {
-          query = query.ilike("notes", `%${term}%`)
+        if (orFilter) {
+          query = query.or(orFilter)
         }
 
         return query

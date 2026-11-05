@@ -34,12 +34,45 @@ export function pageRange(
   return { from, to: from + safeSize - 1 }
 }
 
+/**
+ * Strips PostgREST `.or(...)` structural delimiters and LIKE wildcards
+ * (`%`, `_`, `\`, `,`, `(`, `)`, `"`) while preserving apostrophes (`'` / `’`)
+ * so names such as `O'Brien` or `Cox's Bazar` remain searchable.
+ * PostgREST binds all filter values as prepared-statement parameters.
+ */
 export function sanitizeSearch(raw: string, maxLength = 100): string {
   return raw
     .slice(0, Math.max(0, maxLength))
-    .replace(/[%_\\,()"']/g, " ")
+    .replace(/[%_\\,()"]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+export function parseSearchIsoDate(value: string): string | null {
+  const trimmed = value.trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null
+  const [year, month, day] = trimmed.split("-").map(Number)
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  const check = new Date(Date.UTC(year, month - 1, day))
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() + 1 !== month ||
+    check.getUTCDate() !== day
+  ) {
+    return null
+  }
+  return trimmed
+}
+
+export function parseSearchAmount(raw: string): number | null {
+  const cleaned = raw
+    .trim()
+    .replace(/^(?:bdt|tk|৳|\$)\s*/i, "")
+    .replace(/,/g, "")
+    .trim()
+  if (!/^\d+(?:\.\d{1,2})?$/.test(cleaned)) return null
+  const parsed = Number(cleaned)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 export function buildPageHref(
