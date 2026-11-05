@@ -154,14 +154,26 @@ export type BankTransactionColumnVisibility = Record<
   boolean
 >
 
+export const sortableBankTransactionColumns = [
+  "transactionDate",
+  "direction",
+  "sourceKind",
+  "amount",
+] as const
+
+export const defaultBankTransactionSort: SortState<BankTransactionColumnId> = {
+  key: "transactionDate",
+  direction: "desc",
+}
+
 export const bankTransactionColumns: readonly ListColumn<BankTransactionColumnId>[] =
   [
     { id: "transactionDate", label: "Date", align: "left", locked: true },
-    { id: "accountName", label: "Account", align: "left", locked: true },
+    { id: "accountName", label: "Account", align: "left", locked: true, sortable: false },
     { id: "direction", label: "Direction", align: "left", locked: false },
     { id: "sourceKind", label: "Source", align: "left", locked: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
-    { id: "balance", label: "Balance", align: "right", locked: false },
+    { id: "balance", label: "Balance", align: "right", locked: false, sortable: false },
   ]
 
 const transactionVisibility: BankTransactionColumnVisibility = {

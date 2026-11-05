@@ -1,33 +1,206 @@
 import { listBankAccounts } from "@/lib/bank-accounts"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { fetchAllPages } from "@/lib/fetch-pages"
+import { fetchAllPages, fetchByIds, fetchPage } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
+import {
+  LIST_PAGE_SIZE,
+  parseSearchAmount,
+  parseSearchIsoDate,
+  sanitizeSearch,
+} from "@/lib/page-query"
 import { dateInputValue } from "@/lib/project-validation"
 import {
+  clientInvoiceStatuses,
   clientInvoiceStatusFromPayments,
+  isClientInvoiceStatus,
   moneyCents,
+  paymentStatusLabel,
   sumAmounts,
+  type ClientInvoiceStatus,
 } from "@/lib/payment-status"
 import { createClient } from "@/lib/supabase/server"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
-import type {
-  ClientInvoiceRow,
-  ClientPaymentRow,
-  InvoiceProjectOption,
+import {
+  defaultClientInvoiceSort,
+  type ClientInvoiceColumnId,
+  type ClientInvoiceRow,
+  type ClientPaymentRow,
+  type InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
+import type { SortState } from "@/lib/list-paging"
 
 export type InvoiceProjectFilter = {
   id: string
   name: string
 }
 
-export async function getClientInvoices(projectId: string | null): Promise<{
+export type InvoiceStatusFilter = "all" | ClientInvoiceStatus
+
+export function parseInvoiceStatusFilter(
+  raw: string | string[] | undefined,
+): InvoiceStatusFilter {
+  const value = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? ""
+  return isClientInvoiceStatus(value) ? value : "all"
+}
+
+type InvoiceRawRow = {
+  id: string
+  project_id: string
+  client_id: string
+  issued_on: string
+  due_on: string | null
+  amount: number
+  status: string
+  description: string | null
+}
+
+// Searchable invoice columns: description (ILIKE), project name (via project_id),
+// client display name (via client_id), status key/label, issued_on / due_on (ISO date),
+// and exact invoice amount.
+function buildInvoiceOrFilter(
+  rawQuery: string,
+  term: string,
+  projects: readonly InvoiceProjectOption[],
+  clientsById: ReadonlyMap<string, string>,
+): string | null {
+  const clauses: string[] = []
+  const lower = term.toLowerCase()
+
+  if (term) {
+    clauses.push(`description.ilike.%${term}%`)
+
+    const matchingProjectIds = projects
+      .filter(
+        (project) =>
+          project.name.toLowerCase().includes(lower) ||
+          project.clientName.toLowerCase().includes(lower),
+      )
+      .slice(0, 200)
+      .map((project) => project.id)
+    if (matchingProjectIds.length > 0) {
+      clauses.push(`project_id.in.(${matchingProjectIds.join(",")})`)
+    }
+
+    const matchingClientIds: string[] = []
+    for (const [clientId, displayName] of clientsById.entries()) {
+      if (displayName.toLowerCase().includes(lower)) {
+        matchingClientIds.push(clientId)
+        if (matchingClientIds.length >= 200) break
+      }
+    }
+    if (matchingClientIds.length > 0) {
+      clauses.push(`client_id.in.(${matchingClientIds.join(",")})`)
+    }
+
+    const matchingStatuses = clientInvoiceStatuses.filter(
+      (status) =>
+        status.includes(lower) ||
+        paymentStatusLabel(status).toLowerCase().includes(lower),
+    )
+    if (matchingStatuses.length > 0) {
+      clauses.push(`status.in.(${matchingStatuses.join(",")})`)
+    }
+
+    const isoDate = parseSearchIsoDate(term)
+    if (isoDate) {
+      clauses.push(`issued_on.eq.${isoDate}`, `due_on.eq.${isoDate}`)
+    }
+  }
+
+  const amount = parseSearchAmount(rawQuery)
+  if (amount !== null) {
+    clauses.push(`amount.eq.${amount}`)
+  }
+
+  return clauses.length > 0 ? clauses.join(",") : null
+}
+
+async function hydrateInvoices(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: readonly InvoiceRawRow[],
+  projectsById: ReadonlyMap<string, InvoiceProjectOption>,
+  clientsById: ReadonlyMap<string, string>,
+  bankAccounts: readonly BankAccountChoice[],
+): Promise<ClientInvoiceRow[]> {
+  const invoiceIds = rows.map((row) => row.id)
+  const paymentRows =
+    invoiceIds.length === 0
+      ? []
+      : await fetchByIds(invoiceIds, (ids) =>
+          supabase
+            .from("client_payments")
+            .select(
+              "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks, bank_account_id",
+            )
+            .in("client_invoice_id", ids)
+            .order("id", { ascending: true }),
+        )
+
+  const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
+  const paymentsByInvoice = new Map<string, ClientPaymentRow[]>()
+
+  for (const row of paymentRows) {
+    const payment: ClientPaymentRow = {
+      id: row.id,
+      paidOn: dateInputValue(row.paid_on),
+      amount: toNumber(row.amount),
+      method: row.method?.trim() ?? "",
+      reference: row.reference?.trim() ?? "",
+      notes: row.notes ?? "",
+      remarks: row.remarks ?? "",
+      bankAccountId: row.bank_account_id,
+      bankAccountName: accountsById.get(row.bank_account_id) ?? "",
+    }
+    const current = paymentsByInvoice.get(row.client_invoice_id) ?? []
+    current.push(payment)
+    paymentsByInvoice.set(row.client_invoice_id, current)
+  }
+
+  return rows.map((row) => {
+    const project = projectsById.get(row.project_id)
+    const payments = paymentsByInvoice.get(row.id) ?? []
+    const paid = sumAmounts(payments.map((payment) => payment.amount))
+    const balance = Math.max(
+      0,
+      (moneyCents(toNumber(row.amount)) - moneyCents(paid)) / 100,
+    )
+
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      projectName: project?.name ?? "",
+      clientId: row.client_id,
+      clientName: clientsById.get(row.client_id) ?? project?.clientName ?? "",
+      issuedOn: dateInputValue(row.issued_on),
+      dueOn: row.due_on ? dateInputValue(row.due_on) : "",
+      amount: toNumber(row.amount),
+      status: clientInvoiceStatusFromPayments(toNumber(row.amount), paid),
+      description: row.description ?? "",
+      paid,
+      balance,
+      payments,
+    } satisfies ClientInvoiceRow
+  })
+}
+
+export async function getClientInvoices(
+  projectId: string | null,
+  options: {
+    q?: string
+    page?: number
+    status?: InvoiceStatusFilter
+    sort?: SortState<ClientInvoiceColumnId>
+  } = {},
+): Promise<{
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
   projectFilter: InvoiceProjectFilter | null
+  total: number
+  page: number
+  pageCount: number
   error: string | null
 }> {
   const empty = {
@@ -36,66 +209,56 @@ export async function getClientInvoices(projectId: string | null): Promise<{
     paymentMethods: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
     projectFilter: null,
+    total: 0,
+    page: 1,
+    pageCount: 1,
     error: "Could not load client invoices.",
   }
 
   const supabase = await createClient()
+  const requestedId = projectId && isUuid(projectId) ? projectId : null
+  const requestedPage = options.page ?? 1
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
+  const statusFilter =
+    options.status && isClientInvoiceStatus(options.status)
+      ? options.status
+      : "all"
+  const sort = options.sort ?? defaultClientInvoiceSort
+  const ascending = sort.direction === "asc"
 
   try {
-    const [projectRows, clientRows, invoiceRows, paymentRows, methodRows, bankAccounts] =
-      await Promise.all([
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("projects")
-              .select("id, name, client_id")
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Project list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("client_summaries")
-              .select("client_id, display_name")
-              .order("client_id", { ascending: true })
-              .range(from, to),
-          "Client list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("client_invoices")
-              .select(
-                "id, project_id, client_id, issued_on, due_on, amount, status, description",
-              )
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Client invoice list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("client_payments")
-              .select(
-                "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks, bank_account_id",
-              )
-              .order("id", { ascending: true })
-              .range(from, to),
-          "Client payment list is larger than expected.",
-        ),
-        fetchAllPages(
-          (from, to) =>
-            supabase
-              .from("payment_methods")
-              .select("name, sort_order")
-              .order("sort_order", { ascending: true })
-              .order("name", { ascending: true })
-              .range(from, to),
-          "Payment method list is larger than expected.",
-        ),
-        listBankAccounts(),
-      ])
+    const [projectRows, clientRows, methodRows, bankAccounts] = await Promise.all([
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("projects")
+            .select("id, name, client_id")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Project list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("client_summaries")
+            .select("client_id, display_name")
+            .order("client_id", { ascending: true })
+            .range(from, to),
+        "Client list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("payment_methods")
+            .select("name, sort_order")
+            .order("sort_order", { ascending: true })
+            .order("name", { ascending: true })
+            .range(from, to),
+        "Payment method list is larger than expected.",
+      ),
+      listBankAccounts(),
+    ])
 
     const clientsById = new Map(
       clientRows.flatMap((row) =>
@@ -115,60 +278,7 @@ export async function getClientInvoices(projectId: string | null): Promise<{
       )
 
     const projectsById = new Map(projects.map((project) => [project.id, project]))
-    const accountsById = new Map(bankAccounts.map((account) => [account.id, account.name]))
-    const paymentsByInvoice = new Map<string, ClientPaymentRow[]>()
 
-    for (const row of paymentRows) {
-      const payment: ClientPaymentRow = {
-        id: row.id,
-        paidOn: dateInputValue(row.paid_on),
-        amount: toNumber(row.amount),
-        method: row.method?.trim() ?? "",
-        reference: row.reference?.trim() ?? "",
-        notes: row.notes ?? "",
-        remarks: row.remarks ?? "",
-        bankAccountId: row.bank_account_id,
-        bankAccountName: accountsById.get(row.bank_account_id) ?? "",
-      }
-      const current = paymentsByInvoice.get(row.client_invoice_id) ?? []
-      current.push(payment)
-      paymentsByInvoice.set(row.client_invoice_id, current)
-    }
-
-    const invoices = invoiceRows.flatMap((row) => {
-      if (row.status === "void") {
-        return []
-      }
-
-      const project = projectsById.get(row.project_id)
-      const payments = paymentsByInvoice.get(row.id) ?? []
-      const paid = sumAmounts(payments.map((payment) => payment.amount))
-      const balance = Math.max(
-        0,
-        (moneyCents(toNumber(row.amount)) - moneyCents(paid)) / 100,
-      )
-
-      return [
-        {
-          id: row.id,
-          projectId: row.project_id,
-          projectName: project?.name ?? "",
-          clientId: row.client_id,
-          clientName:
-            clientsById.get(row.client_id) ?? project?.clientName ?? "",
-          issuedOn: dateInputValue(row.issued_on),
-          dueOn: row.due_on ? dateInputValue(row.due_on) : "",
-          amount: toNumber(row.amount),
-          status: clientInvoiceStatusFromPayments(toNumber(row.amount), paid),
-          description: row.description ?? "",
-          paid,
-          balance,
-          payments,
-        } satisfies ClientInvoiceRow,
-      ]
-    })
-
-    const requestedId = projectId && isUuid(projectId) ? projectId : null
     if (projectId && !requestedId) {
       return {
         invoices: [],
@@ -176,6 +286,9 @@ export async function getClientInvoices(projectId: string | null): Promise<{
         paymentMethods: methodRows.map((row) => row.name),
         bankAccounts,
         projectFilter: null,
+        total: 0,
+        page: 1,
+        pageCount: 1,
         error: "That project could not be found.",
       }
     }
@@ -191,20 +304,77 @@ export async function getClientInvoices(projectId: string | null): Promise<{
         paymentMethods: methodRows.map((row) => row.name),
         bankAccounts,
         projectFilter: null,
+        total: 0,
+        page: 1,
+        pageCount: 1,
         error: "That project could not be found.",
       }
     }
 
-    const visibleInvoices = matchedProject
-      ? invoices.filter((invoice) => invoice.projectId === matchedProject.id)
-      : invoices
+    const orFilter = buildInvoiceOrFilter(rawQuery, term, projects, clientsById)
+
+    const invoiceSlice = await fetchPage(
+      (from, to) => {
+        let query = supabase
+          .from("client_invoices")
+          .select(
+            "id, project_id, client_id, issued_on, due_on, amount, status, description",
+            { count: "exact" },
+          )
+
+        if (statusFilter !== "all") {
+          query = query.eq("status", statusFilter)
+        } else {
+          query = query.neq("status", "void")
+        }
+
+        if (matchedProject) {
+          query = query.eq("project_id", matchedProject.id)
+        }
+        if (orFilter) {
+          query = query.or(orFilter)
+        }
+
+        switch (sort.key) {
+          case "amount":
+            query = query
+              .order("amount", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "status":
+            query = query
+              .order("status", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          default:
+            query = query
+              .order("issued_on", { ascending })
+              .order("id", { ascending })
+            break
+        }
+
+        return query.range(from, to)
+      },
+      requestedPage,
+      LIST_PAGE_SIZE,
+    )
+
+    const invoices = await hydrateInvoices(
+      supabase,
+      invoiceSlice.rows,
+      projectsById,
+      clientsById,
+      bankAccounts,
+    )
 
     return {
-      invoices: visibleInvoices,
+      invoices,
       projects,
       paymentMethods: mergeCategorySuggestions(
         methodRows.map((row) => row.name),
-        visibleInvoices.flatMap((invoice) =>
+        invoices.flatMap((invoice) =>
           invoice.payments.map((payment) => payment.method),
         ),
       ),
@@ -212,9 +382,139 @@ export async function getClientInvoices(projectId: string | null): Promise<{
       projectFilter: matchedProject
         ? { id: matchedProject.id, name: matchedProject.name }
         : null,
+      total: invoiceSlice.total,
+      page: invoiceSlice.page,
+      pageCount: invoiceSlice.pageCount,
       error: null,
     }
   } catch {
     return empty
+  }
+}
+
+export async function getAllClientInvoicesForExport(
+  projectId: string | null,
+  options: {
+    q?: string
+    status?: InvoiceStatusFilter
+    sort?: SortState<ClientInvoiceColumnId>
+  } = {},
+): Promise<{
+  invoices: ClientInvoiceRow[]
+  error: string | null
+}> {
+  const supabase = await createClient()
+  const requestedId = projectId && isUuid(projectId) ? projectId : null
+  if (projectId && !requestedId) {
+    return { invoices: [], error: "That project could not be found." }
+  }
+  const rawQuery = options.q ?? ""
+  const term = sanitizeSearch(rawQuery)
+  const statusFilter =
+    options.status && isClientInvoiceStatus(options.status)
+      ? options.status
+      : "all"
+  const sort = options.sort ?? defaultClientInvoiceSort
+  const ascending = sort.direction === "asc"
+
+  try {
+    const [projectRows, clientRows, bankAccounts] = await Promise.all([
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("projects")
+            .select("id, name, client_id")
+            .order("id", { ascending: true })
+            .range(from, to),
+        "Project list is larger than expected.",
+      ),
+      fetchAllPages(
+        (from, to) =>
+          supabase
+            .from("client_summaries")
+            .select("client_id, display_name")
+            .order("client_id", { ascending: true })
+            .range(from, to),
+        "Client list is larger than expected.",
+      ),
+      listBankAccounts(),
+    ])
+
+    const clientsById = new Map(
+      clientRows.flatMap((row) =>
+        row.client_id ? [[row.client_id, row.display_name?.trim() ?? ""] as const] : [],
+      ),
+    )
+    const projects = projectRows.map((row) => ({
+      id: row.id,
+      name: row.name?.trim() ?? "",
+      clientId: row.client_id,
+      clientName: clientsById.get(row.client_id) ?? "",
+    }))
+    const projectsById = new Map(projects.map((project) => [project.id, project]))
+
+    if (requestedId && !projectsById.has(requestedId)) {
+      return { invoices: [], error: "That project could not be found." }
+    }
+
+    const orFilter = buildInvoiceOrFilter(rawQuery, term, projects, clientsById)
+
+    const invoiceRows = await fetchAllPages(
+      (from, to) => {
+        let query = supabase
+          .from("client_invoices")
+          .select(
+            "id, project_id, client_id, issued_on, due_on, amount, status, description",
+          )
+
+        if (statusFilter !== "all") {
+          query = query.eq("status", statusFilter)
+        } else {
+          query = query.neq("status", "void")
+        }
+
+        if (requestedId) {
+          query = query.eq("project_id", requestedId)
+        }
+        if (orFilter) {
+          query = query.or(orFilter)
+        }
+
+        switch (sort.key) {
+          case "amount":
+            query = query
+              .order("amount", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          case "status":
+            query = query
+              .order("status", { ascending })
+              .order("issued_on", { ascending: false })
+              .order("id", { ascending: false })
+            break
+          default:
+            query = query
+              .order("issued_on", { ascending })
+              .order("id", { ascending })
+            break
+        }
+
+        return query.range(from, to)
+      },
+      "Client invoice export is larger than expected.",
+    )
+
+    const invoices = await hydrateInvoices(
+      supabase,
+      invoiceRows,
+      projectsById,
+      clientsById,
+      bankAccounts,
+    )
+
+    return { invoices, error: null }
+  } catch {
+    return { invoices: [], error: "Could not export client invoices." }
   }
 }

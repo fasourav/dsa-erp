@@ -1,19 +1,20 @@
 "use client"
 
-import { filterRows, ListSearch, rowText } from "@/components/list-search"
+import { ListSearch } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState, useTransition } from "react"
+import { useMemo, useState, useTransition, type ReactNode } from "react"
 
+import { exportOperationalExpensesGrid } from "@/app/(app)/accounts/export-actions"
 import { deleteOperationalExpense } from "@/app/(app)/accounts/expenses/actions"
 import { ExpenseFormDialog } from "@/app/(app)/accounts/expenses/expense-form-dialog"
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
-import { PageHeader } from "@/components/page-header"
+import { PageHeader, SectionHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,52 +24,62 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { formatIsoDate } from "@/lib/format"
 import { formatRecordedAt } from "@/lib/recorded-at"
 import {
-  paginateRows,
   rangeLabel,
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { expenseColumnStore } from "@/lib/operational-expense-column-store"
 import {
+  defaultExpenseSort,
   expenseColumns,
   sortExpenses,
   type ExpenseColumnId,
   type NamedOption,
   type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
+import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useUrlSearch } from "@/lib/use-url-search"
 import type { OfficeCategoryGroup } from "@/lib/report-cost-group"
 import { cn } from "@/lib/utils"
 
 export function ExpensesTable({
   expenses,
+  poExpenses = [],
   categories,
   departments,
   paymentMethods,
   bankAccounts,
+  total,
+  page,
   error,
+  initialQuery = "",
+  sort = defaultExpenseSort,
+  pager,
 }: {
   expenses: OperationalExpenseRow[]
+  poExpenses?: OperationalExpenseRow[]
   categories: OfficeCategoryGroup[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
+  total: number
+  page: number
+  pageCount?: number
   error: string | null
+  initialQuery?: string
+  sort?: SortState<ExpenseColumnId>
+  pager?: ReactNode
 }) {
   const canAdd = useCan("expenses", "add")
   const canEdit = useCan("expenses", "edit")
   const canDelete = useCan("expenses", "delete")
 
   const visibility = useColumnVisibility(expenseColumnStore)
-  const [sort, setSort] = useState<SortState<ExpenseColumnId>>({
-    key: "expenseDate",
-    direction: "desc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formExpense, setFormExpense] = useState<OperationalExpenseRow | null>(
     null,
@@ -80,9 +91,21 @@ export function ExpensesTable({
   )
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
-  const sorted = useMemo(() => sortExpenses(expenses, sort), [expenses, sort])
-  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+
+  const sortedPo = useMemo(
+    () => sortExpenses(poExpenses, sort),
+    [poExpenses, sort],
+  )
+
+  const effectiveTotal = error ? 0 : total
+  const rangeStart =
+    effectiveTotal === 0 || expenses.length === 0
+      ? 0
+      : (page - 1) * LIST_PAGE_SIZE + 1
+  const rangeEnd =
+    effectiveTotal === 0 || expenses.length === 0
+      ? 0
+      : Math.min(effectiveTotal, rangeStart + expenses.length - 1)
 
   function openForm(expense: OperationalExpenseRow | null) {
     setFormExpense(expense)
@@ -120,28 +143,13 @@ export function ExpensesTable({
         actions={
           <>
             <ListExport
-              grid={{
-                filename: "operational-expenses",
-                title: "Operational Expenses",
-                columns: [
-                  { header: "Date", kind: "text" },
-                  { header: "Category", kind: "text" },
-                  { header: "Amount", kind: "money" },
-                  { header: "Payment Method", kind: "text" },
-                  { header: "Department", kind: "text" },
-                  { header: "Vendor", kind: "text" },
-                ],
-                rows: filtered.map((row) => [
-                  formatDayMonYear(row.expenseDate),
-                  row.fromPurchaseOrder
-                    ? `${row.category} · From Operational PO`
-                    : row.category,
-                  row.amount,
-                  row.paymentMethod,
-                  row.departmentName || "—",
-                  row.vendorName || "—",
-                ]),
-              }}
+              loadGrid={() =>
+                exportOperationalExpensesGrid({
+                  q: query,
+                  sortKey: sort.key,
+                  sortDir: sort.direction,
+                })
+              }
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>
@@ -154,39 +162,36 @@ export function ExpensesTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search expenses"
       />
       <DataList
         columns={expenseColumns}
-        rows={error ? [] : pageResult.rows}
+        rows={error ? [] : expenses}
         rowKey={(expense) => expense.id}
         sort={sort}
         onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
+          const next = toggleSort(sort, key)
+          setParams(sortQueryParams(next, defaultExpenseSort))
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No Operational Expenses Yet."
+        emptyMessage={
+          query.trim()
+            ? "No Matching Operational Expenses."
+            : "No Operational Expenses Yet."
+        }
         rangeText={rangeLabel(
-          pageResult.rangeStart,
-          pageResult.rangeEnd,
-          error ? 0 : pageResult.total,
+          rangeStart,
+          rangeEnd,
+          effectiveTotal,
           "expense",
           "expenses",
         )}
-        currentPage={pageResult.currentPage}
-        pageCount={pageResult.pageCount}
-        onPageChange={setPage}
-        pagingLabel="Operational Expenses pagination"
+        hidePagination
         mobileItem={(expense) => ({
           title: expense.category || "—",
           subtitle: [
-            expense.fromPurchaseOrder ? "From Operational PO" : "",
             expense.vendorName,
             expense.paymentMethod,
             expense.expenseDate ? formatIsoDate(expense.expenseDate) : "",
@@ -214,43 +219,103 @@ export function ExpensesTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              {expense.fromPurchaseOrder ? null : (
-                <DropdownMenuItem nativeButton={false} render={<Link href={`/documents/vouchers/new?expense=${expense.id}`} />}>
-                  Print / Download
-                </DropdownMenuItem>
-              )}
-              {expense.fromPurchaseOrder ? (
-                <DropdownMenuItem
-                  nativeButton={false}
-                  render={
-                    <Link href={`/purchase-orders/${expense.purchaseOrderId}`} />
-                  }
-                >
-                  View Purchase Order
-                </DropdownMenuItem>
-              ) : null}
-              {!expense.fromPurchaseOrder && canEdit ? (<DropdownMenuItem onClick={() => openForm(expense)}>
-                <Pencil aria-hidden="true" />
-                Edit
-              </DropdownMenuItem>) : null}
-              {!expense.fromPurchaseOrder && canEdit && canDelete ? (
-                <DropdownMenuSeparator />
-              ) : null}
-              {!expense.fromPurchaseOrder && canDelete ? (<DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setDeleteError(null)
-                  setPendingDelete(expense)
-                  setDeleteOpen(true)
-                }}
+              <DropdownMenuItem
+                nativeButton={false}
+                render={<Link href={`/documents/vouchers/new?expense=${expense.id}`} />}
               >
-                <Trash2 aria-hidden="true" />
-                Delete
-              </DropdownMenuItem>) : null}
+                Print / Download
+              </DropdownMenuItem>
+              {canEdit ? (
+                <DropdownMenuItem onClick={() => openForm(expense)}>
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              {canEdit && canDelete ? <DropdownMenuSeparator /> : null}
+              {canDelete ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteError(null)
+                    setPendingDelete(expense)
+                    setDeleteOpen(true)
+                  }}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
       />
+      {pager}
+      {!error && sortedPo.length > 0 ? (
+        <div className="mt-2 flex flex-col gap-3">
+          <SectionHeader title="Operational Purchase Order Payments" />
+          <DataList
+            columns={expenseColumns}
+            rows={sortedPo}
+            rowKey={(expense) => expense.id}
+            sort={sort}
+            onSort={(key) => {
+              const next = toggleSort(sort, key)
+              setParams(sortQueryParams(next, defaultExpenseSort))
+            }}
+            visibility={visibility}
+            error={null}
+            emptyMessage="No Operational Purchase Order Payments."
+            rangeText={rangeLabel(
+              1,
+              sortedPo.length,
+              sortedPo.length,
+              "PO payment",
+              "PO payments",
+            )}
+            hidePagination
+            mobileItem={(expense) => ({
+              title: expense.category || "—",
+              subtitle: [
+                "From Operational PO",
+                expense.vendorName,
+                expense.paymentMethod,
+                expense.expenseDate ? formatIsoDate(expense.expenseDate) : "",
+                expense.createdByName,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+              meta: <Money value={expense.amount} />,
+            })}
+            renderCell={(expense, columnId) => (
+              <Cell expense={expense} columnId={columnId} />
+            )}
+            renderActions={(expense) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Actions for ${expense.category || "PO payment"}`}
+                    />
+                  }
+                >
+                  <MoreHorizontal aria-hidden="true" className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    nativeButton={false}
+                    render={<Link href={`/purchase-orders/${expense.purchaseOrderId}`} />}
+                  >
+                    View Purchase Order
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          />
+        </div>
+      ) : null}
       <ExpenseFormDialog
         key={formSession}
         open={formOpen}

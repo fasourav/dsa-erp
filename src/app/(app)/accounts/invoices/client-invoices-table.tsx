@@ -1,13 +1,14 @@
 "use client"
 
 import { ListExport } from "@/components/list-export"
-import { filterRows, ListSearch, rowText } from "@/components/list-search"
+import { ListSearch } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 
+import { exportClientInvoicesGrid } from "@/app/(app)/accounts/export-actions"
 import { deleteClientInvoice } from "@/app/(app)/accounts/invoices/actions"
 import { ClientInvoiceFormDialog } from "@/app/(app)/accounts/invoices/client-invoice-form-dialog"
 import { ClientPaymentsDialog } from "@/app/(app)/accounts/invoices/client-payments-dialog"
@@ -27,22 +28,25 @@ import {
 import { clientInvoiceColumnStore } from "@/lib/client-invoice-column-store"
 import {
   clientInvoiceColumns,
-  sortClientInvoices,
+  defaultClientInvoiceSort,
   type ClientInvoiceColumnId,
   type ClientInvoiceRow,
   type InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import type { InvoiceProjectFilter } from "@/lib/client-invoices"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
-import { paymentStatusLabel } from "@/lib/payment-status"
+import type {
+  InvoiceProjectFilter,
+  InvoiceStatusFilter,
+} from "@/lib/client-invoices"
+import { formatIsoDate } from "@/lib/format"
 import {
-  paginateRows,
   rangeLabel,
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
+import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useUrlSearch } from "@/lib/use-url-search"
 
 export function ClientInvoicesTable({
   invoices,
@@ -50,29 +54,32 @@ export function ClientInvoicesTable({
   paymentMethods,
   bankAccounts,
   projectFilter,
+  total,
+  page,
   error,
   initialQuery = "",
+  statusFilter = "all",
+  sort = defaultClientInvoiceSort,
 }: {
   invoices: ClientInvoiceRow[]
   projects: InvoiceProjectOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
   projectFilter: InvoiceProjectFilter | null
+  total: number
+  page: number
+  pageCount?: number
   error: string | null
   initialQuery?: string
+  statusFilter?: InvoiceStatusFilter
+  sort?: SortState<ClientInvoiceColumnId>
 }) {
   const canAdd = useCan("client_invoices", "add")
   const canEdit = useCan("client_invoices", "edit")
   const canDelete = useCan("client_invoices", "delete")
 
   const visibility = useColumnVisibility(clientInvoiceColumnStore)
-  const [sort, setSort] = useState<SortState<ClientInvoiceColumnId>>({
-    key: "issuedOn",
-    direction: "desc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
-  const [listFilter, setListFilter] = useState("all")
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -83,21 +90,23 @@ export function ClientInvoicesTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const sorted = useMemo(
-    () => sortClientInvoices(invoices, sort),
-    [invoices, sort],
-  )
   const filterOptions = [
     { value: "all", label: "All Statuses" },
     { value: "unpaid", label: "Unpaid" },
     { value: "partial", label: "Partially Paid" },
     { value: "paid", label: "Paid" },
   ]
-  const filtered = useMemo(
-    () => filterRows(sorted, query, rowText, listFilter, (invoice) => invoice.status),
-    [listFilter, query, sorted],
-  )
-  const pageResult = paginateRows(filtered, page)
+
+  const effectiveTotal = error ? 0 : total
+  const rangeStart =
+    effectiveTotal === 0 || invoices.length === 0
+      ? 0
+      : (page - 1) * LIST_PAGE_SIZE + 1
+  const rangeEnd =
+    effectiveTotal === 0 || invoices.length === 0
+      ? 0
+      : rangeStart + invoices.length - 1
+
   const paymentsInvoice =
     invoices.find((invoice) => invoice.id === paymentsInvoiceId) ?? null
 
@@ -150,26 +159,15 @@ export function ClientInvoicesTable({
         actions={
           <>
             <ListExport
-              grid={{
-                filename: "client-invoices",
-                title: "Client Invoices",
-                columns: [
-                  { header: "Issue Date", kind: "text" },
-                  { header: "Project", kind: "text" },
-                  { header: "Client", kind: "text" },
-                  { header: "Amount", kind: "money" },
-                  { header: "Paid", kind: "money" },
-                  { header: "Status", kind: "text" },
-                ],
-                rows: filtered.map((invoice) => [
-                  formatDayMonYear(invoice.issuedOn),
-                  invoice.projectName,
-                  invoice.clientName,
-                  invoice.amount,
-                  invoice.paid,
-                  paymentStatusLabel(invoice.status),
-                ]),
-              }}
+              loadGrid={() =>
+                exportClientInvoicesGrid({
+                  projectId: projectFilter?.id ?? null,
+                  q: query,
+                  status: statusFilter,
+                  sortKey: sort.key,
+                  sortDir: sort.direction,
+                })
+              }
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>
@@ -182,51 +180,45 @@ export function ClientInvoicesTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search invoices"
         filterLabel="Status"
-        filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        filter={statusFilter}
+        onFilterChange={(next) =>
+          setParams({ status: next === "all" ? null : next })
+        }
         options={filterOptions}
       />
       <DataList
         columns={clientInvoiceColumns}
-        rows={error ? [] : pageResult.rows}
+        rows={error ? [] : invoices}
         rowKey={(invoice) => invoice.id}
         sort={sort}
         onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
+          const next = toggleSort(sort, key)
+          setParams(sortQueryParams(next, defaultClientInvoiceSort))
         }}
         visibility={visibility}
         error={error}
         emptyMessage={
-          projectFilter
-            ? "No Client Invoices For This Project."
-            : "No Client Invoices Yet."
+          statusFilter !== "all" || Boolean(query.trim())
+            ? "No Matching Client Invoices."
+            : projectFilter
+              ? "No Client Invoices For This Project."
+              : "No Client Invoices Yet."
         }
         rangeText={rangeLabel(
-          pageResult.rangeStart,
-          pageResult.rangeEnd,
-          error ? 0 : pageResult.total,
+          rangeStart,
+          rangeEnd,
+          effectiveTotal,
           "invoice",
           "invoices",
         )}
-        currentPage={pageResult.currentPage}
-        pageCount={pageResult.pageCount}
-        onPageChange={setPage}
-        pagingLabel="Client Invoices pagination"
+        hidePagination
         mobileItem={(invoice) => ({
           title: projectTitle(invoice.projectName),
           value: <StatusBadge status={invoice.status} />,
           subtitle: [
-            // Date first so a long client name truncates instead of the date.
             invoice.issuedOn ? formatIsoDate(invoice.issuedOn) : "",
             invoice.clientName,
           ]
@@ -252,10 +244,12 @@ export function ClientInvoicesTable({
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              {canEdit ? (<DropdownMenuItem onClick={() => openForm(invoice)}>
-                <Pencil aria-hidden="true" />
-                Edit
-              </DropdownMenuItem>) : null}
+              {canEdit ? (
+                <DropdownMenuItem onClick={() => openForm(invoice)}>
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() => {
                   setPaymentsInvoiceId(invoice.id)
@@ -269,17 +263,19 @@ export function ClientInvoicesTable({
                 Print / Download
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {canDelete ? (<DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setDeleteError(null)
-                  setPendingDelete(invoice)
-                  setDeleteOpen(true)
-                }}
-              >
-                <Trash2 aria-hidden="true" />
-                Delete
-              </DropdownMenuItem>) : null}
+              {canDelete ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteError(null)
+                    setPendingDelete(invoice)
+                    setDeleteOpen(true)
+                  }}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

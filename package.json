@@ -1,6 +1,6 @@
 {
   "name": "dsa-erp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/*.test.ts"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/*.test.ts",
+    "perf:lh": "node scripts/perf-lighthouse.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -40,8 +41,10 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "chrome-launcher": "^1.2.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "lighthouse": "^12.8.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

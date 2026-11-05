@@ -40,6 +40,18 @@ export type ExpenseOptionalColumnId = Exclude<
 
 export type ExpenseColumnVisibility = Record<ExpenseOptionalColumnId, boolean>
 
+export const sortableExpenseColumns = [
+  "expenseDate",
+  "category",
+  "amount",
+  "paymentMethod",
+] as const
+
+export const defaultExpenseSort: SortState<ExpenseColumnId> = {
+  key: "expenseDate",
+  direction: "desc",
+}
+
 export const expenseColumns: readonly ListColumn<ExpenseColumnId>[] = [
   { id: "expenseDate", label: "Date", align: "left", locked: true },
   { id: "category", label: "Category", align: "left", locked: true },
