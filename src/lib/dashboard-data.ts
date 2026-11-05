@@ -39,7 +39,17 @@ export async function getDashboard(
       loadDashboardScope(scopeYear, now),
       loadPerformanceDetails(scopeYear, includeAssets),
     ])
-    const base = scoped ?? buildDashboard(await loadDashboardRows(), now, scopeYear)
+    if (!scoped) {
+      console.error(
+        "[dashboard] dashboard_scope RPC is unavailable; set DASHBOARD_TABLE_FALLBACK=1 to enable legacy 19-table fallback.",
+      )
+      if (process.env.DASHBOARD_TABLE_FALLBACK !== "1") {
+        return { model: null, error: "Could not load the dashboard." }
+      }
+      const legacy = buildDashboard(await loadDashboardRows(), now, scopeYear)
+      return { model: withPerformance(legacy, details), error: null }
+    }
+    const base = scoped
     return { model: withPerformance(base, details), error: null }
   } catch (error) {
     return { model: null, error: messageOf(error) }
@@ -52,6 +62,32 @@ type PerformanceDetails = {
   backlogValue: number | null
   assetValue: number | null
   vendors: number | null
+}
+
+type DashboardDetailsRpc = {
+  rpc(
+    fn: "dashboard_details",
+    args: { p_year: number | null; p_include_assets: boolean },
+  ): PromiseLike<{
+    data: unknown
+    error: { code?: string; message?: string } | null
+  }>
+}
+
+function mapDashboardDetails(
+  data: unknown,
+  includeAssets: boolean,
+): PerformanceDetails {
+  const row = asRecord(data)
+  return {
+    highValue: nullableNumber(row.highValue ?? row.high_value),
+    lowValue: nullableNumber(row.lowValue ?? row.low_value),
+    backlogValue: nullableNumber(row.backlogValue ?? row.backlog_value),
+    assetValue: includeAssets
+      ? nullableNumber(row.assetValue ?? row.asset_value)
+      : null,
+    vendors: nullableNumber(row.vendors),
+  }
 }
 
 function withPerformance(model: DashboardModel, details: PerformanceDetails): DashboardModel {
@@ -75,6 +111,25 @@ async function loadPerformanceDetails(
   scopeYear: number | null,
   includeAssets: boolean,
 ): Promise<PerformanceDetails> {
+  try {
+    const supabase = await createClient()
+    const rpcResult = await (supabase as unknown as DashboardDetailsRpc).rpc(
+      "dashboard_details",
+      {
+        p_year: scopeYear,
+        p_include_assets: includeAssets,
+      },
+    )
+    if (!rpcResult.error && rpcResult.data && typeof rpcResult.data === "object") {
+      return mapDashboardDetails(rpcResult.data, includeAssets)
+    }
+    if (rpcResult.error && !isMissingFeed(rpcResult.error)) {
+      console.error("[dashboard] dashboard_details RPC error:", rpcResult.error.message)
+    }
+  } catch {
+    // Deploy-order safety: fall back to individual queries if dashboard_details is not yet deployed.
+  }
+
   const [counts, backlogValue, assetValue, vendors] = await Promise.all([
     loadProjectCounts(scopeYear),
     loadBacklogValue(scopeYear),
