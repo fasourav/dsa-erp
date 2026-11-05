@@ -1,7 +1,7 @@
 import { toNumber } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 import {
-  mergeCategorySuggestions,
+  catalogCategoryOptions,
   type VendorSummary,
 } from "@/lib/vendor-summary"
 
@@ -70,10 +70,7 @@ export async function getVendors(): Promise<{
 
     return {
       vendors,
-      categories: mergeCategorySuggestions(
-        catalogNames,
-        vendors.map((vendor) => vendor.vendorField),
-      ),
+      categories: catalogCategoryOptions(catalogNames),
       error: null,
     }
   } catch {

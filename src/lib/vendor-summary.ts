@@ -172,6 +172,19 @@ export function vendorRangeLabel(
   return `Showing ${start}–${end} of ${total} ${noun}`
 }
 
+export function catalogCategoryOptions(
+  catalogNames: readonly string[],
+): string[] {
+  const seen = new Set<string>()
+  const options: string[] = []
+
+  for (const value of catalogNames) {
+    pushSuggestion(options, seen, value)
+  }
+
+  return options
+}
+
 export function mergeCategorySuggestions(
   catalogNames: readonly string[],
   existingFields: readonly (string | null | undefined)[],

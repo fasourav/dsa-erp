@@ -16,8 +16,8 @@ import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import {
+  catalogCategoryOptions,
   isVendorKind,
-  mergeCategorySuggestions,
   type VendorKind,
 } from "@/lib/vendor-summary"
 
@@ -68,25 +68,19 @@ export async function loadVendorCategoryOptions(): Promise<VendorCategoryOptions
     return { categories: null }
   }
 
-  const [categoriesResult, fieldsResult] = await Promise.all([
-    supabase
-      .from("vendor_work_categories")
-      .select("name, sort_order")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true }),
-    supabase.from("vendors").select("vendor_field"),
-  ])
+  const categoriesResult = await supabase
+    .from("vendor_work_categories")
+    .select("name, sort_order")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true })
 
   if (categoriesResult.error) {
     return { categories: null }
   }
 
   return {
-    categories: mergeCategorySuggestions(
+    categories: catalogCategoryOptions(
       (categoriesResult.data ?? []).map((row) => row.name),
-      fieldsResult.error
-        ? []
-        : (fieldsResult.data ?? []).map((row) => row.vendor_field),
     ),
   }
 }
