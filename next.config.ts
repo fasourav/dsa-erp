@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["exceljs", "puppeteer-core", "@sparticuz/chromium"],
   experimental: {
+    optimizePackageImports: ["lucide-react", "recharts"],
     serverActions: {
       // Attachments are uploaded through a Server Action and may be up to 10 MB.
       bodySizeLimit: "11mb",

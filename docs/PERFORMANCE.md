@@ -57,6 +57,10 @@ Measured from `.next/build-manifest.json` (`rootMainFiles`) + each route's `page
 | `/accounts/bank` | Baseline (Task 1) | 21 | 1118.1 | 329.3 | — |
 | `/accounts/expenses` | Baseline (Task 1) | 20 | 1075.0 | 318.2 | — |
 | `/dashboard` | Lazy Recharts (Task 3) | 19 | 1007.8 | 294.4 | -108.2 kB (-26.9%) |
+| `/dashboard` | Shell Code-Split (Task 5) | 19 | 966.6 | 281.9 | -120.7 kB (-30.0%) |
+| `/accounts/invoices` | Shell Code-Split (Task 5) | 21 | 1071.9 | 316.1 | -1.1 kB (-0.3%) |
+| `/accounts/bank` | Shell Code-Split (Task 5) | 23 | 1115.1 | 328.9 | -0.4 kB (-0.1%) |
+| `/accounts/expenses` | Shell Code-Split (Task 5) | 21 | 1071.7 | 317.2 | -1.0 kB (-0.3%) |
 
 ---
 

@@ -1,24 +1,41 @@
 "use client"
 
 import { ChevronLeft } from "lucide-react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, type ReactNode } from "react"
 
 import { AccountMenu, MobileMoreMenu } from "@/components/account-menu"
 import { AppSidebar } from "@/components/app-sidebar"
-import { DocumentsMenu } from "@/components/documents-menu"
 import { DsaBadge } from "@/components/dsa-badge"
-import { GlobalSearch } from "@/components/global-search"
 import { MobileTabBar, useTabRoots } from "@/components/mobile-tab-bar"
-import { ReportsMenu } from "@/components/reports-menu"
 import { ShellHeaderProvider } from "@/components/shell-header"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { navItems } from "@/lib/access"
 import type { AccountIdentity } from "@/lib/account-identity"
 import { modulesHref } from "@/lib/nav-icons"
 import type { ThemePreference } from "@/lib/theme"
+
+const DocumentsMenu = dynamic(
+  () => import("@/components/documents-menu").then((m) => m.DocumentsMenu),
+  { ssr: false },
+)
+
+const ReportsMenu = dynamic(
+  () => import("@/components/reports-menu").then((m) => m.ReportsMenu),
+  { ssr: false },
+)
+
+const GlobalSearch = dynamic(
+  () => import("@/components/global-search").then((m) => m.GlobalSearch),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="size-11 rounded-full bg-fill md:h-8 md:w-60" />,
+  },
+)
 
 const topBarRoots = new Set(["/documents", "/reports"])
 
@@ -43,7 +60,7 @@ export function AppShell({
   const pathname = usePathname()
   const tabRoots = useTabRoots()
   const [collapsed, setCollapsed] = useState(false)
-  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null)
+  const [headerSlot, setHeaderSlot] = useState(null as HTMLDivElement | null)
   const isTabRoot = tabRoots.includes(pathname)
 
   return (
