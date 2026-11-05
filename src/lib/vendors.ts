@@ -33,6 +33,14 @@ export async function getVendors(): Promise<{
       return { vendors: [], categories: [], error: "Could not load vendors." }
     }
 
+    if (categoriesResult.error) {
+      return {
+        vendors: [],
+        categories: [],
+        error: "Could not load vendor categories.",
+      }
+    }
+
     const details = new Map(
       (detailsResult.data ?? []).map((row) => [row.id, row]),
     )
@@ -64,9 +72,7 @@ export async function getVendors(): Promise<{
       ]
     })
 
-    const catalogNames = categoriesResult.error
-      ? []
-      : (categoriesResult.data ?? []).map((row) => row.name)
+    const catalogNames = (categoriesResult.data ?? []).map((row) => row.name)
 
     return {
       vendors,

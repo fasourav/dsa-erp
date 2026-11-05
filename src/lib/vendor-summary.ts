@@ -1,5 +1,17 @@
 export const PAGE_SIZE = 10
 
+export const ONLY_OWNERS_CATEGORY_MESSAGE =
+  "Only owners can add new vendor categories. Choose an existing category."
+
+export const MISSING_VENDOR_VERSION_MESSAGE =
+  "Could not verify the current version of this vendor. Reload and try again."
+
+export const VENDOR_EDIT_DENIED_MESSAGE =
+  "You do not have permission to edit vendors."
+
+export const VENDOR_ADD_DENIED_MESSAGE =
+  "You do not have permission to add vendors."
+
 export type VendorKind = "private" | "company"
 
 export function isVendorKind(value: string): value is VendorKind {

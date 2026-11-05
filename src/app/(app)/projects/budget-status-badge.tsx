@@ -7,7 +7,7 @@ export function BudgetStatusBadge({ status }: { status: BudgetStatus }) {
   return (
     <Badge variant={status === "over" ? "destructive" : "warning"}>
       <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-current" />
-      <span className="truncate">{budgetStatusLabel(status)}</span>
+      <span className="min-w-0 truncate">{budgetStatusLabel(status)}</span>
     </Badge>
   )
 }

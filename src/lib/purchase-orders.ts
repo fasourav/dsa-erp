@@ -12,7 +12,7 @@ import {
   keywordReportGroup,
 } from "@/lib/report-cost-group"
 import { createClient } from "@/lib/supabase/server"
-import { mergeCategorySuggestions } from "@/lib/vendor-summary"
+import { catalogCategoryOptions } from "@/lib/vendor-summary"
 
 const PAGE_SIZE = 1000
 const MAX_PAGES = 100
@@ -220,9 +220,8 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
       } satisfies PurchaseOrderRow
     })
 
-    const workTypes = mergeCategorySuggestions(
+    const workTypes = catalogCategoryOptions(
       categoryRows.map((row) => row.name),
-      orders.map((order) => order.workType),
     )
 
     const requestedId =

@@ -170,7 +170,7 @@ export function ProjectsTable({
   }
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex min-w-0 flex-col gap-3.5">
       <PageHeader
         title="Projects"
         className="mb-0 md:mb-2"
@@ -289,6 +289,7 @@ export function ProjectsTable({
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Projects pagination"
+        subtleScrollbar
         mobileItem={(project) => ({
           title: (
             <Link
@@ -382,7 +383,7 @@ function CellValue({
           <Link
             href={`/projects/${project.id}`}
             className={cn(
-              "max-w-full truncate rounded-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+              "max-w-full truncate rounded-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
               !project.name && "text-muted-foreground",
             )}
           >

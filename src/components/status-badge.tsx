@@ -38,7 +38,7 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <Badge variant={toneVariant[tone]}>
       <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-current" />
-      <span className="truncate">{statusText(status)}</span>
+      <span className="min-w-0 truncate">{statusText(status)}</span>
     </Badge>
   )
 }

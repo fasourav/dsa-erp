@@ -3711,6 +3711,21 @@ export type Database = {
         }
         Returns: Json
       }
+      save_vendor: {
+        Args: {
+          p_address?: string | null
+          p_company_name?: string | null
+          p_email?: string | null
+          p_id?: string | null
+          p_kind: Database["public"]["Enums"]["vendor_kind"]
+          p_notes?: string | null
+          p_person_name?: string | null
+          p_phone?: string | null
+          p_vendor_field?: string | null
+          p_version?: string | null
+        }
+        Returns: Json
+      }
       financial_report: {
         Args: { p_from: string; p_to: string }
         Returns: Json

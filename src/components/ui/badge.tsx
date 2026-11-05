@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 // Atrium tinted capsules. Status badges carry a 6px currentColor dot
 // (see StatusBadge); role and type labels do not.
 const badgeVariants = cva(
-  "group/badge inline-flex h-5.5 w-fit shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-transparent px-2.25 text-xs font-strong tracking-[-0.005em] whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-6 md:px-2.5 md:text-caption md:font-semibold aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "group/badge inline-flex h-5.5 w-fit max-w-full shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-transparent px-2.25 text-xs font-strong tracking-[-0.005em] whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-6 md:px-2.5 md:text-caption md:font-semibold aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
@@ -41,7 +41,7 @@ function Badge({
 }: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
   const content =
     typeof children === "string" || typeof children === "number" ? (
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 truncate">{children}</span>
     ) : (
       children
     )

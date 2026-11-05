@@ -154,6 +154,7 @@ export function DataList<T, Id extends string>({
   renderActions,
   mobileItem,
   toolbar,
+  subtleScrollbar = false,
 }: {
   columns: readonly ListColumn<Id>[]
   rows: readonly T[]
@@ -177,6 +178,12 @@ export function DataList<T, Id extends string>({
    */
   mobileItem?: (row: T) => DataListMobileItem
   toolbar?: ReactNode
+  /**
+   * Opt-in slim, theme-aware horizontal scrollbar for wide tables, shown on
+   * hover or keyboard focus. Off by default so other tables keep the native
+   * scrollbar.
+   */
+  subtleScrollbar?: boolean
 }) {
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
@@ -189,7 +196,7 @@ export function DataList<T, Id extends string>({
   const pages = hidePagination ? [] : paginationItems(currentPage, pageCount)
 
   return (
-    <div className="flex flex-col gap-2.5 md:gap-3.5">
+    <div className="flex min-w-0 flex-col gap-2.5 md:gap-3.5">
       {toolbar ? (
         <div className="flex flex-wrap items-center gap-2 px-1 md:gap-2.5 md:px-0">{toolbar}</div>
       ) : null}
@@ -277,6 +284,8 @@ export function DataList<T, Id extends string>({
         className={cn(
           "min-w-0 overflow-hidden rounded-card glass-panel",
           !hasRows && "[&_[data-slot=table-container]]:overflow-x-hidden",
+          subtleScrollbar &&
+            "[&_[data-slot=table-container]]:scrollbar-subtle [&_[data-slot=table-container]]:overflow-y-hidden",
           mobileItem && "hidden md:block",
         )}
       >
@@ -331,7 +340,7 @@ export function DataList<T, Id extends string>({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          "h-auto max-w-full min-h-8 min-w-0 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
+                          "h-auto max-w-full min-h-8 min-w-0 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-inset active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
                           column.align === "right" && "flex-row-reverse",
                           active && "text-foreground",
                         )}
@@ -394,10 +403,10 @@ export function DataList<T, Id extends string>({
                           onMouseEnter={syncCellTitle}
                           onFocus={syncCellTitle}
                           className={cn(
-                            "max-w-full min-w-0 [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:min-w-0 [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:min-w-0 [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0 [&_[data-slot=checkbox]]:shrink-0",
+                            "max-w-full min-w-0 [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:min-w-0 [&_[data-slot=badge]]:shrink [&_a:focus-visible]:ring-inset [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:min-w-0 [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:md:px-0 [&_[data-slot=button]:focus-visible]:ring-inset [&_[data-slot=checkbox]]:shrink-0",
                             oneLine
                               ? "inline-flex items-center overflow-hidden"
-                              : "block w-full leading-snug [&:not(:has(.flex-col,.flex-wrap,.line-clamp-2))]:truncate [&_.flex>*:not([data-slot=badge]):not([data-slot=checkbox])]:min-w-0 [&_.flex-col>*:not([data-slot=badge])]:max-w-full [&_.flex-col>*:not([data-slot=badge])]:truncate [&_a]:max-w-full [&_a]:truncate [&_[data-slot=button]]:inline-block [&_[data-slot=button]]:truncate [&_[data-slot=button]]:text-left [&_[data-slot=button]]:leading-8 [&_[data-slot=button]]:align-middle [&_span.block]:truncate",
+                              : "block w-full leading-snug [&:not(:has(.flex-col,.flex-wrap,.line-clamp-2))]:truncate [&_.flex>*:not([data-slot=checkbox])]:min-w-0 [&_.flex-col>*:not([data-slot=badge])]:max-w-full [&_.flex-col>*:not([data-slot=badge])]:truncate [&_a]:max-w-full [&_a]:truncate [&_[data-slot=button]]:inline-block [&_[data-slot=button]]:truncate [&_[data-slot=button]]:text-left [&_[data-slot=button]]:leading-8 [&_[data-slot=button]]:align-middle [&_span.block]:truncate",
                           )}
                         >
                           {renderCell(row, column.id)}
@@ -408,7 +417,7 @@ export function DataList<T, Id extends string>({
                   {hasActions ? (
                     <TableCell
                       className={cn(
-                        "sticky right-0 z-10 border-l border-border-subtle bg-card py-2 text-right align-middle whitespace-nowrap group-hover:bg-linear-to-r group-hover:from-primary-tint group-hover:to-primary-tint",
+                        "sticky right-0 z-10 border-l border-border-subtle bg-card py-2 text-right align-middle whitespace-nowrap transition-colors group-hover:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] group-has-aria-expanded:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] group-data-[state=selected]:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] dark:group-hover:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))] dark:group-has-aria-expanded:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))] dark:group-data-[state=selected]:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))]",
                         compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
                       )}
                     >

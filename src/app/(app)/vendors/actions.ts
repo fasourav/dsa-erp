@@ -1,7 +1,7 @@
 "use server"
 
 import { titleCaseName } from "@/lib/format"
-import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
+import { missedUpdateMessage, staleWriteMessage } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
 import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
@@ -12,12 +12,15 @@ import {
   isValidEmail,
 } from "@/lib/client-validation"
 import { phoneErrorForStored, phoneMatchKey, toE164FromStored } from "@/lib/phone"
-import { nextSortOrder } from "@/lib/lookup-catalogs"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import {
   catalogCategoryOptions,
   isVendorKind,
+  MISSING_VENDOR_VERSION_MESSAGE,
+  ONLY_OWNERS_CATEGORY_MESSAGE,
+  VENDOR_ADD_DENIED_MESSAGE,
+  VENDOR_EDIT_DENIED_MESSAGE,
   type VendorKind,
 } from "@/lib/vendor-summary"
 
@@ -45,6 +48,7 @@ export type VendorFormInput = {
 export type VendorFormFieldErrors = {
   kind?: string
   name?: string
+  vendorField?: string
   email?: string
   phone?: string
 }
@@ -56,16 +60,17 @@ export type VendorFormResult = {
 
 export type VendorCategoryOptionsResult = {
   categories: string[] | null
+  error?: string | null
 }
 
 export async function loadVendorCategoryOptions(): Promise<VendorCategoryOptionsResult> {
   const denied = await denyUnless("vendors", "view")
-  if (denied) return { categories: null }
+  if (denied) return { categories: null, error: denied }
   const supabase = await createClient()
   const { data: authData, error: authError } = await supabase.auth.getUser()
 
   if (authError || !authData.user) {
-    return { categories: null }
+    return { categories: null, error: "You must be signed in." }
   }
 
   const categoriesResult = await supabase
@@ -75,13 +80,14 @@ export async function loadVendorCategoryOptions(): Promise<VendorCategoryOptions
     .order("name", { ascending: true })
 
   if (categoriesResult.error) {
-    return { categories: null }
+    return { categories: null, error: "Could not load vendor categories." }
   }
 
   return {
     categories: catalogCategoryOptions(
       (categoriesResult.data ?? []).map((row) => row.name),
     ),
+    error: null,
   }
 }
 
@@ -106,10 +112,20 @@ export async function updateVendor(
   return saveVendor(id, input)
 }
 
+function isValidVersionTimestamp(value: string | undefined): value is string {
+  const trimmed = value?.trim() ?? ""
+  return trimmed.length > 0 && !Number.isNaN(Date.parse(trimmed))
+}
+
 async function saveVendor(
   id: string | null,
   input: VendorFormInput,
 ): Promise<VendorFormResult> {
+  const version = input.version?.trim()
+  if (id && !isValidVersionTimestamp(version)) {
+    return { error: MISSING_VENDOR_VERSION_MESSAGE }
+  }
+
   const { kind } = input
 
   if (!isVendorKind(kind)) {
@@ -175,35 +191,42 @@ async function saveVendor(
     }
   }
 
-  if (vendorField) {
-    const categorySaved = await ensureVendorWorkCategory(supabase, vendorField)
-
-    if (!categorySaved) {
-      return { error: "Could not save this vendor." }
-    }
-  }
-
-  const values = {
-    kind,
-    person_name: kind === "private" ? name : null,
-    company_name: kind === "company" ? name : null,
-    vendor_field: vendorField || null,
-    email: email || null,
-    phone: phone || null,
-    address: address || null,
-    notes: notes || null,
-  }
-
-  const { data, error } = id
-    ? await eqVersion(
-        supabase.from("vendors").update(withVersion(values, input.version)).eq("id", id),
-        input.version,
-      ).select("id")
-    : await supabase.from("vendors").insert(values).select("id")
+  const { data, error } = await supabase.rpc("save_vendor", {
+    p_id: id,
+    p_version: id ? version : null,
+    p_kind: kind,
+    p_person_name: kind === "private" ? name : null,
+    p_company_name: kind === "company" ? name : null,
+    p_vendor_field: vendorField || null,
+    p_email: email || null,
+    p_phone: phone || null,
+    p_address: address || null,
+    p_notes: notes || null,
+  })
 
   if (error) {
     const stale = staleWriteMessage(error)
     if (stale) return { error: stale }
+
+    if (error.code === "P0002" || /could not be found/i.test(error.message ?? "")) {
+      return { error: "That vendor could not be found." }
+    }
+
+    if (error.code === "42501") {
+      const message = error.message ?? ""
+      if (/only owners can add new vendor categories|vendor_work_categories/i.test(message)) {
+        return {
+          error: null,
+          fieldErrors: { vendorField: ONLY_OWNERS_CATEGORY_MESSAGE },
+        }
+      }
+      if (
+        message === VENDOR_EDIT_DENIED_MESSAGE ||
+        message === VENDOR_ADD_DENIED_MESSAGE
+      ) {
+        return { error: message }
+      }
+    }
 
     if (isUniqueViolation(error)) {
       return {
@@ -215,53 +238,17 @@ async function saveVendor(
     return { error: friendlyDbError(error, "Could not save this vendor.") }
   }
 
-  if (!data || data.length === 0) {
-    return { error: missedUpdateMessage(id ? input.version : undefined, "That vendor could not be found.") }
+  const saved =
+    data && typeof data === "object" && !Array.isArray(data)
+      ? (data as { id?: string })
+      : null
+
+  if (!saved?.id) {
+    return { error: missedUpdateMessage(id ? version : undefined, "That vendor could not be found.") }
   }
 
   revalidateVendorSurfaces()
   return { error: null }
-}
-
-async function ensureVendorWorkCategory(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  name: string,
-): Promise<boolean> {
-  const trimmed = name.trim()
-
-  if (!trimmed) {
-    return true
-  }
-
-  const { data, error } = await supabase
-    .from("vendor_work_categories")
-    .select("name, sort_order")
-
-  if (error || !data) {
-    return false
-  }
-
-  const key = trimmed.toLowerCase()
-  const exists = data.some((row) => row.name.trim().toLowerCase() === key)
-
-  if (exists) {
-    return true
-  }
-
-  const { error: insertError } = await supabase
-    .from("vendor_work_categories")
-    .insert({
-      name: trimmed,
-      sort_order: nextSortOrder(
-        data.map((row) => ({ sortOrder: row.sort_order })),
-      ),
-    })
-
-  if (!insertError) {
-    return true
-  }
-
-  return isUniqueViolation(insertError)
 }
 
 function revalidateVendorSurfaces() {
