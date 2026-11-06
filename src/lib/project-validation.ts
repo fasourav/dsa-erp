@@ -1,3 +1,4 @@
+import { businessDate } from "@/lib/business-time"
 import type { ProjectStatus } from "@/lib/project-summary"
 
 const statuses: readonly ProjectStatus[] = ["active", "completed"]
@@ -49,11 +50,9 @@ export function amountError(value: string, label: string): string | null {
   return null
 }
 
+/** Today's business date (YYYY-MM-DD) in Asia/Dhaka. Kept for existing call sites. */
 export function todayIsoDate(): string {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, "0")
-  const day = String(now.getDate()).padStart(2, "0")
-  return `${now.getFullYear()}-${month}-${day}`
+  return businessDate()
 }
 
 export function dateInputValue(value: string): string {
@@ -63,12 +62,7 @@ export function dateInputValue(value: string): string {
 
 /** Today's date (YYYY-MM-DD) in the business time zone, Asia/Dhaka. */
 export function businessTodayIsoDate(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date())
+  return businessDate()
 }
 
 export function isFutureIsoDate(value: string): boolean {

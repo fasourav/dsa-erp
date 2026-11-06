@@ -60,3 +60,27 @@ test("US DST transition days do not affect the Dhaka date", () => {
   assert.equal(businessDate(new Date("2026-03-08T07:30:00Z")), "2026-03-08")
   assert.equal(businessDate(new Date("2026-11-01T05:30:00Z")), "2026-11-01")
 })
+
+const { todayIsoDate, businessTodayIsoDate, isFutureIsoDate } = await import(
+  "../src/lib/project-validation.ts"
+)
+const { dhakaToday } = await import("../src/lib/dashboard-metrics.ts")
+const { currentMonthKey } = await import("../src/lib/payroll-month.ts")
+
+test("all today helpers agree with businessDate", () => {
+  const today = businessDate()
+  assert.equal(todayIsoDate(), today)
+  assert.equal(businessTodayIsoDate(), today)
+  assert.equal(dhakaToday(new Date()), today)
+})
+
+test("future-date validation uses the Dhaka day", () => {
+  assert.equal(isFutureIsoDate(businessDate()), false)
+  assert.equal(isFutureIsoDate(businessDate(new Date(Date.now() + 24 * 60 * 60 * 1000))), true)
+})
+
+test("currentMonthKey rolls over at Dhaka midnight", () => {
+  assert.equal(currentMonthKey(new Date("2026-11-30T17:59:59Z")), "2026-11")
+  assert.equal(currentMonthKey(new Date("2026-11-30T18:00:00Z")), "2026-12")
+  assert.equal(currentMonthKey(new Date("2026-12-31T18:00:00Z")), "2027-01")
+})

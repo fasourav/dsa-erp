@@ -2,6 +2,7 @@
 // Selected-year figures are year-to-date when that year is still in progress.
 // Operational tenure uses company_settings.launch_date.
 
+import { businessDate } from "@/lib/business-time"
 import {
   formatDayMonYear,
   formatGroupedCount,
@@ -194,12 +195,7 @@ export type DashboardModel = {
 type Dated = { date: string; amount: number }
 
 export function dhakaToday(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now)
+  return businessDate(now)
 }
 
 export function formatUpdatedAt(now: Date): string {

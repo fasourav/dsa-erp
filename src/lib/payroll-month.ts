@@ -1,3 +1,5 @@
+import { businessYearMonth } from "@/lib/business-time"
+
 export const monthNames = [
   "January",
   "February",
@@ -31,7 +33,8 @@ export function monthLabel(year: number, month: number): string {
 }
 
 export function currentMonthKey(now = new Date()): string {
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  const { year, month } = businessYearMonth(now)
+  return `${year}-${String(month).padStart(2, "0")}`
 }
 
 export function parseMonthKey(

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { BudgetRow, DepartmentOption } from "@/lib/budgets"
+import { businessYearMonth } from "@/lib/business-time"
 
 const monthItems = [
   "January", "February", "March", "April", "May", "June",
@@ -47,13 +48,13 @@ export function BudgetFormDialog({
   departments: readonly DepartmentOption[]
 }) {
   const budgetId = budget?.id ?? null
-  const now = new Date()
+  const now = businessYearMonth()
   const [departmentId, setDepartmentId] = useState(budget?.departmentId ?? "")
   const [periodYear, setPeriodYear] = useState(
-    String(budget?.periodYear ?? now.getFullYear()),
+    String(budget?.periodYear ?? now.year),
   )
   const [periodMonth, setPeriodMonth] = useState(
-    String(budget?.periodMonth ?? now.getMonth() + 1),
+    String(budget?.periodMonth ?? now.month),
   )
   const [allocatedBudget, setAllocatedBudget] = useState(
     budget ? String(budget.allocatedBudget) : "",
