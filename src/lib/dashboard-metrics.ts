@@ -2,6 +2,7 @@
 // Selected-year figures are year-to-date when that year is still in progress.
 // Operational tenure uses company_settings.launch_date.
 
+import { businessDate } from "@/lib/business-time"
 import {
   formatDayMonYear,
   formatGroupedCount,
@@ -194,12 +195,7 @@ export type DashboardModel = {
 type Dated = { date: string; amount: number }
 
 export function dhakaToday(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now)
+  return businessDate(now)
 }
 
 export function formatUpdatedAt(now: Date): string {
@@ -384,10 +380,10 @@ export function buildDashboard(
   const receivables = receivablesAsOf(input, windowEnd, asOfToday)
   const payables = payablesAsOf(input, windowEnd, asOfToday)
 
-  const cashBalance = operatingCashAsOf(bank, windowEnd, input.openingBalance)
+  const cashBalance = operatingCashAsOf(bank, windowEnd)
   const cashDelta = changePercent(
     cashBalance,
-    operatingCashAsOf(bank, previousMonthEnd(windowEnd), input.openingBalance),
+    operatingCashAsOf(bank, previousMonthEnd(windowEnd)),
   )
 
   const projects = input.projects.filter(
@@ -467,14 +463,10 @@ export function buildDashboard(
     cashBalance,
     cashDelta,
     cashSpark: scoped
-      ? monthEnds(scopeYear, windowEnd, bank, input.openingBalance)
+      ? monthEnds(scopeYear, windowEnd, bank)
       : annualYears.map((year) => ({
           label: String(year),
-          value: operatingCashAsOf(
-            bank,
-            year === currentYear ? today : `${year}-12-31`,
-            input.openingBalance,
-          ),
+          value: operatingCashAsOf(bank, year === currentYear ? today : `${year}-12-31`),
         })),
     receivables,
     payables,
@@ -1023,7 +1015,6 @@ function monthEnds(
   year: number,
   today: string,
   bank: (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[],
-  openingBalance: number,
 ): ChartPoint[] {
   const lastMonth = Number(today.slice(5, 7))
   const points: ChartPoint[] = []
@@ -1031,7 +1022,7 @@ function monthEnds(
     const end = monthEndIso(year, month)
     points.push({
       label: MONTHS[month - 1],
-      value: operatingCashAsOf(bank, end < today ? end : today, openingBalance),
+      value: operatingCashAsOf(bank, end < today ? end : today),
     })
   }
   return points
@@ -1040,14 +1031,13 @@ function monthEnds(
 export function operatingCashAsOf(
   bank: readonly (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[],
   end: string,
-  openingBalance: number,
 ): number {
-  // Dashboard Cash Balance excludes manual bank deposits and withdrawals;
-  // Banking ledger balances still use the full ledger.
+  // Dashboard Cash Balance = adjusted cash movement: no opening balances and no
+  // manual deposits/withdrawals. Banking ledger balances still use the full ledger.
   return balanceAsOf(
     bank.filter((row) => row.sourceKind !== "deposit" && row.sourceKind !== "withdrawal"),
     end,
-    openingBalance,
+    0,
   )
 }
 

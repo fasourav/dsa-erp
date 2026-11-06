@@ -3,17 +3,22 @@ export function sumAssetCurrentValue(values: readonly number[]): number {
   return Math.round(total * 100) / 100
 }
 
+/**
+ * Straight-line value as of a business date (YYYY-MM-DD, Asia/Dhaka).
+ * Mirrors public.dashboard_details so the Assets page and the dashboard agree.
+ */
 export function assetValue(
   purchaseDate: string,
   totalCost: number,
   lifespanYears: number,
+  asOf: string,
 ): { currentValue: number; monthlyDepreciation: number } {
   const lifespanMonths = lifespanYears * 12
   if (lifespanMonths <= 0) {
     return { currentValue: roundMoney(Math.max(0, totalCost)), monthlyDepreciation: 0 }
   }
 
-  const used = Math.min(lifespanMonths, Math.max(0, monthsSince(purchaseDate)))
+  const used = Math.min(lifespanMonths, Math.max(0, monthsBetween(purchaseDate, asOf)))
   const rate = totalCost / lifespanMonths
 
   return {
@@ -22,21 +27,23 @@ export function assetValue(
   }
 }
 
-function monthsSince(purchaseDate: string): number {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(purchaseDate)
-  if (!match) return 0
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
 
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  const now = new Date()
-  let years = now.getFullYear() - year
-  let months = now.getMonth() + 1 - month
-  let days = now.getDate() - day
+function monthsBetween(purchaseDate: string, asOf: string): number {
+  const start = ISO_DATE.exec(purchaseDate)
+  const end = ISO_DATE.exec(asOf)
+  if (!start || !end) return 0
+
+  const endYear = Number(end[1])
+  const endMonth = Number(end[2])
+  let years = endYear - Number(start[1])
+  let months = endMonth - Number(start[2])
+  let days = Number(end[3]) - Number(start[3])
 
   if (days < 0) {
     months -= 1
-    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate()
+    // Length of the month before the as-of month (UTC math: no zone shift).
+    days += new Date(Date.UTC(endYear, endMonth - 1, 0)).getUTCDate()
   }
 
   if (months < 0) {

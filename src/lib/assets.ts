@@ -1,4 +1,5 @@
 import { assetValue } from "@/lib/asset-value"
+import { businessDate } from "@/lib/business-time"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
@@ -61,6 +62,7 @@ export async function getAssets(): Promise<{
       "Asset list is larger than expected.",
     )
 
+    const asOf = businessDate()
     const assets: AssetRow[] = rows.flatMap((row) => {
       if (!row.id) return []
       const categoryId = row.category_id ?? ""
@@ -69,7 +71,7 @@ export async function getAssets(): Promise<{
       const totalCost =
         row.total_cost == null ? quantity * unitCost : toNumber(row.total_cost)
       const lifespanYears = toNumber(row.lifespan_years)
-      const valued = assetValue(row.purchase_date ?? "", totalCost, lifespanYears)
+      const valued = assetValue(row.purchase_date ?? "", totalCost, lifespanYears, asOf)
 
       return [
         {

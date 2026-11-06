@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState, type ReactNode } from "react"
+import { useState, useSyncExternalStore, type ReactNode } from "react"
 
 import { AccountMenu, MobileMoreMenu } from "@/components/account-menu"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -14,10 +14,13 @@ import { ShellHeaderProvider } from "@/components/shell-header"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useSidebarPresence } from "@/components/use-sidebar-presence"
 import { navItems } from "@/lib/access"
 import type { AccountIdentity } from "@/lib/account-identity"
 import { modulesHref } from "@/lib/nav-icons"
+import { sidebarExpanded, sidebarModeStore } from "@/lib/sidebar-mode"
 import type { ThemePreference } from "@/lib/theme"
+import { cn } from "@/lib/utils"
 
 const DocumentsMenu = dynamic(
   () => import("@/components/documents-menu").then((m) => m.DocumentsMenu),
@@ -48,6 +51,41 @@ function backHref(pathname: string): string {
   return modulesHref
 }
 
+function DesktopSidebarSlot({ email }: { email: string }) {
+  const modeStore = sidebarModeStore(email)
+  const mode = useSyncExternalStore(
+    modeStore.subscribe,
+    modeStore.getSnapshot,
+    modeStore.getServerSnapshot,
+  )
+  const [menuOpen, setMenuOpen] = useState(false)
+  const presence = useSidebarPresence()
+  const expanded = sidebarExpanded({
+    mode,
+    pointerInside: presence.pointerInside,
+    focusInside: presence.focusInside,
+    menuOpen,
+  })
+
+  return (
+    <div
+      data-sidebar-mode={mode}
+      className={cn(
+        "relative z-30 hidden w-25 shrink-0 transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none print:hidden md:block",
+        mode === "open" && "lg:w-70",
+      )}
+      {...presence.handlers}
+    >
+      <AppSidebar
+        expanded={expanded}
+        mode={mode}
+        onModeChange={modeStore.write}
+        onMenuOpenChange={setMenuOpen}
+      />
+    </div>
+  )
+}
+
 export function AppShell({
   children,
   theme,
@@ -59,14 +97,13 @@ export function AppShell({
 }) {
   const pathname = usePathname()
   const tabRoots = useTabRoots()
-  const [collapsed, setCollapsed] = useState(false)
   const [headerSlot, setHeaderSlot] = useState(null as HTMLDivElement | null)
   const isTabRoot = tabRoots.includes(pathname)
 
   return (
     <ShellHeaderProvider slot={headerSlot}>
       <div className="relative flex h-svh bg-aurora print:block print:h-auto print:overflow-visible print:bg-background">
-        <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed((current) => !current)} />
+        <DesktopSidebarSlot email={account.email} />
         <main
           id="main"
           className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain scroll-smooth pt-safe pb-tabbar print:h-auto print:overflow-visible print:p-0 md:pt-0 md:pb-12"

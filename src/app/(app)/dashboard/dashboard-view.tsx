@@ -11,6 +11,7 @@ import {
   Download,
   Gem,
   Hammer,
+  Info,
   Layers,
   Minus,
   Target,
@@ -48,6 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { OverBudgetProject } from "@/lib/project-budget-model"
 import {
   formatDelta,
@@ -228,6 +230,7 @@ function DashboardSections({
           {showFinancials ? (
             <KpiCard
               label="Cash Balance"
+              info="Adjusted cash movement: excludes bank opening balances and manual deposits/withdrawals. It is not your spendable bank balance and can be negative while Banking is positive. See Banking for actual balances."
               value={model.cashBalance}
               detail={stockDetail}
               delta={model.cashDelta}
@@ -675,6 +678,7 @@ function EmptyChart() {
 
 function KpiCard({
   label,
+  info,
   value,
   detail,
   delta,
@@ -683,6 +687,7 @@ function KpiCard({
   sparkColor,
 }: {
   label: string
+  info?: string
   value: number
   detail?: string
   delta: number | null
@@ -693,7 +698,27 @@ function KpiCard({
   return (
     <Card className="min-w-0 gap-0 px-4 pt-4 pb-2.5 md:px-5.5 md:pt-5 md:pb-1.5">
       <div className="flex items-center justify-between gap-3">
-        <p className="min-w-0 truncate text-sm font-semibold text-muted-foreground md:text-ui">{label}</p>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="min-w-0 truncate text-sm font-semibold text-muted-foreground md:text-ui">{label}</p>
+          {info ? (
+            <TooltipProvider delay={200}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={`About ${label}`}
+                      className="shrink-0 rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                  }
+                >
+                  <Info aria-hidden="true" className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-64">{info}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+        </div>
         {delta != null ? <DeltaBadge value={delta} lowerIsBetter={lowerIsBetter} /> : null}
       </div>
       <p className={cn("mt-1.5 min-w-0 truncate text-kpi md:mt-2.5", value < 0 && "text-destructive")}>
