@@ -74,7 +74,7 @@ export function AppSidebar({
               "pointer-events-none absolute inset-y-0 left-0 flex w-11 items-center justify-center transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
               !collapsed && "lg:scale-95 lg:opacity-0",
               collapsed &&
-                "lg:group-hover/sidebar:scale-95 lg:group-hover/sidebar:opacity-0 lg:group-focus-within/sidebar:scale-95 lg:group-focus-within/sidebar:opacity-0 lg:group-has-[[data-popup-open]]/header:scale-95 lg:group-has-[[data-popup-open]]/header:opacity-0",
+                "lg:group-hover/header:scale-95 lg:group-hover/header:opacity-0 lg:group-focus-within/header:scale-95 lg:group-focus-within/header:opacity-0 lg:group-has-[[data-popup-open]]/header:scale-95 lg:group-has-[[data-popup-open]]/header:opacity-0",
             )}
           >
             <BrandMark priority className="h-7.5" />
@@ -98,7 +98,7 @@ export function AppSidebar({
                 className={cn(
                   "absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:inline-flex",
                   collapsed
-                    ? "pointer-events-none scale-95 opacity-0 lg:group-hover/sidebar:pointer-events-auto lg:group-hover/sidebar:scale-100 lg:group-hover/sidebar:opacity-100 lg:group-focus-within/sidebar:pointer-events-auto lg:group-focus-within/sidebar:scale-100 lg:group-focus-within/sidebar:opacity-100 data-[popup-open]:pointer-events-auto data-[popup-open]:scale-100 data-[popup-open]:opacity-100"
+                    ? "pointer-events-none scale-95 opacity-0 lg:group-hover/header:pointer-events-auto lg:group-hover/header:scale-100 lg:group-hover/header:opacity-100 lg:group-focus-within/header:pointer-events-auto lg:group-focus-within/header:scale-100 lg:group-focus-within/header:opacity-100 data-[popup-open]:pointer-events-auto data-[popup-open]:scale-100 data-[popup-open]:opacity-100"
                     : "lg:pointer-events-auto lg:scale-100 lg:opacity-100 lg:delay-75",
                 )}
                 aria-controls="primary-navigation"
