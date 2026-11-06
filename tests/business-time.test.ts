@@ -84,3 +84,13 @@ test("currentMonthKey rolls over at Dhaka midnight", () => {
   assert.equal(currentMonthKey(new Date("2026-11-30T18:00:00Z")), "2026-12")
   assert.equal(currentMonthKey(new Date("2026-12-31T18:00:00Z")), "2027-01")
 })
+
+const { lastLoginLabel } = await import("../src/lib/last-login.ts")
+
+test("last login Today/Yesterday uses Dhaka days", () => {
+  const now = new Date("2026-11-06T02:00:00Z") // 08:00 Dhaka, Nov 6
+  assert.equal(lastLoginLabel("2026-11-05T18:30:00Z", now), "Today, 12:30 AM")
+  assert.equal(lastLoginLabel("2026-11-05T17:30:00Z", now), "Yesterday, 11:30 PM")
+  assert.equal(lastLoginLabel(null, now), "—")
+  assert.equal(lastLoginLabel("not-a-date", now), "—")
+})

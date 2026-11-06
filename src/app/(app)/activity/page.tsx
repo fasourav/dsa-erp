@@ -1,5 +1,6 @@
 import { ActivityLog, type ActivityChange, type ActivityRow } from "@/app/(app)/activity/activity-log"
 import { PageHeader } from "@/components/page-header"
+import { businessDayStartUtc } from "@/lib/business-time"
 import { requireOwner } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 import { formatDayMonYear, formatMoney } from "@/lib/format"
@@ -60,13 +61,6 @@ function param(params: Record<string, string | string[] | undefined>, key: strin
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? ""
 }
 
-// Dhaka midnight (UTC+6, no DST) as an ISO instant.
-function dhakaStart(day: string, addDays = 0) {
-  const date = new Date(`${day}T00:00:00+06:00`)
-  date.setUTCDate(date.getUTCDate() + addDays)
-  return date.toISOString()
-}
-
 export default async function ActivityPage({ searchParams }: { searchParams: SearchParams }) {
   await requireOwner()
   const params = await searchParams
@@ -90,8 +84,8 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
     if (filters.module !== "all") query = query.eq("module", filters.module)
     if (filters.user === "system") query = query.is("actor_id", null)
     else if (filters.user !== "all") query = query.eq("actor_id", filters.user)
-    if (filters.from) query = query.gte("created_at", dhakaStart(filters.from))
-    if (filters.to) query = query.lt("created_at", dhakaStart(filters.to, 1))
+    if (filters.from) query = query.gte("created_at", businessDayStartUtc(filters.from))
+    if (filters.to) query = query.lt("created_at", businessDayStartUtc(filters.to, 1))
     if (filters.action !== "all") query = query.eq("action", ACTIONS[filters.action])
     if (filters.q) {
       const term = filters.q.replace(/[%_\\,()"']/g, " ").trim()

@@ -55,6 +55,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDayMonYear } from "@/lib/format"
+import { lastLoginLabel } from "@/lib/last-login"
 import {
   paginateRows,
   rangeLabel,
@@ -728,19 +729,7 @@ function snapshotLastLogin(value: string | null) {
 }
 
 function relativeLabel(value: string | null) {
-  if (!value) return "—"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
-  const time = new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date)
-  const today = new Date()
-  const yesterday = new Date()
-  yesterday.setDate(today.getDate() - 1)
-  if (date.toDateString() === today.toDateString()) return `Today, ${time}`
-  if (date.toDateString() === yesterday.toDateString()) return `Yesterday, ${time}`
-  return formatDayMonYear(value.slice(0, 10))
+  return lastLoginLabel(value)
 }
 
 function LastLogin({ value }: { value: string | null }) {
