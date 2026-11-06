@@ -56,25 +56,37 @@ export function AppSidebar({
     <aside
       data-collapsed={collapsed}
       data-mode={mode}
+      data-state={collapsed ? "collapsed" : "expanded"}
       className={cn(
-        "group/sidebar absolute top-0 left-0 z-30 m-3.5 flex h-[calc(100svh-1.75rem)] min-h-0 w-18 flex-col items-center rounded-sidebar px-2.5 pt-3.5 pb-3 text-sidebar-foreground glass-chrome transition-[width] duration-150 motion-reduce:transition-none",
-        !collapsed && "lg:w-63 lg:items-stretch",
+        "group/sidebar absolute top-0 left-0 z-30 m-3.5 flex h-[calc(100svh-1.75rem)] min-h-0 w-18 flex-col items-stretch overflow-hidden rounded-sidebar px-3.25 pt-3.5 pb-3 text-sidebar-foreground glass-chrome transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none",
+        !collapsed && "lg:w-63",
         !collapsed && mode === "auto" && "lg:shadow-2xl",
       )}
     >
-      <div
-        className={cn(
-          "flex shrink-0 flex-col items-center gap-3 pt-1.5 pb-4",
-          !collapsed && "lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:pr-2 lg:pl-2.5",
-        )}
-      >
+      <div className="group/header relative mb-2 flex h-12.5 shrink-0 items-center">
         <Link
           href="/dashboard"
           aria-label="Dashboard"
-          className="rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="relative flex h-12.5 min-w-0 flex-1 items-center rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <BrandMark priority className={cn("h-7.5", !collapsed && "lg:hidden")} />
-          <BrandLockup priority className={cn("hidden", !collapsed && "lg:inline-flex")} />
+          <span
+            className={cn(
+              "pointer-events-none absolute inset-y-0 left-0 flex w-11 items-center justify-center transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+              !collapsed && "lg:scale-95 lg:opacity-0",
+              collapsed &&
+                "lg:group-hover/sidebar:scale-95 lg:group-hover/sidebar:opacity-0 lg:group-focus-within/sidebar:scale-95 lg:group-focus-within/sidebar:opacity-0 lg:group-has-[[data-popup-open]]/header:scale-95 lg:group-has-[[data-popup-open]]/header:opacity-0",
+            )}
+          >
+            <BrandMark priority className="h-7.5" />
+          </span>
+          <BrandLockup
+            priority
+            className={cn(
+              "pointer-events-none pl-1 opacity-0 -translate-x-1 transition-[opacity,translate] duration-120 delay-0 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+              !collapsed &&
+                "lg:pointer-events-auto lg:translate-x-0 lg:opacity-100 lg:duration-200 lg:delay-80",
+            )}
+          />
         </Link>
         <DropdownMenu onOpenChange={(open) => onMenuOpenChange(open)}>
           <DropdownMenuTrigger
@@ -83,7 +95,12 @@ export function AppSidebar({
                 type="button"
                 variant="secondary"
                 size="icon-sm"
-                className="hidden lg:inline-flex"
+                className={cn(
+                  "absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:inline-flex",
+                  collapsed
+                    ? "pointer-events-none scale-95 opacity-0 lg:group-hover/sidebar:pointer-events-auto lg:group-hover/sidebar:scale-100 lg:group-hover/sidebar:opacity-100 lg:group-focus-within/sidebar:pointer-events-auto lg:group-focus-within/sidebar:scale-100 lg:group-focus-within/sidebar:opacity-100 data-[popup-open]:pointer-events-auto data-[popup-open]:scale-100 data-[popup-open]:opacity-100"
+                    : "lg:pointer-events-auto lg:scale-100 lg:opacity-100 lg:delay-75",
+                )}
                 aria-controls="primary-navigation"
                 aria-label={`Sidebar: ${sidebarModeLabel(mode)}`}
                 title={`Sidebar: ${sidebarModeLabel(mode)}`}
@@ -117,7 +134,7 @@ export function AppSidebar({
         <nav
           id="primary-navigation"
           aria-label="Primary"
-          className="no-scrollbar -mx-1 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-1 pb-2"
+          className="no-scrollbar -mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-x-hidden overflow-y-auto overscroll-contain px-1 pb-2"
         >
           {visibleItems.map((item) => (
             <NavLink
@@ -132,9 +149,11 @@ export function AppSidebar({
         </nav>
       </TooltipProvider>
       <p
+        aria-hidden={collapsed}
         className={cn(
-          "hidden shrink-0 px-3 pt-1 text-micro text-muted-foreground",
-          !collapsed && "lg:block",
+          "pointer-events-none shrink-0 overflow-hidden px-3.25 pt-1 text-micro whitespace-nowrap text-muted-foreground opacity-0 -translate-x-1 transition-[opacity,translate] duration-120 delay-0 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+          !collapsed &&
+            "lg:translate-x-0 lg:opacity-100 lg:duration-200 lg:delay-80",
         )}
       >
         {APP_VERSION_LABEL}
@@ -170,25 +189,44 @@ function NavLink({
   if (!Icon) return null
 
   const className = cn(
-    "flex h-8.25 w-11 shrink-0 items-center justify-center gap-2.75 rounded-lg text-ui font-book tracking-[-0.005em] whitespace-nowrap text-sidebar-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50",
-    !collapsed && "lg:w-auto lg:justify-start lg:px-3",
+    "relative flex h-8.25 w-full min-w-0 shrink-0 items-center gap-2.75 overflow-hidden rounded-lg px-3.25 text-left text-ui font-book tracking-[-0.005em] whitespace-nowrap text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50",
     active &&
       "bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-nav-active hover:bg-sidebar-primary",
   )
 
   return (
-    <Tooltip>
+    <Tooltip disabled={!collapsed}>
       <TooltipTrigger
-        render={<Link href={href} prefetch={false} aria-current={active ? "page" : undefined} className={className} />}
+        render={
+          <Link
+            href={href}
+            prefetch={false}
+            aria-current={active ? "page" : undefined}
+            className={className}
+          />
+        }
       >
-        <Icon
+        <span
           aria-hidden="true"
+          className="relative z-10 grid size-4.5 shrink-0 place-items-center"
+        >
+          <Icon
+            aria-hidden="true"
+            className={cn(
+              "size-4.25 shrink-0",
+              active ? "text-sidebar-primary-foreground" : "text-muted-foreground",
+            )}
+          />
+        </span>
+        <span
           className={cn(
-            "size-4.25 shrink-0",
-            active ? "text-sidebar-primary-foreground" : "text-muted-foreground",
+            "relative z-10 w-42 shrink-0 truncate opacity-0 -translate-x-1 pointer-events-none transition-[opacity,translate] duration-120 delay-0 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            !collapsed &&
+              "lg:pointer-events-auto lg:translate-x-0 lg:opacity-100 lg:duration-200 lg:delay-80",
           )}
-        />
-        <span className={cn("sr-only", !collapsed && "lg:not-sr-only")}>{label}</span>
+        >
+          {label}
+        </span>
       </TooltipTrigger>
       <TooltipContent side="right" className={cn(!collapsed && "lg:hidden")}>
         {label}

@@ -51,18 +51,8 @@ function backHref(pathname: string): string {
   return modulesHref
 }
 
-export function AppShell({
-  children,
-  theme,
-  account,
-}: {
-  children: ReactNode
-  theme: ThemePreference
-  account: AccountIdentity
-}) {
-  const pathname = usePathname()
-  const tabRoots = useTabRoots()
-  const modeStore = sidebarModeStore(account.email)
+function DesktopSidebarSlot({ email }: { email: string }) {
+  const modeStore = sidebarModeStore(email)
   const mode = useSyncExternalStore(
     modeStore.subscribe,
     modeStore.getSnapshot,
@@ -76,27 +66,44 @@ export function AppShell({
     focusInside: presence.focusInside,
     menuOpen,
   })
+
+  return (
+    <div
+      data-sidebar-mode={mode}
+      className={cn(
+        "relative z-30 hidden w-25 shrink-0 transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none print:hidden md:block",
+        mode === "open" && "lg:w-70",
+      )}
+      {...presence.handlers}
+    >
+      <AppSidebar
+        expanded={expanded}
+        mode={mode}
+        onModeChange={modeStore.write}
+        onMenuOpenChange={setMenuOpen}
+      />
+    </div>
+  )
+}
+
+export function AppShell({
+  children,
+  theme,
+  account,
+}: {
+  children: ReactNode
+  theme: ThemePreference
+  account: AccountIdentity
+}) {
+  const pathname = usePathname()
+  const tabRoots = useTabRoots()
   const [headerSlot, setHeaderSlot] = useState(null as HTMLDivElement | null)
   const isTabRoot = tabRoots.includes(pathname)
 
   return (
     <ShellHeaderProvider slot={headerSlot}>
       <div className="relative flex h-svh bg-aurora print:block print:h-auto print:overflow-visible print:bg-background">
-        <div
-          data-sidebar-mode={mode}
-          className={cn(
-            "relative z-30 hidden w-25 shrink-0 print:hidden md:block",
-            mode === "open" && "lg:w-70",
-          )}
-          {...presence.handlers}
-        >
-          <AppSidebar
-            expanded={expanded}
-            mode={mode}
-            onModeChange={modeStore.write}
-            onMenuOpenChange={setMenuOpen}
-          />
-        </div>
+        <DesktopSidebarSlot email={account.email} />
         <main
           id="main"
           className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain scroll-smooth pt-safe pb-tabbar print:h-auto print:overflow-visible print:p-0 md:pt-0 md:pb-12"
