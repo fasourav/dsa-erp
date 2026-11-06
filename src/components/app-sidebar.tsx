@@ -8,6 +8,15 @@ import { useAccess } from "@/components/access-provider"
 import { BrandLockup, BrandMark } from "@/components/brand-mark"
 import { Button } from "@/components/ui/button"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -16,17 +25,29 @@ import {
 import { canSeeNav, navItems } from "@/lib/access"
 import { APP_VERSION_LABEL } from "@/lib/app-version"
 import { navIcons } from "@/lib/nav-icons"
+import {
+  SIDEBAR_MODES,
+  sanitizeSidebarMode,
+  sidebarModeLabel,
+  type SidebarMode,
+} from "@/lib/sidebar-mode"
 import { cn } from "@/lib/utils"
 
 // Floating glass sidebar (desktop only). Between md and lg it is always the
-// 72px icon rail; from lg up it is 252px unless the user collapses it.
+// 72px icon rail. From lg up it follows the mode: Auto expands on hover/focus
+// and overlays content; Always expanded reserves 252px; Always collapsed stays a rail.
 export function AppSidebar({
-  collapsed,
-  onToggle,
+  expanded,
+  mode,
+  onModeChange,
+  onMenuOpenChange,
 }: {
-  collapsed: boolean
-  onToggle: () => void
+  expanded: boolean
+  mode: SidebarMode
+  onModeChange: (mode: SidebarMode) => void
+  onMenuOpenChange: (open: boolean) => void
 }) {
+  const collapsed = !expanded
   const pathname = usePathname()
   const access = useAccess()
   const visibleItems = navItems.filter((item) => canSeeNav(access, item))
@@ -34,9 +55,11 @@ export function AppSidebar({
   return (
     <aside
       data-collapsed={collapsed}
+      data-mode={mode}
       className={cn(
-        "group/sidebar relative z-30 m-3.5 hidden max-h-[calc(100svh-1.75rem)] min-h-0 w-18 shrink-0 flex-col items-center rounded-sidebar px-2.5 pt-3.5 pb-3 text-sidebar-foreground glass-chrome print:hidden md:flex",
+        "group/sidebar absolute top-0 left-0 z-30 m-3.5 flex h-[calc(100svh-1.75rem)] min-h-0 w-18 flex-col items-center rounded-sidebar px-2.5 pt-3.5 pb-3 text-sidebar-foreground glass-chrome transition-[width] duration-150 motion-reduce:transition-none",
         !collapsed && "lg:w-63 lg:items-stretch",
+        !collapsed && mode === "auto" && "lg:shadow-2xl",
       )}
     >
       <div
@@ -53,22 +76,42 @@ export function AppSidebar({
           <BrandMark priority className={cn("h-7.5", !collapsed && "lg:hidden")} />
           <BrandLockup priority className={cn("hidden", !collapsed && "lg:inline-flex")} />
         </Link>
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon-sm"
-          className="hidden lg:inline-flex"
-          aria-expanded={!collapsed}
-          aria-controls="primary-navigation"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={onToggle}
-        >
-          {collapsed ? (
-            <PanelLeftOpen aria-hidden="true" />
-          ) : (
-            <PanelLeftClose aria-hidden="true" />
-          )}
-        </Button>
+        <DropdownMenu onOpenChange={(open) => onMenuOpenChange(open)}>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon-sm"
+                className="hidden lg:inline-flex"
+                aria-controls="primary-navigation"
+                aria-label={`Sidebar: ${sidebarModeLabel(mode)}`}
+                title={`Sidebar: ${sidebarModeLabel(mode)}`}
+              />
+            }
+          >
+            {collapsed ? (
+              <PanelLeftOpen aria-hidden="true" />
+            ) : (
+              <PanelLeftClose aria-hidden="true" />
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" className="w-52">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Sidebar</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={mode}
+                onValueChange={(value) => onModeChange(sanitizeSidebarMode(value))}
+              >
+                {SIDEBAR_MODES.map((option) => (
+                  <DropdownMenuRadioItem key={option} value={option}>
+                    {sidebarModeLabel(option)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <TooltipProvider delay={300}>
         <nav
