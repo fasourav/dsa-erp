@@ -32,8 +32,9 @@ test("operatingCashAsOf excludes manual deposit and withdrawal while keeping ope
     { date: "2026-01-28", amount: 1_500, direction: "inflow" as const, sourceKind: "other" },
   ]
 
-  // Opening 100,000 + 50,000 - 12,000 - 3,000 - 2,000 - 5,000 + 4,000 - 4,000 + 1,500 = 129,500
-  assert.equal(operatingCashAsOf(bank, "2026-01-31", 100_000), 129_500)
+  // Opening balances are excluded from the KPI (v1.1.2):
+  // 50,000 - 12,000 - 3,000 - 2,000 - 5,000 + 4,000 - 4,000 + 1,500 = 29,500
+  assert.equal(operatingCashAsOf(bank, "2026-01-31"), 29_500)
 })
 
 test("buildDashboard cashBalance, cashDelta, and cashSpark ignore manual deposit and withdrawal", () => {
@@ -68,14 +69,47 @@ test("buildDashboard cashBalance, cashDelta, and cashSpark ignore manual deposit
     2026,
   )
 
-  // Jan end operating cash: 80,000 + 20,000 = 100,000 (ignores +90,000 deposit)
-  // Feb 20 operating cash: 100,000 + 40,000 = 140,000 (ignores -30,000 withdrawal)
-  assert.equal(model.cashBalance, 140_000)
-  assert.equal(model.cashDelta, 40)
+  // Jan end: 20,000 (ignores 80,000 opening and +90,000 deposit)
+  // Feb 20: 20,000 + 40,000 = 60,000 (ignores -30,000 withdrawal)
+  assert.equal(model.cashBalance, 60_000)
+  assert.equal(model.cashDelta, 200)
   assert.deepEqual(model.cashSpark, [
-    { label: "Jan", value: 100_000 },
-    { label: "Feb", value: 140_000 },
+    { label: "Jan", value: 20_000 },
+    { label: "Feb", value: 60_000 },
   ])
   // Withdrawal compact metric still reports manual withdrawals separately
   assert.equal(model.snapshots[0]?.withdrawal, 30_000)
+})
+
+test("opening-only account contributes 0 to dashboard cash", () => {
+  const model = buildDashboard(
+    {
+      projects: [],
+      clientCount: 0,
+      leads: [],
+      clients: [],
+      invoices: [],
+      orders: [],
+      backlogYears: [],
+      revenue: [],
+      vendorPayments: [],
+      operational: [],
+      taxes: [],
+      bank: [],
+      openingBalance: 5_000,
+      billed: 0,
+      ledgerPaid: 0,
+      receivables: 0,
+      payables: 0,
+      backlogCount: 0,
+      launchDate: "2025-01-01",
+    },
+    new Date("2026-02-20T06:00:00Z"),
+    2026,
+  )
+  assert.equal(model.cashBalance, 0)
+  assert.deepEqual(model.cashSpark, [
+    { label: "Jan", value: 0 },
+    { label: "Feb", value: 0 },
+  ])
 })
