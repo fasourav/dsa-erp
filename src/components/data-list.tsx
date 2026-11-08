@@ -349,7 +349,7 @@ export function DataList<T, Id extends string>({
                     {column.hint ? (
                       <div
                         className={cn(
-                          "flex max-w-full min-w-0 items-center gap-1",
+                          "inline-flex max-w-full min-w-0 items-center gap-0.5 align-middle",
                           column.align === "right" && "flex-row-reverse",
                         )}
                       >
@@ -530,7 +530,6 @@ function ColumnLabel<Id extends string>({
         className={cn(
           "inline-flex max-w-full min-h-8 min-w-0 items-center text-caption font-label text-muted-foreground",
           column.align === "right" && "justify-end",
-          column.hint && "flex-1",
         )}
       >
         <span className="truncate">{column.label}</span>
@@ -546,7 +545,7 @@ function ColumnLabel<Id extends string>({
       className={cn(
         "h-auto max-w-full min-h-8 min-w-0 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-inset active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
         column.align === "right" && "flex-row-reverse",
-        column.hint && "flex-1",
+        column.hint && "w-auto justify-start",
         active && "text-foreground",
       )}
       aria-label={
@@ -571,7 +570,7 @@ export function ColumnHint({ label, hint }: { label: string; hint: string }) {
             <button
               type="button"
               aria-label={`About ${label}`}
-              className="shrink-0 rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           }
         >
