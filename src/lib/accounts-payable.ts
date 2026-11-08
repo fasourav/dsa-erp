@@ -39,13 +39,16 @@ export type PayableOptionalColumnId = Exclude<
 
 export type PayableColumnVisibility = Record<PayableOptionalColumnId, boolean>
 
+export const unpaidSinceExplanation =
+  "Date of the earliest bill with an amount still unpaid for this purchase order."
+
 export const payableColumns: readonly ListColumn<PayableColumnId>[] = [
   { id: "projectName", label: "Project", align: "left", locked: true },
   { id: "vendorName", label: "Vendor", align: "left", locked: true },
   {
     id: "oldestUnpaidBillOn",
     label: "Unpaid Since",
-    hint: "Date of the earliest bill with an amount still unpaid for this purchase order.",
+    hint: unpaidSinceExplanation,
     align: "left",
     locked: false,
     minWidth: 168,

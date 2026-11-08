@@ -134,6 +134,8 @@ function syncCellTitle(
 export type DataListMobileItem = {
   title: ReactNode
   subtitle?: ReactNode
+  /** Sits beside the subtitle and stays visible when the subtitle truncates. */
+  subtitleAccessory?: ReactNode
   /** Right side of the first line, usually a <Money>. */
   value?: ReactNode
   /** Right side of the second line: a <StatusBadge>, or the amount when it reads with the subtitle. */
@@ -238,10 +240,13 @@ export function DataList<T, Id extends string>({
                             </span>
                           ) : null}
                         </div>
-                        {item.subtitle || item.meta ? (
+                        {item.subtitle || item.subtitleAccessory || item.meta ? (
                           <div className="mt-0.5 flex items-center justify-between gap-2.5">
-                            <span className="min-w-0 flex-1 truncate text-label text-muted-foreground">
-                              {item.subtitle}
+                            <span className="flex min-w-0 flex-1 items-center gap-1 text-label text-muted-foreground">
+                              <span className="min-w-0 truncate">{item.subtitle}</span>
+                              {item.subtitleAccessory ? (
+                                <span className="shrink-0">{item.subtitleAccessory}</span>
+                              ) : null}
                             </span>
                             {item.meta ? (
                               <span className="shrink-0 text-callout font-strong tabular-nums">{item.meta}</span>
@@ -557,7 +562,7 @@ function ColumnLabel<Id extends string>({
   )
 }
 
-function ColumnHint({ label, hint }: { label: string; hint: string }) {
+export function ColumnHint({ label, hint }: { label: string; hint: string }) {
   return (
     <TooltipProvider delay={200}>
       <Tooltip>
@@ -572,7 +577,7 @@ function ColumnHint({ label, hint }: { label: string; hint: string }) {
         >
           <Info aria-hidden="true" className="size-3.5" />
         </TooltipTrigger>
-        <TooltipContent className="max-w-64">
+        <TooltipContent arrow={false} className="max-w-64">
           <span className="block min-w-0 whitespace-normal text-left">{hint}</span>
         </TooltipContent>
       </Tooltip>

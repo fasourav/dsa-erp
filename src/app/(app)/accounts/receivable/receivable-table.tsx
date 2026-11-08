@@ -83,9 +83,10 @@ export function ReceivableTable({
 }) {
   const visibility = useColumnVisibility(receivableColumnStore)
   const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
+  const normalizedQuery = query.trim()
   const searched = useMemo(
-    () => filterRows(error ? [] : rows, query, receivableSearchText),
-    [error, query, rows],
+    () => filterRows(error ? [] : rows, normalizedQuery, receivableSearchText),
+    [error, normalizedQuery, rows],
   )
   const counts = useMemo(
     () => settlementCounts(searched, (row) => row.settlement),
@@ -99,7 +100,7 @@ export function ReceivableTable({
       ),
     [searched, sort, statusFilter],
   )
-  const currentPage = query === initialQuery ? page : 1
+  const currentPage = normalizedQuery === initialQuery.trim() ? page : 1
   const pageResult = paginateRows(visible, currentPage)
 
   function changeVisibility(id: ReceivableColumnId, checked: boolean) {

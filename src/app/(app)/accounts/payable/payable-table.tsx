@@ -5,7 +5,7 @@ import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useMemo } from "react"
 
-import { DataList } from "@/components/data-list"
+import { ColumnHint, DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
@@ -24,6 +24,7 @@ import { payableColumnStore } from "@/lib/accounts-payable-column-store"
 import {
   payableColumns,
   sortPayables,
+  unpaidSinceExplanation,
   type PayableColumnId,
   type PayableRow,
 } from "@/lib/accounts-payable"
@@ -82,9 +83,10 @@ export function PayableTable({
 }) {
   const visibility = useColumnVisibility(payableColumnStore)
   const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
+  const normalizedQuery = query.trim()
   const searched = useMemo(
-    () => filterRows(error ? [] : rows, query, payableSearchText),
-    [error, query, rows],
+    () => filterRows(error ? [] : rows, normalizedQuery, payableSearchText),
+    [error, normalizedQuery, rows],
   )
   const counts = useMemo(
     () => settlementCounts(searched, (row) => row.settlement),
@@ -98,7 +100,7 @@ export function PayableTable({
       ),
     [searched, sort, statusFilter],
   )
-  const currentPage = query === initialQuery ? page : 1
+  const currentPage = normalizedQuery === initialQuery.trim() ? page : 1
   const pageResult = paginateRows(visible, currentPage)
 
   return (
@@ -183,6 +185,9 @@ export function PayableTable({
             row.projectName || "—",
             `Unpaid Since ${row.oldestUnpaidBillOn ? formatIsoDate(row.oldestUnpaidBillOn) : "—"}`,
           ].join(" · "),
+          subtitleAccessory: (
+            <ColumnHint label="Unpaid Since" hint={unpaidSinceExplanation} />
+          ),
           meta: (
             <Money
               value={row.pendingPayable}

@@ -35,6 +35,17 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
         timerRef.current = null
         const trimmed = next.trim()
         const params = new URLSearchParams(window.location.search)
+        const current = (params.get("q") ?? "").trim()
+        // Whitespace-only edits do not change the committed search, so keep
+        // the page. The field stores the trimmed value so it matches the URL.
+        if (trimmed === current) {
+          setState((prev) =>
+            prev.value === next
+              ? { synced: trimmed, value: trimmed, dirty: false }
+              : prev,
+          )
+          return
+        }
         if (trimmed) {
           params.set("q", trimmed)
         } else {
@@ -46,7 +57,7 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
           router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
           setState((prev) =>
             prev.value === next
-              ? { synced: trimmed, value: next, dirty: false }
+              ? { synced: trimmed, value: trimmed, dirty: false }
               : prev,
           )
         })
