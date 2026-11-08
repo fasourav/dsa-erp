@@ -115,7 +115,7 @@ export function PayableTable({
               columns: [
                 { header: "Project", kind: "text" },
                 { header: "Vendor", kind: "text" },
-                { header: "Oldest Unpaid Bill Date", kind: "text" },
+                { header: "Unpaid Since", kind: "text" },
                 { header: "Billed", kind: "money" },
                 { header: "Paid", kind: "money" },
                 { header: "Open Payable", kind: "money" },
@@ -181,7 +181,7 @@ export function PayableTable({
           title: row.vendorName || "—",
           subtitle: [
             row.projectName || "—",
-            row.oldestUnpaidBillOn ? formatIsoDate(row.oldestUnpaidBillOn) : "—",
+            `Unpaid Since ${row.oldestUnpaidBillOn ? formatIsoDate(row.oldestUnpaidBillOn) : "—"}`,
           ].join(" · "),
           meta: (
             <Money

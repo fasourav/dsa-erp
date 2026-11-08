@@ -44,9 +44,11 @@ export const payableColumns: readonly ListColumn<PayableColumnId>[] = [
   { id: "vendorName", label: "Vendor", align: "left", locked: true },
   {
     id: "oldestUnpaidBillOn",
-    label: "Oldest Unpaid Bill Date",
+    label: "Unpaid Since",
+    hint: "Date of the earliest bill with an amount still unpaid for this purchase order.",
     align: "left",
     locked: false,
+    minWidth: 168,
   },
   { id: "totalPayable", label: "Billed", align: "right", locked: false },
   { id: "totalPaid", label: "Paid", align: "right", locked: false },
