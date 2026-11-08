@@ -2,6 +2,10 @@
 
 import { ListExport } from "@/components/list-export"
 import { ListSearch } from "@/components/list-search"
+import {
+  ListFilterBar,
+  SettlementFilterControl,
+} from "@/components/settlement-filter"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil, Plus, Trash2, Wallet } from "lucide-react"
@@ -34,17 +38,19 @@ import {
   type InvoiceProjectOption,
 } from "@/lib/client-invoice-summary"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import type {
-  InvoiceProjectFilter,
-  InvoiceStatusFilter,
-} from "@/lib/client-invoices"
+import type { InvoiceProjectFilter } from "@/lib/client-invoices"
 import { formatIsoDate } from "@/lib/format"
 import {
   rangeLabel,
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
+import { buildPageHref, LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
+import {
+  settlementQueryValue,
+  type SettlementCounts,
+  type SettlementFilter,
+} from "@/lib/settlement-filter"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useUrlSearch } from "@/lib/use-url-search"
 
@@ -58,7 +64,8 @@ export function ClientInvoicesTable({
   page,
   error,
   initialQuery = "",
-  statusFilter = "all",
+  statusFilter = "outstanding",
+  counts,
   sort = defaultClientInvoiceSort,
 }: {
   invoices: ClientInvoiceRow[]
@@ -71,7 +78,8 @@ export function ClientInvoicesTable({
   pageCount?: number
   error: string | null
   initialQuery?: string
-  statusFilter?: InvoiceStatusFilter
+  statusFilter?: SettlementFilter
+  counts: SettlementCounts
   sort?: SortState<ClientInvoiceColumnId>
 }) {
   const canAdd = useCan("client_invoices", "add")
@@ -90,14 +98,10 @@ export function ClientInvoicesTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
-  const filterOptions = [
-    { value: "all", label: "All Statuses" },
-    { value: "unpaid", label: "Unpaid" },
-    { value: "partial", label: "Partially Paid" },
-    { value: "paid", label: "Paid" },
-  ]
-
   const effectiveTotal = error ? 0 : total
+  const filterCounts = error
+    ? { outstanding: 0, settled: 0, all: 0 }
+    : counts
   const rangeStart =
     effectiveTotal === 0 || invoices.length === 0
       ? 0
@@ -148,7 +152,11 @@ export function ClientInvoicesTable({
             <>
               For {projectFilter.name || "this project"}.{" "}
               <Link
-                href="/accounts/invoices"
+                href={buildPageHref("/accounts/invoices", 1, {
+                  q: query.trim(),
+                  status: settlementQueryValue(statusFilter),
+                  ...sortQueryParams(sort, defaultClientInvoiceSort),
+                })}
                 className="font-medium text-foreground underline underline-offset-4"
               >
                 Show All
@@ -178,16 +186,24 @@ export function ClientInvoicesTable({
           </>
         }
       />
-      <ListSearch
-        query={query}
-        onQueryChange={setQuery}
-        placeholder="Search invoices"
-        filterLabel="Status"
-        filter={statusFilter}
-        onFilterChange={(next) =>
-          setParams({ status: next === "all" ? null : next })
+      <ListFilterBar
+        search={
+          <ListSearch
+            query={query}
+            onQueryChange={setQuery}
+            placeholder="Search invoices"
+          />
         }
-        options={filterOptions}
+        filter={
+          <SettlementFilterControl
+            value={statusFilter}
+            counts={filterCounts}
+            label="Client invoice settlement"
+            onChange={(next) =>
+              setParams({ status: settlementQueryValue(next) })
+            }
+          />
+        }
       />
       <DataList
         columns={clientInvoiceColumns}
@@ -201,11 +217,11 @@ export function ClientInvoicesTable({
         visibility={visibility}
         error={error}
         emptyMessage={
-          statusFilter !== "all" || Boolean(query.trim())
-            ? "No Matching Client Invoices."
-            : projectFilter
+          filterCounts.all === 0 && !query.trim()
+            ? projectFilter
               ? "No Client Invoices For This Project."
               : "No Client Invoices Yet."
+            : "No Matching Client Invoices."
         }
         rangeText={rangeLabel(
           rangeStart,

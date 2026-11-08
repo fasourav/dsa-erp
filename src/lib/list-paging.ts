@@ -15,6 +15,8 @@ export type ListColumn<Id extends string> = {
   sortable?: boolean
   width?: string
   minWidth?: number
+  /** Header help text. Shown with the existing tooltip control, not in the label. */
+  hint?: string
 }
 
 export type TableColumnLayout = {

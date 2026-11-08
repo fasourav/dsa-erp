@@ -13,12 +13,15 @@ import { dateInputValue } from "@/lib/project-validation"
 import {
   clientInvoiceStatuses,
   clientInvoiceStatusFromPayments,
-  isClientInvoiceStatus,
   moneyCents,
   paymentStatusLabel,
   sumAmounts,
-  type ClientInvoiceStatus,
 } from "@/lib/payment-status"
+import {
+  parseSettlementFilter,
+  type SettlementCounts,
+  type SettlementFilter,
+} from "@/lib/settlement-filter"
 import { createClient } from "@/lib/supabase/server"
 import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 import {
@@ -35,13 +38,82 @@ export type InvoiceProjectFilter = {
   name: string
 }
 
-export type InvoiceStatusFilter = "all" | ClientInvoiceStatus
+type InvoiceScope = {
+  projectId: string | null
+  orFilter: string | null
+  settlement: SettlementFilter
+}
 
-export function parseInvoiceStatusFilter(
-  raw: string | string[] | undefined,
-): InvoiceStatusFilter {
-  const value = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? ""
-  return isClientInvoiceStatus(value) ? value : "all"
+const emptySettlementCounts: SettlementCounts = {
+  outstanding: 0,
+  settled: 0,
+  all: 0,
+}
+
+/**
+ * Stored status follows derived_payment_status, so this matches the open
+ * balance without a second pass over payments:
+ * Outstanding = partial, or unpaid with amount > 0.
+ * Settled = paid, or unpaid with amount <= 0 (nothing left to collect).
+ * All = every non-void invoice. Void stays out of all three.
+ */
+type InvoiceQuery = {
+  eq: (column: string, value: string) => InvoiceQuery
+  neq: (column: string, value: string) => InvoiceQuery
+  or: (filters: string) => InvoiceQuery
+}
+
+function applyClientInvoiceScope<Q>(query: Q, scope: InvoiceScope): Q {
+  let scoped = query as InvoiceQuery
+  if (scope.projectId) {
+    scoped = scoped.eq("project_id", scope.projectId)
+  }
+  if (scope.settlement === "all") {
+    scoped = scoped.neq("status", "void")
+  }
+
+  const settlementOr =
+    scope.settlement === "outstanding"
+      ? "status.eq.partial,and(status.eq.unpaid,amount.gt.0)"
+      : scope.settlement === "settled"
+        ? "status.eq.paid,and(status.eq.unpaid,amount.lte.0)"
+        : null
+
+  if (scope.orFilter && settlementOr) {
+    scoped = scoped.or(`and(or(${scope.orFilter}),or(${settlementOr}))`)
+  } else if (scope.orFilter) {
+    scoped = scoped.or(scope.orFilter)
+  } else if (settlementOr) {
+    scoped = scoped.or(settlementOr)
+  }
+
+  return scoped as Q
+}
+
+async function countClientInvoices(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  scope: InvoiceScope,
+): Promise<SettlementCounts> {
+  async function count(settlement: SettlementFilter): Promise<number> {
+    const query = applyClientInvoiceScope(
+      supabase
+        .from("client_invoices")
+        .select("id", { count: "exact", head: true }),
+      { ...scope, settlement },
+    )
+    const { count: total, error } = await query
+    if (error) {
+      throw error
+    }
+    return total ?? 0
+  }
+
+  const [outstanding, settled, all] = await Promise.all([
+    count("outstanding"),
+    count("settled"),
+    count("all"),
+  ])
+  return { outstanding, settled, all }
 }
 
 type InvoiceRawRow = {
@@ -189,7 +261,7 @@ export async function getClientInvoices(
   options: {
     q?: string
     page?: number
-    status?: InvoiceStatusFilter
+    status?: SettlementFilter
     sort?: SortState<ClientInvoiceColumnId>
   } = {},
 ): Promise<{
@@ -201,6 +273,7 @@ export async function getClientInvoices(
   total: number
   page: number
   pageCount: number
+  counts: SettlementCounts
   error: string | null
 }> {
   const empty = {
@@ -212,6 +285,7 @@ export async function getClientInvoices(
     total: 0,
     page: 1,
     pageCount: 1,
+    counts: emptySettlementCounts,
     error: "Could not load client invoices.",
   }
 
@@ -220,10 +294,7 @@ export async function getClientInvoices(
   const requestedPage = options.page ?? 1
   const rawQuery = options.q ?? ""
   const term = sanitizeSearch(rawQuery)
-  const statusFilter =
-    options.status && isClientInvoiceStatus(options.status)
-      ? options.status
-      : "all"
+  const statusFilter = parseSettlementFilter(options.status)
   const sort = options.sort ?? defaultClientInvoiceSort
   const ascending = sort.direction === "asc"
 
@@ -289,6 +360,7 @@ export async function getClientInvoices(
         total: 0,
         page: 1,
         pageCount: 1,
+        counts: emptySettlementCounts,
         error: "That project could not be found.",
       }
     }
@@ -307,33 +379,30 @@ export async function getClientInvoices(
         total: 0,
         page: 1,
         pageCount: 1,
+        counts: emptySettlementCounts,
         error: "That project could not be found.",
       }
     }
 
     const orFilter = buildInvoiceOrFilter(rawQuery, term, projects, clientsById)
+    const scope: InvoiceScope = {
+      projectId: matchedProject?.id ?? null,
+      orFilter,
+      settlement: statusFilter,
+    }
 
-    const invoiceSlice = await fetchPage(
+    const [invoiceSlice, counts] = await Promise.all([
+      fetchPage(
       (from, to) => {
-        let query = supabase
-          .from("client_invoices")
-          .select(
-            "id, project_id, client_id, issued_on, due_on, amount, status, description",
-            { count: "exact" },
-          )
-
-        if (statusFilter !== "all") {
-          query = query.eq("status", statusFilter)
-        } else {
-          query = query.neq("status", "void")
-        }
-
-        if (matchedProject) {
-          query = query.eq("project_id", matchedProject.id)
-        }
-        if (orFilter) {
-          query = query.or(orFilter)
-        }
+        let query = applyClientInvoiceScope(
+          supabase
+            .from("client_invoices")
+            .select(
+              "id, project_id, client_id, issued_on, due_on, amount, status, description",
+              { count: "exact" },
+            ),
+          scope,
+        )
 
         switch (sort.key) {
           case "amount":
@@ -359,7 +428,9 @@ export async function getClientInvoices(
       },
       requestedPage,
       LIST_PAGE_SIZE,
-    )
+      ),
+      countClientInvoices(supabase, scope),
+    ])
 
     const invoices = await hydrateInvoices(
       supabase,
@@ -385,6 +456,7 @@ export async function getClientInvoices(
       total: invoiceSlice.total,
       page: invoiceSlice.page,
       pageCount: invoiceSlice.pageCount,
+      counts: { ...counts, [statusFilter]: invoiceSlice.total },
       error: null,
     }
   } catch {
@@ -396,7 +468,7 @@ export async function getAllClientInvoicesForExport(
   projectId: string | null,
   options: {
     q?: string
-    status?: InvoiceStatusFilter
+    status?: SettlementFilter
     sort?: SortState<ClientInvoiceColumnId>
   } = {},
 ): Promise<{
@@ -410,10 +482,7 @@ export async function getAllClientInvoicesForExport(
   }
   const rawQuery = options.q ?? ""
   const term = sanitizeSearch(rawQuery)
-  const statusFilter =
-    options.status && isClientInvoiceStatus(options.status)
-      ? options.status
-      : "all"
+  const statusFilter = parseSettlementFilter(options.status)
   const sort = options.sort ?? defaultClientInvoiceSort
   const ascending = sort.direction === "asc"
 
@@ -461,24 +530,18 @@ export async function getAllClientInvoicesForExport(
 
     const invoiceRows = await fetchAllPages(
       (from, to) => {
-        let query = supabase
-          .from("client_invoices")
-          .select(
-            "id, project_id, client_id, issued_on, due_on, amount, status, description",
-          )
-
-        if (statusFilter !== "all") {
-          query = query.eq("status", statusFilter)
-        } else {
-          query = query.neq("status", "void")
-        }
-
-        if (requestedId) {
-          query = query.eq("project_id", requestedId)
-        }
-        if (orFilter) {
-          query = query.or(orFilter)
-        }
+        let query = applyClientInvoiceScope(
+          supabase
+            .from("client_invoices")
+            .select(
+              "id, project_id, client_id, issued_on, due_on, amount, status, description",
+            ),
+          {
+            projectId: requestedId,
+            orFilter,
+            settlement: statusFilter,
+          },
+        )
 
         switch (sort.key) {
           case "amount":

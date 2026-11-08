@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Columns3,
   Inbox,
+  Info,
 } from "lucide-react"
 import type {
   FocusEvent as ReactFocusEvent,
@@ -16,6 +17,12 @@ import type {
 } from "react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
   DropdownMenu,
@@ -127,6 +134,8 @@ function syncCellTitle(
 export type DataListMobileItem = {
   title: ReactNode
   subtitle?: ReactNode
+  /** Sits beside the subtitle and stays visible when the subtitle truncates. */
+  subtitleAccessory?: ReactNode
   /** Right side of the first line, usually a <Money>. */
   value?: ReactNode
   /** Right side of the second line: a <StatusBadge>, or the amount when it reads with the subtitle. */
@@ -231,10 +240,13 @@ export function DataList<T, Id extends string>({
                             </span>
                           ) : null}
                         </div>
-                        {item.subtitle || item.meta ? (
+                        {item.subtitle || item.subtitleAccessory || item.meta ? (
                           <div className="mt-0.5 flex items-center justify-between gap-2.5">
-                            <span className="min-w-0 flex-1 truncate text-label text-muted-foreground">
-                              {item.subtitle}
+                            <span className="flex min-w-0 flex-1 items-center gap-1 text-label text-muted-foreground">
+                              <span className="min-w-0 truncate">{item.subtitle}</span>
+                              {item.subtitleAccessory ? (
+                                <span className="shrink-0">{item.subtitleAccessory}</span>
+                              ) : null}
                             </span>
                             {item.meta ? (
                               <span className="shrink-0 text-callout font-strong tabular-nums">{item.meta}</span>
@@ -315,7 +327,6 @@ export function DataList<T, Id extends string>({
                 const active = isSortable && sort.key === column.id
                 const previous = visibleColumns[index - 1]?.align ?? null
                 const next = visibleColumns[index + 1]?.align ?? null
-                const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
                 return (
                   <TableHead
                     key={column.id}
@@ -329,40 +340,36 @@ export function DataList<T, Id extends string>({
                         : undefined
                     }
                     className={cn(
-                      "overflow-hidden py-2 align-middle",
+                      "py-2 align-middle",
+                      column.hint ? "overflow-visible" : "overflow-hidden",
                       alignClass(column.align),
                       insetClass(column.align, previous, next, dense),
                     )}
                   >
-                    {isSortable ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
+                    {column.hint ? (
+                      <div
                         className={cn(
-                          "h-auto max-w-full min-h-8 min-w-0 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-inset active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
+                          "inline-flex max-w-full min-w-0 items-center gap-0.5 align-middle",
                           column.align === "right" && "flex-row-reverse",
-                          active && "text-foreground",
                         )}
-                        aria-label={
-                          active
-                            ? `Sort by ${column.label}, ${sort.direction === "asc" ? "ascending" : "descending"}`
-                            : `Sort by ${column.label}`
-                        }
-                        onClick={() => onSort(column.id)}
                       >
-                        <span className="truncate">{column.label}</span>
-                        {active ? <SortIcon aria-hidden="true" className="size-3 shrink-0" strokeWidth={2.4} /> : null}
-                      </Button>
+                        <ColumnLabel
+                          column={column}
+                          sortable={isSortable}
+                          active={active}
+                          sortDirection={sort.direction}
+                          onSort={() => onSort(column.id)}
+                        />
+                        <ColumnHint label={column.label} hint={column.hint} />
+                      </div>
                     ) : (
-                      <span
-                        className={cn(
-                          "inline-flex max-w-full min-h-8 min-w-0 items-center text-caption font-label text-muted-foreground",
-                          column.align === "right" && "justify-end",
-                        )}
-                      >
-                        <span className="truncate">{column.label}</span>
-                      </span>
+                      <ColumnLabel
+                        column={column}
+                        sortable={isSortable}
+                        active={active}
+                        sortDirection={sort.direction}
+                        onSort={() => onSort(column.id)}
+                      />
                     )}
                   </TableHead>
                 )
@@ -499,6 +506,81 @@ export function DataList<T, Id extends string>({
         </div>
       </div>
     </div>
+  )
+}
+
+function ColumnLabel<Id extends string>({
+  column,
+  sortable,
+  active,
+  sortDirection,
+  onSort,
+}: {
+  column: ListColumn<Id>
+  sortable: boolean
+  active: boolean
+  sortDirection: SortState<Id>["direction"]
+  onSort: () => void
+}) {
+  const SortIcon = sortDirection === "asc" ? ArrowUp : ArrowDown
+
+  if (!sortable) {
+    return (
+      <span
+        className={cn(
+          "inline-flex max-w-full min-h-8 min-w-0 items-center text-caption font-label text-muted-foreground",
+          column.align === "right" && "justify-end",
+        )}
+      >
+        <span className="truncate">{column.label}</span>
+      </span>
+    )
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "h-auto max-w-full min-h-8 min-w-0 gap-1 rounded-md px-0 text-caption font-label text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-inset active:not-aria-[haspopup]:scale-100 md:h-auto md:px-0 md:text-caption",
+        column.align === "right" && "flex-row-reverse",
+        column.hint && "w-auto justify-start",
+        active && "text-foreground",
+      )}
+      aria-label={
+        active
+          ? `Sort by ${column.label}, ${sortDirection === "asc" ? "ascending" : "descending"}`
+          : `Sort by ${column.label}`
+      }
+      onClick={onSort}
+    >
+      <span className="truncate">{column.label}</span>
+      {active ? <SortIcon aria-hidden="true" className="size-3 shrink-0" strokeWidth={2.4} /> : null}
+    </Button>
+  )
+}
+
+export function ColumnHint({ label, hint }: { label: string; hint: string }) {
+  return (
+    <TooltipProvider delay={200}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              aria-label={`About ${label}`}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          }
+        >
+          <Info aria-hidden="true" className="size-3.5" />
+        </TooltipTrigger>
+        <TooltipContent arrow={false} className="max-w-64">
+          <span className="block min-w-0 whitespace-normal text-left">{hint}</span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 

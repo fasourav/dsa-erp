@@ -14,10 +14,7 @@ import {
   sortableClientInvoiceColumns,
   type ClientInvoiceColumnId,
 } from "@/lib/client-invoice-summary"
-import {
-  getAllClientInvoicesForExport,
-  parseInvoiceStatusFilter,
-} from "@/lib/client-invoices"
+import { getAllClientInvoicesForExport } from "@/lib/client-invoices"
 import { formatDayMonYear } from "@/lib/format"
 import type { SortDirection } from "@/lib/list-paging"
 import {
@@ -30,6 +27,7 @@ import { getAllOperationalExpensesForExport } from "@/lib/operational-expenses-d
 import { parseSortParams } from "@/lib/page-query"
 import { paymentStatusLabel } from "@/lib/payment-status"
 import { denyUnless, getAccess } from "@/lib/permissions"
+import { parseSettlementFilter } from "@/lib/settlement-filter"
 
 export async function exportClientInvoicesGrid(input: {
   projectId: string | null
@@ -41,7 +39,7 @@ export async function exportClientInvoicesGrid(input: {
   const denied = await denyUnless("client_invoices", "view")
   if (denied) return { error: denied }
 
-  const status = parseInvoiceStatusFilter(input.status)
+  const status = parseSettlementFilter(input.status)
   const sort = parseSortParams<ClientInvoiceColumnId>(
     { sort: input.sortKey, dir: input.sortDir },
     sortableClientInvoiceColumns,

@@ -3,12 +3,16 @@
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import { CustomizeColumns, DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import {
+  ListFilterBar,
+  SettlementFilterControl,
+} from "@/components/settlement-filter"
 import { StatusBadge } from "@/components/status-badge"
 import { paymentStatusLabel } from "@/lib/payment-status"
 import { Button } from "@/components/ui/button"
@@ -32,27 +36,72 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
+import { sortQueryParams } from "@/lib/page-query"
+import {
+  matchesSettlement,
+  settlementCounts,
+  settlementQueryValue,
+  type SettlementFilter,
+} from "@/lib/settlement-filter"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useUrlSearch } from "@/lib/use-url-search"
 
 const locked = new Set<ReceivableColumnId>(["projectName", "clientName"])
+
+const defaultSort: SortState<ReceivableColumnId> = {
+  key: "projectName",
+  direction: "asc",
+}
+
+function receivableSearchText(row: ReceivableRow): string {
+  return rowText({
+    id: row.id,
+    clientName: row.clientName,
+    projectId: row.projectId,
+    projectName: row.projectName,
+    billedAmount: row.billedAmount,
+    paid: row.paid,
+    due: row.due,
+    status: row.status ?? "",
+  })
+}
 
 export function ReceivableTable({
   rows,
   error,
+  initialQuery = "",
+  page,
+  statusFilter,
+  sort,
 }: {
   rows: ReceivableRow[]
   error: string | null
+  initialQuery?: string
+  page: number
+  statusFilter: SettlementFilter
+  sort: SortState<ReceivableColumnId>
 }) {
   const visibility = useColumnVisibility(receivableColumnStore)
-  const [sort, setSort] = useState<SortState<ReceivableColumnId>>({
-    key: "projectName",
-    direction: "asc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
-  const sorted = useMemo(() => sortReceivables(rows, sort), [rows, sort])
-  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
+  const normalizedQuery = query.trim()
+  const searched = useMemo(
+    () => filterRows(error ? [] : rows, normalizedQuery, receivableSearchText),
+    [error, normalizedQuery, rows],
+  )
+  const counts = useMemo(
+    () => settlementCounts(searched, (row) => row.settlement),
+    [searched],
+  )
+  const visible = useMemo(
+    () =>
+      sortReceivables(
+        searched.filter((row) => matchesSettlement(row.settlement, statusFilter)),
+        sort,
+      ),
+    [searched, sort, statusFilter],
+  )
+  const currentPage = normalizedQuery === initialQuery.trim() ? page : 1
+  const pageResult = paginateRows(visible, currentPage)
 
   function changeVisibility(id: ReceivableColumnId, checked: boolean) {
     if (locked.has(id)) {
@@ -82,7 +131,7 @@ export function ReceivableTable({
                   { header: "Pending Due", kind: "money" },
                   { header: "Status", kind: "text" },
                 ],
-                rows: filtered.map((row) => [
+                rows: visible.map((row) => [
                   row.projectName,
                   row.clientName,
                   row.billedAmount,
@@ -100,13 +149,24 @@ export function ReceivableTable({
           </>
         }
       />
-      <ListSearch
-        query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
-        placeholder="Search receivables"
+      <ListFilterBar
+        search={
+          <ListSearch
+            query={query}
+            onQueryChange={setQuery}
+            placeholder="Search receivables"
+          />
+        }
+        filter={
+          <SettlementFilterControl
+            value={statusFilter}
+            counts={counts}
+            label="Accounts receivable settlement"
+            onChange={(next) =>
+              setParams({ status: settlementQueryValue(next) })
+            }
+          />
+        }
       />
       <DataList
         columns={receivableColumns}
@@ -114,12 +174,15 @@ export function ReceivableTable({
         rowKey={(row) => row.id}
         sort={sort}
         onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
+          setParams(sortQueryParams(toggleSort(sort, key), defaultSort))
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No Receivable Invoices Yet."
+        emptyMessage={
+          counts.all === 0 && !query.trim()
+            ? "No Receivable Invoices Yet."
+            : "No Matching Receivables."
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
