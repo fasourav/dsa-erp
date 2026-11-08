@@ -16,13 +16,9 @@ import type {
   ReactNode,
 } from "react"
 
+import { Popover } from "@base-ui/react/popover"
+
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
   DropdownMenu,
@@ -563,24 +559,29 @@ function ColumnLabel<Id extends string>({
 
 export function ColumnHint({ label, hint }: { label: string; hint: string }) {
   return (
-    <TooltipProvider delay={200}>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <button
-              type="button"
-              aria-label={`About ${label}`}
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-          }
-        >
-          <Info aria-hidden="true" className="size-3.5" />
-        </TooltipTrigger>
-        <TooltipContent arrow={false} className="max-w-64">
-          <span className="block min-w-0 whitespace-normal text-left">{hint}</span>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Popover.Root>
+      <Popover.Trigger
+        openOnHover
+        delay={200}
+        nativeButton
+        aria-label={`About ${label}`}
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <Info aria-hidden="true" className="size-3.5" />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="top" sideOffset={4} align="center" className="isolate z-50">
+          <Popover.Popup
+            initialFocus={(openType) => openType !== "mouse"}
+            className="z-50 w-fit max-w-64 origin-(--transform-origin) rounded-[10px] bg-popover px-2.5 py-1.5 text-left text-caption font-semibold text-popover-foreground shadow-tooltip outline-none"
+          >
+            <span className="block min-w-0 whitespace-normal">{hint}</span>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 
