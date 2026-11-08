@@ -3,12 +3,16 @@
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { FileText, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import {
+  ListFilterBar,
+  SettlementFilterControl,
+} from "@/components/settlement-filter"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,6 +27,7 @@ import {
   type PayableColumnId,
   type PayableRow,
 } from "@/lib/accounts-payable"
+import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -30,25 +35,71 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
+import { sortQueryParams } from "@/lib/page-query"
+import {
+  matchesSettlement,
+  settlementCounts,
+  settlementQueryValue,
+  type SettlementFilter,
+} from "@/lib/settlement-filter"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useUrlSearch } from "@/lib/use-url-search"
+
+const defaultSort: SortState<PayableColumnId> = {
+  key: "vendorName",
+  direction: "asc",
+}
+
+function payableSearchText(row: PayableRow): string {
+  return rowText({
+    id: row.id,
+    vendorName: row.vendorName,
+    workType: row.workType,
+    projectId: row.projectId,
+    projectName: row.projectName,
+    purchaseOrderId: row.purchaseOrderId,
+    totalPayable: row.totalPayable,
+    totalPaid: row.totalPaid,
+    pendingPayable: row.pendingPayable,
+    oldestUnpaidBillOn: row.oldestUnpaidBillOn ?? "",
+  })
+}
 
 export function PayableTable({
   rows,
   error,
+  initialQuery = "",
+  page,
+  statusFilter,
+  sort,
 }: {
   rows: PayableRow[]
   error: string | null
+  initialQuery?: string
+  page: number
+  statusFilter: SettlementFilter
+  sort: SortState<PayableColumnId>
 }) {
   const visibility = useColumnVisibility(payableColumnStore)
-  const [sort, setSort] = useState<SortState<PayableColumnId>>({
-    key: "vendorName",
-    direction: "asc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
-  const sorted = useMemo(() => sortPayables(rows, sort), [rows, sort])
-  const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
+  const searched = useMemo(
+    () => filterRows(error ? [] : rows, query, payableSearchText),
+    [error, query, rows],
+  )
+  const counts = useMemo(
+    () => settlementCounts(searched, (row) => row.settlement),
+    [searched],
+  )
+  const visible = useMemo(
+    () =>
+      sortPayables(
+        searched.filter((row) => matchesSettlement(row.settlement, statusFilter)),
+        sort,
+      ),
+    [searched, sort, statusFilter],
+  )
+  const currentPage = query === initialQuery ? page : 1
+  const pageResult = paginateRows(visible, currentPage)
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -64,13 +115,15 @@ export function PayableTable({
               columns: [
                 { header: "Project", kind: "text" },
                 { header: "Vendor", kind: "text" },
+                { header: "Oldest Unpaid Bill Date", kind: "text" },
                 { header: "Billed", kind: "money" },
                 { header: "Paid", kind: "money" },
                 { header: "Open Payable", kind: "money" },
               ],
-              rows: filtered.map((row) => [
+              rows: visible.map((row) => [
                 row.projectName,
                 row.vendorName,
+                row.oldestUnpaidBillOn ? formatDayMonYear(row.oldestUnpaidBillOn) : "—",
                 row.totalPayable,
                 row.totalPaid,
                 row.pendingPayable,
@@ -79,13 +132,24 @@ export function PayableTable({
           />
         }
       />
-      <ListSearch
-        query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
-        placeholder="Search payables"
+      <ListFilterBar
+        search={
+          <ListSearch
+            query={query}
+            onQueryChange={setQuery}
+            placeholder="Search payables"
+          />
+        }
+        filter={
+          <SettlementFilterControl
+            value={statusFilter}
+            counts={counts}
+            label="Accounts payable settlement"
+            onChange={(next) =>
+              setParams({ status: settlementQueryValue(next) })
+            }
+          />
+        }
       />
       <DataList
         columns={payableColumns}
@@ -93,12 +157,15 @@ export function PayableTable({
         rowKey={(row) => row.id}
         sort={sort}
         onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
+          setParams(sortQueryParams(toggleSort(sort, key), defaultSort))
         }}
         visibility={visibility}
         error={error}
-        emptyMessage="No Payables Yet."
+        emptyMessage={
+          counts.all === 0 && !query.trim()
+            ? "No Payables Yet."
+            : "No Matching Payables."
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
@@ -112,7 +179,10 @@ export function PayableTable({
         pagingLabel="Accounts Payable pagination"
         mobileItem={(row) => ({
           title: row.vendorName || "—",
-          subtitle: row.projectName || "—",
+          subtitle: [
+            row.projectName || "—",
+            row.oldestUnpaidBillOn ? formatIsoDate(row.oldestUnpaidBillOn) : "—",
+          ].join(" · "),
           meta: (
             <Money
               value={row.pendingPayable}
@@ -186,6 +256,12 @@ function Cell({
         <span>{row.vendorName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
+      )
+    case "oldestUnpaidBillOn":
+      return (
+        <span className="text-muted-foreground">
+          {row.oldestUnpaidBillOn ? formatIsoDate(row.oldestUnpaidBillOn) : "—"}
+        </span>
       )
     case "totalPayable":
       return <Money value={row.totalPayable} />

@@ -4,6 +4,7 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import type { RowSettlement } from "@/lib/settlement-filter"
 
 export type ReceivableRow = {
   id: string
@@ -14,6 +15,8 @@ export type ReceivableRow = {
   paid: number
   due: number
   status: PaymentStatus | null
+  /** Null when the balance is hidden and the visible status is void or missing. */
+  settlement: RowSettlement | null
 }
 
 export type ReceivableColumnId =

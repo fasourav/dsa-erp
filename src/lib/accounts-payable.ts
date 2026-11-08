@@ -3,6 +3,10 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import {
+  compareIsoDateNullLast,
+  type RowSettlement,
+} from "@/lib/settlement-filter"
 
 export type PayableRow = {
   id: string
@@ -14,11 +18,16 @@ export type PayableRow = {
   totalPayable: number
   totalPaid: number
   pendingPayable: number
+  /** Earliest open bill date, or null when settled, unknown, or figures are hidden. */
+  oldestUnpaidBillOn: string | null
+  /** Null when financial figures are hidden. Do not infer this from the zeroed amounts. */
+  settlement: RowSettlement | null
 }
 
 export type PayableColumnId =
   | "projectName"
   | "vendorName"
+  | "oldestUnpaidBillOn"
   | "totalPayable"
   | "totalPaid"
   | "pendingPayable"
@@ -33,12 +42,19 @@ export type PayableColumnVisibility = Record<PayableOptionalColumnId, boolean>
 export const payableColumns: readonly ListColumn<PayableColumnId>[] = [
   { id: "projectName", label: "Project", align: "left", locked: true },
   { id: "vendorName", label: "Vendor", align: "left", locked: true },
+  {
+    id: "oldestUnpaidBillOn",
+    label: "Oldest Unpaid Bill Date",
+    align: "left",
+    locked: false,
+  },
   { id: "totalPayable", label: "Billed", align: "right", locked: false },
   { id: "totalPaid", label: "Paid", align: "right", locked: false },
   { id: "pendingPayable", label: "Open Payable", align: "right", locked: false },
 ]
 
 const defaultVisibility: PayableColumnVisibility = {
+  oldestUnpaidBillOn: true,
   totalPayable: true,
   totalPaid: true,
   pendingPayable: true,
@@ -50,7 +66,7 @@ export function defaultPayableColumns(): PayableColumnVisibility {
 
 export function sanitizePayableColumns(value: unknown): PayableColumnVisibility {
   return sanitizeColumnVisibility(
-    ["totalPayable", "totalPaid", "pendingPayable"],
+    ["oldestUnpaidBillOn", "totalPayable", "totalPaid", "pendingPayable"],
     defaultPayableColumns(),
     value,
   )
@@ -63,7 +79,14 @@ export function sortPayables(
   const direction = sort.direction === "asc" ? 1 : -1
 
   return [...rows].sort((left, right) => {
-    const primary = compareRows(left, right, sort.key) * direction
+    const primary =
+      sort.key === "oldestUnpaidBillOn"
+        ? compareIsoDateNullLast(
+            left.oldestUnpaidBillOn,
+            right.oldestUnpaidBillOn,
+            sort.direction,
+          )
+        : compareRows(left, right, sort.key) * direction
     if (primary !== 0) {
       return primary
     }
@@ -85,5 +108,7 @@ function compareRows(
     case "totalPaid":
     case "pendingPayable":
       return left[key] - right[key]
+    case "oldestUnpaidBillOn":
+      return 0
   }
 }

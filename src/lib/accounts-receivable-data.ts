@@ -2,6 +2,7 @@ import type { ReceivableRow } from "@/lib/accounts-receivable"
 import { fetchAllPages } from "@/lib/fetch-pages"
 import { toNumber } from "@/lib/format"
 import { isPaymentStatus } from "@/lib/payment-status"
+import { settlementFromBalance } from "@/lib/settlement-filter"
 import { createClient } from "@/lib/supabase/server"
 
 export async function getAccountsReceivable(): Promise<{
@@ -28,6 +29,12 @@ export async function getAccountsReceivable(): Promise<{
         return []
       }
 
+      const status =
+        row.current_status && isPaymentStatus(row.current_status)
+          ? row.current_status
+          : null
+      const dueIsHidden = row.due === null || row.due === undefined
+
       return [
         {
           id: row.id,
@@ -37,10 +44,8 @@ export async function getAccountsReceivable(): Promise<{
           billedAmount: toNumber(row.billed_amount),
           paid: toNumber(row.paid),
           due: toNumber(row.due),
-          status:
-            row.current_status && isPaymentStatus(row.current_status)
-              ? row.current_status
-              : null,
+          status,
+          settlement: settlementFromBalance(dueIsHidden ? null : toNumber(row.due), status),
         } satisfies ReceivableRow,
       ]
     })

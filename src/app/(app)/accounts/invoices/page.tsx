@@ -5,16 +5,17 @@ import {
   sortableClientInvoiceColumns,
   type ClientInvoiceColumnId,
 } from "@/lib/client-invoice-summary"
-import {
-  getClientInvoices,
-  parseInvoiceStatusFilter,
-} from "@/lib/client-invoices"
+import { getClientInvoices } from "@/lib/client-invoices"
 import {
   parsePageParams,
   parseSortParams,
   sortQueryParams,
 } from "@/lib/page-query"
 import { requireModule } from "@/lib/permissions"
+import {
+  parseSettlementFilter,
+  settlementQueryValue,
+} from "@/lib/settlement-filter"
 
 export const metadata = { title: "Client Invoices" }
 
@@ -28,7 +29,7 @@ export default async function ClientInvoicesPage({
   const projectParam = Array.isArray(params.project)
     ? params.project[0]
     : params.project
-  const status = parseInvoiceStatusFilter(params.status)
+  const status = parseSettlementFilter(params.status)
   const { page: requestedPage, q } = parsePageParams(params)
   const sort = parseSortParams<ClientInvoiceColumnId>(
     params,
@@ -57,6 +58,7 @@ export default async function ClientInvoicesPage({
         error={data.error}
         initialQuery={q}
         statusFilter={status}
+        counts={data.counts}
         sort={sort}
       />
       <ListPager
@@ -66,7 +68,7 @@ export default async function ClientInvoicesPage({
         params={{
           project: data.projectFilter?.id,
           q,
-          status: status === "all" ? undefined : status,
+          status: settlementQueryValue(status),
           sort: sortParams.sort,
           dir: sortParams.dir,
         }}
