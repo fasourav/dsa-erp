@@ -77,7 +77,13 @@ export const clientInvoiceColumns: readonly ListColumn<ClientInvoiceColumnId>[] 
     { id: "clientName", label: "Client", align: "left", locked: true, sortable: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
     { id: "paid", label: "Paid", align: "right", locked: false, sortable: false },
-    { id: "status", label: "Status", align: "left", locked: false },
+    {
+      id: "status",
+      label: "Status",
+      align: "left",
+      locked: false,
+      sortText: { asc: "Unpaid first", desc: "Paid first" },
+    },
   ]
 
 const defaultVisibility: ClientInvoiceColumnVisibility = {

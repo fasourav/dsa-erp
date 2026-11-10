@@ -57,6 +57,8 @@ export type DataColumn = {
   align: "left" | "right" | "center"
   locked: boolean
   format: ColumnFormat
+  sortKind?: "text" | "number" | "date"
+  sortText?: { asc: string; desc: string }
 }
 
 export const dataColumns: readonly DataColumn[] = [
@@ -74,6 +76,7 @@ export const dataColumns: readonly DataColumn[] = [
     align: "center",
     locked: false,
     format: "count",
+    sortKind: "number",
   },
   {
     id: "completedProjects",
@@ -81,6 +84,7 @@ export const dataColumns: readonly DataColumn[] = [
     align: "center",
     locked: false,
     format: "count",
+    sortKind: "number",
   },
   {
     id: "totalProjects",
@@ -88,6 +92,7 @@ export const dataColumns: readonly DataColumn[] = [
     align: "center",
     locked: false,
     format: "count",
+    sortKind: "number",
   },
   {
     id: "totalProjectValue",

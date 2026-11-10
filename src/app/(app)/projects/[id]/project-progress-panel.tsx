@@ -40,7 +40,13 @@ const milestoneColumns: readonly ListColumn<MilestoneColumn>[] = [
   { id: "label", label: "Milestone", align: "left", locked: true },
   { id: "dueOn", label: "Due On", align: "left", locked: true },
   { id: "amount", label: "Amount", align: "right", locked: true },
-  { id: "status", label: "Status", align: "left", locked: true },
+  {
+    id: "status",
+    label: "Status",
+    align: "left",
+    locked: true,
+    sortText: { asc: "Open first", desc: "Done first" },
+  },
 ]
 
 export function ProjectProgressPanel({

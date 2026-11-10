@@ -49,7 +49,13 @@ const columns: readonly ListColumn<ColumnId>[] = [
   { id: "monthlySalary", label: "Monthly Salary", align: "right", locked: true },
   { id: "allowance", label: "Allowance", align: "right", locked: true },
   { id: "joiningDate", label: "Joining Date", align: "left", locked: true },
-  { id: "isActive", label: "Status", align: "left", locked: true },
+  {
+    id: "isActive",
+    label: "Status",
+    align: "left",
+    locked: true,
+    sortText: { asc: "Inactive first", desc: "Active first" },
+  },
 ]
 const employeeSortKeys = columns.map((column) => column.id)
 const defaultEmployeeSort: SortState<ColumnId> = {

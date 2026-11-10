@@ -71,6 +71,8 @@ export type DataColumn = {
   align: "left" | "right"
   locked: boolean
   format: ColumnFormat
+  sortKind?: "text" | "number" | "date"
+  sortText?: { asc: string; desc: string }
 }
 
 export const dataColumns: readonly DataColumn[] = [
@@ -115,6 +117,7 @@ export const dataColumns: readonly DataColumn[] = [
     align: "left",
     locked: false,
     format: "text",
+    sortKind: "number",
   },
   {
     id: "totalValue",

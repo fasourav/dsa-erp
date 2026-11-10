@@ -76,13 +76,21 @@ export type DataColumn = {
   label: string
   align: "left" | "right"
   locked: boolean
+  sortKind?: "text" | "number" | "date"
+  sortText?: { asc: string; desc: string }
 }
 
 export const dataColumns: readonly DataColumn[] = [
   { id: "issuedOn", label: "Date", align: "left", locked: true },
   { id: "projectName", label: "Project Name", align: "left", locked: true },
   { id: "vendorName", label: "Vendor Name", align: "left", locked: true },
-  { id: "status", label: "Status", align: "left", locked: true },
+  {
+    id: "status",
+    label: "Status",
+    align: "left",
+    locked: true,
+    sortText: { asc: "Unpaid first", desc: "Paid first" },
+  },
   {
     id: "totalValue",
     label: "Purchase Order Value",

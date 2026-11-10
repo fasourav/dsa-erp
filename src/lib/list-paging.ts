@@ -18,6 +18,10 @@ export type ListColumn<Id extends string> = {
   minWidth?: number
   /** Header help text. Shown with the existing tooltip control, not in the label. */
   hint?: string
+  /** How the column sorts, when the default guess (date name / right-aligned number / text) is wrong. */
+  sortKind?: "text" | "number" | "date"
+  /** Exact phone sort words, for rank or code orders. Wins over sortKind. */
+  sortText?: { asc: string; desc: string }
 }
 
 export type TableColumnLayout = {
@@ -186,9 +190,24 @@ function defaultColumnWidthPx<Id extends string>(
 }
 
 export function sortDirectionText<Id extends string>(
-  column: Pick<ListColumn<Id>, "id" | "label" | "align">,
+  column: Pick<
+    ListColumn<Id>,
+    "id" | "label" | "align" | "sortKind" | "sortText"
+  >,
   direction: SortDirection,
 ): string {
+  if (column.sortText) {
+    return direction === "asc" ? column.sortText.asc : column.sortText.desc
+  }
+  if (column.sortKind === "date") {
+    return direction === "asc" ? "Oldest first" : "Newest first"
+  }
+  if (column.sortKind === "number") {
+    return direction === "asc" ? "Low to high" : "High to low"
+  }
+  if (column.sortKind === "text") {
+    return direction === "asc" ? "A to Z" : "Z to A"
+  }
   if (isDateColumn(column)) {
     return direction === "asc" ? "Oldest first" : "Newest first"
   }
