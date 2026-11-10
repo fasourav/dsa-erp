@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { useRef, type KeyboardEvent, type ReactNode } from "react"
 
 import { formatGroupedCount } from "@/lib/format"
 import {
@@ -42,30 +42,73 @@ export function SettlementFilterControl({
   onChange: (next: SettlementFilter) => void
   label?: string
 }) {
+  const buttonRefs = useRef<
+    Partial<Record<SettlementFilter, HTMLButtonElement | null>>
+  >({})
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const currentIndex = settlementFilters.indexOf(value)
+    const fallbackIndex = currentIndex >= 0 ? currentIndex : 0
+    const length = settlementFilters.length
+    let nextIndex: number | null = null
+
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        nextIndex = (fallbackIndex + 1) % length
+        break
+      case "ArrowLeft":
+      case "ArrowUp":
+        nextIndex = (fallbackIndex - 1 + length) % length
+        break
+      case "Home":
+        nextIndex = 0
+        break
+      case "End":
+        nextIndex = length - 1
+        break
+      default:
+        return
+    }
+
+    event.preventDefault()
+    const next = settlementFilters[nextIndex]
+    if (!next) return
+    onChange(next)
+    buttonRefs.current[next]?.focus()
+  }
+
   return (
     <div
       role="radiogroup"
       aria-label={label}
+      onKeyDown={handleKeyDown}
       className="flex w-full min-w-0 flex-wrap gap-1.5 md:w-auto"
     >
       {settlementFilters.map((filter) => {
         const selected = value === filter
+        const formattedCount = formatGroupedCount(counts[filter])
         return (
           <button
             key={filter}
+            ref={(node) => {
+              buttonRefs.current[filter] = node
+            }}
             type="button"
             role="radio"
             aria-checked={selected}
+            aria-label={`${labels[filter]}, ${formattedCount}`}
+            tabIndex={selected ? 0 : -1}
             onClick={() => onChange(filter)}
             className={cn(
-              "inline-flex h-8 max-w-full items-center justify-center gap-1.5 rounded-full px-3 text-label font-semibold whitespace-nowrap",
+              "inline-flex h-8 max-w-full items-center justify-center gap-1.5 rounded-full px-3 text-label font-semibold whitespace-nowrap outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               selected
                 ? "bg-segment-active text-foreground shadow-segment"
                 : "bg-fill text-muted-foreground hover:text-foreground",
             )}
           >
             <span>{labels[filter]}</span>
-            <span className="tabular-nums">{formatGroupedCount(counts[filter])}</span>
+            <span className="tabular-nums">{formattedCount}</span>
           </button>
         )
       })}
