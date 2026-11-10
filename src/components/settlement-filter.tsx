@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, type KeyboardEvent, type ReactNode } from "react"
+import { useRef, useState, type KeyboardEvent, type ReactNode } from "react"
 
 import { formatGroupedCount } from "@/lib/format"
 import {
@@ -45,9 +45,24 @@ export function SettlementFilterControl({
   const buttonRefs = useRef<
     Partial<Record<SettlementFilter, HTMLButtonElement | null>>
   >({})
+  const [pending, setPending] = useState<{
+    from: SettlementFilter
+    to: SettlementFilter
+  } | null>(null)
+  const shown = pending && pending.from === value ? pending.to : value
+
+  function choose(next: SettlementFilter) {
+    if (next !== shown) setPending({ from: value, to: next })
+    onChange(next)
+  }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const currentIndex = settlementFilters.indexOf(value)
+    const active = document.activeElement
+    const focusedIndex = settlementFilters.findIndex(
+      (f) => buttonRefs.current[f] === active,
+    )
+    const currentIndex =
+      focusedIndex >= 0 ? focusedIndex : settlementFilters.indexOf(shown)
     const fallbackIndex = currentIndex >= 0 ? currentIndex : 0
     const length = settlementFilters.length
     let nextIndex: number | null = null
@@ -74,7 +89,7 @@ export function SettlementFilterControl({
     event.preventDefault()
     const next = settlementFilters[nextIndex]
     if (!next) return
-    onChange(next)
+    choose(next)
     buttonRefs.current[next]?.focus()
   }
 
@@ -86,7 +101,7 @@ export function SettlementFilterControl({
       className="flex w-full min-w-0 flex-wrap gap-1.5 md:w-auto"
     >
       {settlementFilters.map((filter) => {
-        const selected = value === filter
+        const selected = shown === filter
         const formattedCount = formatGroupedCount(counts[filter])
         return (
           <button
@@ -99,7 +114,7 @@ export function SettlementFilterControl({
             aria-checked={selected}
             aria-label={`${labels[filter]}, ${formattedCount}`}
             tabIndex={selected ? 0 : -1}
-            onClick={() => onChange(filter)}
+            onClick={() => choose(filter)}
             className={cn(
               "inline-flex h-8 max-w-full items-center justify-center gap-1.5 rounded-full px-3 text-label font-semibold whitespace-nowrap outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               selected
