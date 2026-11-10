@@ -67,11 +67,11 @@ export function ListSearch({
   const searchId = useId()
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-2 md:gap-2.5">
+    <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-2.5">
       <Label htmlFor={searchId} className="sr-only">
         Search
       </Label>
-      <InputGroup className="min-w-0 flex-1 md:max-w-sm">
+      <InputGroup className="w-full min-w-0 md:max-w-sm md:flex-1">
         <InputGroupAddon>
           <Search aria-hidden="true" />
         </InputGroupAddon>
@@ -86,7 +86,7 @@ export function ListSearch({
         />
       </InputGroup>
       {filterLabel && filter && onFilterChange && options ? (
-        <div className="flex max-w-[45%] shrink-0 md:max-w-none">
+        <div className="flex w-full min-w-0 md:w-auto md:shrink-0">
           <Select
             items={options.map((option) => ({ value: option.value, label: option.label }))}
             value={filter}
