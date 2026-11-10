@@ -325,7 +325,7 @@ export function LeadsTable({
         lead={formLead}
         lookups={lookups}
         readOnly={formMode === "view"}
-        onEdit={canEdit && formLead ? () => openForm(formLead) : undefined}
+        onEdit={canEdit && formLead ? () => setFormMode("edit") : undefined}
       />
 
       <DeleteConfirmDialog
