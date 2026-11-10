@@ -113,17 +113,12 @@ export function AppShell({
           ref={setMainElement}
           className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain scroll-smooth pt-safe pb-tabbar print:h-auto print:overflow-visible print:p-0 md:pt-0 md:pb-12"
         >
+          <span role="status" aria-live="polite" className="sr-only">
+            {pull.refreshing ? "Refreshing…" : ""}
+          </span>
           {showPullIndicator ? (
             <div
-              role="status"
-              aria-live="polite"
-              aria-label={
-                pull.refreshing
-                  ? "Refreshing"
-                  : pull.ready
-                    ? "Release to refresh"
-                    : "Pull to refresh"
-              }
+              aria-hidden="true"
               style={{
                 height: `${pull.refreshing ? 44 : Math.min(56, Math.round(pull.pullDistance * 0.7))}px`,
               }}
