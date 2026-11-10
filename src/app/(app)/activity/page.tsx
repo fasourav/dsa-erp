@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/page-header"
 import { businessDayStartUtc } from "@/lib/business-time"
 import { requireOwner } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
-import { formatDayMonYear, formatMoney } from "@/lib/format"
+import { compareText, formatDayMonYear, formatMoney } from "@/lib/format"
 import type { Json } from "@/types/database.types"
 
 export const metadata = { title: "Activity Log" }
@@ -140,10 +140,10 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
   const userOptions = [
     { value: "system", label: "System" },
     ...[...names.entries()].map(([value, label]) => ({ value, label })),
-  ].sort((a, b) => a.label.localeCompare(b.label))
+  ].sort((a, b) => compareText(a.label, b.label))
   const moduleOptions = Object.entries(moduleLabels)
     .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label))
+    .sort((a, b) => compareText(a.label, b.label))
 
   const activity: ActivityRow[] = rows.map((row) => {
     const verb =

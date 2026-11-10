@@ -519,7 +519,7 @@ function sortUsers(rows: DirectoryUser[], sort: SortState<UserColumn>) {
         cmp = compareText(left.designation, right.designation)
         break
       case "status":
-        cmp = left.status.localeCompare(right.status)
+        cmp = compareText(statusLabel(left.status), statusLabel(right.status))
         break
       case "lastLogin":
         cmp = (left.lastSignInAt ?? "").localeCompare(right.lastSignInAt ?? "")

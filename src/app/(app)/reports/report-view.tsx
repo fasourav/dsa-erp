@@ -9,6 +9,7 @@ import { Money } from "@/components/money"
 import { PageHeader, SectionHeader } from "@/components/page-header"
 import { buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { compareText } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -257,7 +258,7 @@ function compareCell(
     const b = typeof right === "number" ? right : Number.NEGATIVE_INFINITY
     return a - b
   }
-  return String(left ?? "").localeCompare(String(right ?? ""), undefined, { numeric: true })
+  return compareText(String(left ?? ""), String(right ?? ""))
 }
 
 function renderLineCell(table: ReportTable, row: ReportLine, columnId: string) {

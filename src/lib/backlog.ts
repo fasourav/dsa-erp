@@ -1,5 +1,5 @@
 import { compareText } from "@/lib/format"
-import type { ProjectStatus } from "@/lib/project-summary"
+import { statusLabel, type ProjectStatus } from "@/lib/project-summary"
 import {
   sanitizeColumnVisibility,
   type ListColumn,
@@ -94,7 +94,10 @@ function compareRows(
     case "recoveryPlan":
       return compareText(left[key], right[key])
     case "status":
-      return (left.status ?? "").localeCompare(right.status ?? "")
+      return compareText(
+        left.status ? statusLabel(left.status) : "",
+        right.status ? statusLabel(right.status) : "",
+      )
     case "projectValue":
     case "amountPaid":
     case "totalExpense":
