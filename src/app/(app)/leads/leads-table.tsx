@@ -143,6 +143,7 @@ export function LeadsTable({
   const [formOpen, setFormOpen] = useState(false)
   const [formLead, setFormLead] = useState<LeadRow | null>(null)
   const [formMode, setFormMode] = useState<"view" | "edit">("edit")
+  const [formOrigin, setFormOrigin] = useState<"view" | "direct">("direct")
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<LeadRow | null>(null)
@@ -161,6 +162,7 @@ export function LeadsTable({
   function openForm(lead: LeadRow | null) {
     setFormLead(lead)
     setFormMode("edit")
+    setFormOrigin("direct")
     setFormSession((s) => s + 1)
     setFormOpen(true)
   }
@@ -168,6 +170,7 @@ export function LeadsTable({
   function openView(lead: LeadRow) {
     setFormLead(lead)
     setFormMode("view")
+    setFormOrigin("view")
     setFormSession((s) => s + 1)
     setFormOpen(true)
   }
@@ -342,6 +345,7 @@ export function LeadsTable({
         lookups={lookups}
         readOnly={formMode === "view"}
         onEdit={canEdit && formLead ? () => setFormMode("edit") : undefined}
+        onCancelEdit={formOrigin === "view" ? () => setFormMode("view") : undefined}
       />
 
       <DeleteConfirmDialog
@@ -383,13 +387,13 @@ function CellValue({
             variant="link"
             title={lead.leadName || undefined}
             className={cn(
-              "h-auto max-w-full min-h-8 truncate px-0 text-left text-ui font-semibold text-foreground",
+              "h-auto max-w-full min-h-8 min-w-0 px-0 text-left text-ui font-semibold text-foreground",
               !lead.leadName && "text-muted-foreground",
             )}
             aria-label={`Open details for ${lead.leadName || "lead"}`}
             onClick={() => onView(lead)}
           >
-            {lead.leadName || "—"}
+            <span className="truncate">{lead.leadName || "—"}</span>
           </Button>
           {lead.kindLabel ? <Badge variant="outline">{lead.kindLabel}</Badge> : null}
         </div>
