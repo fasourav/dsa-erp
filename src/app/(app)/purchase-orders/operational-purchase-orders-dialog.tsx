@@ -42,6 +42,7 @@ import {
   type ExpenseCategoryOption,
   type PurchaseOrderRow,
   type VendorOption,
+  type VendorPoDefaults,
 } from "@/lib/purchase-order-summary"
 
 type OperationalColumnId =
@@ -74,12 +75,14 @@ export function OperationalPurchaseOrdersDialog({
   workTypes,
   expenseCategories,
   officeExpenseCategories,
+  vendorDefaults,
 }: {
   orders: PurchaseOrderRow[]
   vendors: VendorOption[]
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
   officeExpenseCategories: ExpenseCategoryOption[]
+  vendorDefaults: VendorPoDefaults
 }) {
   const canAdd = useCan("purchase_orders", "add")
 
@@ -242,6 +245,7 @@ export function OperationalPurchaseOrdersDialog({
         workTypes={workTypes}
         expenseCategories={expenseCategories}
         officeExpenseCategories={officeExpenseCategories}
+        vendorDefaults={vendorDefaults}
         defaultProjectId={null}
         operational
       />

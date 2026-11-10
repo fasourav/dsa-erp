@@ -55,6 +55,7 @@ import type {
   ProjectOption,
   PurchaseOrderRow,
   VendorOption,
+  VendorPoDefaults,
 } from "@/lib/purchase-order-summary"
 import { countsAsLabel, isReportGroup, keywordReportGroup } from "@/lib/report-cost-group"
 
@@ -67,6 +68,7 @@ export function PurchaseOrderFormDialog({
   workTypes,
   expenseCategories,
   officeExpenseCategories,
+  vendorDefaults = {},
   defaultProjectId,
   operational = false,
 }: {
@@ -78,6 +80,7 @@ export function PurchaseOrderFormDialog({
   workTypes: readonly string[]
   expenseCategories: readonly ExpenseCategoryOption[]
   officeExpenseCategories: readonly ExpenseCategoryOption[]
+  vendorDefaults?: VendorPoDefaults
   defaultProjectId: string | null
   operational?: boolean
 }) {
@@ -101,6 +104,11 @@ export function PurchaseOrderFormDialog({
     purchaseOrder ? String(purchaseOrder.totalValue) : "",
   )
   const [notes, setNotes] = useState(purchaseOrder?.notes ?? "")
+  const [autoFilled, setAutoFilled] = useState<{
+    expense?: string
+    office?: string
+    workType?: string
+  }>({})
   const [attempted, setAttempted] = useState(false)
   const [serverErrors, setServerErrors] = useState<PurchaseOrderFormFieldErrors>(
     {},
@@ -194,12 +202,51 @@ export function PurchaseOrderFormDialog({
     onOpenChange(nextOpen)
   }
 
+  function handleVendorChange(nextVendorId: string) {
+    setVendorId(nextVendorId)
+    if (purchaseOrderId !== null) return
+
+    const defaults = nextVendorId ? vendorDefaults[nextVendorId] : undefined
+    const nextAuto: { expense?: string; office?: string; workType?: string } = {
+      ...autoFilled,
+    }
+
+    if (operational) {
+      if (
+        !officeExpenseCategoryId ||
+        officeExpenseCategoryId === autoFilled.office
+      ) {
+        const nextOffice = defaults?.officeExpenseCategoryId ?? ""
+        setOfficeExpenseCategoryId(nextOffice)
+        nextAuto.office = nextOffice || undefined
+      }
+    } else {
+      if (
+        !expenseCategoryId ||
+        expenseCategoryId === autoFilled.expense
+      ) {
+        const nextExpense = defaults?.expenseCategoryId ?? ""
+        setExpenseCategoryId(nextExpense)
+        nextAuto.expense = nextExpense || undefined
+      }
+    }
+
+    if (!workType.trim() || workType === autoFilled.workType) {
+      const nextWorkType = defaults?.workType ?? ""
+      setWorkType(nextWorkType)
+      nextAuto.workType = nextWorkType || undefined
+    }
+
+    setAutoFilled(nextAuto)
+  }
+
   function handleWorkTypeInput(
     next: string,
     details: { reason: string; cancel: () => void },
   ) {
     if (details.reason === "input-change" || details.reason === "item-press") {
       setWorkType(next)
+      setAutoFilled((prev) => ({ ...prev, workType: undefined }))
       return
     }
 
@@ -306,7 +353,7 @@ export function PurchaseOrderFormDialog({
                 placeholder="Select A Vendor"
                 disabled={pending}
                 invalid={Boolean(vendorError)}
-                onValueChange={setVendorId}
+                onValueChange={handleVendorChange}
               />
               {vendorError ? <FieldError>{vendorError}</FieldError> : null}
             </Field>
@@ -344,7 +391,10 @@ export function PurchaseOrderFormDialog({
                   items={officeItems}
                   value={officeExpenseCategoryId || null}
                   disabled={pending}
-                  onValueChange={(value) => setOfficeExpenseCategoryId(value ?? "")}
+                  onValueChange={(value) => {
+                    setOfficeExpenseCategoryId(value ?? "")
+                    setAutoFilled((prev) => ({ ...prev, office: undefined }))
+                  }}
                 >
                   <SelectTrigger
                     id="po-office-category"
@@ -364,6 +414,10 @@ export function PurchaseOrderFormDialog({
                 {officeCategoryError ? (
                   <FieldError>{officeCategoryError}</FieldError>
                 ) : null}
+                {officeExpenseCategoryId &&
+                officeExpenseCategoryId === autoFilled.office ? (
+                  <FieldDescription>Last used for this vendor.</FieldDescription>
+                ) : null}
                 {officeCountsAs ? (
                   <FieldDescription>{officeCountsAs}</FieldDescription>
                 ) : null}
@@ -377,7 +431,10 @@ export function PurchaseOrderFormDialog({
                   items={categoryItems}
                   value={expenseCategoryId || null}
                   disabled={pending}
-                  onValueChange={(value) => setExpenseCategoryId(value ?? "")}
+                  onValueChange={(value) => {
+                    setExpenseCategoryId(value ?? "")
+                    setAutoFilled((prev) => ({ ...prev, expense: undefined }))
+                  }}
                 >
                   <SelectTrigger
                     id="po-expense-category"
@@ -395,6 +452,10 @@ export function PurchaseOrderFormDialog({
                   </SelectContent>
                 </Select>
                 {categoryError ? <FieldError>{categoryError}</FieldError> : null}
+                {expenseCategoryId &&
+                expenseCategoryId === autoFilled.expense ? (
+                  <FieldDescription>Last used for this vendor.</FieldDescription>
+                ) : null}
               </Field>
             )}
 
@@ -408,6 +469,7 @@ export function PurchaseOrderFormDialog({
                 onValueChange={(value) => {
                   if (typeof value === "string") {
                     setWorkType(value)
+                    setAutoFilled((prev) => ({ ...prev, workType: undefined }))
                   }
                 }}
               >

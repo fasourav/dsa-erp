@@ -21,6 +21,15 @@ export type ExpenseCategoryOption = {
   reportGroup?: "operational" | "marketing" | "salary" | null
 }
 
+export type VendorPoDefaults = Record<
+  string,
+  {
+    expenseCategoryId?: string
+    officeExpenseCategoryId?: string
+    workType?: string
+  }
+>
+
 export type PurchaseOrderRow = {
   id: string
   issuedOn: string

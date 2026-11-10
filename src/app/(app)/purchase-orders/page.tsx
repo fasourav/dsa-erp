@@ -21,6 +21,7 @@ export default async function PurchaseOrdersPage({
     workTypes,
     expenseCategories,
     officeExpenseCategories,
+    vendorDefaults,
     projectFilter,
     error,
   } = await getPurchaseOrders(projectParam ?? null)
@@ -34,6 +35,7 @@ export default async function PurchaseOrdersPage({
       workTypes={workTypes}
       expenseCategories={expenseCategories}
       officeExpenseCategories={officeExpenseCategories}
+      vendorDefaults={vendorDefaults}
       projectFilter={projectFilter}
       error={error}
     />

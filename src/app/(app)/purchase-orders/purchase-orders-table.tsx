@@ -46,6 +46,7 @@ import {
   type PurchaseOrderRow,
   type SortState,
   type VendorOption,
+  type VendorPoDefaults,
 } from "@/lib/purchase-order-summary"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
@@ -67,6 +68,7 @@ export function PurchaseOrdersTable({
   workTypes,
   expenseCategories,
   officeExpenseCategories,
+  vendorDefaults,
   projectFilter,
   error,
 }: {
@@ -76,6 +78,7 @@ export function PurchaseOrdersTable({
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
   officeExpenseCategories: ExpenseCategoryOption[]
+  vendorDefaults: VendorPoDefaults
   projectFilter: ProjectFilter | null
   error: string | null
 }) {
@@ -247,6 +250,7 @@ export function PurchaseOrdersTable({
               workTypes={workTypes}
               expenseCategories={expenseCategories}
               officeExpenseCategories={officeExpenseCategories}
+              vendorDefaults={vendorDefaults}
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>
@@ -347,6 +351,7 @@ export function PurchaseOrdersTable({
         workTypes={workTypes}
         expenseCategories={expenseCategories}
         officeExpenseCategories={officeExpenseCategories}
+        vendorDefaults={vendorDefaults}
         defaultProjectId={projectFilter?.id ?? null}
         operational={formOperational}
       />
