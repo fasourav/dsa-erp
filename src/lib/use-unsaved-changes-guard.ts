@@ -76,6 +76,7 @@ export function useUnsavedChangesGuard(
       if (!(target instanceof Element)) return
       const anchor = target.closest("a[href]")
       if (!(anchor instanceof HTMLAnchorElement)) return
+      if (anchor.closest("[data-unsaved-guard='skip']")) return
       if (
         anchor.target === "_blank" ||
         anchor.hasAttribute("download") ||

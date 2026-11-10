@@ -110,8 +110,15 @@ export function GlobalSearch() {
     setOpen(true)
   }
 
-  function go(hit: SearchHit) {
+  function closePalette() {
     setOpen(false)
+    setQuery("")
+    setResults([])
+    setError(null)
+  }
+
+  function go(hit: SearchHit) {
+    closePalette()
     guardedNavigate(hit.href, () => router.push(hit.href))
   }
 
@@ -158,11 +165,10 @@ export function GlobalSearch() {
       <Dialog
         open={open}
         onOpenChange={(next) => {
-          setOpen(next)
-          if (!next) {
-            setQuery("")
-            setResults([])
-            setError(null)
+          if (next) {
+            setOpen(true)
+          } else {
+            closePalette()
           }
         }}
       >
@@ -224,8 +230,21 @@ export function GlobalSearch() {
                         <li key={`${hit.moduleKey}-${hit.recordId}-${hit.label}-${index}`}>
                           <Link
                             href={hit.href}
-                            onClickCapture={() => setOpen(false)}
-                            onClick={() => setOpen(false)}
+                            data-unsaved-guard="skip"
+                            onClick={(event) => {
+                              if (
+                                event.button !== 0 ||
+                                event.metaKey ||
+                                event.ctrlKey ||
+                                event.shiftKey ||
+                                event.altKey
+                              ) {
+                                closePalette()
+                                return
+                              }
+                              event.preventDefault()
+                              go(hit)
+                            }}
                             className={cn(
                               "flex min-h-11 items-center gap-3 rounded-xl px-2 py-2 hover:bg-fill",
                               index === active && "bg-primary-tint hover:bg-primary-tint",
