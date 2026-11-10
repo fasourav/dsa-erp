@@ -11,7 +11,6 @@ import {
   Download,
   Gem,
   Hammer,
-  Info,
   Layers,
   Minus,
   Target,
@@ -37,6 +36,7 @@ import {
   Ring,
 } from "@/app/(app)/dashboard/dashboard-chart-primitives"
 import { useAccess } from "@/components/access-provider"
+import { ColumnHint } from "@/components/data-list"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
@@ -49,7 +49,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { OverBudgetProject } from "@/lib/project-budget-model"
 import {
   formatDelta,
@@ -701,22 +700,9 @@ function KpiCard({
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="min-w-0 truncate text-sm font-semibold text-muted-foreground md:text-ui">{label}</p>
           {info ? (
-            <TooltipProvider delay={200}>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <button
-                      type="button"
-                      aria-label={`About ${label}`}
-                      className="shrink-0 rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-                    />
-                  }
-                >
-                  <Info aria-hidden="true" className="size-3.5" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-64">{info}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <span className="-mx-1 -my-2 inline-flex shrink-0">
+              <ColumnHint label={label} hint={info} />
+            </span>
           ) : null}
         </div>
         {delta != null ? <DeltaBadge value={delta} lowerIsBetter={lowerIsBetter} /> : null}
