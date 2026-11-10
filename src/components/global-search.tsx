@@ -145,12 +145,12 @@ export function GlobalSearch() {
         size="icon"
         aria-label="Search"
         aria-keyshortcuts="Control+K Meta+K"
-        className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong aria-expanded:bg-fill-strong md:h-8 md:w-60 md:justify-start md:gap-2 md:px-3.5 md:font-normal md:text-muted-foreground"
+        className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong aria-expanded:bg-fill-strong md:h-8 md:w-40 md:justify-start md:gap-2 md:px-3.5 md:font-normal md:text-muted-foreground xl:w-60"
         onClick={openPalette}
       >
         <Search aria-hidden="true" className="size-4.5 md:size-4" />
         <span className="hidden md:inline">Search</span>
-        <kbd className="ml-auto hidden font-sans text-caption text-subtle-foreground md:inline">
+        <kbd className="ml-auto hidden font-sans text-caption text-subtle-foreground xl:inline">
           {shortcut}
         </kbd>
       </Button>
