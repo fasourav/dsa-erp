@@ -202,10 +202,10 @@ export function VatTaxTable({
         pagingLabel="VAT tax pagination"
         mobileItem={(payment) => ({
           title: payment.projectName || "—",
+          value: <Money value={payment.amount} />,
           subtitle: [payment.paymentMethod, payment.paidOn ? formatIsoDate(payment.paidOn) : null]
             .filter(Boolean)
             .join(" · "),
-          meta: <Money value={payment.amount} />,
         })}
         renderCell={(payment, columnId) => (
           <Cell payment={payment} columnId={columnId} />
