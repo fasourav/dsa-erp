@@ -24,6 +24,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -195,6 +196,7 @@ export function DataList<T, Id extends string>({
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
   )
+  const sortableColumns = columns.filter((column) => column.sortable !== false)
   const dense = visibleColumns.length >= 10
   const compactActions = dense || visibleColumns.length >= 6
   const hasActions = renderActions !== undefined
@@ -209,6 +211,13 @@ export function DataList<T, Id extends string>({
       ) : null}
       {mobileItem ? (
         <div className="flex flex-col gap-2.5 md:hidden">
+          {sortableColumns.length > 0 ? (
+            <MobileSortControl
+              columns={sortableColumns}
+              sort={sort}
+              onSort={onSort}
+            />
+          ) : null}
           <div className="overflow-hidden rounded-card glass-panel">
             {error ? (
               <p role="alert" className="px-4 py-8 text-center text-callout text-destructive">
@@ -512,6 +521,73 @@ export function DataList<T, Id extends string>({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function MobileSortControl<Id extends string>({
+  columns,
+  sort,
+  onSort,
+}: {
+  columns: readonly ListColumn<Id>[]
+  sort: SortState<Id>
+  onSort: (id: Id) => void
+}) {
+  const activeColumn =
+    columns.find((column) => column.id === sort.key) ?? columns[0]
+  const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
+  const directionLabel = sort.direction === "asc" ? "ascending" : "descending"
+
+  return (
+    <div className="flex items-center justify-end px-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 max-w-full gap-1.5 px-3 text-label"
+              aria-label={`Sort by ${activeColumn.label}, ${directionLabel}`}
+            />
+          }
+        >
+          <span className="text-muted-foreground">Sort:</span>
+          <span className="truncate font-semibold text-foreground">
+            {activeColumn.label}
+          </span>
+          <SortIcon
+            aria-hidden="true"
+            className="size-3.5 shrink-0"
+            strokeWidth={2.4}
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={6} className="w-56">
+          {columns.map((column) => {
+            const active = column.id === sort.key
+            return (
+              <DropdownMenuItem
+                key={column.id}
+                className={cn(
+                  "justify-between",
+                  active && "font-semibold text-foreground",
+                )}
+                onClick={() => onSort(column.id)}
+              >
+                <span className="truncate">{column.label}</span>
+                {active ? (
+                  <SortIcon
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 text-primary"
+                    strokeWidth={2.4}
+                  />
+                ) : null}
+              </DropdownMenuItem>
+            )
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
