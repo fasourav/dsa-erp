@@ -10,6 +10,7 @@ import {
   type PurchaseOrderFormFieldErrors,
 } from "@/app/(app)/purchase-orders/actions"
 import { MoneyInput } from "@/components/money-input"
+import { RecordPicker } from "@/components/record-picker"
 import { Button } from "@/components/ui/button"
 import {
   Combobox,
@@ -283,54 +284,30 @@ export function PurchaseOrderFormDialog({
             {operational ? null : (
               <Field data-invalid={Boolean(projectError) || undefined}>
                 <FieldLabel htmlFor="po-project">Project</FieldLabel>
-                <Select
-                  items={projectItems}
-                  value={projectId || null}
+                <RecordPicker
+                  id="po-project"
+                  value={projectId}
+                  options={projectItems}
+                  placeholder="Select A Project"
                   disabled={pending}
-                  onValueChange={(value) => setProjectId(value ?? "")}
-                >
-                  <SelectTrigger
-                    id="po-project"
-                    className="w-full"
-                    aria-invalid={Boolean(projectError)}
-                  >
-                    <SelectValue placeholder="Select A Project" />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    {projectItems.map((project) => (
-                      <SelectItem key={project.value} value={project.value}>
-                        {project.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  invalid={Boolean(projectError)}
+                  onValueChange={setProjectId}
+                />
                 {projectError ? <FieldError>{projectError}</FieldError> : null}
               </Field>
             )}
 
             <Field data-invalid={Boolean(vendorError) || undefined}>
               <FieldLabel htmlFor="po-vendor">Vendor</FieldLabel>
-              <Select
-                items={vendorItems}
-                value={vendorId || null}
+              <RecordPicker
+                id="po-vendor"
+                value={vendorId}
+                options={vendorItems}
+                placeholder="Select A Vendor"
                 disabled={pending}
-                onValueChange={(value) => setVendorId(value ?? "")}
-              >
-                <SelectTrigger
-                  id="po-vendor"
-                  className="w-full"
-                  aria-invalid={Boolean(vendorError)}
-                >
-                  <SelectValue placeholder="Select A Vendor" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {vendorItems.map((vendor) => (
-                    <SelectItem key={vendor.value} value={vendor.value}>
-                      {vendor.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                invalid={Boolean(vendorError)}
+                onValueChange={setVendorId}
+              />
               {vendorError ? <FieldError>{vendorError}</FieldError> : null}
             </Field>
 

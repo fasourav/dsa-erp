@@ -256,6 +256,7 @@ export function WorkOrderStudio({
       <ChoiceField
         id="purchase-order"
         label="Purchase Order"
+        searchable
         placeholder={form.id && !linked ? "No purchase order (older work order)" : "Choose a purchase order"}
         value={form.purchaseOrderId}
         disabled={!canSave}
@@ -273,6 +274,7 @@ export function WorkOrderStudio({
       <ChoiceField
         id="vendor"
         label="Vendor Name"
+        searchable
         value={form.vendorId}
         disabled={!canSave || linked}
         options={vendors.map((item) => ({ value: item.id, label: item.name }))}
@@ -281,6 +283,7 @@ export function WorkOrderStudio({
       <ChoiceField
         id="project"
         label="Project Name"
+        searchable
         value={form.projectId}
         disabled={!canSave || linked}
         options={projects.map((item) => ({ value: item.id, label: item.name }))}
