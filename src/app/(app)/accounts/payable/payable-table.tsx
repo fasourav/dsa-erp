@@ -29,6 +29,7 @@ import {
   type PayableRow,
 } from "@/lib/accounts-payable"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { sumBy } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 import {
   paginateRows,
@@ -108,6 +109,17 @@ export function PayableTable({
     [searched, sort, statusFilter],
   )
   const pageResult = paginateRows(visible, page)
+  const totals = useMemo(
+    () => ({
+      values: {
+        totalPayable: sumBy(visible, (row) => row.totalPayable),
+        totalPaid: sumBy(visible, (row) => row.totalPaid),
+        pendingPayable: sumBy(visible, (row) => row.pendingPayable),
+      },
+      withheld: visible.some((row) => row.settlement === null),
+    }),
+    [visible],
+  )
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -165,6 +177,7 @@ export function PayableTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
+        totals={totals}
         emptyMessage={
           counts.all === 0 && !query.trim()
             ? "No Payables Yet."

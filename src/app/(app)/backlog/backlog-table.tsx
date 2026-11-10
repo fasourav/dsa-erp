@@ -31,6 +31,7 @@ import {
   rangeLabel,
   type SortState,
 } from "@/lib/list-paging"
+import { sumBy } from "@/lib/payment-status"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
@@ -62,6 +63,17 @@ export function BacklogTable({
   const sorted = useMemo(() => sortBacklog(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
+  const totals = useMemo(
+    () => ({
+      values: {
+        projectValue: sumBy(filtered, (row) => row.projectValue),
+        amountPaid: sumBy(filtered, (row) => row.amountPaid),
+        totalExpense: sumBy(filtered, (row) => row.totalExpense),
+        backlogAmount: sumBy(filtered, (row) => row.backlogAmount),
+      },
+    }),
+    [filtered],
+  )
 
   function openPlan(row: BacklogRow) {
     setFormProject(row)
@@ -114,6 +126,7 @@ export function BacklogTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
+        totals={totals}
         emptyMessage="No Backlog Projects Yet."
         rangeText={rangeLabel(
           pageResult.rangeStart,

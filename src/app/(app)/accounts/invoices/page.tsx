@@ -59,6 +59,7 @@ export default async function ClientInvoicesPage({
         initialQuery={q}
         statusFilter={status}
         counts={data.counts}
+        totals={data.totals}
         sort={sort}
       />
       <ListPager

@@ -30,7 +30,7 @@ import {
   subscribeColumnVisibility,
   writeColumnVisibility,
 } from "@/lib/purchase-order-column-store"
-import { paymentStatusLabel } from "@/lib/payment-status"
+import { paymentStatusLabel, sumBy } from "@/lib/payment-status"
 import type { ProjectFilter } from "@/lib/purchase-orders"
 import {
   dataColumns,
@@ -134,6 +134,16 @@ export function PurchaseOrdersTable({
   const pageResult = useMemo(
     () => paginatePurchaseOrders(filtered, page),
     [filtered, page],
+  )
+  const totals = useMemo(
+    () => ({
+      values: {
+        totalValue: sumBy(filtered, (order) => order.totalValue),
+        totalPaid: sumBy(filtered, (order) => order.totalPaid),
+        totalPending: sumBy(filtered, (order) => order.totalPending),
+      },
+    }),
+    [filtered],
   )
 
   function openForm(order: PurchaseOrderRow | null) {
@@ -273,6 +283,7 @@ export function PurchaseOrdersTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
+        totals={totals}
         emptyMessage={
           projectFilter
             ? "No Purchase Orders For This Project."

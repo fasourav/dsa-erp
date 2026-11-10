@@ -66,6 +66,7 @@ export function ClientInvoicesTable({
   initialQuery = "",
   statusFilter = "outstanding",
   counts,
+  totals,
   sort = defaultClientInvoiceSort,
 }: {
   invoices: ClientInvoiceRow[]
@@ -80,6 +81,7 @@ export function ClientInvoicesTable({
   initialQuery?: string
   statusFilter?: SettlementFilter
   counts: SettlementCounts
+  totals?: { amount: number; paid: number }
   sort?: SortState<ClientInvoiceColumnId>
 }) {
   const canAdd = useCan("client_invoices", "add")
@@ -216,6 +218,11 @@ export function ClientInvoicesTable({
         }}
         visibility={visibility}
         error={error}
+        totals={
+          totals
+            ? { values: { amount: totals.amount, paid: totals.paid } }
+            : undefined
+        }
         emptyMessage={
           filterCounts.all === 0 && !query.trim()
             ? projectFilter

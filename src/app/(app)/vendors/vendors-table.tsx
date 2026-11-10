@@ -35,6 +35,7 @@ import {
   type SortState,
   type VendorSummary,
 } from "@/lib/vendor-summary"
+import { sumBy } from "@/lib/payment-status"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -92,6 +93,16 @@ export function VendorsTable({
   const pageResult = useMemo(
     () => paginateVendors(filtered, page),
     [filtered, page],
+  )
+  const totals = useMemo(
+    () => ({
+      values: {
+        totalProjectValue: sumBy(filtered, (vendor) => vendor.totalProjectValue),
+        totalPaid: sumBy(filtered, (vendor) => vendor.totalPaid),
+        totalDue: sumBy(filtered, (vendor) => vendor.totalDue),
+      },
+    }),
+    [filtered],
   )
 
   function openForm(vendor: VendorSummary | null) {
@@ -196,6 +207,7 @@ export function VendorsTable({
         onSort={onSort}
         visibility={{}}
         error={error}
+        totals={totals}
         emptyMessage="No Vendors Yet."
         rangeText={vendorRangeLabel(
           pageResult.rangeStart,
