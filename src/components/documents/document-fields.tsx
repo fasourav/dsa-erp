@@ -91,6 +91,7 @@ export function ChoiceField({
   disabled,
   placeholder = "Choose",
   searchable = false,
+  fallbackLabel,
 }: {
   id: string
   label: string
@@ -100,6 +101,7 @@ export function ChoiceField({
   disabled?: boolean
   placeholder?: string
   searchable?: boolean
+  fallbackLabel?: string
 }) {
   // Keep the item list stable. Dropping the placeholder item as soon as a value is
   // picked changed the list mid-selection and the Select snapped back to "unset",
@@ -121,6 +123,7 @@ export function ChoiceField({
           placeholder={placeholder}
           allowClear
           clearLabel={placeholder}
+          fallbackLabel={fallbackLabel}
           disabled={disabled || options.length === 0}
           onValueChange={onChange}
         />

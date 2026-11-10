@@ -221,6 +221,7 @@ export function ProjectFormDialog({
                   value={clientId}
                   options={clientItems}
                   placeholder="Select A Client"
+                  fallbackLabel={project?.clientName || "Saved client"}
                   disabled={pending}
                   invalid={Boolean(clientError)}
                   onValueChange={setClientId}

@@ -258,6 +258,7 @@ export function WorkOrderStudio({
         id="purchase-order"
         label="Purchase Order"
         searchable
+        fallbackLabel="Saved purchase order"
         placeholder={form.id && !linked ? "No purchase order (older work order)" : "Choose a purchase order"}
         value={form.purchaseOrderId}
         disabled={!canSave}
@@ -276,6 +277,7 @@ export function WorkOrderStudio({
         id="vendor"
         label="Vendor Name"
         searchable
+        fallbackLabel="Saved vendor"
         value={form.vendorId}
         disabled={!canSave || linked}
         options={vendors.map((item) => ({ value: item.id, label: item.name }))}
@@ -285,6 +287,7 @@ export function WorkOrderStudio({
         id="project"
         label="Project Name"
         searchable
+        fallbackLabel="Saved project"
         value={form.projectId}
         disabled={!canSave || linked}
         options={projects.map((item) => ({ value: item.id, label: item.name }))}

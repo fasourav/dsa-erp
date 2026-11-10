@@ -336,6 +336,7 @@ export function PurchaseOrderFormDialog({
                   value={projectId}
                   options={projectItems}
                   placeholder="Select A Project"
+                  fallbackLabel={purchaseOrder?.projectName || "Saved project"}
                   disabled={pending}
                   invalid={Boolean(projectError)}
                   onValueChange={setProjectId}
@@ -351,6 +352,7 @@ export function PurchaseOrderFormDialog({
                 value={vendorId}
                 options={vendorItems}
                 placeholder="Select A Vendor"
+                fallbackLabel={purchaseOrder?.vendorName || "Saved vendor"}
                 disabled={pending}
                 invalid={Boolean(vendorError)}
                 onValueChange={handleVendorChange}

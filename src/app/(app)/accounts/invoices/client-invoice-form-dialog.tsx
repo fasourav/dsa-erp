@@ -169,6 +169,7 @@ export function ClientInvoiceFormDialog({
                 value={projectId}
                 options={projectItems}
                 placeholder="Select A Project"
+                fallbackLabel={invoice?.projectName || "Saved project"}
                 disabled={pending}
                 invalid={Boolean(projectError)}
                 onValueChange={setProjectId}
