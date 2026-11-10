@@ -50,6 +50,10 @@ export function ProjectDetailPanel({
         </Button>
         <PageHeader
           className="mb-0 min-w-0 flex-1 md:mb-2"
+          breadcrumbs={[
+            { label: "Projects", href: "/projects" },
+            { label: project.name || "Project" },
+          ]}
           eyebrow={project.clientName || undefined}
           title={
             <span className="inline-flex flex-wrap items-center gap-2.5">

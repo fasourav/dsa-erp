@@ -876,7 +876,15 @@ function SettingsBackLink({
         <ArrowLeft aria-hidden="true" data-icon="inline-start" />
         Settings
       </Button>
-      <PageHeader title={title} description={description} className="mb-0 md:mb-2" />
+      <PageHeader
+        breadcrumbs={[
+          { label: "Settings", href: "/settings" },
+          { label: title },
+        ]}
+        title={title}
+        description={description}
+        className="mb-0 md:mb-2"
+      />
     </div>
   )
 }

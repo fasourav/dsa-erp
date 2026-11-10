@@ -55,7 +55,16 @@ export default async function VendorStatementPage({
   if (loaded.status !== "ok") {
     return (
       <div className="flex w-full min-w-0 flex-col gap-3.5">
-        <PageHeader eyebrow="Vendors" title="Vendor Statement" description={partyName} />
+        <PageHeader
+          breadcrumbs={[
+            { label: "Vendors", href: "/vendors" },
+            { label: partyName },
+            { label: "Statement" },
+          ]}
+          eyebrow={<span className="md:hidden">Vendors</span>}
+          title="Vendor Statement"
+          description={partyName}
+        />
         <ReportFilters launch={launch} today={today} from={period.from} to={period.to} />
         <p role="alert" className="text-sm text-destructive">
           {loaded.status === "missing"

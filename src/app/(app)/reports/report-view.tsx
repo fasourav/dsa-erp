@@ -59,7 +59,11 @@ export function ReportView({
     <div className="flex w-full min-w-0 flex-col gap-3.5">
       <PageHeader
         className="mb-0 md:mb-2"
-        eyebrow="Reports"
+        breadcrumbs={[
+          { label: "Reports", href: "/reports" },
+          { label: report.title },
+        ]}
+        eyebrow={<span className="md:hidden">Reports</span>}
         title={report.title}
         description={report.periodLabel}
         actions={

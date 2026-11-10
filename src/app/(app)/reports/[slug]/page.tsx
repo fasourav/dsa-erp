@@ -61,7 +61,14 @@ export default async function ReportPage({
           />
         ) : (
           <>
-            <PageHeader eyebrow="Reports" title={definition.title} />
+            <PageHeader
+              breadcrumbs={[
+                { label: "Reports", href: "/reports" },
+                { label: definition.title },
+              ]}
+              eyebrow={<span className="md:hidden">Reports</span>}
+              title={definition.title}
+            />
             <p role="alert" className="text-sm text-destructive">
               {loaded.status === "missing"
                 ? "Project budgets are not installed on this database yet. Apply the budget migration, then reload."
@@ -95,7 +102,14 @@ export default async function ReportPage({
         />
       ) : (
         <>
-          <PageHeader eyebrow="Reports" title={definition.title} />
+          <PageHeader
+            breadcrumbs={[
+              { label: "Reports", href: "/reports" },
+              { label: definition.title },
+            ]}
+            eyebrow={<span className="md:hidden">Reports</span>}
+            title={definition.title}
+          />
           <ReportFilters launch={launch} today={today} from={period.from} to={period.to} />
           <p role="alert" className="text-sm text-destructive">
             {loaded.status === "missing"

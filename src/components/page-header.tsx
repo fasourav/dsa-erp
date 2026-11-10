@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { Breadcrumbs, type BreadcrumbItem } from "@/components/breadcrumbs"
 import { cn } from "@/lib/utils"
 
 // Large title + actions. Phones: 34px title, actions wrap below as capsules.
@@ -9,12 +10,14 @@ export function PageHeader({
   title,
   description,
   eyebrow,
+  breadcrumbs,
   actions,
   className,
 }: {
   title: ReactNode
   description?: ReactNode
   eyebrow?: ReactNode
+  breadcrumbs?: readonly BreadcrumbItem[]
   actions?: ReactNode
   className?: string
 }) {
@@ -26,6 +29,9 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 md:max-w-full md:shrink-0">
+        {breadcrumbs && breadcrumbs.length > 0 ? (
+          <Breadcrumbs items={breadcrumbs} className="mb-1" />
+        ) : null}
         {eyebrow ? (
           <p className="mb-0.5 text-label font-semibold text-muted-foreground md:mb-1 md:font-medium">
             {eyebrow}
