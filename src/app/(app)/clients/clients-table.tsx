@@ -276,7 +276,20 @@ export function ClientsTable({
         onPageChange={setPage}
         pagingLabel="Clients pagination"
         mobileItem={(client) => ({
-          title: client.displayName || "—",
+          title: (
+            <Button
+              type="button"
+              variant="link"
+              className={cn(
+                "h-auto min-h-8 px-0 text-row font-semibold text-foreground",
+                !client.displayName && "text-muted-foreground",
+              )}
+              aria-label={`Open contact card for ${client.displayName || "client"}`}
+              onClick={() => openContact(client)}
+            >
+              {client.displayName || "—"}
+            </Button>
+          ),
           subtitle: [
             kindLabel(client.kind),
             `${formatCount(client.totalProjects)} ${client.totalProjects === 1 ? "Project" : "Projects"}`,

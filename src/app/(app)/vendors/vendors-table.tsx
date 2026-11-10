@@ -216,9 +216,23 @@ export function VendorsTable({
         onPageChange={setPage}
         pagingLabel="Vendors pagination"
         mobileItem={(vendor) => ({
-          title: vendor.displayName || "—",
+          title: (
+            <Button
+              type="button"
+              variant="link"
+              className={cn(
+                "h-auto min-h-8 px-0 text-row font-semibold text-foreground",
+                !vendor.displayName && "text-muted-foreground",
+              )}
+              aria-label={`Open contact card for ${vendor.displayName || "vendor"}`}
+              onClick={() => openContact(vendor)}
+            >
+              {vendor.displayName || "—"}
+            </Button>
+          ),
+          value: <Money value={vendor.totalProjectValue} />,
           subtitle: contactSubtitle(vendor),
-          meta: <Money value={vendor.totalProjectValue} />,
+          detail: vendorDetail(vendor),
         })}
         renderCell={(vendor, columnId) => (
           <CellValue
@@ -271,6 +285,41 @@ function contactSubtitle(vendor: VendorSummary) {
   const phone = formatPhoneDisplay(vendor.phone ?? "")
   const email = vendor.email?.trim() ?? ""
   return [phone, email].filter(Boolean).join(" · ")
+}
+
+function vendorDetail(vendor: VendorSummary) {
+  const category = vendor.vendorField?.trim() ?? ""
+  return (
+    <>
+      {category ? (
+        <>
+          <span className="font-medium text-foreground">{category}</span>
+          <span aria-hidden="true"> · </span>
+        </>
+      ) : null}
+      <span>
+        Paid{" "}
+        <Money
+          value={vendor.totalPaid}
+          className={cn(
+            "font-semibold",
+            vendor.totalPaid > 0 ? "text-success" : "text-muted-foreground",
+          )}
+        />
+      </span>
+      <span aria-hidden="true"> · </span>
+      <span>
+        Due{" "}
+        <Money
+          value={vendor.totalDue}
+          className={cn(
+            "font-semibold",
+            vendor.totalDue > 0 ? "text-destructive" : "text-muted-foreground",
+          )}
+        />
+      </span>
+    </>
+  )
 }
 
 function CellValue({
