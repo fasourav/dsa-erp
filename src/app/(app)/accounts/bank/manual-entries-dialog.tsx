@@ -112,6 +112,7 @@ export function ManualEntriesDialog({
             visibility={{}}
             error={null}
             emptyMessage="No Deposits Or Withdrawals Yet."
+            stickyHeader={false}
             rangeText={rangeLabel(
               pageResult.rangeStart,
               pageResult.rangeEnd,
