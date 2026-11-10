@@ -74,6 +74,32 @@ export function facetQueryValue(
   return trimmed
 }
 
+export function parsePageSize(
+  raw: string | string[] | undefined | null,
+  options: readonly number[],
+  fallback: number,
+): number {
+  const value = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? ""
+  if (!/^\d+$/.test(value)) {
+    return fallback
+  }
+  const parsed = Number(value)
+  if (Number.isSafeInteger(parsed) && options.includes(parsed)) {
+    return parsed
+  }
+  return fallback
+}
+
+export function pageSizeQueryValue(
+  size: number,
+  fallback: number,
+): string | null {
+  if (!Number.isSafeInteger(size) || size === fallback) {
+    return null
+  }
+  return String(size)
+}
+
 export function parsePageParams(
   params: Record<string, string | string[] | undefined>,
   maxQueryLength = 100,

@@ -1,4 +1,5 @@
 export const LIST_PAGE_SIZE = 10
+export const CLIENT_PAGE_SIZES = [10, 25, 50, 100] as const
 
 export type SortDirection = "asc" | "desc"
 

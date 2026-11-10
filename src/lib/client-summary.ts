@@ -224,19 +224,20 @@ function compareClients(
 export function paginateClients(
   clients: readonly ClientSummary[],
   page: number,
+  pageSize: number = PAGE_SIZE,
 ) {
   const total = clients.length
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), pageCount)
-  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const startIndex = (currentPage - 1) * pageSize
 
   return {
-    rows: clients.slice(startIndex, startIndex + PAGE_SIZE),
+    rows: clients.slice(startIndex, startIndex + pageSize),
     total,
     pageCount,
     currentPage,
     rangeStart: total === 0 ? 0 : startIndex + 1,
-    rangeEnd: Math.min(startIndex + PAGE_SIZE, total),
+    rangeEnd: Math.min(startIndex + pageSize, total),
   }
 }
 

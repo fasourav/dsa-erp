@@ -18,6 +18,7 @@ import {
   type IncomeRow,
 } from "@/lib/income"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -47,6 +48,8 @@ export function IncomeTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<IncomeColumnId>({
@@ -55,7 +58,7 @@ export function IncomeTable({
   })
   const sorted = useMemo(() => sortIncome(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const pageResult = paginateRows(filtered, page, pageSize)
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -113,6 +116,12 @@ export function IncomeTable({
           "invoice",
           "invoices",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

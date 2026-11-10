@@ -3,11 +3,18 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
-import { type SortState, toggleSort } from "@/lib/list-paging"
+import {
+  CLIENT_PAGE_SIZES,
+  LIST_PAGE_SIZE,
+  type SortState,
+  toggleSort,
+} from "@/lib/list-paging"
 import {
   facetQueryValue,
+  pageSizeQueryValue,
   parseFacetParam,
   parsePageParams,
+  parsePageSize,
   parseSortParams,
   sortQueryParams,
 } from "@/lib/page-query"
@@ -28,6 +35,8 @@ export type UseListUrlStateOptions<ColumnId extends string> = {
   defaultSort: SortState<ColumnId>
   facet?: ListFacetConfig
   settlement?: boolean
+  pageSizes?: readonly number[]
+  defaultPageSize?: number
   navigation?: "history" | "router"
   debounceMs?: number
 }
@@ -39,6 +48,8 @@ export function useListUrlState<ColumnId extends string>({
   defaultSort,
   facet: facetConfig,
   settlement: settlementEnabled = false,
+  pageSizes = CLIENT_PAGE_SIZES,
+  defaultPageSize = LIST_PAGE_SIZE,
   navigation = "history",
   debounceMs = 300,
 }: UseListUrlStateOptions<ColumnId>) {
@@ -52,6 +63,12 @@ export function useListUrlState<ColumnId extends string>({
     page: searchParams.get("page") ?? undefined,
     q: searchParams.get("q") ?? undefined,
   })
+
+  const pageSize = parsePageSize(
+    searchParams.get("size"),
+    pageSizes,
+    defaultPageSize,
+  )
 
   const sort = parseSortParams<ColumnId>(
     {
@@ -208,6 +225,14 @@ export function useListUrlState<ColumnId extends string>({
     [writeParams],
   )
 
+  const setPageSize = useCallback(
+    (nextSize: number) => {
+      const valid = parsePageSize(String(nextSize), pageSizes, defaultPageSize)
+      writeParams({ size: pageSizeQueryValue(valid, defaultPageSize) })
+    },
+    [defaultPageSize, pageSizes, writeParams],
+  )
+
   const clearFilters = useCallback(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
@@ -244,7 +269,9 @@ export function useListUrlState<ColumnId extends string>({
     onSort,
     page,
     setPage,
-     setParams: writeParams,
+    pageSize,
+    setPageSize,
+    setParams: writeParams,
     clearFilters,
     hasActiveFilters,
   }

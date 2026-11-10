@@ -10,6 +10,7 @@ import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
 import { formatIsoDate } from "@/lib/format"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -46,6 +47,8 @@ export function ExpenseTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<PoExpenseColumnId>({
@@ -54,7 +57,7 @@ export function ExpenseTable({
   })
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const pageResult = paginateRows(filtered, page, pageSize)
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -112,6 +115,12 @@ export function ExpenseTable({
           "expense",
           "expenses",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

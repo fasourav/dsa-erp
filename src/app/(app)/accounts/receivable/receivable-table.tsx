@@ -31,6 +31,7 @@ import {
 } from "@/lib/accounts-receivable"
 import { cn } from "@/lib/utils"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -85,6 +86,8 @@ export function ReceivableTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
   } = useListUrlState<ReceivableColumnId>({
     sortKeys: receivableSortKeys,
@@ -108,7 +111,7 @@ export function ReceivableTable({
       ),
     [searched, sort, statusFilter],
   )
-  const pageResult = paginateRows(visible, page)
+  const pageResult = paginateRows(visible, page, pageSize)
 
   function changeVisibility(id: ReceivableColumnId, checked: boolean) {
     if (locked.has(id)) {
@@ -198,6 +201,12 @@ export function ReceivableTable({
           "invoice",
           "invoices",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

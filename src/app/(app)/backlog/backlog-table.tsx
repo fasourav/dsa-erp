@@ -28,6 +28,7 @@ import {
   type BacklogRow,
 } from "@/lib/backlog"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -59,6 +60,8 @@ export function BacklogTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<BacklogColumnId>({
@@ -70,7 +73,7 @@ export function BacklogTable({
   const [formSession, setFormSession] = useState(0)
   const sorted = useMemo(() => sortBacklog(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const pageResult = paginateRows(filtered, page, pageSize)
 
   function openPlan(row: BacklogRow) {
     setFormProject(row)
@@ -136,6 +139,12 @@ export function BacklogTable({
           "project",
           "projects",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

@@ -223,19 +223,20 @@ function paymentStatusRank(order: PurchaseOrderRow): number {
 export function paginatePurchaseOrders(
   orders: readonly PurchaseOrderRow[],
   page: number,
+  pageSize: number = PAGE_SIZE,
 ) {
   const total = orders.length
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), pageCount)
-  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const startIndex = (currentPage - 1) * pageSize
 
   return {
-    rows: orders.slice(startIndex, startIndex + PAGE_SIZE),
+    rows: orders.slice(startIndex, startIndex + pageSize),
     total,
     pageCount,
     currentPage,
     rangeStart: total === 0 ? 0 : startIndex + 1,
-    rangeEnd: Math.min(startIndex + PAGE_SIZE, total),
+    rangeEnd: Math.min(startIndex + pageSize, total),
   }
 }
 

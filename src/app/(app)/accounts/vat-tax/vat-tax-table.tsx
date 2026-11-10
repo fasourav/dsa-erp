@@ -25,6 +25,7 @@ import {
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
@@ -91,6 +92,8 @@ export function VatTaxTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColId>({
@@ -106,7 +109,10 @@ export function VatTaxTable({
 
   const sorted = useMemo(() => sortVat(payments, sort), [payments, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
 
   function openForm() {
     setFormSession((s) => s + 1)
@@ -211,6 +217,12 @@ export function VatTaxTable({
           "payment",
           "payments",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

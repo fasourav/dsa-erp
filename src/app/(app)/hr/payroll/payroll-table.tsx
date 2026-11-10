@@ -25,6 +25,7 @@ import {
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { compareText, formatDayMonYear } from "@/lib/format"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
@@ -119,6 +120,8 @@ export function PayrollTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -142,7 +145,7 @@ export function PayrollTable({
     [accountNames, salaries, sort],
   )
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const pageResult = paginateRows(filtered, page, pageSize)
   const takenMonths = salaries.map(
     (salary) =>
       `${salary.periodYear}-${String(salary.periodMonth).padStart(2, "0")}`,
@@ -244,6 +247,12 @@ export function PayrollTable({
           "month",
           "months",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

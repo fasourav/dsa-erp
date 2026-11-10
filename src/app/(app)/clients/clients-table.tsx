@@ -51,6 +51,7 @@ import {
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
 import { formatCount } from "@/lib/format"
+import { CLIENT_PAGE_SIZES } from "@/lib/list-paging"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -88,6 +89,8 @@ export function ClientsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -115,8 +118,8 @@ export function ClientsTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(
-    () => paginateClients(filtered, page),
-    [filtered, page],
+    () => paginateClients(filtered, page, pageSize),
+    [filtered, page, pageSize],
   )
 
   function openForm(client: ClientSummary | null) {
@@ -277,6 +280,12 @@ export function ClientsTable({
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

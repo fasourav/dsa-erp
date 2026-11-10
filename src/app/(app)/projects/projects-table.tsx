@@ -56,6 +56,7 @@ import {
   type ProjectRow,
   type SortState,
 } from "@/lib/project-summary"
+import { CLIENT_PAGE_SIZES } from "@/lib/list-paging"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -98,6 +99,8 @@ export function ProjectsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -123,8 +126,8 @@ export function ProjectsTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(
-    () => paginateProjects(filtered, page),
-    [filtered, page],
+    () => paginateProjects(filtered, page, pageSize),
+    [filtered, page, pageSize],
   )
 
   function openForm(project: ProjectRow | null) {
@@ -292,6 +295,12 @@ export function ProjectsTable({
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

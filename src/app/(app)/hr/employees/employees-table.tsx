@@ -25,6 +25,7 @@ import {
 import { compareText, formatDayMonYear } from "@/lib/format"
 import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
@@ -121,6 +122,8 @@ export function EmployeesTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -147,7 +150,10 @@ export function EmployeesTable({
       ),
     [listFilter, query, sorted],
   )
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
 
   function openForm(emp: EmployeeRow | null) {
     setFormEmployee(emp)
@@ -258,6 +264,12 @@ export function EmployeesTable({
           "employee",
           "employees",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

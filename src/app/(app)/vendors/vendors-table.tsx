@@ -35,6 +35,7 @@ import {
   type SortState,
   type VendorSummary,
 } from "@/lib/vendor-summary"
+import { CLIENT_PAGE_SIZES } from "@/lib/list-paging"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -69,6 +70,8 @@ export function VendorsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -92,8 +95,8 @@ export function VendorsTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(
-    () => paginateVendors(filtered, page),
-    [filtered, page],
+    () => paginateVendors(filtered, page, pageSize),
+    [filtered, page, pageSize],
   )
 
   function openForm(vendor: VendorSummary | null) {
@@ -217,6 +220,12 @@ export function VendorsTable({
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

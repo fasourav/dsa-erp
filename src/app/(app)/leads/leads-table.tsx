@@ -42,6 +42,7 @@ import {
   type ColumnId,
 } from "@/lib/lead-summary"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -133,6 +134,8 @@ export function LeadsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -157,7 +160,10 @@ export function LeadsTable({
     () => filterRows(sorted, query, rowText, listFilter, (lead) => lead.status),
     [listFilter, query, sorted],
   )
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
 
   function openForm(lead: LeadRow | null) {
     setFormLead(lead)
@@ -300,6 +306,12 @@ export function LeadsTable({
           "lead",
           "leads",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

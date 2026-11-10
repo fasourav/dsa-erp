@@ -48,6 +48,7 @@ import {
   type VendorOption,
   type VendorPoDefaults,
 } from "@/lib/purchase-order-summary"
+import { CLIENT_PAGE_SIZES } from "@/lib/list-paging"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -99,6 +100,8 @@ export function PurchaseOrdersTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -137,8 +140,8 @@ export function PurchaseOrdersTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(
-    () => paginatePurchaseOrders(filtered, page),
-    [filtered, page],
+    () => paginatePurchaseOrders(filtered, page, pageSize),
+    [filtered, page, pageSize],
   )
 
   function openForm(order: PurchaseOrderRow | null) {
@@ -302,6 +305,12 @@ export function PurchaseOrdersTable({
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
