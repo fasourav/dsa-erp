@@ -8,6 +8,7 @@ import {
   updateBudget,
   type BudgetFieldErrors,
 } from "@/app/(app)/accounts/budgets/actions"
+import { MoneyInput } from "@/components/money-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -202,17 +203,13 @@ export function BudgetFormDialog({
             </Field>
             <Field data-invalid={Boolean(fieldErrors.allocatedBudget) || undefined}>
               <FieldLabel htmlFor="bgt-amount">Allocated Budget</FieldLabel>
-              <Input
+              <MoneyInput
                 id="bgt-amount"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                autoComplete="off"
                 enterKeyHint="next"
                 value={allocatedBudget}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.allocatedBudget)}
-                onChange={(event) => setAllocatedBudget(event.target.value)}
+                onValueChange={setAllocatedBudget}
               />
               {fieldErrors.allocatedBudget ? (
                 <FieldError>{fieldErrors.allocatedBudget}</FieldError>

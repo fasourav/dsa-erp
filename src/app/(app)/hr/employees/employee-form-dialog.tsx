@@ -10,6 +10,7 @@ import {
   type EmployeeFieldErrors,
 } from "@/app/(app)/hr/employees/actions"
 import { useAccess } from "@/components/access-provider"
+import { MoneyInput } from "@/components/money-input"
 import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -245,17 +246,13 @@ export function EmployeeFormDialog({
                   Hidden
                 </p>
               ) : (
-                <Input
+                <MoneyInput
                   id="emp-salary"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  inputMode="decimal"
                   enterKeyHint="next"
                   value={monthlySalary}
                   disabled={pending}
                   aria-invalid={Boolean(salaryError)}
-                  onChange={(e) => setMonthlySalary(e.target.value)}
+                  onValueChange={setMonthlySalary}
                 />
               )}
               {salaryError ? <FieldError>{salaryError}</FieldError> : null}
@@ -267,18 +264,14 @@ export function EmployeeFormDialog({
                   Hidden
                 </p>
               ) : (
-                <Input
+                <MoneyInput
                   id="emp-allowance"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  inputMode="decimal"
                   enterKeyHint="next"
                   value={allowance}
                   disabled={pending}
                   placeholder="0"
                   aria-invalid={Boolean(fieldErrors.allowance)}
-                  onChange={(e) => setAllowance(e.target.value)}
+                  onValueChange={setAllowance}
                 />
               )}
               {fieldErrors.allowance ? (

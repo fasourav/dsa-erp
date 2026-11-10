@@ -9,6 +9,7 @@ import {
   updateAsset,
   type AssetFieldErrors,
 } from "@/app/(app)/assets/actions"
+import { MoneyInput } from "@/components/money-input"
 import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import {
@@ -210,17 +211,13 @@ export function AssetFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(fieldErrors.unitCost) || undefined}>
               <FieldLabel htmlFor="asset-cost">Unit Cost</FieldLabel>
-              <Input
+              <MoneyInput
                 id="asset-cost"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
                 enterKeyHint="next"
-                autoComplete="off"
                 value={unitCost}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.unitCost)}
-                onChange={(event) => setUnitCost(event.target.value)}
+                onValueChange={setUnitCost}
               />
               {fieldErrors.unitCost ? <FieldError>{fieldErrors.unitCost}</FieldError> : null}
             </Field>

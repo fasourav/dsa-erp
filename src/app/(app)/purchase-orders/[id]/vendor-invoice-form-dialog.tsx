@@ -9,6 +9,7 @@ import {
   updateVendorInvoice,
   type VendorInvoiceFieldErrors,
 } from "@/app/(app)/purchase-orders/[id]/actions"
+import { MoneyInput } from "@/components/money-input"
 import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
 import {
@@ -188,14 +189,12 @@ export function VendorInvoiceFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(amountError) || undefined}>
               <FieldLabel htmlFor="vendor-invoice-amount">Amount</FieldLabel>
-              <Input
+              <MoneyInput
                 id="vendor-invoice-amount"
-                inputMode="decimal"
-                autoComplete="off"
                 value={amount}
                 disabled={pending}
                 aria-invalid={Boolean(amountError)}
-                onChange={(event) => setAmount(event.target.value)}
+                onValueChange={setAmount}
               />
               {amountError ? <FieldError>{amountError}</FieldError> : null}
             </Field>

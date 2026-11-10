@@ -11,6 +11,7 @@ import {
 } from "@/app/(app)/leads/actions"
 import { MailtoLink, TelLink } from "@/components/contact-links"
 import { Money } from "@/components/money"
+import { MoneyInput } from "@/components/money-input"
 import { NameCombobox } from "@/components/name-combobox"
 import { PhoneInput } from "@/components/phone-input"
 import { StatusBadge } from "@/components/status-badge"
@@ -384,14 +385,11 @@ export function LeadFormDialog({
 
               <Field span="half">
                 <FieldLabel htmlFor="lead-value">Estimated Value</FieldLabel>
-                <Input
+                <MoneyInput
                   id="lead-value"
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
                   value={estimatedValue}
                   disabled={pending}
-                  onChange={(e) => setEstimatedValue(e.target.value)}
+                  onValueChange={setEstimatedValue}
                 />
                 {valueError ? <FieldError>{valueError}</FieldError> : null}
               </Field>

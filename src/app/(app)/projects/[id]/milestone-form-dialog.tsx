@@ -7,6 +7,7 @@ import {
   saveProjectMilestone,
   type ProgressFieldErrors,
 } from "@/app/(app)/projects/[id]/progress-actions"
+import { MoneyInput } from "@/components/money-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -173,15 +174,13 @@ export function MilestoneFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(fieldErrors.amount) || undefined}>
               <FieldLabel htmlFor="milestone-amount">Amount</FieldLabel>
-              <Input
+              <MoneyInput
                 id="milestone-amount"
                 value={amount}
-                inputMode="decimal"
-                autoComplete="off"
                 enterKeyHint="done"
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.amount)}
-                onChange={(event) => setAmount(event.target.value)}
+                onValueChange={setAmount}
               />
               {fieldErrors.amount ? <FieldError>{fieldErrors.amount}</FieldError> : null}
             </Field>

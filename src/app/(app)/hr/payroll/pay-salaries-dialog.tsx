@@ -11,6 +11,7 @@ import {
   type PaySalaryFieldErrors,
 } from "@/app/(app)/hr/payroll/actions"
 import { Money } from "@/components/money"
+import { MoneyInput } from "@/components/money-input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -314,18 +315,15 @@ export function PaySalariesDialog({
                         </TableCell>
                         <TableCell className="text-right">
                           {showFinancials ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
+                          <MoneyInput
+                            prefix={false}
                             enterKeyHint="next"
                             className="ml-auto w-28 text-right"
                             aria-label={`Bonus for ${row.name}`}
                             value={row.bonus}
                             disabled={pending || !row.included}
-                            onChange={(event) =>
-                              patchRow(row, { bonus: event.target.value })
+                            onValueChange={(next) =>
+                              patchRow(row, { bonus: next })
                             }
                           />
                           ) : (
@@ -334,18 +332,15 @@ export function PaySalariesDialog({
                         </TableCell>
                         <TableCell className="text-right">
                           {showFinancials ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
+                          <MoneyInput
+                            prefix={false}
                             enterKeyHint="next"
                             className="ml-auto w-28 text-right"
                             aria-label={`Deduction for ${row.name}`}
                             value={row.deduction}
                             disabled={pending || !row.included}
-                            onChange={(event) =>
-                              patchRow(row, { deduction: event.target.value })
+                            onValueChange={(next) =>
+                              patchRow(row, { deduction: next })
                             }
                           />
                           ) : (

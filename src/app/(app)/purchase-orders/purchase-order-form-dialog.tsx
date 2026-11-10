@@ -9,6 +9,7 @@ import {
   updatePurchaseOrder,
   type PurchaseOrderFormFieldErrors,
 } from "@/app/(app)/purchase-orders/actions"
+import { MoneyInput } from "@/components/money-input"
 import { Button } from "@/components/ui/button"
 import {
   Combobox,
@@ -347,14 +348,12 @@ export function PurchaseOrderFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(valueError) || undefined}>
               <FieldLabel htmlFor="po-total-value">Purchase Order Value</FieldLabel>
-              <Input
+              <MoneyInput
                 id="po-total-value"
-                inputMode="decimal"
-                autoComplete="off"
                 value={totalValue}
                 disabled={pending}
                 aria-invalid={Boolean(valueError)}
-                onChange={(event) => setTotalValue(event.target.value)}
+                onValueChange={setTotalValue}
               />
               {valueError ? <FieldError>{valueError}</FieldError> : null}
             </Field>
