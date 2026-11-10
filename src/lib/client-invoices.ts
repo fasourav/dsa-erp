@@ -261,6 +261,7 @@ export async function getClientInvoices(
   options: {
     q?: string
     page?: number
+    pageSize?: number
     status?: SettlementFilter
     sort?: SortState<ClientInvoiceColumnId>
   } = {},
@@ -425,7 +426,7 @@ export async function getClientInvoices(
         return query.range(from, to)
       },
       requestedPage,
-      LIST_PAGE_SIZE,
+      options.pageSize ?? LIST_PAGE_SIZE,
       ),
       countClientInvoices(supabase, scope),
     ])

@@ -7,8 +7,12 @@ import {
 } from "@/lib/client-invoice-summary"
 import { getClientInvoices } from "@/lib/client-invoices"
 import {
+  LIST_PAGE_SIZE,
+  pageSizeQueryValue,
   parsePageParams,
+  parsePageSize,
   parseSortParams,
+  SERVER_PAGE_SIZES,
   sortQueryParams,
 } from "@/lib/page-query"
 import { requireModule } from "@/lib/permissions"
@@ -31,6 +35,7 @@ export default async function ClientInvoicesPage({
     : params.project
   const status = parseSettlementFilter(params.status)
   const { page: requestedPage, q } = parsePageParams(params)
+  const pageSize = parsePageSize(params.size, SERVER_PAGE_SIZES, LIST_PAGE_SIZE)
   const sort = parseSortParams<ClientInvoiceColumnId>(
     params,
     sortableClientInvoiceColumns,
@@ -40,6 +45,7 @@ export default async function ClientInvoicesPage({
   const data = await getClientInvoices(projectParam ?? null, {
     q,
     page: requestedPage,
+    pageSize,
     status,
     sort,
   })
@@ -55,6 +61,7 @@ export default async function ClientInvoicesPage({
         projectFilter={data.projectFilter}
         total={data.total}
         page={data.page}
+        pageSize={pageSize}
         error={data.error}
         initialQuery={q}
         statusFilter={status}
@@ -71,6 +78,7 @@ export default async function ClientInvoicesPage({
           status: settlementQueryValue(status),
           sort: sortParams.sort,
           dir: sortParams.dir,
+          size: pageSizeQueryValue(pageSize, LIST_PAGE_SIZE),
         }}
         label="Client Invoices pages"
       />

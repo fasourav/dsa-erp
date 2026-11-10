@@ -1,4 +1,5 @@
 export const LIST_PAGE_SIZE = 50
+export const SERVER_PAGE_SIZES = [25, 50, 100] as const
 
 export type PageParams = {
   page: number

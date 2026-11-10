@@ -48,7 +48,12 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
+import {
+  LIST_PAGE_SIZE,
+  pageSizeQueryValue,
+  SERVER_PAGE_SIZES,
+  sortQueryParams,
+} from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useUrlSearch } from "@/lib/use-url-search"
 import type { ReconciliationBundle } from "@/lib/bank-reconcile"
@@ -68,6 +73,7 @@ export function BankPanel({
   accountFilter,
   total,
   page,
+  pageSize = LIST_PAGE_SIZE,
   error,
   fiscalYearStartMonth,
   view,
@@ -85,6 +91,7 @@ export function BankPanel({
   accountFilter: AccountFilter | null
   total: number
   page: number
+  pageSize?: number
   pageCount?: number
   error: string | null
   fiscalYearStartMonth: number
@@ -121,7 +128,7 @@ export function BankPanel({
   const rangeStart =
     effectiveTotal === 0 || transactions.length === 0
       ? 0
-      : (page - 1) * LIST_PAGE_SIZE + 1
+      : (page - 1) * pageSize + 1
   const rangeEnd =
     effectiveTotal === 0 || transactions.length === 0
       ? 0
@@ -332,6 +339,13 @@ export function BankPanel({
           "transaction",
           "transactions",
         )}
+        totalCount={effectiveTotal}
+        pageSize={{
+          value: pageSize,
+          options: SERVER_PAGE_SIZES,
+          onChange: (n) =>
+            setParams({ size: pageSizeQueryValue(n, LIST_PAGE_SIZE) }),
+        }}
         hidePagination
         mobileItem={(transaction) => ({
           title: bankSourceLabel(transaction.sourceKind, { projectId: transaction.projectId }),

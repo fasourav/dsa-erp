@@ -40,7 +40,12 @@ import {
   type NamedOption,
   type OperationalExpenseRow,
 } from "@/lib/operational-expenses"
-import { LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
+import {
+  LIST_PAGE_SIZE,
+  pageSizeQueryValue,
+  SERVER_PAGE_SIZES,
+  sortQueryParams,
+} from "@/lib/page-query"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useUrlSearch } from "@/lib/use-url-search"
 import type { OfficeCategoryGroup } from "@/lib/report-cost-group"
@@ -55,6 +60,7 @@ export function ExpensesTable({
   bankAccounts,
   total,
   page,
+  pageSize = LIST_PAGE_SIZE,
   error,
   initialQuery = "",
   sort = defaultExpenseSort,
@@ -68,6 +74,7 @@ export function ExpensesTable({
   bankAccounts: BankAccountChoice[]
   total: number
   page: number
+  pageSize?: number
   pageCount?: number
   error: string | null
   initialQuery?: string
@@ -101,7 +108,7 @@ export function ExpensesTable({
   const rangeStart =
     effectiveTotal === 0 || expenses.length === 0
       ? 0
-      : (page - 1) * LIST_PAGE_SIZE + 1
+      : (page - 1) * pageSize + 1
   const rangeEnd =
     effectiveTotal === 0 || expenses.length === 0
       ? 0
@@ -204,6 +211,13 @@ export function ExpensesTable({
           "expense",
           "expenses",
         )}
+        totalCount={effectiveTotal}
+        pageSize={{
+          value: pageSize,
+          options: SERVER_PAGE_SIZES,
+          onChange: (n) =>
+            setParams({ size: pageSizeQueryValue(n, LIST_PAGE_SIZE) }),
+        }}
         hidePagination
         mobileItem={(expense) => ({
           title: expense.category || "—",

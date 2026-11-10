@@ -237,6 +237,7 @@ export async function getBankPage(
   options: {
     q?: string
     page?: number
+    pageSize?: number
     sort?: SortState<BankTransactionColumnId>
     includeReportRows?: boolean
   } = {},
@@ -434,7 +435,7 @@ export async function getBankPage(
         return query.range(from, to)
       },
       requestedPage,
-      LIST_PAGE_SIZE,
+      options.pageSize ?? LIST_PAGE_SIZE,
     )
 
     const transactions = txSlice.rows.flatMap((row) =>
