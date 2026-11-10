@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useTransition } from "react"
 
-const DEADZONE_PX = 8
-const DAMPING = 0.65
-const PULL_THRESHOLD_PX = 64
-const MAX_PULL_PX = 104
-const MIN_REFRESH_MS = 550
+const DEADZONE_PX = 6
+const DAMPING = 0.75
+const PULL_THRESHOLD_PX = 48
+const MAX_PULL_PX = 76
+const MIN_REFRESH_MS = 450
 
 function isDesktopOrPrint(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -25,7 +25,7 @@ function hasOpenOverlay(): boolean {
   }
   return Boolean(
     document.querySelector(
-      "[data-slot=dialog-content], [data-slot=sheet-content], [data-slot=alert-dialog-content], [data-slot=dropdown-menu-content], [data-slot=select-content], [role=dialog], [role=alertdialog]",
+      "[data-slot=dialog-content], [data-slot=sheet-content], [data-slot=alert-dialog-content], [data-slot=dropdown-menu-content], [data-slot=select-content], [data-slot=popover-content], [data-base-ui-focus-guard], [role=dialog], [role=alertdialog], [role=listbox], [role=menu]",
     ),
   )
 }

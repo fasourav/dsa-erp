@@ -119,14 +119,14 @@ export function AppShell({
           {showPullIndicator ? (
             <div
               aria-hidden="true"
-              style={{
-                height: `${pull.refreshing ? 44 : Math.min(56, Math.round(pull.pullDistance * 0.7))}px`,
-              }}
-              className="pointer-events-none flex items-center justify-center overflow-hidden transition-[height] duration-150 ease-out print:hidden md:hidden"
+              className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center pt-safe print:hidden md:hidden"
             >
               <span
+                style={{
+                  transform: `translateY(${pull.refreshing ? 10 : Math.min(20, Math.round(pull.pullDistance * 0.35))}px)`,
+                }}
                 className={cn(
-                  "inline-flex size-8 items-center justify-center rounded-full bg-fill text-muted-foreground shadow-segment transition-colors",
+                  "inline-flex size-8 items-center justify-center rounded-full bg-fill text-muted-foreground shadow-segment transition-[color,transform] duration-150 ease-out",
                   (pull.ready || pull.refreshing) && "text-primary",
                 )}
               >
