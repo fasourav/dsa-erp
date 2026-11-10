@@ -95,7 +95,10 @@ export function ClientInvoicesTable({
   const canDelete = useCan("client_invoices", "delete")
 
   const visibility = useColumnVisibility(clientInvoiceColumnStore)
-  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery, undefined, {
+    options: SERVER_PAGE_SIZES,
+    fallback: LIST_PAGE_SIZE,
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)

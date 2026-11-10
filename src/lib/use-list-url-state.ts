@@ -11,6 +11,7 @@ import {
 } from "@/lib/list-paging"
 import {
   facetQueryValue,
+  normalizePageSizeParam,
   pageSizeQueryValue,
   parseFacetParam,
   parsePageParams,
@@ -133,6 +134,7 @@ export function useListUrlState<ColumnId extends string>({
       if (!options?.keepPage && !("page" in updates)) {
         params.delete("page")
       }
+      normalizePageSizeParam(params, pageSizes, defaultPageSize)
       const qs = params.toString()
       const nextUrl = qs ? `${pathname}?${qs}` : pathname
       if (navigation === "router") {
@@ -143,7 +145,7 @@ export function useListUrlState<ColumnId extends string>({
         window.history.replaceState(null, "", nextUrl)
       }
     },
-    [navigation, pathname, router],
+    [defaultPageSize, navigation, pageSizes, pathname, router],
   )
 
   const setQuery = useCallback(

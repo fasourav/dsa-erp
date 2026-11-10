@@ -101,6 +101,20 @@ export function pageSizeQueryValue(
   return String(size)
 }
 
+export function normalizePageSizeParam(
+  params: URLSearchParams,
+  options: readonly number[],
+  fallback: number,
+): void {
+  if (!params.has("size")) return
+  const value = pageSizeQueryValue(
+    parsePageSize(params.get("size"), options, fallback),
+    fallback,
+  )
+  if (value) params.set("size", value)
+  else params.delete("size")
+}
+
 export function parsePageParams(
   params: Record<string, string | string[] | undefined>,
   maxQueryLength = 100,

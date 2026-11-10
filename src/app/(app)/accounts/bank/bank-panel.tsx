@@ -108,7 +108,10 @@ export function BankPanel({
   const canDelete = useCan("banking", "delete")
 
   const visibility = useColumnVisibility(bankTransactionColumnStore)
-  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery, undefined, {
+    options: SERVER_PAGE_SIZES,
+    fallback: LIST_PAGE_SIZE,
+  })
   const [movementOpen, setMovementOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [movementKind, setMovementKind] = useState<"deposit" | "withdrawal">("deposit")

@@ -87,7 +87,10 @@ export function ExpensesTable({
   const canDelete = useCan("expenses", "delete")
 
   const visibility = useColumnVisibility(expenseColumnStore)
-  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery, undefined, {
+    options: SERVER_PAGE_SIZES,
+    fallback: LIST_PAGE_SIZE,
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formExpense, setFormExpense] = useState<OperationalExpenseRow | null>(
     null,
