@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft, RotateCw } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -14,6 +14,7 @@ import { ShellHeaderProvider } from "@/components/shell-header"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { usePullToRefresh } from "@/components/use-pull-to-refresh"
 import { useSidebarPresence } from "@/components/use-sidebar-presence"
 import { navItems } from "@/lib/access"
 import type { AccountIdentity } from "@/lib/account-identity"
@@ -98,7 +99,10 @@ export function AppShell({
   const pathname = usePathname()
   const tabRoots = useTabRoots()
   const [headerSlot, setHeaderSlot] = useState(null as HTMLDivElement | null)
+  const [mainElement, setMainElement] = useState(null as HTMLElement | null)
   const isTabRoot = tabRoots.includes(pathname)
+  const pull = usePullToRefresh(mainElement)
+  const showPullIndicator = pull.pullDistance > 0 || pull.refreshing
 
   return (
     <ShellHeaderProvider slot={headerSlot}>
@@ -106,8 +110,45 @@ export function AppShell({
         <DesktopSidebarSlot email={account.email} />
         <main
           id="main"
+          ref={setMainElement}
           className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain scroll-smooth pt-safe pb-tabbar print:h-auto print:overflow-visible print:p-0 md:pt-0 md:pb-12"
         >
+          {showPullIndicator ? (
+            <div
+              role="status"
+              aria-live="polite"
+              aria-label={
+                pull.refreshing
+                  ? "Refreshing"
+                  : pull.ready
+                    ? "Release to refresh"
+                    : "Pull to refresh"
+              }
+              style={{
+                height: `${pull.refreshing ? 44 : Math.min(56, Math.round(pull.pullDistance * 0.7))}px`,
+              }}
+              className="pointer-events-none flex items-center justify-center overflow-hidden transition-[height] duration-150 ease-out print:hidden md:hidden"
+            >
+              <span
+                className={cn(
+                  "inline-flex size-8 items-center justify-center rounded-full bg-fill text-muted-foreground shadow-segment transition-colors",
+                  (pull.ready || pull.refreshing) && "text-primary",
+                )}
+              >
+                <RotateCw
+                  aria-hidden="true"
+                  className={cn("size-4", pull.refreshing && "animate-spin")}
+                  style={
+                    pull.refreshing
+                      ? undefined
+                      : {
+                          transform: `rotate(${Math.round(pull.progress * 240)}deg)`,
+                        }
+                  }
+                />
+              </span>
+            </div>
+          ) : null}
           <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mt-5.5 md:mb-2.5 md:h-10 md:pt-0 md:pr-10 md:pl-7">
             {isTabRoot ? (
               <Link
