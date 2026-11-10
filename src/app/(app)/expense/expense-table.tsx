@@ -40,11 +40,19 @@ export function ExpenseTable({
   error: string | null
 }) {
   const visibility = useColumnVisibility(poExpenseColumnStore)
-  const { query, setQuery, sort, onSort, page, setPage } =
-    useListUrlState<PoExpenseColumnId>({
-      sortKeys: poExpenseSortKeys,
-      defaultSort: defaultPoExpenseSort,
-    })
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<PoExpenseColumnId>({
+    sortKeys: poExpenseSortKeys,
+    defaultSort: defaultPoExpenseSort,
+  })
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
@@ -98,6 +106,11 @@ export function ExpenseTable({
         error={error}
         totals={totals}
         emptyMessage="No Paid Expenses Yet."
+        emptyState={
+          rows.length === 0 && !hasActiveFilters
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

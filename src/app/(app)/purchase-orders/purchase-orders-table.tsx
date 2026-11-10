@@ -96,6 +96,8 @@ export function PurchaseOrdersTable({
     onSort,
     page,
     setPage,
+    clearFilters,
+    hasActiveFilters,
   } = useListUrlState<ColumnId>({
     sortKeys: poSortKeys,
     defaultSort: defaultPoSort,
@@ -288,6 +290,19 @@ export function PurchaseOrdersTable({
           projectFilter
             ? "No Purchase Orders For This Project."
             : "No Purchase Orders Yet."
+        }
+        emptyState={
+          projectOrders.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Assign Purchase Order
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
         }
         rangeText={purchaseOrderRangeLabel(
           pageResult.rangeStart,

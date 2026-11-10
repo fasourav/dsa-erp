@@ -53,11 +53,19 @@ export function BacklogTable({
   const canEdit = useCan("backlog", "edit")
 
   const visibility = useColumnVisibility(backlogColumnStore)
-  const { query, setQuery, sort, onSort, page, setPage } =
-    useListUrlState<BacklogColumnId>({
-      sortKeys: backlogSortKeys,
-      defaultSort: defaultBacklogSort,
-    })
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<BacklogColumnId>({
+    sortKeys: backlogSortKeys,
+    defaultSort: defaultBacklogSort,
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formProject, setFormProject] = useState<BacklogRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -129,6 +137,11 @@ export function BacklogTable({
         error={error}
         totals={totals}
         emptyMessage="No Backlog Projects Yet."
+        emptyState={
+          rows.length === 0 && !hasActiveFilters
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

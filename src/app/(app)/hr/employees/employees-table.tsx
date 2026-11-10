@@ -127,6 +127,8 @@ export function EmployeesTable({
     onSort,
     page,
     setPage,
+    clearFilters,
+    hasActiveFilters,
   } = useListUrlState<ColumnId>({
     sortKeys: employeeSortKeys,
     defaultSort: defaultEmployeeSort,
@@ -242,6 +244,19 @@ export function EmployeesTable({
         visibility={{}}
         error={error}
         emptyMessage="No Employees Yet."
+        emptyState={
+          employees.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add New Employee
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

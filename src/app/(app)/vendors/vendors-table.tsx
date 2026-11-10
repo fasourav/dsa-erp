@@ -70,6 +70,8 @@ export function VendorsTable({
     onSort,
     page,
     setPage,
+    clearFilters,
+    hasActiveFilters,
   } = useListUrlState<ColumnId>({
     sortKeys: vendorSortKeys,
     defaultSort: defaultVendorSort,
@@ -209,6 +211,19 @@ export function VendorsTable({
         error={error}
         totals={totals}
         emptyMessage="No Vendors Yet."
+        emptyState={
+          vendors.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add New Vendor
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={vendorRangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

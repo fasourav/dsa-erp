@@ -139,6 +139,8 @@ export function LeadsTable({
     onSort,
     page,
     setPage,
+    clearFilters,
+    hasActiveFilters,
   } = useListUrlState<ColumnId>({
     sortKeys: leadSortKeys,
     defaultSort: defaultLeadSort,
@@ -281,6 +283,19 @@ export function LeadsTable({
         visibility={visibility}
         error={error}
         emptyMessage="No Leads Yet."
+        emptyState={
+          leads.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add New Lead
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

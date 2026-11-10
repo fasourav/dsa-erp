@@ -230,6 +230,22 @@ export function ClientInvoicesTable({
               : "No Client Invoices Yet."
             : "No Matching Client Invoices."
         }
+        emptyState={
+          filterCounts.all === 0 && !query.trim()
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add Client Invoice
+                  </Button>
+                ) : undefined,
+              }
+            : {
+                kind: "filtered",
+                onClearFilters: () => setParams({ q: null, status: null }),
+              }
+        }
         rangeText={rangeLabel(
           rangeStart,
           rangeEnd,

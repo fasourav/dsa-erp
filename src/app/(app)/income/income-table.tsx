@@ -41,11 +41,19 @@ export function IncomeTable({
   error: string | null
 }) {
   const visibility = useColumnVisibility(incomeColumnStore)
-  const { query, setQuery, sort, onSort, page, setPage } =
-    useListUrlState<IncomeColumnId>({
-      sortKeys: incomeSortKeys,
-      defaultSort: defaultIncomeSort,
-    })
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<IncomeColumnId>({
+    sortKeys: incomeSortKeys,
+    defaultSort: defaultIncomeSort,
+  })
   const sorted = useMemo(() => sortIncome(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
@@ -104,6 +112,11 @@ export function IncomeTable({
         error={error}
         totals={totals}
         emptyMessage="No Collected Invoices Yet."
+        emptyState={
+          rows.length === 0 && !hasActiveFilters
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

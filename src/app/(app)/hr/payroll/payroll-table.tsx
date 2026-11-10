@@ -113,11 +113,19 @@ export function PayrollTable({
   const canEdit = useCan("payroll", "edit")
   const canDelete = useCan("payroll", "delete")
 
-  const { query, setQuery, sort, onSort, page, setPage } =
-    useListUrlState<ColumnId>({
-      sortKeys: payrollSortKeys,
-      defaultSort: defaultPayrollSort,
-    })
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<ColumnId>({
+    sortKeys: payrollSortKeys,
+    defaultSort: defaultPayrollSort,
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formSalary, setFormSalary] = useState<MonthlySalary | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -217,6 +225,19 @@ export function PayrollTable({
         visibility={{}}
         error={error}
         emptyMessage="No Monthly Salaries Yet."
+        emptyState={
+          salaries.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Pay Salaries
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

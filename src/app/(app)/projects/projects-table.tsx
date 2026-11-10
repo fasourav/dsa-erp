@@ -99,6 +99,8 @@ export function ProjectsTable({
     onSort,
     page,
     setPage,
+    clearFilters,
+    hasActiveFilters,
   } = useListUrlState<ColumnId>({
     sortKeys: projectSortKeys,
     defaultSort: defaultProjectSort,
@@ -290,6 +292,19 @@ export function ProjectsTable({
         error={error}
         totals={totals}
         emptyMessage="No Projects Yet."
+        emptyState={
+          projects.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add New Project
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={projectRangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

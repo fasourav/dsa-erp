@@ -85,6 +85,7 @@ export function ReceivableTable({
     onSort,
     page,
     setPage,
+    clearFilters,
   } = useListUrlState<ReceivableColumnId>({
     sortKeys: receivableSortKeys,
     defaultSort,
@@ -196,6 +197,11 @@ export function ReceivableTable({
           counts.all === 0 && !query.trim()
             ? "No Receivable Invoices Yet."
             : "No Matching Receivables."
+        }
+        emptyState={
+          counts.all === 0 && !query.trim()
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
         }
         rangeText={rangeLabel(
           pageResult.rangeStart,

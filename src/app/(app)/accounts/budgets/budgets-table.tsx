@@ -97,11 +97,19 @@ export function BudgetsTable({
   const canEdit = useCan("budgets", "edit")
   const canDelete = useCan("budgets", "delete")
 
-  const { query, setQuery, sort, onSort, page, setPage } =
-    useListUrlState<ColId>({
-      sortKeys: budgetSortKeys,
-      defaultSort: defaultBudgetSort,
-    })
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<ColId>({
+    sortKeys: budgetSortKeys,
+    defaultSort: defaultBudgetSort,
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formBudget, setFormBudget] = useState<BudgetRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -229,6 +237,19 @@ export function BudgetsTable({
         visibility={{}}
         error={error}
         emptyMessage="No Budgets Yet."
+        emptyState={
+          budgets.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add New Budget
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

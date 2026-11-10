@@ -86,6 +86,7 @@ export function PayableTable({
     onSort,
     page,
     setPage,
+    clearFilters,
   } = useListUrlState<PayableColumnId>({
     sortKeys: payableSortKeys,
     defaultSort,
@@ -182,6 +183,11 @@ export function PayableTable({
           counts.all === 0 && !query.trim()
             ? "No Payables Yet."
             : "No Matching Payables."
+        }
+        emptyState={
+          counts.all === 0 && !query.trim()
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
         }
         rangeText={rangeLabel(
           pageResult.rangeStart,

@@ -87,11 +87,19 @@ export function VatTaxTable({
   const canAdd = useCan("vat_tax", "add")
   const canDelete = useCan("vat_tax", "delete")
 
-  const { query, setQuery, sort, onSort, page, setPage } =
-    useListUrlState<ColId>({
-      sortKeys: vatSortKeys,
-      defaultSort: defaultVatSort,
-    })
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<ColId>({
+    sortKeys: vatSortKeys,
+    defaultSort: defaultVatSort,
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -191,6 +199,19 @@ export function VatTaxTable({
         error={error}
         totals={totals}
         emptyMessage="No VAT / Tax Payments Yet."
+        emptyState={
+          payments.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={openForm}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add Payment
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

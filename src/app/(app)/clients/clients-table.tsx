@@ -89,6 +89,8 @@ export function ClientsTable({
     onSort,
     page,
     setPage,
+    clearFilters,
+    hasActiveFilters,
   } = useListUrlState<ColumnId>({
     sortKeys: clientSortKeys,
     defaultSort: defaultClientSort,
@@ -269,6 +271,19 @@ export function ClientsTable({
         error={error}
         totals={totals}
         emptyMessage="No Clients Yet."
+        emptyState={
+          clients.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add New Client
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={clientRangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
