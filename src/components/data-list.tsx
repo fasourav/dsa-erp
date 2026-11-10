@@ -170,7 +170,6 @@ export function DataList<T, Id extends string>({
   mobileItem,
   toolbar,
   subtleScrollbar = false,
-  stickyHeader = true,
 }: {
   columns: readonly ListColumn<Id>[]
   rows: readonly T[]
@@ -201,7 +200,6 @@ export function DataList<T, Id extends string>({
    * scrollbar.
    */
   subtleScrollbar?: boolean
-  stickyHeader?: boolean
 }) {
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
@@ -323,20 +321,12 @@ export function DataList<T, Id extends string>({
           "min-w-0 overflow-hidden rounded-card glass-panel",
           !hasRows && "[&_[data-slot=table-container]]:overflow-x-hidden",
           subtleScrollbar &&
-            cn(
-              "[&_[data-slot=table-container]]:scrollbar-subtle",
-              !stickyHeader && "[&_[data-slot=table-container]]:overflow-y-hidden",
-            ),
+            "[&_[data-slot=table-container]]:scrollbar-subtle [&_[data-slot=table-container]]:overflow-y-hidden",
           mobileItem && "hidden md:block",
         )}
       >
         <Table
           className="table-fixed"
-          containerClassName={cn(
-            stickyHeader &&
-              hasRows &&
-              "md:max-h-[calc(100dvh-14rem)] md:overflow-y-auto",
-          )}
           style={
             layout.minWidthPx > 0
               ? { minWidth: `${layout.minWidthPx}px` }
@@ -375,7 +365,6 @@ export function DataList<T, Id extends string>({
                     }
                     className={cn(
                       "py-2 align-middle",
-                      stickyHeader && "md:sticky md:top-0 md:z-20 bg-muted",
                       column.hint ? "overflow-visible" : "overflow-hidden",
                       alignClass(column.align),
                       insetClass(column.align, previous, next, dense),
@@ -413,7 +402,6 @@ export function DataList<T, Id extends string>({
                 <TableHead
                   className={cn(
                     "sticky right-0 z-10 border-l border-border-subtle bg-muted text-right align-middle whitespace-nowrap",
-                    stickyHeader && "md:top-0 md:z-30",
                     compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
                   )}
                 >

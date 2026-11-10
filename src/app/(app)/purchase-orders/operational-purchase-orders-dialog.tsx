@@ -177,7 +177,6 @@ export function OperationalPurchaseOrdersDialog({
               visibility={{}}
               error={null}
               emptyMessage="No Operational Purchase Orders Yet."
-              stickyHeader={false}
               rangeText={rangeLabel(
                 pageResult.rangeStart,
                 pageResult.rangeEnd,
