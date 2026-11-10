@@ -535,7 +535,7 @@ function MobileSortControl<Id extends string>({
   onSort: (id: Id) => void
 }) {
   const activeColumn =
-    columns.find((column) => column.id === sort.key) ?? columns[0]
+    columns.find((column) => column.id === sort.key) ?? null
   const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
   const directionLabel = sort.direction === "asc" ? "ascending" : "descending"
 
@@ -549,19 +549,29 @@ function MobileSortControl<Id extends string>({
               variant="outline"
               size="sm"
               className="h-9 max-w-full gap-1.5 px-3 text-label"
-              aria-label={`Sort by ${activeColumn.label}, ${directionLabel}`}
+              aria-label={
+                activeColumn
+                  ? `Sort by ${activeColumn.label}, ${directionLabel}`
+                  : "Sort"
+              }
             />
           }
         >
-          <span className="text-muted-foreground">Sort:</span>
-          <span className="truncate font-semibold text-foreground">
-            {activeColumn.label}
-          </span>
-          <SortIcon
-            aria-hidden="true"
-            className="size-3.5 shrink-0"
-            strokeWidth={2.4}
-          />
+          {activeColumn ? (
+            <>
+              <span className="text-muted-foreground">Sort:</span>
+              <span className="truncate font-semibold text-foreground">
+                {activeColumn.label}
+              </span>
+              <SortIcon
+                aria-hidden="true"
+                className="size-3.5 shrink-0"
+                strokeWidth={2.4}
+              />
+            </>
+          ) : (
+            <span className="font-semibold text-foreground">Sort</span>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={6} className="w-56">
           {columns.map((column) => {
