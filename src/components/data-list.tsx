@@ -45,6 +45,7 @@ import {
   columnVisible,
   computeTableColumnLayout,
   paginationItems,
+  sortDirectionText,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
@@ -545,7 +546,9 @@ function MobileSortControl<Id extends string>({
   const activeColumn =
     columns.find((column) => column.id === sort.key) ?? null
   const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
-  const directionLabel = sort.direction === "asc" ? "ascending" : "descending"
+  const directionText = activeColumn
+    ? sortDirectionText(activeColumn, sort.direction)
+    : ""
 
   return (
     <div className="flex items-center justify-end px-1">
@@ -556,10 +559,10 @@ function MobileSortControl<Id extends string>({
               type="button"
               variant="outline"
               size="sm"
-              className="h-9 max-w-full gap-1.5 px-3 text-label"
+              className="h-9 max-w-full min-w-0 gap-1.5 px-3 text-label"
               aria-label={
                 activeColumn
-                  ? `Sort by ${activeColumn.label}, ${directionLabel}`
+                  ? `Sort by ${activeColumn.label}, ${directionText}`
                   : "Sort"
               }
             />
@@ -567,9 +570,12 @@ function MobileSortControl<Id extends string>({
         >
           {activeColumn ? (
             <>
-              <span className="text-muted-foreground">Sort:</span>
-              <span className="truncate font-semibold text-foreground">
+              <span className="shrink-0 text-muted-foreground">Sort:</span>
+              <span className="min-w-8 truncate font-semibold text-foreground">
                 {activeColumn.label}
+              </span>
+              <span className="shrink-[0.2] truncate text-muted-foreground">
+                · {directionText}
               </span>
               <SortIcon
                 aria-hidden="true"
@@ -581,26 +587,41 @@ function MobileSortControl<Id extends string>({
             <span className="font-semibold text-foreground">Sort</span>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={6} className="w-56">
+        <DropdownMenuContent align="end" sideOffset={6} className="w-64">
           {columns.map((column) => {
             const active = column.id === sort.key
+            const itemDirectionText = sortDirectionText(
+              column,
+              active ? sort.direction : "asc",
+            )
             return (
               <DropdownMenuItem
                 key={column.id}
                 className={cn(
-                  "justify-between",
+                  "justify-between gap-3",
                   active && "font-semibold text-foreground",
                 )}
                 onClick={() => onSort(column.id)}
               >
-                <span className="truncate">{column.label}</span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate">{column.label}</span>
+                  {active ? (
+                    <span className="truncate text-caption font-normal text-muted-foreground">
+                      {itemDirectionText} · Tap to reverse
+                    </span>
+                  ) : null}
+                </div>
                 {active ? (
                   <SortIcon
                     aria-hidden="true"
                     className="size-3.5 shrink-0 text-primary"
                     strokeWidth={2.4}
                   />
-                ) : null}
+                ) : (
+                  <span className="shrink-0 text-caption text-muted-foreground">
+                    {itemDirectionText}
+                  </span>
+                )}
               </DropdownMenuItem>
             )
           })}

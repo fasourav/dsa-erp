@@ -107,6 +107,18 @@ function parseExplicitPx(width: string | undefined): number | null {
   return match ? Number(match[1]) : null
 }
 
+function isDateColumn<Id extends string>(
+  column: Pick<ListColumn<Id>, "id" | "label">,
+): boolean {
+  const id = column.id
+  return (
+    /date/i.test(id) ||
+    /date/i.test(column.label) ||
+    /(?:On|At)$/.test(id) ||
+    /^(?:month|period|when|lastLogin)$/i.test(id)
+  )
+}
+
 function defaultColumnWidthPx<Id extends string>(
   column: ListColumn<Id>,
   index: number,
@@ -118,13 +130,7 @@ function defaultColumnWidthPx<Id extends string>(
     return dense ? 164 : 176
   }
 
-  const isDate =
-    /date/i.test(id) ||
-    /date/i.test(column.label) ||
-    /(?:On|At)$/.test(id) ||
-    /^(?:month|period)$/i.test(id)
-
-  if (isDate) {
+  if (isDateColumn(column)) {
     return dense ? 120 : 122
   }
 
@@ -176,6 +182,19 @@ function defaultColumnWidthPx<Id extends string>(
   }
 
   return dense ? 196 : 192
+}
+
+export function sortDirectionText<Id extends string>(
+  column: Pick<ListColumn<Id>, "id" | "label" | "align">,
+  direction: SortDirection,
+): string {
+  if (isDateColumn(column)) {
+    return direction === "asc" ? "Oldest first" : "Newest first"
+  }
+  if (column.align === "right") {
+    return direction === "asc" ? "Low to high" : "High to low"
+  }
+  return direction === "asc" ? "A to Z" : "Z to A"
 }
 
 export function toggleSort<Id extends string>(
