@@ -1,13 +1,13 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import Link from "next/link"
 import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { formatIsoDate } from "@/lib/format"
 import {
   CLIENT_PAGE_SIZES,
@@ -127,12 +127,12 @@ export function ExpenseTable({
         pagingLabel="Expense pagination"
         mobileItem={(row) => ({
           title: row.purchaseOrderId ? (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${row.purchaseOrderId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.vendorName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             row.vendorName || "—"
           ),
@@ -176,12 +176,12 @@ function Cell({
       return (
         <span className="flex min-w-0 flex-col">
           {row.purchaseOrderId && row.vendorName ? (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${row.purchaseOrderId}`}
               className="truncate text-ui font-medium underline-offset-4 hover:underline"
             >
               {row.vendorName}
-            </Link>
+            </RecordLink>
           ) : (
             <span className={cn("truncate", !row.vendorName && "text-muted-foreground")}>
               {row.vendorName || "—"}

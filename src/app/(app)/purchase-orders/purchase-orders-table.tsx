@@ -15,6 +15,7 @@ import { CustomizeColumns, DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -317,12 +318,12 @@ export function PurchaseOrdersTable({
         pagingLabel="Purchase orders pagination"
         mobileItem={(order) => ({
           title: (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${order.id}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {order.vendorName || "—"}
-            </Link>
+            </RecordLink>
           ),
           subtitle: [
             purchaseOrderDetailLine(order),
@@ -405,12 +406,12 @@ function CellValue({
         return <span className="text-ui font-semibold text-muted-foreground">Operational</span>
       }
       return order.projectName ? (
-        <Link
+        <RecordLink
           href={`/projects/${order.projectId}`}
           className="block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         >
           {order.projectName}
-        </Link>
+        </RecordLink>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -418,7 +419,7 @@ function CellValue({
       const detail = purchaseOrderDetailLine(order)
       return (
         <div className="min-w-0">
-          <Link
+          <RecordLink
             href={`/purchase-orders/${order.id}`}
             className={cn(
               "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -426,7 +427,7 @@ function CellValue({
             )}
           >
             {order.vendorName || "—"}
-          </Link>
+          </RecordLink>
           {detail ? (
             <p className="truncate text-label text-muted-foreground">{detail}</p>
           ) : null}

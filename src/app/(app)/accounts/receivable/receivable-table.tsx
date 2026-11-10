@@ -9,6 +9,7 @@ import { CustomizeColumns, DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import {
   ListFilterBar,
   SettlementFilterControl,
@@ -213,12 +214,12 @@ export function ReceivableTable({
         pagingLabel="Accounts Receivable pagination"
         mobileItem={(row) => ({
           title: row.projectId ? (
-            <Link
+            <RecordLink
               href={`/accounts/invoices?project=${row.projectId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.projectName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             row.projectName || "—"
           ),
@@ -282,7 +283,7 @@ function Cell({
     case "projectName":
       if (row.projectId) {
         return (
-          <Link
+          <RecordLink
             href={`/accounts/invoices?project=${row.projectId}`}
             className={cn(
               "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -290,7 +291,7 @@ function Cell({
             )}
           >
             {row.projectName || "—"}
-          </Link>
+          </RecordLink>
         )
       }
       return (

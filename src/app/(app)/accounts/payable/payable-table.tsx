@@ -9,6 +9,7 @@ import { ColumnHint, DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import {
   ListFilterBar,
   SettlementFilterControl,
@@ -198,12 +199,12 @@ export function PayableTable({
         pagingLabel="Accounts Payable pagination"
         mobileItem={(row) => ({
           title: row.purchaseOrderId ? (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${row.purchaseOrderId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.vendorName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             row.vendorName || "—"
           ),
@@ -274,12 +275,12 @@ function Cell({
     case "projectName":
       if (row.projectId && row.projectName && row.projectName !== "Operational") {
         return (
-          <Link
+          <RecordLink
             href={`/projects/${row.projectId}`}
             className="block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
           >
             {row.projectName}
-          </Link>
+          </RecordLink>
         )
       }
       return (
@@ -295,12 +296,12 @@ function Cell({
     case "vendorName":
       if (row.purchaseOrderId && row.vendorName) {
         return (
-          <Link
+          <RecordLink
             href={`/purchase-orders/${row.purchaseOrderId}`}
             className="block truncate rounded-sm text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
           >
             {row.vendorName}
-          </Link>
+          </RecordLink>
         )
       }
       return row.vendorName ? (

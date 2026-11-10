@@ -15,6 +15,7 @@ import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader, SectionHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -406,12 +407,12 @@ function Cell({
             {expense.createdByName} · {formatRecordedAt(expense.createdAt)}
           </span>
           {expense.fromPurchaseOrder ? (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${expense.purchaseOrderId}`}
               className="text-label text-muted-foreground underline underline-offset-4"
             >
               From Operational PO
-            </Link>
+            </RecordLink>
           ) : null}
           {expense.vendorName ? (
             <span className="text-label text-muted-foreground">

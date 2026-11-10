@@ -14,6 +14,7 @@ import { DataList, type DataListMobileItem } from "@/components/data-list"
 import { Money } from "@/components/money"
 import { Badge } from "@/components/ui/badge"
 import { RecordAttachments } from "@/components/record-attachments"
+import { RecordLink } from "@/components/record-link"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -306,12 +307,12 @@ export function ProjectSummarySection({
             sortValue={purchaseSortValue}
             mobileItem={(order) => ({
               title: (
-                <Link
+                <RecordLink
                   href={`/purchase-orders/${order.id}`}
                   className="block truncate underline-offset-4 hover:underline"
                 >
                   {order.vendorName || "—"}
-                </Link>
+                </RecordLink>
               ),
               value: <Money value={order.pending} />,
               subtitle: [
@@ -594,7 +595,7 @@ function PurchaseCell({
           type="button"
           variant="link"
           nativeButton={false}
-          render={<Link href={`/purchase-orders/${order.id}`} />}
+          render={<RecordLink href={`/purchase-orders/${order.id}`} />}
           className="h-auto min-h-8 px-0 text-ui font-semibold text-foreground"
         >
           {order.vendorName || "—"}

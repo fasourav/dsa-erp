@@ -4,7 +4,6 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil } from "lucide-react"
-import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { RecoveryPlanDialog } from "@/app/(app)/backlog/recovery-plan-dialog"
@@ -12,6 +11,7 @@ import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -151,12 +151,12 @@ export function BacklogTable({
         pagingLabel="Backlog pagination"
         mobileItem={(row) => ({
           title: (
-            <Link
+            <RecordLink
               href={`/projects/${row.id}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.projectName || "—"}
-            </Link>
+            </RecordLink>
           ),
           value: row.status ? <StatusBadge status={row.status} /> : undefined,
           subtitle: row.recoveryPlan || "—",
@@ -206,7 +206,7 @@ function Cell({
   switch (columnId) {
     case "projectName":
       return (
-        <Link
+        <RecordLink
           href={`/projects/${row.id}`}
           className={cn(
             "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -214,7 +214,7 @@ function Cell({
           )}
         >
           {row.projectName || "—"}
-        </Link>
+        </RecordLink>
       )
     case "projectValue":
     case "amountPaid":

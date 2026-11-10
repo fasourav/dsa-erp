@@ -4,7 +4,6 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
-import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVatTaxPayment } from "@/app/(app)/accounts/vat-tax/actions"
@@ -14,6 +13,7 @@ import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -229,12 +229,12 @@ export function VatTaxTable({
         pagingLabel="VAT tax pagination"
         mobileItem={(payment) => ({
           title: payment.projectId ? (
-            <Link
+            <RecordLink
               href={`/projects/${payment.projectId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {payment.projectName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             payment.projectName || "—"
           ),
@@ -317,7 +317,7 @@ function Cell({
     case "projectName":
       if (payment.projectId) {
         return (
-          <Link
+          <RecordLink
             href={`/projects/${payment.projectId}`}
             className={cn(
               "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -325,7 +325,7 @@ function Cell({
             )}
           >
             {payment.projectName || "—"}
-          </Link>
+          </RecordLink>
         )
       }
       return (

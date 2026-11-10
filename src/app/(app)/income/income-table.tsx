@@ -1,13 +1,13 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import Link from "next/link"
 import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { Badge } from "@/components/ui/badge"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { incomeColumnStore } from "@/lib/income-column-store"
@@ -128,12 +128,12 @@ export function IncomeTable({
         pagingLabel="Income pagination"
         mobileItem={(row) => ({
           title: row.projectId ? (
-            <Link
+            <RecordLink
               href={`/projects/${row.projectId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.projectName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             row.projectName || "—"
           ),
@@ -175,7 +175,7 @@ function Cell({ row, columnId }: { row: IncomeRow; columnId: IncomeColumnId }) {
     case "projectName":
       if (row.projectId) {
         return (
-          <Link
+          <RecordLink
             href={`/projects/${row.projectId}`}
             className={cn(
               "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -183,7 +183,7 @@ function Cell({ row, columnId }: { row: IncomeRow; columnId: IncomeColumnId }) {
             )}
           >
             {row.projectName || "—"}
-          </Link>
+          </RecordLink>
         )
       }
       return (

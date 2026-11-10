@@ -13,6 +13,7 @@ import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -359,12 +360,12 @@ function Cell({
   switch (columnId) {
     case "month":
       return (
-        <Link
+        <RecordLink
           href={`/hr/payroll/${salary.id}`}
           className="text-ui font-semibold"
         >
           {monthLabel(salary.periodYear, salary.periodMonth)}
-        </Link>
+        </RecordLink>
       )
     case "employees":
       return <span className="tabular-nums">{salary.lineCount}</span>
