@@ -365,8 +365,9 @@ function CellValue({
           <Button
             type="button"
             variant="link"
+            title={lead.leadName || undefined}
             className={cn(
-              "h-auto min-h-8 px-0 text-ui font-semibold text-foreground",
+              "h-auto max-w-full min-h-8 truncate px-0 text-left text-ui font-semibold text-foreground",
               !lead.leadName && "text-muted-foreground",
             )}
             aria-label={`Open details for ${lead.leadName || "lead"}`}
