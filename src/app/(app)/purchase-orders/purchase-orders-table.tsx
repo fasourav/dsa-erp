@@ -387,7 +387,12 @@ function CellValue({
         return <span className="text-ui font-semibold text-muted-foreground">Operational</span>
       }
       return order.projectName ? (
-        <span className="text-ui font-semibold">{order.projectName}</span>
+        <Link
+          href={`/projects/${order.projectId}`}
+          className="block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        >
+          {order.projectName}
+        </Link>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -395,14 +400,15 @@ function CellValue({
       const detail = purchaseOrderDetailLine(order)
       return (
         <div className="min-w-0">
-          <p
+          <Link
+            href={`/purchase-orders/${order.id}`}
             className={cn(
-              "truncate text-ui font-semibold",
+              "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
               !order.vendorName && "text-muted-foreground",
             )}
           >
             {order.vendorName || "—"}
-          </p>
+          </Link>
           {detail ? (
             <p className="truncate text-label text-muted-foreground">{detail}</p>
           ) : null}

@@ -209,7 +209,16 @@ export function ReceivableTable({
         onPageChange={setPage}
         pagingLabel="Accounts Receivable pagination"
         mobileItem={(row) => ({
-          title: row.projectName || "—",
+          title: row.projectId ? (
+            <Link
+              href={`/accounts/invoices?project=${row.projectId}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {row.projectName || "—"}
+            </Link>
+          ) : (
+            row.projectName || "—"
+          ),
           value: row.status ? <StatusBadge status={row.status} /> : undefined,
           subtitle: row.clientName || "—",
           meta: (
@@ -268,6 +277,19 @@ function Cell({
 }) {
   switch (columnId) {
     case "projectName":
+      if (row.projectId) {
+        return (
+          <Link
+            href={`/accounts/invoices?project=${row.projectId}`}
+            className={cn(
+              "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
+              !row.projectName && "text-muted-foreground",
+            )}
+          >
+            {row.projectName || "—"}
+          </Link>
+        )
+      }
       return (
         <span
           className={cn(

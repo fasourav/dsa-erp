@@ -6,6 +6,7 @@ import {
 
 export type PoExpenseRow = {
   id: string
+  purchaseOrderId?: string
   expenseDate: string
   projectName: string
   vendorName: string

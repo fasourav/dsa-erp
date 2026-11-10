@@ -1,6 +1,7 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
+import Link from "next/link"
 import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
@@ -109,7 +110,16 @@ export function ExpenseTable({
         onPageChange={setPage}
         pagingLabel="Expense pagination"
         mobileItem={(row) => ({
-          title: row.vendorName || "—",
+          title: row.purchaseOrderId ? (
+            <Link
+              href={`/purchase-orders/${row.purchaseOrderId}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {row.vendorName || "—"}
+            </Link>
+          ) : (
+            row.vendorName || "—"
+          ),
           subtitle: [row.workType, row.projectName, row.expenseDate ? formatIsoDate(row.expenseDate) : "", row.bankingChannel]
             .filter(Boolean)
             .join(" · "),
@@ -149,9 +159,18 @@ function Cell({
     case "vendorName":
       return (
         <span className="flex min-w-0 flex-col">
-          <span className={cn("truncate", !row.vendorName && "text-muted-foreground")}>
-            {row.vendorName || "—"}
-          </span>
+          {row.purchaseOrderId && row.vendorName ? (
+            <Link
+              href={`/purchase-orders/${row.purchaseOrderId}`}
+              className="truncate text-ui font-medium underline-offset-4 hover:underline"
+            >
+              {row.vendorName}
+            </Link>
+          ) : (
+            <span className={cn("truncate", !row.vendorName && "text-muted-foreground")}>
+              {row.vendorName || "—"}
+            </span>
+          )}
           {row.workType ? (
             <span className="truncate text-caption text-muted-foreground">{row.workType}</span>
           ) : null}

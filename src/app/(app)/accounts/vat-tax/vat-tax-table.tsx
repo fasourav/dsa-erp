@@ -4,6 +4,7 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVatTaxPayment } from "@/app/(app)/accounts/vat-tax/actions"
@@ -202,7 +203,16 @@ export function VatTaxTable({
         onPageChange={setPage}
         pagingLabel="VAT tax pagination"
         mobileItem={(payment) => ({
-          title: payment.projectName || "—",
+          title: payment.projectId ? (
+            <Link
+              href={`/projects/${payment.projectId}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {payment.projectName || "—"}
+            </Link>
+          ) : (
+            payment.projectName || "—"
+          ),
           value: <Money value={payment.amount} />,
           subtitle: [payment.paymentMethod, payment.paidOn ? formatIsoDate(payment.paidOn) : null]
             .filter(Boolean)
@@ -280,6 +290,19 @@ function Cell({
 }) {
   switch (columnId) {
     case "projectName":
+      if (payment.projectId) {
+        return (
+          <Link
+            href={`/projects/${payment.projectId}`}
+            className={cn(
+              "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
+              !payment.projectName && "text-muted-foreground",
+            )}
+          >
+            {payment.projectName || "—"}
+          </Link>
+        )
+      }
       return (
         <span
           className={cn(

@@ -263,7 +263,14 @@ export function ClientInvoicesTable({
           meta: <Money value={invoice.amount} />,
         })}
         renderCell={(invoice, columnId) => (
-          <InvoiceCell invoice={invoice} columnId={columnId} />
+          <InvoiceCell
+            invoice={invoice}
+            columnId={columnId}
+            onOpenPayments={() => {
+              setPaymentsInvoiceId(invoice.id)
+              setPaymentsOpen(true)
+            }}
+          />
         )}
         renderActions={(invoice) => (
           <DropdownMenu>
@@ -360,9 +367,11 @@ function projectTitle(name: string) {
 function InvoiceCell({
   invoice,
   columnId,
+  onOpenPayments,
 }: {
   invoice: ClientInvoiceRow
   columnId: ClientInvoiceColumnId
+  onOpenPayments: () => void
 }) {
   switch (columnId) {
     case "issuedOn":
@@ -373,7 +382,15 @@ function InvoiceCell({
       )
     case "projectName":
       return (
-        <span className="text-ui font-semibold">{projectTitle(invoice.projectName)}</span>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto min-h-8 px-0 text-ui font-semibold text-foreground"
+          aria-label={`Open payments for ${projectTitle(invoice.projectName)}`}
+          onClick={onOpenPayments}
+        >
+          <span className="truncate">{projectTitle(invoice.projectName)}</span>
+        </Button>
       )
     case "clientName":
       return invoice.clientName ? (

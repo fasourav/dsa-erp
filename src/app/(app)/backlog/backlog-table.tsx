@@ -4,6 +4,7 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { RecoveryPlanDialog } from "@/app/(app)/backlog/recovery-plan-dialog"
@@ -140,7 +141,14 @@ export function BacklogTable({
         onPageChange={setPage}
         pagingLabel="Backlog pagination"
         mobileItem={(row) => ({
-          title: row.projectName || "—",
+          title: (
+            <Link
+              href={`/projects/${row.id}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {row.projectName || "—"}
+            </Link>
+          ),
           value: row.status ? <StatusBadge status={row.status} /> : undefined,
           subtitle: row.recoveryPlan || "—",
           meta: <Money value={row.backlogAmount} />,
@@ -189,14 +197,15 @@ function Cell({
   switch (columnId) {
     case "projectName":
       return (
-        <span
+        <Link
+          href={`/projects/${row.id}`}
           className={cn(
-            "text-ui font-semibold",
+            "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
             !row.projectName && "text-muted-foreground",
           )}
         >
           {row.projectName || "—"}
-        </span>
+        </Link>
       )
     case "projectValue":
     case "amountPaid":

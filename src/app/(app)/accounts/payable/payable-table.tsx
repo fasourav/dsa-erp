@@ -270,6 +270,16 @@ function Cell({
 }) {
   switch (columnId) {
     case "projectName":
+      if (row.projectId && row.projectName && row.projectName !== "Operational") {
+        return (
+          <Link
+            href={`/projects/${row.projectId}`}
+            className="block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+          >
+            {row.projectName}
+          </Link>
+        )
+      }
       return (
         <span
           className={cn(
@@ -281,6 +291,16 @@ function Cell({
         </span>
       )
     case "vendorName":
+      if (row.purchaseOrderId && row.vendorName) {
+        return (
+          <Link
+            href={`/purchase-orders/${row.purchaseOrderId}`}
+            className="block truncate rounded-sm text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+          >
+            {row.vendorName}
+          </Link>
+        )
+      }
       return row.vendorName ? (
         <span>{row.vendorName}</span>
       ) : (
