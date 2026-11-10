@@ -126,7 +126,9 @@ export function IncomeTable({
               Invoice Amount{" "}
               <Money
                 value={row.invoiceAmount}
-                className="font-semibold text-foreground"
+                className={
+                  row.invoiceAmount > 0 ? "text-success" : "text-muted-foreground"
+                }
               />
             </span>
           ),
