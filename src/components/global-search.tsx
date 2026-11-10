@@ -145,7 +145,7 @@ export function GlobalSearch() {
         size="icon"
         aria-label="Search"
         aria-keyshortcuts="Control+K Meta+K"
-        className="md:h-8 md:w-60 md:justify-start md:gap-2 md:bg-fill md:px-3.5 md:font-normal md:text-muted-foreground md:shadow-none md:backdrop-blur-none md:hover:bg-fill-strong"
+        className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong aria-expanded:bg-fill-strong md:h-8 md:w-60 md:justify-start md:gap-2 md:px-3.5 md:font-normal md:text-muted-foreground"
         onClick={openPalette}
       >
         <Search aria-hidden="true" className="size-4.5 md:size-4" />

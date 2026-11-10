@@ -232,7 +232,20 @@ export function ClientInvoicesTable({
         )}
         hidePagination
         mobileItem={(invoice) => ({
-          title: projectTitle(invoice.projectName),
+          title: (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto min-h-8 px-0 text-row font-semibold text-foreground"
+              aria-label={`Open payments for ${projectTitle(invoice.projectName)}`}
+              onClick={() => {
+                setPaymentsInvoiceId(invoice.id)
+                setPaymentsOpen(true)
+              }}
+            >
+              {projectTitle(invoice.projectName)}
+            </Button>
+          ),
           value: <StatusBadge status={invoice.status} />,
           subtitle: [
             invoice.issuedOn ? formatIsoDate(invoice.issuedOn) : "",

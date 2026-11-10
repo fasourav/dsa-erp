@@ -24,6 +24,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -132,6 +133,8 @@ export type DataListMobileItem = {
   subtitle?: ReactNode
   /** Sits beside the subtitle and stays visible when the subtitle truncates. */
   subtitleAccessory?: ReactNode
+  /** Optional second detail line below the subtitle. */
+  detail?: ReactNode
   /** Right side of the first line, usually a <Money>. */
   value?: ReactNode
   /** Right side of the second line: a <StatusBadge>, or the amount when it reads with the subtitle. */
@@ -193,6 +196,7 @@ export function DataList<T, Id extends string>({
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
   )
+  const sortableColumns = columns.filter((column) => column.sortable !== false)
   const dense = visibleColumns.length >= 10
   const compactActions = dense || visibleColumns.length >= 6
   const hasActions = renderActions !== undefined
@@ -207,6 +211,13 @@ export function DataList<T, Id extends string>({
       ) : null}
       {mobileItem ? (
         <div className="flex flex-col gap-2.5 md:hidden">
+          {sortableColumns.length > 0 ? (
+            <MobileSortControl
+              columns={sortableColumns}
+              sort={sort}
+              onSort={onSort}
+            />
+          ) : null}
           <div className="overflow-hidden rounded-card glass-panel">
             {error ? (
               <p role="alert" className="px-4 py-8 text-center text-callout text-destructive">
@@ -229,7 +240,9 @@ export function DataList<T, Id extends string>({
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <div className="flex items-center justify-between gap-2.5">
-                          <span className="min-w-0 truncate text-row font-semibold">{item.title}</span>
+                          <span className="min-w-0 truncate text-row font-semibold [&_a]:block [&_a]:max-w-full [&_a]:truncate [&_a:focus-visible]:ring-inset [&_button]:inline-block [&_button]:max-w-full [&_button]:min-w-0 [&_button]:truncate [&_button]:text-left [&_button]:align-middle [&_button:focus-visible]:ring-inset [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:text-row [&_[data-slot=button]]:font-semibold">
+                            {item.title}
+                          </span>
                           {item.value ? (
                             <span className="shrink-0 text-callout font-strong tabular-nums">
                               {item.value}
@@ -239,7 +252,9 @@ export function DataList<T, Id extends string>({
                         {item.subtitle || item.subtitleAccessory || item.meta ? (
                           <div className="mt-0.5 flex items-center justify-between gap-2.5">
                             <span className="flex min-w-0 flex-1 items-center gap-1 text-label text-muted-foreground">
-                              <span className="min-w-0 truncate">{item.subtitle}</span>
+                              {item.subtitle ? (
+                                <span className="min-w-0 line-clamp-2 break-words">{item.subtitle}</span>
+                              ) : null}
                               {item.subtitleAccessory ? (
                                 <span className="shrink-0">{item.subtitleAccessory}</span>
                               ) : null}
@@ -247,6 +262,11 @@ export function DataList<T, Id extends string>({
                             {item.meta ? (
                               <span className="shrink-0 text-callout font-strong tabular-nums">{item.meta}</span>
                             ) : null}
+                          </div>
+                        ) : null}
+                        {item.detail ? (
+                          <div className="mt-1 min-w-0 line-clamp-2 break-words text-label text-muted-foreground">
+                            {item.detail}
                           </div>
                         ) : null}
                       </div>
@@ -501,6 +521,83 @@ export function DataList<T, Id extends string>({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function MobileSortControl<Id extends string>({
+  columns,
+  sort,
+  onSort,
+}: {
+  columns: readonly ListColumn<Id>[]
+  sort: SortState<Id>
+  onSort: (id: Id) => void
+}) {
+  const activeColumn =
+    columns.find((column) => column.id === sort.key) ?? null
+  const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
+  const directionLabel = sort.direction === "asc" ? "ascending" : "descending"
+
+  return (
+    <div className="flex items-center justify-end px-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 max-w-full gap-1.5 px-3 text-label"
+              aria-label={
+                activeColumn
+                  ? `Sort by ${activeColumn.label}, ${directionLabel}`
+                  : "Sort"
+              }
+            />
+          }
+        >
+          {activeColumn ? (
+            <>
+              <span className="text-muted-foreground">Sort:</span>
+              <span className="truncate font-semibold text-foreground">
+                {activeColumn.label}
+              </span>
+              <SortIcon
+                aria-hidden="true"
+                className="size-3.5 shrink-0"
+                strokeWidth={2.4}
+              />
+            </>
+          ) : (
+            <span className="font-semibold text-foreground">Sort</span>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={6} className="w-56">
+          {columns.map((column) => {
+            const active = column.id === sort.key
+            return (
+              <DropdownMenuItem
+                key={column.id}
+                className={cn(
+                  "justify-between",
+                  active && "font-semibold text-foreground",
+                )}
+                onClick={() => onSort(column.id)}
+              >
+                <span className="truncate">{column.label}</span>
+                {active ? (
+                  <SortIcon
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 text-primary"
+                    strokeWidth={2.4}
+                  />
+                ) : null}
+              </DropdownMenuItem>
+            )
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

@@ -106,16 +106,31 @@ export function IncomeTable({
         pagingLabel="Income pagination"
         mobileItem={(row) => ({
           title: row.projectName || "—",
-          subtitle: [row.bankingChannel, row.paidOn ? formatIsoDate(row.paidOn) : ""]
-            .filter(Boolean)
-            .join(" · "),
-          meta: (
+          value: (
             <Money
               value={row.collectedAmount}
               className={
                 row.collectedAmount > 0 ? "text-success" : "text-muted-foreground"
               }
             />
+          ),
+          subtitle: [
+            row.projectType,
+            row.bankingChannel,
+            row.paidOn ? formatIsoDate(row.paidOn) : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          detail: (
+            <span>
+              Invoice Amount{" "}
+              <Money
+                value={row.invoiceAmount}
+                className={
+                  row.invoiceAmount > 0 ? "text-success" : "text-muted-foreground"
+                }
+              />
+            </span>
           ),
         })}
         renderCell={(row, columnId) => <Cell row={row} columnId={columnId} />}

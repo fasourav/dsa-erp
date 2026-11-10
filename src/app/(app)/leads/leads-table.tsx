@@ -104,6 +104,7 @@ export function LeadsTable({
   initialQuery?: string
 }) {
   const canAdd = useCan("leads", "add")
+  const canEdit = useCan("leads", "edit")
 
   const visibility = useSyncExternalStore(
     subscribeColumnVisibility,
@@ -119,6 +120,7 @@ export function LeadsTable({
   const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formLead, setFormLead] = useState<LeadRow | null>(null)
+  const [formMode, setFormMode] = useState<"view" | "edit">("edit")
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<LeadRow | null>(null)
@@ -146,6 +148,14 @@ export function LeadsTable({
 
   function openForm(lead: LeadRow | null) {
     setFormLead(lead)
+    setFormMode("edit")
+    setFormSession((s) => s + 1)
+    setFormOpen(true)
+  }
+
+  function openView(lead: LeadRow) {
+    setFormLead(lead)
+    setFormMode("view")
     setFormSession((s) => s + 1)
     setFormOpen(true)
   }
@@ -276,13 +286,26 @@ export function LeadsTable({
         onPageChange={setPage}
         pagingLabel="Leads pagination"
         mobileItem={(lead) => ({
-          title: lead.leadName || "—",
+          title: (
+            <Button
+              type="button"
+              variant="link"
+              className={cn(
+                "h-auto min-h-8 px-0 text-row font-semibold text-foreground",
+                !lead.leadName && "text-muted-foreground",
+              )}
+              aria-label={`Open details for ${lead.leadName || "lead"}`}
+              onClick={() => openView(lead)}
+            >
+              {lead.leadName || "—"}
+            </Button>
+          ),
           value: <StatusBadge status={lead.status} />,
           subtitle: [lead.projectName, lead.currentStage].filter(Boolean).join(" · "),
           meta: <Money value={lead.estimatedValue} />,
         })}
         renderCell={(lead, columnId) => (
-          <CellValue lead={lead} columnId={columnId} />
+          <CellValue lead={lead} columnId={columnId} onView={openView} />
         )}
         renderActions={(lead) => (
           <RowActions
@@ -301,6 +324,8 @@ export function LeadsTable({
         onOpenChange={setFormOpen}
         lead={formLead}
         lookups={lookups}
+        readOnly={formMode === "view"}
+        onEdit={canEdit && formLead ? () => setFormMode("edit") : undefined}
       />
 
       <DeleteConfirmDialog
@@ -327,17 +352,29 @@ export function LeadsTable({
 function CellValue({
   lead,
   columnId,
+  onView,
 }: {
   lead: LeadRow
   columnId: ColumnId
+  onView: (lead: LeadRow) => void
 }) {
   switch (columnId) {
     case "leadName":
       return (
         <div className="flex w-full min-w-0 flex-col items-start gap-1.5">
-          <span className={cn("text-ui font-semibold", !lead.leadName && "text-muted-foreground")}>
+          <Button
+            type="button"
+            variant="link"
+            title={lead.leadName || undefined}
+            className={cn(
+              "h-auto max-w-full min-h-8 truncate px-0 text-left text-ui font-semibold text-foreground",
+              !lead.leadName && "text-muted-foreground",
+            )}
+            aria-label={`Open details for ${lead.leadName || "lead"}`}
+            onClick={() => onView(lead)}
+          >
             {lead.leadName || "—"}
-          </span>
+          </Button>
           {lead.kindLabel ? <Badge variant="outline">{lead.kindLabel}</Badge> : null}
         </div>
       )

@@ -116,7 +116,15 @@ export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
       }}
     >
       <DropdownMenuTrigger
-        render={<Button type="button" variant="outline" size="icon" aria-label="More" />}
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="More"
+            className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong aria-expanded:bg-fill-strong"
+          />
+        }
       >
         <Ellipsis aria-hidden="true" className="size-5" />
       </DropdownMenuTrigger>
