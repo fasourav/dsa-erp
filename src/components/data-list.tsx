@@ -132,6 +132,8 @@ export type DataListMobileItem = {
   subtitle?: ReactNode
   /** Sits beside the subtitle and stays visible when the subtitle truncates. */
   subtitleAccessory?: ReactNode
+  /** Optional second detail line below the subtitle. */
+  detail?: ReactNode
   /** Right side of the first line, usually a <Money>. */
   value?: ReactNode
   /** Right side of the second line: a <StatusBadge>, or the amount when it reads with the subtitle. */
@@ -229,7 +231,9 @@ export function DataList<T, Id extends string>({
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <div className="flex items-center justify-between gap-2.5">
-                          <span className="min-w-0 truncate text-row font-semibold">{item.title}</span>
+                          <span className="min-w-0 truncate text-row font-semibold [&_a]:block [&_a]:max-w-full [&_a]:truncate [&_a:focus-visible]:ring-inset [&_button]:inline-block [&_button]:max-w-full [&_button]:min-w-0 [&_button]:truncate [&_button]:text-left [&_button]:align-middle [&_button:focus-visible]:ring-inset [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:text-row [&_[data-slot=button]]:font-semibold">
+                            {item.title}
+                          </span>
                           {item.value ? (
                             <span className="shrink-0 text-callout font-strong tabular-nums">
                               {item.value}
@@ -239,7 +243,9 @@ export function DataList<T, Id extends string>({
                         {item.subtitle || item.subtitleAccessory || item.meta ? (
                           <div className="mt-0.5 flex items-center justify-between gap-2.5">
                             <span className="flex min-w-0 flex-1 items-center gap-1 text-label text-muted-foreground">
-                              <span className="min-w-0 truncate">{item.subtitle}</span>
+                              {item.subtitle ? (
+                                <span className="min-w-0 line-clamp-2 break-words">{item.subtitle}</span>
+                              ) : null}
                               {item.subtitleAccessory ? (
                                 <span className="shrink-0">{item.subtitleAccessory}</span>
                               ) : null}
@@ -247,6 +253,11 @@ export function DataList<T, Id extends string>({
                             {item.meta ? (
                               <span className="shrink-0 text-callout font-strong tabular-nums">{item.meta}</span>
                             ) : null}
+                          </div>
+                        ) : null}
+                        {item.detail ? (
+                          <div className="mt-1 min-w-0 line-clamp-2 break-words text-label text-muted-foreground">
+                            {item.detail}
                           </div>
                         ) : null}
                       </div>
