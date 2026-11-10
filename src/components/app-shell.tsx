@@ -122,7 +122,7 @@ export function AppShell({
                 variant="outline"
                 size="icon"
                 aria-label="Back"
-                className="md:hidden"
+                className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong md:hidden"
                 nativeButton={false}
                 render={<Link href={backHref(pathname)} />}
               >
