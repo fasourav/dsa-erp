@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -408,9 +408,10 @@ function RecordList<T, Id extends string>({
   const [page, setPage] = useState(1)
   const sorted = useMemo(() => {
     const direction = sort.direction === "asc" ? 1 : -1
+    const isDateSort = sort.key === "paidOn" || sort.key === "issuedOn"
     return [...rows].sort(
       (left, right) =>
-        compareSortValues(sortValue(left, sort.key), sortValue(right, sort.key)) * direction,
+        compareSortValues(sortValue(left, sort.key), sortValue(right, sort.key), isDateSort) * direction,
     )
   }, [rows, sort, sortValue])
   const pageResult = useMemo(() => paginateRows(sorted, page), [page, sorted])
@@ -445,12 +446,14 @@ function RecordList<T, Id extends string>({
   )
 }
 
-function compareSortValues(left: string | number, right: string | number) {
+function compareSortValues(left: string | number, right: string | number, isDate = false) {
   if (typeof left === "number" && typeof right === "number") {
     return left - right
   }
 
-  return String(left).localeCompare(String(right), "en", { sensitivity: "base" })
+  return isDate
+    ? String(left).localeCompare(String(right))
+    : compareText(String(left), String(right))
 }
 
 function PaymentTypeBadge({ direction }: { direction: RecentClientPayment["direction"] }) {

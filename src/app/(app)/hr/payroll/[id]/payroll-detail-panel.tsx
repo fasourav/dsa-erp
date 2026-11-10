@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -48,9 +48,7 @@ function sortLines(rows: SalaryLine[], sort: SortState<ColumnId>): SalaryLine[] 
     let cmp = 0
     switch (sort.key) {
       case "employee":
-        cmp = left.employeeName.localeCompare(right.employeeName, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(left.employeeName, right.employeeName)
         break
       case "salary":
         cmp = left.salary - right.salary

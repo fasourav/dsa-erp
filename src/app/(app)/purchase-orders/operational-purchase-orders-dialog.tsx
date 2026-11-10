@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { compareText } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -413,19 +414,14 @@ function compareOperational(
     case "issuedOn":
       return left.issuedOn.localeCompare(right.issuedOn)
     case "workType":
-      return left.workType.localeCompare(right.workType, "en", {
-        sensitivity: "base",
-      })
+      return compareText(left.workType, right.workType)
     case "category":
-      return left.officeExpenseCategoryName.localeCompare(
+      return compareText(
+        left.officeExpenseCategoryName,
         right.officeExpenseCategoryName,
-        "en",
-        { sensitivity: "base" },
       )
     case "vendorName":
-      return left.vendorName.localeCompare(right.vendorName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(left.vendorName, right.vendorName)
     case "totalValue":
     case "totalPaid":
     case "totalPending":

@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { statusLabel } from "@/lib/documents/drafts"
+import { compareText } from "@/lib/format"
 import { savedToast } from "@/lib/saved"
 import { cn } from "@/lib/utils"
 import {
@@ -91,9 +92,7 @@ export function DocumentListView({
   const sorted = useMemo(() => {
     const copy = [...items]
     copy.sort((left, right) => {
-      const result = columnText(left, sort.key).localeCompare(columnText(right, sort.key), undefined, {
-        numeric: true,
-      })
+      const result = compareText(columnText(left, sort.key), columnText(right, sort.key))
       return sort.direction === "asc" ? result : -result
     })
     return copy

@@ -29,7 +29,7 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { sumAssetCurrentValue } from "@/lib/asset-value"
 import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 import { useListUrlState } from "@/lib/use-list-url-state"
@@ -54,10 +54,10 @@ function sortAssets(rows: AssetRow[], sort: SortState<ColId>): AssetRow[] {
     let cmp = 0
     switch (sort.key) {
       case "name":
-        cmp = a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+        cmp = compareText(a.name, b.name)
         break
       case "category":
-        cmp = a.category.localeCompare(b.category, "en", { sensitivity: "base" })
+        cmp = compareText(a.category, b.category)
         break
       case "purchaseDate":
         cmp = a.purchaseDate.localeCompare(b.purchaseDate)

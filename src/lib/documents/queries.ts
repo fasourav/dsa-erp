@@ -1,5 +1,5 @@
 import { fetchAllPages } from "@/lib/fetch-pages"
-import { formatIsoDate, formatMoney, toNumber } from "@/lib/format"
+import { compareText, formatIsoDate, formatMoney, toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -331,7 +331,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
           ]),
         } satisfies NamedOption
       })
-      .sort((left, right) => left.name.localeCompare(right.name, "en", { sensitivity: "base" }))
+      .sort((left, right) => compareText(left.name, right.name))
 
     const vendors = vendorRows
       .map((row) => {
@@ -346,7 +346,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
           detail: partyDetail([person, company, row.address, row.phone, row.email]),
         } satisfies NamedOption
       })
-      .sort((left, right) => left.name.localeCompare(right.name, "en", { sensitivity: "base" }))
+      .sort((left, right) => compareText(left.name, right.name))
 
     const projects = projectRows
       .map((row) => ({
@@ -355,7 +355,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
         clientId: row.client_id,
         location: row.location?.trim() ?? "",
       }))
-      .sort((left, right) => left.name.localeCompare(right.name, "en", { sensitivity: "base" }))
+      .sort((left, right) => compareText(left.name, right.name))
 
     const roleLabels = new Map<string, string>([
       ["owner", "Owner"],
@@ -392,7 +392,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
       }
     }
     const employees = Array.from(employeeByKey.values()).sort((left, right) =>
-      left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+      compareText(left.name, right.name),
     )
 
     return {

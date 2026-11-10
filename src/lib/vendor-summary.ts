@@ -1,3 +1,5 @@
+import { compareText } from "@/lib/format"
+
 export const PAGE_SIZE = 10
 
 export const ONLY_OWNERS_CATEGORY_MESSAGE =
@@ -76,9 +78,7 @@ export function sortVendors(
       return primary
     }
 
-    const byName = a.displayName.localeCompare(b.displayName, "en", {
-      sensitivity: "base",
-    })
+    const byName = compareText(a.displayName, b.displayName)
     if (byName !== 0) {
       return byName
     }
@@ -94,18 +94,11 @@ function compareVendors(
 ): number {
   switch (key) {
     case "displayName":
-      return a.displayName.localeCompare(b.displayName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.displayName, b.displayName)
     case "vendorField":
-      return (a.vendorField ?? "").localeCompare(b.vendorField ?? "", "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.vendorField ?? "", b.vendorField ?? "")
     case "contact":
-      return contactSortKey(a).localeCompare(contactSortKey(b), "en", {
-        sensitivity: "base",
-        numeric: true,
-      })
+      return compareText(contactSortKey(a), contactSortKey(b))
     case "totalProjectValue":
     case "totalPaid":
     case "totalDue":
@@ -213,9 +206,7 @@ export function mergeCategorySuggestions(
       const name = value?.trim() ?? ""
       return name ? [name] : []
     })
-    .sort((left, right) =>
-      left.localeCompare(right, "en", { sensitivity: "base" }),
-    )
+    .sort((left, right) => compareText(left, right))
 
   for (const value of extras) {
     pushSuggestion(suggestions, seen, value)

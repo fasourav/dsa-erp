@@ -1,4 +1,4 @@
-import { formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate } from "@/lib/format"
 
 export const PAGE_SIZE = 10
 
@@ -252,7 +252,7 @@ export function sortProjects(
       return primary
     }
 
-    const byName = a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+    const byName = compareText(a.name, b.name)
     if (byName !== 0) {
       return byName
     }
@@ -264,17 +264,15 @@ export function sortProjects(
 function compareProjects(a: ProjectRow, b: ProjectRow, key: ColumnId): number {
   switch (key) {
     case "name":
-      return a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+      return compareText(a.name, b.name)
     case "location":
-      return a.location.localeCompare(b.location, "en", { sensitivity: "base" })
+      return compareText(a.location, b.location)
     case "startedOn":
       return a.startedOn.localeCompare(b.startedOn)
     case "status":
-      return statusLabel(a.status).localeCompare(statusLabel(b.status), "en", {
-        sensitivity: "base",
-      })
+      return compareText(statusLabel(a.status), statusLabel(b.status))
     case "phase":
-      return a.phase.localeCompare(b.phase, "en", { sensitivity: "base" })
+      return compareText(a.phase, b.phase)
     case "totalValue":
       return a.totalValue - b.totalValue
     case "totalPaid":

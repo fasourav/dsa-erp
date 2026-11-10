@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { bankSourceLabel, type BankTransactionRow } from "@/lib/bank"
-import { formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -243,22 +243,17 @@ function compare(
     case "transactionDate":
       return left.transactionDate.localeCompare(right.transactionDate)
     case "type":
-      return bankSourceLabel(left.sourceKind, { projectId: left.projectId }).localeCompare(
+      return compareText(
+        bankSourceLabel(left.sourceKind, { projectId: left.projectId }),
         bankSourceLabel(right.sourceKind, { projectId: right.projectId }),
-        "en",
-        { sensitivity: "base" },
       )
     case "accountName":
-      return left.accountName.localeCompare(right.accountName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(left.accountName, right.accountName)
     case "amount":
       return left.amount - right.amount
     case "paymentMethod":
-      return left.paymentMethod.localeCompare(right.paymentMethod, "en", {
-        sensitivity: "base",
-      })
+      return compareText(left.paymentMethod, right.paymentMethod)
     case "notes":
-      return left.notes.localeCompare(right.notes, "en", { sensitivity: "base" })
+      return compareText(left.notes, right.notes)
   }
 }

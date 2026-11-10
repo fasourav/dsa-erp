@@ -1,5 +1,5 @@
 import { fetchAllPages } from "@/lib/fetch-pages"
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import { roundMoney } from "@/lib/payroll-month"
 import { createClient } from "@/lib/supabase/server"
 
@@ -207,9 +207,7 @@ function toMonthlySalary(
   lines: SalaryLine[],
 ): MonthlySalary {
   const sorted = [...lines].sort((left, right) =>
-    left.employeeName.localeCompare(right.employeeName, "en", {
-      sensitivity: "base",
-    }),
+    compareText(left.employeeName, right.employeeName),
   )
   const totalPaid = roundMoney(sorted.reduce((sum, line) => sum + line.netPay, 0))
 

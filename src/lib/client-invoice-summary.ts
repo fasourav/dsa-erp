@@ -1,3 +1,4 @@
+import { compareText } from "@/lib/format"
 import type { ClientInvoiceStatus } from "@/lib/payment-status"
 import {
   sanitizeColumnVisibility,
@@ -127,10 +128,11 @@ function compareInvoices(
 ): number {
   switch (key) {
     case "issuedOn":
+      return left.issuedOn.localeCompare(right.issuedOn)
     case "projectName":
     case "clientName":
     case "status":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "amount":
     case "paid":
       return left[key] - right[key]

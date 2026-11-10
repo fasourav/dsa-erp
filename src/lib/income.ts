@@ -1,3 +1,4 @@
+import { compareText } from "@/lib/format"
 import { dateInputValue } from "@/lib/project-validation"
 import {
   sanitizeColumnVisibility,
@@ -98,7 +99,7 @@ export function settlePaidInvoice(
   const ordered = [...channels].sort(
     (left, right) =>
       left.date.localeCompare(right.date) ||
-      left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+      compareText(left.name, right.name),
   )
 
   for (const channel of ordered) {
@@ -138,8 +139,9 @@ function compareRows(
     case "projectName":
     case "projectType":
     case "bankingChannel":
+      return compareText(left[key], right[key])
     case "paidOn":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return left.paidOn.localeCompare(right.paidOn)
     case "invoiceAmount":
       return left.invoiceAmount - right.invoiceAmount
     case "collectedAmount":

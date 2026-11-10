@@ -46,7 +46,7 @@ import {
   rangeLabel,
   type SortState,
 } from "@/lib/list-paging"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
@@ -63,23 +63,19 @@ function sortLeads(rows: LeadRow[], sort: SortState<ColumnId>): LeadRow[] {
     let cmp = 0
     switch (sort.key) {
       case "leadName":
-        cmp = a.leadName.localeCompare(b.leadName, "en", { sensitivity: "base" })
+        cmp = compareText(a.leadName, b.leadName)
         break
       case "addedOn":
         cmp = a.addedOn.localeCompare(b.addedOn)
         break
       case "projectName":
-        cmp = a.projectName.localeCompare(b.projectName, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.projectName, b.projectName)
         break
       case "currentStage":
-        cmp = a.currentStage.localeCompare(b.currentStage, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.currentStage, b.currentStage)
         break
       case "source":
-        cmp = a.source.localeCompare(b.source, "en", { sensitivity: "base" })
+        cmp = compareText(a.source, b.source)
         break
       case "estimatedValue":
         cmp = a.estimatedValue - b.estimatedValue
@@ -88,9 +84,7 @@ function sortLeads(rows: LeadRow[], sort: SortState<ColumnId>): LeadRow[] {
         cmp = a.probability - b.probability
         break
       case "status":
-        cmp = a.statusLabel.localeCompare(b.statusLabel, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.statusLabel, b.statusLabel)
         break
     }
     return sort.direction === "asc" ? cmp : -cmp

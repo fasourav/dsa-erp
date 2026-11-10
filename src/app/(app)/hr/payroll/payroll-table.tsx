@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -80,10 +80,9 @@ function sortSalaries(
         cmp = left.paidOn.localeCompare(right.paidOn)
         break
       case "bankAccount":
-        cmp = accountName(left.bankAccountId).localeCompare(
+        cmp = compareText(
+          accountName(left.bankAccountId),
           accountName(right.bankAccountId),
-          "en",
-          { sensitivity: "base" },
         )
         break
       case "status":

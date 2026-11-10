@@ -1,6 +1,6 @@
 import { allows } from "@/lib/access"
 import { fetchAllPages } from "@/lib/fetch-pages"
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import {
   lineBudgetStatus,
   projectBudgetStatus,
@@ -144,7 +144,7 @@ export async function getProjectsOverBudget(): Promise<OverBudgetProject[]> {
         overAmount: roundMoney(actual - planned),
       })
     }
-    rows.sort((left, right) => right.overAmount - left.overAmount || left.name.localeCompare(right.name))
+    rows.sort((left, right) => right.overAmount - left.overAmount || compareText(left.name, right.name))
     return rows
   } catch (error) {
     if (isMissingBudgetRelation(error)) return []
@@ -220,9 +220,7 @@ export async function loadProjectBudgetReport(): Promise<
 
     const lines: ProjectBudgetReportLine[] = []
     const orderedIds = [...projectIds].sort((left, right) =>
-      (names.get(left) || "Project").localeCompare(names.get(right) || "Project", "en", {
-        sensitivity: "base",
-      }),
+      compareText(names.get(left) || "Project", names.get(right) || "Project"),
     )
 
     for (const projectId of orderedIds) {
@@ -375,7 +373,7 @@ function assembleLines(
     .sort(
       (left, right) =>
         left.sortOrder - right.sortOrder ||
-        left.categoryName.localeCompare(right.categoryName, "en", { sensitivity: "base" }),
+        compareText(left.categoryName, right.categoryName),
     )
 }
 

@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 import {
   paginateRows,
@@ -71,19 +71,13 @@ function sortEmployees(
     let cmp = 0
     switch (sort.key) {
       case "fullName":
-        cmp = a.fullName.localeCompare(b.fullName, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.fullName, b.fullName)
         break
       case "department":
-        cmp = a.department.localeCompare(b.department, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.department, b.department)
         break
       case "designation":
-        cmp = a.designation.localeCompare(b.designation, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.designation, b.designation)
         break
       case "monthlySalary":
         cmp = a.monthlySalary - b.monthlySalary

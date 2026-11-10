@@ -1,3 +1,5 @@
+import { compareText } from "@/lib/format"
+
 export const PAGE_SIZE = 10
 
 export const COLUMN_STORAGE_KEY = "dsa-erp.clients.columns"
@@ -187,9 +189,7 @@ export function sortClients(
       return primary
     }
 
-    const byName = a.displayName.localeCompare(b.displayName, "en", {
-      sensitivity: "base",
-    })
+    const byName = compareText(a.displayName, b.displayName)
     if (byName !== 0) {
       return byName
     }
@@ -205,13 +205,9 @@ function compareClients(
 ): number {
   switch (key) {
     case "displayName":
-      return a.displayName.localeCompare(b.displayName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.displayName, b.displayName)
     case "kind":
-      return kindLabel(a.kind).localeCompare(kindLabel(b.kind), "en", {
-        sensitivity: "base",
-      })
+      return compareText(kindLabel(a.kind), kindLabel(b.kind))
     case "ongoingProjects":
     case "completedProjects":
     case "totalProjects":

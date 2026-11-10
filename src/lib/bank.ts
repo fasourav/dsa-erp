@@ -1,3 +1,4 @@
+import { compareText } from "@/lib/format"
 import {
   sanitizeColumnVisibility,
   type ListColumn,
@@ -217,7 +218,7 @@ function compareAccounts(
     case "name":
     case "bankName":
     case "currency":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "isActive":
       return Number(left.isActive) - Number(right.isActive)
   }
@@ -260,10 +261,11 @@ function compareTransactions(
 ): number {
   switch (key) {
     case "transactionDate":
+      return left.transactionDate.localeCompare(right.transactionDate)
     case "accountName":
     case "direction":
     case "sourceKind":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "amount":
     case "balance":
       return left[key] - right[key]

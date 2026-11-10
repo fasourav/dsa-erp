@@ -1,4 +1,4 @@
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import { openPayableByPurchaseOrder } from "@/lib/open-payable"
 import { dateInputValue } from "@/lib/project-validation"
 import {
@@ -266,7 +266,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
 }
 
 function byLabel(a: ProjectOption, b: ProjectOption): number {
-  const byName = a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+  const byName = compareText(a.name, b.name)
   if (byName !== 0) {
     return byName
   }

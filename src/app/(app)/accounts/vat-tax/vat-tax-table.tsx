@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -51,9 +51,7 @@ function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
     let cmp = 0
     switch (sort.key) {
       case "projectName":
-        cmp = a.projectName.localeCompare(b.projectName, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.projectName, b.projectName)
         break
       case "paidOn":
         cmp = a.paidOn.localeCompare(b.paidOn)
@@ -62,7 +60,7 @@ function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
         cmp = a.amount - b.amount
         break
       case "paymentMethod":
-        cmp = a.paymentMethod.localeCompare(b.paymentMethod)
+        cmp = compareText(a.paymentMethod, b.paymentMethod)
         break
     }
     return sort.direction === "asc" ? cmp : -cmp

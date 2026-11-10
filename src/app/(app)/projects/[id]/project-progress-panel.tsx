@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate } from "@/lib/format"
 import type { ListColumn, SortState } from "@/lib/list-paging"
 import { toggleSort } from "@/lib/list-paging"
 import {
@@ -374,7 +374,7 @@ function sortMilestones(
     if (sort.key === "dueOn" && !left.dueOn !== !right.dueOn) return left.dueOn ? -1 : 1
     const primary = compareMilestone(left, right, sort.key) * direction
     if (primary !== 0) return primary
-    return left.label.localeCompare(right.label, "en", { sensitivity: "base" })
+    return compareText(left.label, right.label)
   })
 }
 
@@ -385,7 +385,7 @@ function compareMilestone(
 ) {
   switch (key) {
     case "label":
-      return left.label.localeCompare(right.label, "en", { sensitivity: "base" })
+      return compareText(left.label, right.label)
     case "dueOn":
       return left.dueOn.localeCompare(right.dueOn)
     case "amount":

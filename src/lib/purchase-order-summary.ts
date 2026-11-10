@@ -1,4 +1,4 @@
-import { formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate } from "@/lib/format"
 import { moneyCents } from "@/lib/payment-status"
 
 export const PAGE_SIZE = 10
@@ -184,13 +184,9 @@ function comparePurchaseOrders(
     case "issuedOn":
       return a.issuedOn.localeCompare(b.issuedOn)
     case "projectName":
-      return a.projectName.localeCompare(b.projectName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.projectName, b.projectName)
     case "vendorName":
-      return vendorSortKey(a).localeCompare(vendorSortKey(b), "en", {
-        sensitivity: "base",
-      })
+      return compareText(vendorSortKey(a), vendorSortKey(b))
     case "status":
       return paymentStatusRank(a) - paymentStatusRank(b)
     case "totalValue":

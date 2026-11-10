@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { compareText } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -58,7 +59,7 @@ function sortBudgets(rows: BudgetRow[], sort: SortState<ColId>): BudgetRow[] {
     let cmp = 0
     switch (sort.key) {
       case "department":
-        cmp = a.department.localeCompare(b.department, "en", { sensitivity: "base" })
+        cmp = compareText(a.department, b.department)
         break
       case "period":
         cmp = a.periodYear - b.periodYear || a.periodMonth - b.periodMonth
