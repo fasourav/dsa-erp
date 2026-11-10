@@ -1,7 +1,7 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
@@ -11,7 +11,6 @@ import { formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { poExpenseColumnStore } from "@/lib/po-expense-column-store"
@@ -22,7 +21,14 @@ import {
   type PoExpenseRow,
 } from "@/lib/po-expenses"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const poExpenseSortKeys = poExpenseColumns.map((column) => column.id)
+const defaultPoExpenseSort: SortState<PoExpenseColumnId> = {
+  key: "expenseDate",
+  direction: "desc",
+}
 
 export function ExpenseTable({
   rows,
@@ -32,12 +38,11 @@ export function ExpenseTable({
   error: string | null
 }) {
   const visibility = useColumnVisibility(poExpenseColumnStore)
-  const [sort, setSort] = useState<SortState<PoExpenseColumnId>>({
-    key: "expenseDate",
-    direction: "desc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const { query, setQuery, sort, onSort, page, setPage } =
+    useListUrlState<PoExpenseColumnId>({
+      sortKeys: poExpenseSortKeys,
+      defaultSort: defaultPoExpenseSort,
+    })
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
@@ -74,10 +79,7 @@ export function ExpenseTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search expenses"
       />
       <DataList
@@ -85,10 +87,7 @@ export function ExpenseTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(row) => row.id}
         sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Paid Expenses Yet."

@@ -26,10 +26,10 @@ import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import type { ProjectOption, VatTaxRow } from "@/lib/vat-tax"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +41,8 @@ const columns: readonly ListColumn<ColId>[] = [
   { id: "amount", label: "Amount", align: "right", locked: true },
   { id: "paymentMethod", label: "Payment Method", align: "left", locked: true },
 ]
+const vatSortKeys = columns.map((column) => column.id)
+const defaultVatSort: SortState<ColId> = { key: "paidOn", direction: "desc" }
 
 function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
   const sorted = [...rows]
@@ -83,12 +85,11 @@ export function VatTaxTable({
   const canAdd = useCan("vat_tax", "add")
   const canDelete = useCan("vat_tax", "delete")
 
-  const [sort, setSort] = useState<SortState<ColId>>({
-    key: "paidOn",
-    direction: "desc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const { query, setQuery, sort, onSort, page, setPage } =
+    useListUrlState<ColId>({
+      sortKeys: vatSortKeys,
+      defaultSort: defaultVatSort,
+    })
   const [formOpen, setFormOpen] = useState(false)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -171,10 +172,7 @@ export function VatTaxTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search payments"
       />
       <DataList
@@ -182,10 +180,7 @@ export function VatTaxTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(payment) => payment.id}
         sort={sort}
-        onSort={(key) => {
-          setSort(toggleSort(sort, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={{}}
         error={error}
         emptyMessage="No VAT / Tax Payments Yet."

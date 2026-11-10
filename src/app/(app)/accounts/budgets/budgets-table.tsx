@@ -25,11 +25,11 @@ import {
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
 import type { BudgetRow, DepartmentOption } from "@/lib/budgets"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
 const monthNames = [
@@ -46,6 +46,11 @@ const columns: readonly ListColumn<ColId>[] = [
   { id: "actualSpent", label: "Actual Spent", align: "right", locked: false },
   { id: "variance", label: "Variance", align: "right", locked: false },
 ]
+const budgetSortKeys = columns.map((column) => column.id)
+const defaultBudgetSort: SortState<ColId> = {
+  key: "period",
+  direction: "desc",
+}
 
 function sortBudgets(rows: BudgetRow[], sort: SortState<ColId>): BudgetRow[] {
   const sorted = [...rows]
@@ -92,12 +97,11 @@ export function BudgetsTable({
   const canEdit = useCan("budgets", "edit")
   const canDelete = useCan("budgets", "delete")
 
-  const [sort, setSort] = useState<SortState<ColId>>({
-    key: "period",
-    direction: "desc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const { query, setQuery, sort, onSort, page, setPage } =
+    useListUrlState<ColId>({
+      sortKeys: budgetSortKeys,
+      defaultSort: defaultBudgetSort,
+    })
   const [formOpen, setFormOpen] = useState(false)
   const [formBudget, setFormBudget] = useState<BudgetRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -213,10 +217,7 @@ export function BudgetsTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search budgets"
       />
       <DataList
@@ -224,10 +225,7 @@ export function BudgetsTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(budget) => budget.id}
         sort={sort}
-        onSort={(key) => {
-          setSort(toggleSort(sort, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={{}}
         error={error}
         emptyMessage="No Budgets Yet."

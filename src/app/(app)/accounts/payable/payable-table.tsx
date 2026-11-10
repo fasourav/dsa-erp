@@ -33,19 +33,17 @@ import { cn } from "@/lib/utils"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { sortQueryParams } from "@/lib/page-query"
 import {
   matchesSettlement,
   settlementCounts,
-  settlementQueryValue,
   type SettlementFilter,
 } from "@/lib/settlement-filter"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
-import { useUrlSearch } from "@/lib/use-url-search"
+import { useListUrlState } from "@/lib/use-list-url-state"
 
+const payableSortKeys = payableColumns.map((column) => column.id)
 const defaultSort: SortState<PayableColumnId> = {
   key: "vendorName",
   direction: "asc",
@@ -69,20 +67,29 @@ function payableSearchText(row: PayableRow): string {
 export function PayableTable({
   rows,
   error,
-  initialQuery = "",
-  page,
-  statusFilter,
-  sort,
 }: {
   rows: PayableRow[]
   error: string | null
   initialQuery?: string
-  page: number
-  statusFilter: SettlementFilter
-  sort: SortState<PayableColumnId>
+  page?: number
+  statusFilter?: SettlementFilter
+  sort?: SortState<PayableColumnId>
 }) {
   const visibility = useColumnVisibility(payableColumnStore)
-  const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
+  const {
+    query,
+    setQuery,
+    settlement: statusFilter,
+    setSettlement,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<PayableColumnId>({
+    sortKeys: payableSortKeys,
+    defaultSort,
+    settlement: true,
+  })
   const normalizedQuery = query.trim()
   const searched = useMemo(
     () => filterRows(error ? [] : rows, normalizedQuery, payableSearchText),
@@ -100,8 +107,7 @@ export function PayableTable({
       ),
     [searched, sort, statusFilter],
   )
-  const currentPage = normalizedQuery === initialQuery.trim() ? page : 1
-  const pageResult = paginateRows(visible, currentPage)
+  const pageResult = paginateRows(visible, page)
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -147,9 +153,7 @@ export function PayableTable({
             value={statusFilter}
             counts={counts}
             label="Accounts payable settlement"
-            onChange={(next) =>
-              setParams({ status: settlementQueryValue(next) })
-            }
+            onChange={setSettlement}
           />
         }
       />
@@ -158,9 +162,7 @@ export function PayableTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(row) => row.id}
         sort={sort}
-        onSort={(key) => {
-          setParams(sortQueryParams(toggleSort(sort, key), defaultSort))
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage={

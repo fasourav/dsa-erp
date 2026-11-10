@@ -33,20 +33,18 @@ import { cn } from "@/lib/utils"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { sortQueryParams } from "@/lib/page-query"
 import {
   matchesSettlement,
   settlementCounts,
-  settlementQueryValue,
   type SettlementFilter,
 } from "@/lib/settlement-filter"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
-import { useUrlSearch } from "@/lib/use-url-search"
+import { useListUrlState } from "@/lib/use-list-url-state"
 
 const locked = new Set<ReceivableColumnId>(["projectName", "clientName"])
+const receivableSortKeys = receivableColumns.map((column) => column.id)
 
 const defaultSort: SortState<ReceivableColumnId> = {
   key: "projectName",
@@ -69,20 +67,29 @@ function receivableSearchText(row: ReceivableRow): string {
 export function ReceivableTable({
   rows,
   error,
-  initialQuery = "",
-  page,
-  statusFilter,
-  sort,
 }: {
   rows: ReceivableRow[]
   error: string | null
   initialQuery?: string
-  page: number
-  statusFilter: SettlementFilter
-  sort: SortState<ReceivableColumnId>
+  page?: number
+  statusFilter?: SettlementFilter
+  sort?: SortState<ReceivableColumnId>
 }) {
   const visibility = useColumnVisibility(receivableColumnStore)
-  const { query, setQuery, setPage, setParams } = useUrlSearch(initialQuery)
+  const {
+    query,
+    setQuery,
+    settlement: statusFilter,
+    setSettlement,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<ReceivableColumnId>({
+    sortKeys: receivableSortKeys,
+    defaultSort,
+    settlement: true,
+  })
   const normalizedQuery = query.trim()
   const searched = useMemo(
     () => filterRows(error ? [] : rows, normalizedQuery, receivableSearchText),
@@ -100,8 +107,7 @@ export function ReceivableTable({
       ),
     [searched, sort, statusFilter],
   )
-  const currentPage = normalizedQuery === initialQuery.trim() ? page : 1
-  const pageResult = paginateRows(visible, currentPage)
+  const pageResult = paginateRows(visible, page)
 
   function changeVisibility(id: ReceivableColumnId, checked: boolean) {
     if (locked.has(id)) {
@@ -162,9 +168,7 @@ export function ReceivableTable({
             value={statusFilter}
             counts={counts}
             label="Accounts receivable settlement"
-            onChange={(next) =>
-              setParams({ status: settlementQueryValue(next) })
-            }
+            onChange={setSettlement}
           />
         }
       />
@@ -173,9 +177,7 @@ export function ReceivableTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(row) => row.id}
         sort={sort}
-        onSort={(key) => {
-          setParams(sortQueryParams(toggleSort(sort, key), defaultSort))
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage={

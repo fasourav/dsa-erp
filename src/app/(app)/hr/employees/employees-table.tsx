@@ -27,10 +27,10 @@ import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import { useListUrlState } from "@/lib/use-list-url-state"
 
 type ColumnId =
   | "fullName"
@@ -49,6 +49,17 @@ const columns: readonly ListColumn<ColumnId>[] = [
   { id: "allowance", label: "Allowance", align: "right", locked: true },
   { id: "joiningDate", label: "Joining Date", align: "left", locked: true },
   { id: "isActive", label: "Status", align: "left", locked: true },
+]
+const employeeSortKeys = columns.map((column) => column.id)
+const defaultEmployeeSort: SortState<ColumnId> = {
+  key: "fullName",
+  direction: "asc",
+}
+const employeeStatusValues = ["all", "active", "inactive"] as const
+const filterOptions = [
+  { value: "all", label: "All Employees" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
 ]
 
 function sortEmployees(
@@ -97,7 +108,6 @@ export function EmployeesTable({
   departments,
   nextCode,
   error,
-  initialQuery = "",
 }: {
   employees: EmployeeRow[]
   departments: DepartmentOption[]
@@ -108,13 +118,20 @@ export function EmployeesTable({
   const showFinancials = useAccess().showFinancials
   const canAdd = useCan("employees", "add")
 
-  const [sort, setSort] = useState<SortState<ColumnId>>({
-    key: "fullName",
-    direction: "asc",
+  const {
+    query,
+    setQuery,
+    facet: listFilter,
+    setFacet: setListFilter,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<ColumnId>({
+    sortKeys: employeeSortKeys,
+    defaultSort: defaultEmployeeSort,
+    facet: { key: "status", options: employeeStatusValues },
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
-  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formEmployee, setFormEmployee] = useState<EmployeeRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -127,11 +144,6 @@ export function EmployeesTable({
     () => sortEmployees(employees, sort),
     [employees, sort],
   )
-  const filterOptions = [
-    { value: "all", label: "All Employees" },
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-  ]
   const filtered = useMemo(
     () =>
       filterRows(sorted, query, rowText, listFilter, (employee) =>
@@ -214,17 +226,11 @@ export function EmployeesTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search employees"
         filterLabel="Status"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
@@ -232,10 +238,7 @@ export function EmployeesTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(employee) => employee.id}
         sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={{}}
         error={error}
         emptyMessage="No Employees Yet."

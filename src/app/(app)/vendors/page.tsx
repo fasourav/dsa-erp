@@ -17,7 +17,6 @@ export default async function VendorsPage({
 
   return (
     <VendorsTable
-      key={initialQuery || "all"}
       vendors={vendors}
       categories={categories}
       error={error}

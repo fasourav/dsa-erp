@@ -47,7 +47,18 @@ import {
   type SortState,
   type VendorOption,
 } from "@/lib/purchase-order-summary"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const poSortKeys = dataColumns.map((column) => column.id)
+const defaultPoSort: SortState = { key: "issuedOn", direction: "desc" }
+const poStatusValues = ["all", "unpaid", "partial", "paid"] as const
+const filterOptions = [
+  { value: "all", label: "All Statuses" },
+  { value: "unpaid", label: "Unpaid" },
+  { value: "partial", label: "Partially Paid" },
+  { value: "paid", label: "Paid" },
+]
 
 export function PurchaseOrdersTable({
   orders,
@@ -76,13 +87,20 @@ export function PurchaseOrdersTable({
     getColumnSnapshot,
     getColumnServerSnapshot,
   )
-  const [sort, setSort] = useState<SortState>({
-    key: "issuedOn",
-    direction: "desc",
+  const {
+    query,
+    setQuery,
+    facet: listFilter,
+    setFacet: setListFilter,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<ColumnId>({
+    sortKeys: poSortKeys,
+    defaultSort: defaultPoSort,
+    facet: { key: "status", options: poStatusValues },
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
-  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formOperational, setFormOperational] = useState(false)
   const [formOrder, setFormOrder] = useState<PurchaseOrderRow | null>(null)
@@ -102,12 +120,6 @@ export function PurchaseOrdersTable({
     () => sortPurchaseOrders(projectOrders, sort),
     [projectOrders, sort],
   )
-  const filterOptions = [
-    { value: "all", label: "All Statuses" },
-    { value: "unpaid", label: "Unpaid" },
-    { value: "partial", label: "Partially Paid" },
-    { value: "paid", label: "Paid" },
-  ]
   const filtered = useMemo(
     () =>
       filterRows(sorted, query, rowText, listFilter, (order) =>
@@ -123,20 +135,6 @@ export function PurchaseOrdersTable({
     () => paginatePurchaseOrders(filtered, page),
     [filtered, page],
   )
-
-  function toggleSort(key: ColumnId) {
-    setSort((current) => {
-      if (current.key === key) {
-        return {
-          key,
-          direction: current.direction === "asc" ? "desc" : "asc",
-        }
-      }
-
-      return { key, direction: "asc" }
-    })
-    setPage(1)
-  }
 
   function openForm(order: PurchaseOrderRow | null) {
     setFormOrder(order)
@@ -260,17 +258,11 @@ export function PurchaseOrdersTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search purchase orders"
         filterLabel="Status"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
@@ -278,7 +270,7 @@ export function PurchaseOrdersTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(order) => order.id}
         sort={sort}
-        onSort={toggleSort}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage={

@@ -17,7 +17,6 @@ export default async function AssetsPage({
 
   return (
     <AssetsTable
-      key={initialQuery || "all"}
       assets={assets}
       categories={categories}
       error={error}

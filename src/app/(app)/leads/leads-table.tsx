@@ -44,12 +44,18 @@ import {
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const leadSortKeys = dataColumns.map((column) => column.id)
+const defaultLeadSort: SortState<ColumnId> = {
+  key: "addedOn",
+  direction: "desc",
+}
 
 function sortLeads(rows: LeadRow[], sort: SortState<ColumnId>): LeadRow[] {
   const sorted = [...rows]
@@ -96,7 +102,6 @@ export function LeadsTable({
   leads,
   lookups,
   error,
-  initialQuery = "",
 }: {
   leads: LeadRow[]
   lookups: LeadLookups
@@ -111,13 +116,34 @@ export function LeadsTable({
     getColumnSnapshot,
     getColumnServerSnapshot,
   )
-  const [sort, setSort] = useState<SortState<ColumnId>>({
-    key: "addedOn",
-    direction: "desc",
+  const filterOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const lead of leads) {
+      if (lead.status) seen.set(lead.status, lead.statusLabel || lead.status)
+    }
+    return [
+      { value: "all", label: "All Statuses" },
+      ...[...seen.entries()].map(([value, label]) => ({ value, label })),
+    ]
+  }, [leads])
+  const leadFilterValues = useMemo(
+    () => filterOptions.map((option) => option.value),
+    [filterOptions],
+  )
+  const {
+    query,
+    setQuery,
+    facet: listFilter,
+    setFacet: setListFilter,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<ColumnId>({
+    sortKeys: leadSortKeys,
+    defaultSort: defaultLeadSort,
+    facet: { key: "status", options: leadFilterValues },
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
-  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formLead, setFormLead] = useState<LeadRow | null>(null)
   const [formMode, setFormMode] = useState<"view" | "edit">("edit")
@@ -130,16 +156,6 @@ export function LeadsTable({
   const [convertError, setConvertError] = useState<string | null>(null)
 
   const sorted = useMemo(() => sortLeads(leads, sort), [leads, sort])
-  const filterOptions = useMemo(() => {
-    const seen = new Map()
-    for (const lead of leads) {
-      if (lead.status) seen.set(lead.status, lead.statusLabel || lead.status)
-    }
-    return [
-      { value: "all", label: "All Statuses" },
-      ...[...seen.entries()].map(([value, label]) => ({ value, label })),
-    ]
-  }, [leads])
   const filtered = useMemo(
     () => filterRows(sorted, query, rowText, listFilter, (lead) => lead.status),
     [listFilter, query, sorted],
@@ -249,17 +265,11 @@ export function LeadsTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search leads"
         filterLabel="Status"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
@@ -267,10 +277,7 @@ export function LeadsTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(lead) => lead.id}
         sort={sort}
-        onSort={(key) => {
-          setSort(toggleSort(sort, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Leads Yet."

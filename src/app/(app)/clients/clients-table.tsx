@@ -51,12 +51,21 @@ import {
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
 import { formatCount } from "@/lib/format"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const clientSortKeys = dataColumns.map((column) => column.id)
+const defaultClientSort: SortState = { key: "displayName", direction: "asc" }
+const clientTypeValues = ["all", "person", "company"] as const
+const filterOptions = [
+  { value: "all", label: "All Types" },
+  { value: "person", label: "Person" },
+  { value: "company", label: "Company" },
+]
 
 export function ClientsTable({
   clients,
   error,
-  initialQuery = "",
 }: {
   clients: ClientSummary[]
   error: string | null
@@ -70,13 +79,20 @@ export function ClientsTable({
     getColumnSnapshot,
     getColumnServerSnapshot,
   )
-  const [sort, setSort] = useState<SortState>({
-    key: "displayName",
-    direction: "asc",
+  const {
+    query,
+    setQuery,
+    facet: listFilter,
+    setFacet: setListFilter,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<ColumnId>({
+    sortKeys: clientSortKeys,
+    defaultSort: defaultClientSort,
+    facet: { key: "type", options: clientTypeValues },
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
-  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formClient, setFormClient] = useState<ClientSummary | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -92,11 +108,6 @@ export function ClientsTable({
   const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortClients(clients, sort), [clients, sort])
-  const filterOptions = [
-    { value: "all", label: "All Types" },
-    { value: "person", label: "Person" },
-    { value: "company", label: "Company" },
-  ]
   const filtered = useMemo(
     () => filterRows(sorted, query, rowText, listFilter, (client) => client.kind ?? ""),
     [listFilter, query, sorted],
@@ -105,20 +116,6 @@ export function ClientsTable({
     () => paginateClients(filtered, page),
     [filtered, page],
   )
-
-  function toggleSort(key: ColumnId) {
-    setSort((current) => {
-      if (current.key === key) {
-        return {
-          key,
-          direction: current.direction === "asc" ? "desc" : "asc",
-        }
-      }
-
-      return { key, direction: "asc" }
-    })
-    setPage(1)
-  }
 
   function openForm(client: ClientSummary | null) {
     setFormClient(client)
@@ -244,17 +241,11 @@ export function ClientsTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search clients"
         filterLabel="Type"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
@@ -262,7 +253,7 @@ export function ClientsTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(client) => client.id}
         sort={sort}
-        onSort={toggleSort}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Clients Yet."

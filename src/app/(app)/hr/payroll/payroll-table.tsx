@@ -27,12 +27,12 @@ import { formatDayMonYear } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
 import type { MonthlySalary, SalaryEmployee } from "@/lib/payroll"
 import { monthLabel } from "@/lib/payroll-month"
+import { useListUrlState } from "@/lib/use-list-url-state"
 
 type ColumnId =
   | "month"
@@ -50,6 +50,11 @@ const columns: readonly ListColumn<ColumnId>[] = [
   { id: "bankAccount", label: "Bank Account", align: "left", locked: true },
   { id: "status", label: "Status", align: "left", locked: true },
 ]
+const payrollSortKeys = columns.map((column) => column.id)
+const defaultPayrollSort: SortState<ColumnId> = {
+  key: "month",
+  direction: "desc",
+}
 
 function sortSalaries(
   rows: MonthlySalary[],
@@ -108,12 +113,11 @@ export function PayrollTable({
   const canEdit = useCan("payroll", "edit")
   const canDelete = useCan("payroll", "delete")
 
-  const [sort, setSort] = useState<SortState<ColumnId>>({
-    key: "month",
-    direction: "desc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const { query, setQuery, sort, onSort, page, setPage } =
+    useListUrlState<ColumnId>({
+      sortKeys: payrollSortKeys,
+      defaultSort: defaultPayrollSort,
+    })
   const [formOpen, setFormOpen] = useState(false)
   const [formSalary, setFormSalary] = useState<MonthlySalary | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -201,10 +205,7 @@ export function PayrollTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search payroll"
       />
       <DataList
@@ -212,10 +213,7 @@ export function PayrollTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(salary) => salary.id}
         sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={{}}
         error={error}
         emptyMessage="No Monthly Salaries Yet."

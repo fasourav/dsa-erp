@@ -29,11 +29,17 @@ import {
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const backlogSortKeys = backlogColumns.map((column) => column.id)
+const defaultBacklogSort: SortState<BacklogColumnId> = {
+  key: "backlogAmount",
+  direction: "desc",
+}
 
 export function BacklogTable({
   rows,
@@ -45,12 +51,11 @@ export function BacklogTable({
   const canEdit = useCan("backlog", "edit")
 
   const visibility = useColumnVisibility(backlogColumnStore)
-  const [sort, setSort] = useState<SortState<BacklogColumnId>>({
-    key: "backlogAmount",
-    direction: "desc",
-  })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
+  const { query, setQuery, sort, onSort, page, setPage } =
+    useListUrlState<BacklogColumnId>({
+      sortKeys: backlogSortKeys,
+      defaultSort: defaultBacklogSort,
+    })
   const [formOpen, setFormOpen] = useState(false)
   const [formProject, setFormProject] = useState<BacklogRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -98,10 +103,7 @@ export function BacklogTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search backlog"
       />
       <DataList
@@ -109,10 +111,7 @@ export function BacklogTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(row) => row.id}
         sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Backlog Projects Yet."

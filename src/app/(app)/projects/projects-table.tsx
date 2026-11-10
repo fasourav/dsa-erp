@@ -56,7 +56,17 @@ import {
   type ProjectRow,
   type SortState,
 } from "@/lib/project-summary"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const projectSortKeys = dataColumns.map((column) => column.id)
+const defaultProjectSort: SortState = { key: "name", direction: "asc" }
+const projectFilterValues = ["all", "active", "completed"] as const
+const filterOptions = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "Active" },
+  { value: "completed", label: "Completed" },
+]
 
 export function ProjectsTable({
   projects,
@@ -79,13 +89,20 @@ export function ProjectsTable({
     getColumnSnapshot,
     getColumnServerSnapshot,
   )
-  const [sort, setSort] = useState<SortState>({
-    key: "name",
-    direction: "asc",
+  const {
+    query,
+    setQuery,
+    facet: listFilter,
+    setFacet: setListFilter,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<ColumnId>({
+    sortKeys: projectSortKeys,
+    defaultSort: defaultProjectSort,
+    facet: { key: "status", options: projectFilterValues },
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
-  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formProject, setFormProject] = useState<ProjectRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -99,11 +116,6 @@ export function ProjectsTable({
     () => sortProjects(projects, sort),
     [projects, sort],
   )
-  const filterOptions = [
-    { value: "all", label: "All Statuses" },
-    { value: "active", label: "Active" },
-    { value: "completed", label: "Completed" },
-  ]
   const filtered = useMemo(
     () => filterRows(sorted, query, rowText, listFilter, (project) => project.status),
     [listFilter, query, sorted],
@@ -112,20 +124,6 @@ export function ProjectsTable({
     () => paginateProjects(filtered, page),
     [filtered, page],
   )
-
-  function toggleSort(key: ColumnId) {
-    setSort((current) => {
-      if (current.key === key) {
-        return {
-          key,
-          direction: current.direction === "asc" ? "desc" : "asc",
-        }
-      }
-
-      return { key, direction: "asc" }
-    })
-    setPage(1)
-  }
 
   function openForm(project: ProjectRow | null) {
     setFormProject(project)
@@ -258,17 +256,11 @@ export function ProjectsTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search projects"
         filterLabel="Status"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
@@ -276,7 +268,7 @@ export function ProjectsTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(project) => project.id}
         sort={sort}
-        onSort={toggleSort}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Projects Yet."

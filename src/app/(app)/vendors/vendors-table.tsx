@@ -35,13 +35,22 @@ import {
   type SortState,
   type VendorSummary,
 } from "@/lib/vendor-summary"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const vendorSortKeys = dataColumns.map((column) => column.id)
+const defaultVendorSort: SortState = { key: "displayName", direction: "asc" }
+const vendorTypeValues = ["all", "private", "company"] as const
+const filterOptions = [
+  { value: "all", label: "All Types" },
+  { value: "private", label: "Private" },
+  { value: "company", label: "Company" },
+]
 
 export function VendorsTable({
   vendors,
   categories,
   error,
-  initialQuery = "",
 }: {
   vendors: VendorSummary[]
   categories: string[]
@@ -51,13 +60,20 @@ export function VendorsTable({
   const canAdd = useCan("vendors", "add")
   const seesMoney = useSeesMoney()
 
-  const [sort, setSort] = useState<SortState>({
-    key: "displayName",
-    direction: "asc",
+  const {
+    query,
+    setQuery,
+    facet: listFilter,
+    setFacet: setListFilter,
+    sort,
+    onSort,
+    page,
+    setPage,
+  } = useListUrlState<ColumnId>({
+    sortKeys: vendorSortKeys,
+    defaultSort: defaultVendorSort,
+    facet: { key: "type", options: vendorTypeValues },
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
-  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formVendor, setFormVendor] = useState<VendorSummary | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -69,11 +85,6 @@ export function VendorsTable({
   const [deleting, startDelete] = useTransition()
 
   const sorted = useMemo(() => sortVendors(vendors, sort), [vendors, sort])
-  const filterOptions = [
-    { value: "all", label: "All Types" },
-    { value: "private", label: "Private" },
-    { value: "company", label: "Company" },
-  ]
   const filtered = useMemo(
     () => filterRows(sorted, query, rowText, listFilter, (vendor) => vendor.kind ?? ""),
     [listFilter, query, sorted],
@@ -82,20 +93,6 @@ export function VendorsTable({
     () => paginateVendors(filtered, page),
     [filtered, page],
   )
-
-  function toggleSort(key: ColumnId) {
-    setSort((current) => {
-      if (current.key === key) {
-        return {
-          key,
-          direction: current.direction === "asc" ? "desc" : "asc",
-        }
-      }
-
-      return { key, direction: "asc" }
-    })
-    setPage(1)
-  }
 
   function openForm(vendor: VendorSummary | null) {
     setFormVendor(vendor)
@@ -184,17 +181,11 @@ export function VendorsTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search vendors"
         filterLabel="Type"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
@@ -202,7 +193,7 @@ export function VendorsTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(vendor) => vendor.id}
         sort={sort}
-        onSort={toggleSort}
+        onSort={onSort}
         visibility={{}}
         error={error}
         emptyMessage="No Vendors Yet."
