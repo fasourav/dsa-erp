@@ -1,7 +1,8 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { useMemo, useState } from "react"
+import Link from "next/link"
+import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
@@ -11,7 +12,6 @@ import { formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { poExpenseColumnStore } from "@/lib/po-expense-column-store"
@@ -22,7 +22,14 @@ import {
   type PoExpenseRow,
 } from "@/lib/po-expenses"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const poExpenseSortKeys = poExpenseColumns.map((column) => column.id)
+const defaultPoExpenseSort: SortState<PoExpenseColumnId> = {
+  key: "expenseDate",
+  direction: "desc",
+}
 
 export function ExpenseTable({
   rows,
@@ -32,12 +39,19 @@ export function ExpenseTable({
   error: string | null
 }) {
   const visibility = useColumnVisibility(poExpenseColumnStore)
-  const [sort, setSort] = useState<SortState<PoExpenseColumnId>>({
-    key: "expenseDate",
-    direction: "desc",
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<PoExpenseColumnId>({
+    sortKeys: poExpenseSortKeys,
+    defaultSort: defaultPoExpenseSort,
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
@@ -74,10 +88,7 @@ export function ExpenseTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search expenses"
       />
       <DataList
@@ -85,13 +96,15 @@ export function ExpenseTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(row) => row.id}
         sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Paid Expenses Yet."
+        emptyState={
+          rows.length === 0 && !hasActiveFilters
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
@@ -104,7 +117,16 @@ export function ExpenseTable({
         onPageChange={setPage}
         pagingLabel="Expense pagination"
         mobileItem={(row) => ({
-          title: row.vendorName || "—",
+          title: row.purchaseOrderId ? (
+            <Link
+              href={`/purchase-orders/${row.purchaseOrderId}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {row.vendorName || "—"}
+            </Link>
+          ) : (
+            row.vendorName || "—"
+          ),
           subtitle: [row.workType, row.projectName, row.expenseDate ? formatIsoDate(row.expenseDate) : "", row.bankingChannel]
             .filter(Boolean)
             .join(" · "),
@@ -144,9 +166,18 @@ function Cell({
     case "vendorName":
       return (
         <span className="flex min-w-0 flex-col">
-          <span className={cn("truncate", !row.vendorName && "text-muted-foreground")}>
-            {row.vendorName || "—"}
-          </span>
+          {row.purchaseOrderId && row.vendorName ? (
+            <Link
+              href={`/purchase-orders/${row.purchaseOrderId}`}
+              className="truncate text-ui font-medium underline-offset-4 hover:underline"
+            >
+              {row.vendorName}
+            </Link>
+          ) : (
+            <span className={cn("truncate", !row.vendorName && "text-muted-foreground")}>
+              {row.vendorName || "—"}
+            </span>
+          )}
           {row.workType ? (
             <span className="truncate text-caption text-muted-foreground">{row.workType}</span>
           ) : null}

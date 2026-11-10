@@ -17,7 +17,6 @@ export default async function EmployeesPage({
 
   return (
     <EmployeesTable
-      key={initialQuery || "all"}
       employees={employees}
       departments={departments}
       nextCode={nextCode}

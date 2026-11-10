@@ -4,6 +4,7 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVatTaxPayment } from "@/app/(app)/accounts/vat-tax/actions"
@@ -26,10 +27,10 @@ import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import type { ProjectOption, VatTaxRow } from "@/lib/vat-tax"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +42,8 @@ const columns: readonly ListColumn<ColId>[] = [
   { id: "amount", label: "Amount", align: "right", locked: true },
   { id: "paymentMethod", label: "Payment Method", align: "left", locked: true },
 ]
+const vatSortKeys = columns.map((column) => column.id)
+const defaultVatSort: SortState<ColId> = { key: "paidOn", direction: "desc" }
 
 function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
   const sorted = [...rows]
@@ -83,12 +86,19 @@ export function VatTaxTable({
   const canAdd = useCan("vat_tax", "add")
   const canDelete = useCan("vat_tax", "delete")
 
-  const [sort, setSort] = useState<SortState<ColId>>({
-    key: "paidOn",
-    direction: "desc",
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<ColId>({
+    sortKeys: vatSortKeys,
+    defaultSort: defaultVatSort,
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -171,10 +181,7 @@ export function VatTaxTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search payments"
       />
       <DataList
@@ -182,13 +189,23 @@ export function VatTaxTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(payment) => payment.id}
         sort={sort}
-        onSort={(key) => {
-          setSort(toggleSort(sort, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={{}}
         error={error}
         emptyMessage="No VAT / Tax Payments Yet."
+        emptyState={
+          payments.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={openForm}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add Payment
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
@@ -201,7 +218,16 @@ export function VatTaxTable({
         onPageChange={setPage}
         pagingLabel="VAT tax pagination"
         mobileItem={(payment) => ({
-          title: payment.projectName || "—",
+          title: payment.projectId ? (
+            <Link
+              href={`/projects/${payment.projectId}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {payment.projectName || "—"}
+            </Link>
+          ) : (
+            payment.projectName || "—"
+          ),
           value: <Money value={payment.amount} />,
           subtitle: [payment.paymentMethod, payment.paidOn ? formatIsoDate(payment.paidOn) : null]
             .filter(Boolean)
@@ -279,6 +305,19 @@ function Cell({
 }) {
   switch (columnId) {
     case "projectName":
+      if (payment.projectId) {
+        return (
+          <Link
+            href={`/projects/${payment.projectId}`}
+            className={cn(
+              "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
+              !payment.projectName && "text-muted-foreground",
+            )}
+          >
+            {payment.projectName || "—"}
+          </Link>
+        )
+      }
       return (
         <span
           className={cn(

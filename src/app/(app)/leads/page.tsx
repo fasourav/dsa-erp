@@ -17,7 +17,6 @@ export default async function LeadsPage({
 
   return (
     <LeadsTable
-      key={initialQuery || "all"}
       leads={leads}
       lookups={lookups}
       error={error}

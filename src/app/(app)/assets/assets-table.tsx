@@ -26,13 +26,13 @@ import {
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { sumAssetCurrentValue } from "@/lib/asset-value"
 import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
 type ColId = "name" | "category" | "purchaseDate" | "quantity" | "totalCost" | "currentValue"
@@ -45,6 +45,8 @@ const columns: readonly ListColumn<ColId>[] = [
   { id: "totalCost", label: "Total Cost", align: "right", locked: false },
   { id: "currentValue", label: "Current Value", align: "right", locked: false },
 ]
+const assetSortKeys = columns.map((column) => column.id)
+const defaultAssetSort: SortState<ColId> = { key: "name", direction: "asc" }
 
 function sortAssets(rows: AssetRow[], sort: SortState<ColId>): AssetRow[] {
   const sorted = [...rows]
@@ -79,7 +81,6 @@ export function AssetsTable({
   assets,
   categories,
   error,
-  initialQuery = "",
 }: {
   assets: AssetRow[]
   categories: AssetCategoryOption[]
@@ -90,13 +91,33 @@ export function AssetsTable({
   const canEdit = useCan("assets", "edit")
   const canDelete = useCan("assets", "delete")
 
-  const [sort, setSort] = useState<SortState<ColId>>({
-    key: "name",
-    direction: "asc",
+  const filterOptions = useMemo(
+    () => [
+      { value: "all", label: "All Categories" },
+      ...categories.map((category) => ({ value: category.id, label: category.name })),
+    ],
+    [categories],
+  )
+  const categoryValues = useMemo(
+    () => filterOptions.map((option) => option.value),
+    [filterOptions],
+  )
+  const {
+    query,
+    setQuery,
+    facet: listFilter,
+    setFacet: setListFilter,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<ColId>({
+    sortKeys: assetSortKeys,
+    defaultSort: defaultAssetSort,
+    facet: { key: "category", options: categoryValues },
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState(initialQuery)
-  const [listFilter, setListFilter] = useState("all")
   const [formOpen, setFormOpen] = useState(false)
   const [formAsset, setFormAsset] = useState<AssetRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -110,10 +131,6 @@ export function AssetsTable({
     () => sumAssetCurrentValue(assets.map((asset) => asset.currentValue)),
     [assets],
   )
-  const filterOptions = [
-    { value: "all", label: "All Categories" },
-    ...categories.map((category) => ({ value: category.id, label: category.name })),
-  ]
   const filtered = useMemo(
     () => filterRows(sorted, query, rowText, listFilter, (asset) => asset.categoryId || "none"),
     [listFilter, query, sorted],
@@ -204,17 +221,11 @@ export function AssetsTable({
 
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search assets"
         filterLabel="Category"
         filter={listFilter}
-        onFilterChange={(value) => {
-          setListFilter(value)
-          setPage(1)
-        }}
+        onFilterChange={setListFilter}
         options={filterOptions}
       />
       <DataList
@@ -222,13 +233,23 @@ export function AssetsTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(asset) => asset.id}
         sort={sort}
-        onSort={(key) => {
-          setSort(toggleSort(sort, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={{}}
         error={error}
         emptyMessage="No Assets Yet."
+        emptyState={
+          assets.length === 0 && !hasActiveFilters
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add New Asset
+                  </Button>
+                ) : undefined,
+              }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,

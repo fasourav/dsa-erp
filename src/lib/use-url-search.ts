@@ -76,7 +76,7 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
       }
       const qs = params.toString()
       startTransition(() => {
-        router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
       })
     },
     [pathname, router],
@@ -84,6 +84,14 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
 
   const setParams = useCallback(
     (updates: Record<string, string | null | undefined>) => {
+      if ("q" in updates) {
+        if (timerRef.current !== null) {
+          clearTimeout(timerRef.current)
+          timerRef.current = null
+        }
+        const nextQ = updates.q?.trim() ?? ""
+        setState({ synced: nextQ, value: nextQ, dirty: false })
+      }
       const params = new URLSearchParams(window.location.search)
       for (const [key, value] of Object.entries(updates)) {
         const trimmed = value?.trim()
@@ -98,7 +106,7 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
       }
       const qs = params.toString()
       startTransition(() => {
-        router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
       })
     },
     [pathname, router],

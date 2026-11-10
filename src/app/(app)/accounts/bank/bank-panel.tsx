@@ -305,6 +305,26 @@ export function BankPanel({
             ? "No Transactions For This Account."
             : "No Bank Transactions Yet."
         }
+        emptyState={
+          !query.trim()
+            ? {
+                kind: "none",
+                action:
+                  canAdd && accounts.length > 0 ? (
+                    <Button
+                      type="button"
+                      onClick={() => openMovement("deposit", null)}
+                    >
+                      <Plus aria-hidden="true" data-icon="inline-start" />
+                      Deposit
+                    </Button>
+                  ) : undefined,
+              }
+            : {
+                kind: "filtered",
+                onClearFilters: () => setParams({ q: null }),
+              }
+        }
         rangeText={rangeLabel(
           rangeStart,
           rangeEnd,

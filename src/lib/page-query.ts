@@ -51,6 +51,29 @@ export function sortQueryParams<K extends string>(
   return { sort: sort.key, dir: sort.direction }
 }
 
+export function parseFacetParam(
+  raw: string | string[] | undefined,
+  allowedValues: readonly string[],
+  defaultValue = "all",
+): string {
+  const value = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? ""
+  if (value && allowedValues.includes(value)) {
+    return value
+  }
+  return defaultValue
+}
+
+export function facetQueryValue(
+  value: string,
+  defaultValue = "all",
+): string | null {
+  const trimmed = value.trim()
+  if (!trimmed || trimmed === defaultValue) {
+    return null
+  }
+  return trimmed
+}
+
 export function parsePageParams(
   params: Record<string, string | string[] | undefined>,
   maxQueryLength = 100,

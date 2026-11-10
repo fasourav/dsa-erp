@@ -7,6 +7,7 @@ import {
   saveProjectBudgetLine,
   type BudgetLineFieldErrors,
 } from "@/app/(app)/projects/[id]/budget-actions"
+import { MoneyInput } from "@/components/money-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,7 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -138,17 +138,14 @@ export function BudgetLineDialog({
             </Field>
             <Field data-invalid={Boolean(fieldErrors.plannedAmount) || undefined}>
               <FieldLabel htmlFor="budget-planned">Planned Amount</FieldLabel>
-              <Input
+              <MoneyInput
                 id="budget-planned"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
                 autoCapitalize="off"
                 enterKeyHint="next"
                 value={plannedAmount}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.plannedAmount)}
-                onChange={(event) => setPlannedAmount(event.target.value)}
+                onValueChange={setPlannedAmount}
               />
               {fieldErrors.plannedAmount ? (
                 <FieldError>{fieldErrors.plannedAmount}</FieldError>

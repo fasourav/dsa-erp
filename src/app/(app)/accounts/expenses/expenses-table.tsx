@@ -181,6 +181,22 @@ export function ExpensesTable({
             ? "No Matching Operational Expenses."
             : "No Operational Expenses Yet."
         }
+        emptyState={
+          !query.trim()
+            ? {
+                kind: "none",
+                action: canAdd ? (
+                  <Button type="button" onClick={() => openForm(null)}>
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Add Expense
+                  </Button>
+                ) : undefined,
+              }
+            : {
+                kind: "filtered",
+                onClearFilters: () => setParams({ q: null }),
+              }
+        }
         rangeText={rangeLabel(
           rangeStart,
           rangeEnd,

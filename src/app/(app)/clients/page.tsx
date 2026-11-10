@@ -15,5 +15,5 @@ export default async function ClientsPage({
   const { clients, error } = await getClientSummaries()
   const initialQuery = firstParam(params.q)
 
-  return <ClientsTable key={initialQuery || "all"} clients={clients} error={error} initialQuery={initialQuery} />
+  return <ClientsTable clients={clients} error={error} initialQuery={initialQuery} />
 }

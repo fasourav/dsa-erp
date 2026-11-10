@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 
+import { MoneyInput } from "@/components/money-input"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -73,13 +74,12 @@ export function RecordPaymentFields({
         {showAmount ? (
           <div className="flex flex-col gap-2">
             <Label htmlFor={`${idPrefix}-amount`}>Amount</Label>
-            <Input
+            <MoneyInput
               id={`${idPrefix}-amount`}
-              inputMode="decimal"
               value={amount}
               disabled={disabled}
               aria-invalid={Boolean(amountError)}
-              onChange={(event) => onAmountChange(event.target.value)}
+              onValueChange={onAmountChange}
             />
             {amountError ? (
               <p role="alert" className="text-sm text-destructive">

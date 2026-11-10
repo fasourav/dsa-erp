@@ -11,6 +11,7 @@ import {
   type BankMovementFieldErrors,
   type BankTransferFieldErrors,
 } from "@/app/(app)/accounts/bank/actions"
+import { MoneyInput } from "@/components/money-input"
 import { NameCombobox } from "@/components/name-combobox"
 import { RecordAttachments } from "@/components/record-attachments"
 import { Button } from "@/components/ui/button"
@@ -448,15 +449,13 @@ function PaymentFieldRows({
     <>
       <Field span="half" data-invalid={Boolean(amountError) || undefined}>
         <FieldLabel htmlFor={`${idPrefix}-amount`}>Amount</FieldLabel>
-        <Input
+        <MoneyInput
           id={`${idPrefix}-amount`}
-          inputMode="decimal"
-          autoComplete="off"
           enterKeyHint="next"
           value={amount}
           disabled={disabled}
           aria-invalid={Boolean(amountError)}
-          onChange={(event) => onAmountChange(event.target.value)}
+          onValueChange={onAmountChange}
         />
         {amountError ? <FieldError>{amountError}</FieldError> : null}
       </Field>

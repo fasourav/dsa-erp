@@ -19,7 +19,7 @@ import type {
 import { Popover } from "@base-ui/react/popover"
 
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyContent, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -141,6 +141,12 @@ export type DataListMobileItem = {
   meta?: ReactNode
 }
 
+export type DataListEmptyState = {
+  kind: "none" | "filtered"
+  action?: ReactNode
+  onClearFilters?: () => void
+}
+
 const noopPageChange = () => {}
 
 export function DataList<T, Id extends string>({
@@ -152,6 +158,7 @@ export function DataList<T, Id extends string>({
   visibility,
   error,
   emptyMessage,
+  emptyState,
   rangeText,
   currentPage = 1,
   pageCount = 1,
@@ -172,6 +179,7 @@ export function DataList<T, Id extends string>({
   visibility: Partial<Record<Id, boolean>>
   error: string | null
   emptyMessage: string
+  emptyState?: DataListEmptyState
   rangeText: string
   currentPage?: number
   pageCount?: number
@@ -224,7 +232,7 @@ export function DataList<T, Id extends string>({
                 {error}
               </p>
             ) : rows.length === 0 ? (
-              <ListEmpty message={emptyMessage} />
+              <ListEmpty message={emptyMessage} emptyState={emptyState} />
             ) : (
               <ul>
                 {rows.map((row) => {
@@ -459,7 +467,7 @@ export function DataList<T, Id extends string>({
             {error}
           </p>
         ) : rows.length === 0 ? (
-          <ListEmpty message={emptyMessage} />
+          <ListEmpty message={emptyMessage} emptyState={emptyState} />
         ) : null}
         <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
           <p className="text-label text-muted-foreground">{rangeText}</p>
@@ -682,13 +690,35 @@ export function ColumnHint({ label, hint }: { label: string; hint: string }) {
   )
 }
 
-function ListEmpty({ message }: { message: string }) {
+function ListEmpty({
+  message,
+  emptyState,
+}: {
+  message: string
+  emptyState?: DataListEmptyState
+}) {
+  const isFiltered = emptyState?.kind === "filtered"
   return (
     <Empty>
       <EmptyMedia variant="icon">
         <Inbox aria-hidden="true" />
       </EmptyMedia>
-      <EmptyTitle className="font-label text-muted-foreground">{message}</EmptyTitle>
+      <EmptyTitle className="font-label text-muted-foreground">
+        {isFiltered ? "No results for these filters." : message}
+      </EmptyTitle>
+      {isFiltered && emptyState.onClearFilters ? (
+        <EmptyContent>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={emptyState.onClearFilters}
+          >
+            Clear filters
+          </Button>
+        </EmptyContent>
+      ) : emptyState?.kind === "none" && emptyState.action ? (
+        <EmptyContent>{emptyState.action}</EmptyContent>
+      ) : null}
     </Empty>
   )
 }

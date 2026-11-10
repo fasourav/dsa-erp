@@ -15,6 +15,7 @@ import {
 import { useCan } from "@/components/access-provider"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
+import { MoneyInput } from "@/components/money-input"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -295,14 +296,13 @@ function ReconcileSession({
                 <Money value={exact.statementBalance} />
               </p>
             ) : (
-              <Input
+              <MoneyInput
                 id="statement-balance"
-                inputMode="decimal"
-                autoComplete="off"
+                allowNegative
                 aria-label="Statement Balance"
                 value={statementBalance}
                 disabled={!canEdit || pending || locked}
-                onChange={(event) => setStatementBalance(event.target.value)}
+                onValueChange={setStatementBalance}
               />
             )}
           </CardContent>
@@ -856,13 +856,11 @@ function AddLineDialog({
             </Field>
             <Field span="half">
               <FieldLabel htmlFor="line-amount">Amount</FieldLabel>
-              <Input
+              <MoneyInput
                 id="line-amount"
-                inputMode="decimal"
-                autoComplete="off"
                 enterKeyHint="next"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onValueChange={setAmount}
               />
             </Field>
             <Field span="half">

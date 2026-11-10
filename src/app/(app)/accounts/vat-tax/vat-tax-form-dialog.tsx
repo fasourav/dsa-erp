@@ -8,6 +8,7 @@ import {
   addVatTaxPayment,
   type VatTaxFieldErrors,
 } from "@/app/(app)/accounts/vat-tax/actions"
+import { MoneyInput } from "@/components/money-input"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
@@ -146,15 +147,13 @@ export function VatTaxFormDialog({
 
             <Field span="half" data-invalid={Boolean(fieldErrors.amount) || undefined}>
               <FieldLabel htmlFor="vat-amount">Amount</FieldLabel>
-              <Input
+              <MoneyInput
                 id="vat-amount"
-                inputMode="decimal"
-                autoComplete="off"
                 enterKeyHint="next"
                 value={amount}
                 disabled={pending}
                 aria-invalid={Boolean(fieldErrors.amount)}
-                onChange={(event) => setAmount(event.target.value)}
+                onValueChange={setAmount}
               />
               {fieldErrors.amount ? <FieldError>{fieldErrors.amount}</FieldError> : null}
             </Field>

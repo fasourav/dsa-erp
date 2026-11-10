@@ -89,7 +89,20 @@ export function StatementView({
       <div className="print:hidden">
         <PageHeader
           className="mb-0 md:mb-2"
-          eyebrow={eyebrow}
+          breadcrumbs={[
+            {
+              label: eyebrow,
+              href:
+                eyebrow === "Vendors"
+                  ? "/vendors"
+                  : eyebrow === "Clients"
+                    ? "/clients"
+                    : undefined,
+            },
+            { label: partyName },
+            { label: "Statement" },
+          ]}
+          eyebrow={<span className="md:hidden">{eyebrow}</span>}
           title={title}
           description={`${partyName} · ${periodLabel}`}
           actions={

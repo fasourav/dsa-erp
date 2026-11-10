@@ -205,6 +205,18 @@ export function VendorInvoicesPanel({
     <div className="flex flex-col gap-4 md:gap-5">
       <PageHeader
         className="mb-0 md:mb-2"
+        breadcrumbs={[
+          { label: "Purchase Orders", href: "/purchase-orders" },
+          {
+            label: purchaseOrder?.projectId
+              ? purchaseOrder.projectName || "Project"
+              : "Operational",
+            href: purchaseOrder?.projectId
+              ? `/projects/${purchaseOrder.projectId}`
+              : undefined,
+          },
+          { label: purchaseOrder?.vendorName || "Vendor" },
+        ]}
         eyebrow={purchaseOrder ? purchaseOrder.vendorName || "Vendor" : undefined}
         title={
           <span className="inline-flex flex-wrap items-center gap-2.5">
@@ -463,7 +475,7 @@ export function VendorInvoicesPanel({
       {purchaseOrder ? (
         <>
           <VendorInvoiceFormDialog
-            key={formSession}
+            key={`vendor-invoice-form-${formSession}`}
             open={formOpen}
             onOpenChange={setFormOpen}
             purchaseOrderId={purchaseOrder.id}
@@ -471,7 +483,7 @@ export function VendorInvoicesPanel({
             maxAmount={maxBillAmount}
           />
           <RecordVendorPaymentDialog
-            key={recordSession}
+            key={`record-payment-${recordSession}`}
             open={recordOpen}
             onOpenChange={setRecordOpen}
             purchaseOrder={purchaseOrder}

@@ -7,6 +7,7 @@ import {
 
 export type IncomeRow = {
   id: string
+  projectId?: string
   projectName: string
   projectType: string
   invoiceAmount: number

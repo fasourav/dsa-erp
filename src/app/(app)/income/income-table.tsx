@@ -1,7 +1,8 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import { useMemo, useState } from "react"
+import Link from "next/link"
+import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
@@ -19,11 +20,17 @@ import {
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const incomeSortKeys = incomeColumns.map((column) => column.id)
+const defaultIncomeSort: SortState<IncomeColumnId> = {
+  key: "paidOn",
+  direction: "desc",
+}
 
 export function IncomeTable({
   rows,
@@ -33,12 +40,19 @@ export function IncomeTable({
   error: string | null
 }) {
   const visibility = useColumnVisibility(incomeColumnStore)
-  const [sort, setSort] = useState<SortState<IncomeColumnId>>({
-    key: "paidOn",
-    direction: "desc",
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<IncomeColumnId>({
+    sortKeys: incomeSortKeys,
+    defaultSort: defaultIncomeSort,
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
   const sorted = useMemo(() => sortIncome(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
@@ -75,10 +89,7 @@ export function IncomeTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search income"
       />
       <DataList
@@ -86,13 +97,15 @@ export function IncomeTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(row) => row.id}
         sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Collected Invoices Yet."
+        emptyState={
+          rows.length === 0 && !hasActiveFilters
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
@@ -105,7 +118,16 @@ export function IncomeTable({
         onPageChange={setPage}
         pagingLabel="Income pagination"
         mobileItem={(row) => ({
-          title: row.projectName || "—",
+          title: row.projectId ? (
+            <Link
+              href={`/projects/${row.projectId}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {row.projectName || "—"}
+            </Link>
+          ) : (
+            row.projectName || "—"
+          ),
           value: (
             <Money
               value={row.collectedAmount}
@@ -142,6 +164,19 @@ export function IncomeTable({
 function Cell({ row, columnId }: { row: IncomeRow; columnId: IncomeColumnId }) {
   switch (columnId) {
     case "projectName":
+      if (row.projectId) {
+        return (
+          <Link
+            href={`/projects/${row.projectId}`}
+            className={cn(
+              "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
+              !row.projectName && "text-muted-foreground",
+            )}
+          >
+            {row.projectName || "—"}
+          </Link>
+        )
+      }
       return (
         <span
           className={cn(

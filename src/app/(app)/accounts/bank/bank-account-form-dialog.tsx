@@ -8,6 +8,7 @@ import {
   updateBankAccount,
   type BankAccountFieldErrors,
 } from "@/app/(app)/accounts/bank/actions"
+import { MoneyInput } from "@/components/money-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -265,15 +266,13 @@ export function BankAccountFormDialog({
             </Field>
             <Field data-invalid={Boolean(openingError) || undefined}>
               <FieldLabel htmlFor="bank-account-opening">Opening Balance</FieldLabel>
-              <Input
+              <MoneyInput
                 id="bank-account-opening"
-                inputMode="decimal"
-                autoComplete="off"
                 enterKeyHint="next"
                 value={openingBalance}
                 disabled={pending || Boolean(accountId)}
                 aria-invalid={Boolean(openingError)}
-                onChange={(event) => setOpeningBalance(event.target.value)}
+                onValueChange={setOpeningBalance}
               />
               {accountId ? (
                 <FieldDescription>

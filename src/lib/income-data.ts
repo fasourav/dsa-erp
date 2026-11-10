@@ -99,6 +99,7 @@ export async function getIncome(): Promise<{
 
       return {
         id: invoice.id,
+        projectId: invoice.project_id ?? "",
         projectName: project?.name.trim() ?? "",
         projectType: project?.project_type?.trim() ?? "",
         invoiceAmount: toNumber(invoice.amount),

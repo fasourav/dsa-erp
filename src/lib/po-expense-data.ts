@@ -108,6 +108,7 @@ export async function getPoExpenses(): Promise<{
       return [
         {
           id: expense.expense_id,
+          purchaseOrderId: expense.po_id ?? "",
           expenseDate: dateInputValue(expense.expense_date ?? ""),
           projectName: expense.project_name?.trim() ?? "",
           vendorName: expense.vendor_name?.trim() ?? "",

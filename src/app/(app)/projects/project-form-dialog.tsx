@@ -9,6 +9,7 @@ import {
   updateProject,
   type ProjectFormFieldErrors,
 } from "@/app/(app)/projects/actions"
+import { MoneyInput } from "@/components/money-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -356,16 +357,12 @@ export function ProjectFormDialog({
             <FieldGroup layout="inset">
               <Field data-invalid={Boolean(valueError) || undefined}>
                 <FieldLabel htmlFor="project-value">Project Value</FieldLabel>
-                <Input
+                <MoneyInput
                   id="project-value"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  inputMode="decimal"
                   value={totalValue}
                   disabled={pending}
                   aria-invalid={Boolean(valueError)}
-                  onChange={(event) => setTotalValue(event.target.value)}
+                  onValueChange={setTotalValue}
                 />
                 {valueError ? <FieldError>{valueError}</FieldError> : null}
               </Field>

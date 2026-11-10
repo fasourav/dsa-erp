@@ -11,6 +11,7 @@ import {
 } from "@/app/(app)/accounts/expenses/actions"
 import { DuplicateWarning } from "@/app/(app)/accounts/duplicate-warning"
 import { BankAccountField } from "@/components/bank-account-field"
+import { MoneyInput } from "@/components/money-input"
 import { RecordAttachments } from "@/components/record-attachments"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
@@ -238,16 +239,14 @@ export function ExpenseFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(amountError) || undefined}>
               <FieldLabel htmlFor="expense-amount">Amount</FieldLabel>
-              <Input
+              <MoneyInput
                 id="expense-amount"
-                inputMode="decimal"
-                autoComplete="off"
                 enterKeyHint="next"
                 value={amount}
                 disabled={pending}
                 aria-invalid={Boolean(amountError)}
-                onChange={(event) => {
-                  setAmount(event.target.value)
+                onValueChange={(next) => {
+                  setAmount(next)
                   forgetDuplicate()
                 }}
               />

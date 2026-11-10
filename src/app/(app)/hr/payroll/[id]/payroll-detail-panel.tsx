@@ -139,8 +139,12 @@ export function PayrollDetailPanel({
   return (
     <div className="flex flex-col gap-3.5">
       <PageHeader
+        breadcrumbs={[
+          { label: "Payroll", href: "/hr/payroll" },
+          { label },
+        ]}
         eyebrow={
-          <Link href="/hr/payroll" className="hover:text-foreground">
+          <Link href="/hr/payroll" className="hover:text-foreground md:hidden">
             Payroll
           </Link>
         }

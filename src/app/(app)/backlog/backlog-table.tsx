@@ -4,6 +4,7 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Pencil } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import { RecoveryPlanDialog } from "@/app/(app)/backlog/recovery-plan-dialog"
@@ -29,11 +30,17 @@ import {
 import {
   paginateRows,
   rangeLabel,
-  toggleSort,
   type SortState,
 } from "@/lib/list-paging"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
+import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
+
+const backlogSortKeys = backlogColumns.map((column) => column.id)
+const defaultBacklogSort: SortState<BacklogColumnId> = {
+  key: "backlogAmount",
+  direction: "desc",
+}
 
 export function BacklogTable({
   rows,
@@ -45,12 +52,19 @@ export function BacklogTable({
   const canEdit = useCan("backlog", "edit")
 
   const visibility = useColumnVisibility(backlogColumnStore)
-  const [sort, setSort] = useState<SortState<BacklogColumnId>>({
-    key: "backlogAmount",
-    direction: "desc",
+  const {
+    query,
+    setQuery,
+    sort,
+    onSort,
+    page,
+    setPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useListUrlState<BacklogColumnId>({
+    sortKeys: backlogSortKeys,
+    defaultSort: defaultBacklogSort,
   })
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [formProject, setFormProject] = useState<BacklogRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -98,10 +112,7 @@ export function BacklogTable({
       />
       <ListSearch
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value)
-          setPage(1)
-        }}
+        onQueryChange={setQuery}
         placeholder="Search backlog"
       />
       <DataList
@@ -109,13 +120,15 @@ export function BacklogTable({
         rows={error ? [] : pageResult.rows}
         rowKey={(row) => row.id}
         sort={sort}
-        onSort={(key) => {
-          setSort((current) => toggleSort(current, key))
-          setPage(1)
-        }}
+        onSort={onSort}
         visibility={visibility}
         error={error}
         emptyMessage="No Backlog Projects Yet."
+        emptyState={
+          rows.length === 0 && !hasActiveFilters
+            ? { kind: "none" }
+            : { kind: "filtered", onClearFilters: clearFilters }
+        }
         rangeText={rangeLabel(
           pageResult.rangeStart,
           pageResult.rangeEnd,
@@ -128,7 +141,14 @@ export function BacklogTable({
         onPageChange={setPage}
         pagingLabel="Backlog pagination"
         mobileItem={(row) => ({
-          title: row.projectName || "—",
+          title: (
+            <Link
+              href={`/projects/${row.id}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {row.projectName || "—"}
+            </Link>
+          ),
           value: row.status ? <StatusBadge status={row.status} /> : undefined,
           subtitle: row.recoveryPlan || "—",
           meta: <Money value={row.backlogAmount} />,
@@ -177,14 +197,15 @@ function Cell({
   switch (columnId) {
     case "projectName":
       return (
-        <span
+        <Link
+          href={`/projects/${row.id}`}
           className={cn(
-            "text-ui font-semibold",
+            "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
             !row.projectName && "text-muted-foreground",
           )}
         >
           {row.projectName || "—"}
-        </span>
+        </Link>
       )
     case "projectValue":
     case "amountPaid":

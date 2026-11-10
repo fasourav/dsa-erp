@@ -49,6 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { allows, canSeeReport } from "@/lib/access"
 import type { OverBudgetProject } from "@/lib/project-budget-model"
 import {
   formatDelta,
@@ -119,13 +120,36 @@ function DashboardSections({
   overBudget: readonly OverBudgetProject[]
   showAssets: boolean
 }) {
-  const showFinancials = useAccess().showFinancials
+  const access = useAccess()
+  const showFinancials = access.showFinancials
   const router = useRouter()
   if (!showFinancials) {
     return <LimitedDashboard />
   }
   const snapshot = model.snapshots[0]
   const yearValue = model.scopeYear == null ? "all" : String(model.scopeYear)
+  const y = model.scopeYear
+  const pnlHref = canSeeReport(access, "profit-and-loss")
+    ? y != null
+      ? `/reports/profit-and-loss?from=${y}-01-01&to=${y}-12-31`
+      : "/reports/profit-and-loss"
+    : undefined
+  const bankHref = allows(access, "banking", "view") ? "/accounts/bank" : undefined
+  const receivableHref = allows(access, "accounts_receivable", "view")
+    ? "/accounts/receivable"
+    : undefined
+  const payableHref = allows(access, "accounts_payable", "view")
+    ? "/accounts/payable"
+    : undefined
+  const projectsHref = allows(access, "projects", "view") ? "/projects" : undefined
+  const activeProjectsHref = allows(access, "projects", "view")
+    ? "/projects?status=active"
+    : undefined
+  const leadsHref = allows(access, "leads", "view") ? "/leads" : undefined
+  const clientsHref = allows(access, "clients", "view") ? "/clients" : undefined
+  const vendorsHref = allows(access, "vendors", "view") ? "/vendors" : undefined
+  const backlogHref = allows(access, "backlog", "view") ? "/backlog" : undefined
+  const assetsHref = allows(access, "assets", "view") ? "/assets" : undefined
   const yearItems = [
     { value: "all", label: "All Time" },
     ...model.years.map((item) => ({
@@ -210,6 +234,7 @@ function DashboardSections({
             delta={snapshot.revenueDelta}
             spark={snapshot.revenueSpark}
             sparkColor="var(--chart-1)"
+            href={pnlHref}
           />
           <KpiCard
             label="Total Expense"
@@ -218,6 +243,7 @@ function DashboardSections({
             lowerIsBetter
             spark={snapshot.expenseSpark}
             sparkColor="var(--chart-3)"
+            href={pnlHref}
           />
           <KpiCard
             label="Net Profit"
@@ -225,6 +251,7 @@ function DashboardSections({
             delta={snapshot.netDelta}
             spark={snapshot.netSpark}
             sparkColor="var(--chart-2)"
+            href={pnlHref}
           />
           {showFinancials ? (
             <KpiCard
@@ -235,6 +262,7 @@ function DashboardSections({
               delta={model.cashDelta}
               spark={model.cashSpark}
               sparkColor="var(--chart-5)"
+              href={bankHref}
             />
           ) : null}
         </div>
@@ -248,11 +276,13 @@ function DashboardSections({
                 : `${formatDelta(snapshot.grossDelta)} Vs Last FY`
             }
             tone={snapshot.grossProfit < 0 ? "negative" : "default"}
+            href={pnlHref}
           />
           <CompactMetric
             label="Accounts Receivable"
             value={model.receivables}
             detail={stockDetail}
+            href={receivableHref}
           />
           <CompactMetric
             label="Accounts Payable"
@@ -260,6 +290,7 @@ function DashboardSections({
             detail={stockDetail}
             tone={model.payables > 0 ? "warning" : "default"}
             icon={model.payables > 0 ? AlertCircle : undefined}
+            href={payableHref}
           />
           <CompactMetric
             label="Forecasted Profit"
@@ -288,6 +319,7 @@ function DashboardSections({
           <ProjectValueTile
             high={model.performance.highValue}
             low={model.performance.lowValue}
+            href={projectsHref}
           />
           <MetricTile
             icon={Hammer}
@@ -295,6 +327,7 @@ function DashboardSections({
             label="Active Projects"
             value={String(model.performance.active)}
             hint="In Progress"
+            href={activeProjectsHref}
           />
           <MetricTile
             icon={Target}
@@ -302,6 +335,7 @@ function DashboardSections({
             label="Projects in Leads"
             value={String(model.performance.openLeads)}
             hint="Open Pipeline"
+            href={leadsHref}
           />
           <MetricTile
             icon={Wallet}
@@ -309,6 +343,7 @@ function DashboardSections({
             label="Project Lead Value"
             value={<Money value={model.performance.leadValue} />}
             hint="In Pipeline"
+            href={leadsHref}
           />
           <MetricTile
             icon={Users}
@@ -316,6 +351,7 @@ function DashboardSections({
             label="Clients"
             value={String(model.performance.clients)}
             hint="Total Clients"
+            href={clientsHref}
           />
           <MetricTile
             icon={Truck}
@@ -329,6 +365,7 @@ function DashboardSections({
               )
             }
             hint={model.performance.vendors == null ? "Unavailable" : "Total Vendors"}
+            href={vendorsHref}
           />
           <MetricTile
             icon={Trophy}
@@ -367,6 +404,7 @@ function DashboardSections({
             hint="Expense Exceeds Collection"
             wrap
             className={showAssets ? "lg:col-span-2" : "lg:col-span-3"}
+            href={backlogHref}
           />
           {showAssets ? (
             <MetricTile
@@ -382,6 +420,7 @@ function DashboardSections({
               }
               hint={model.performance.assetValue == null ? "Unavailable" : "Current Value"}
               className="col-span-2 lg:col-span-1"
+              href={assetsHref}
             />
           ) : null}
         </div>
@@ -684,6 +723,7 @@ function KpiCard({
   lowerIsBetter = false,
   spark,
   sparkColor,
+  href,
 }: {
   label: string
   info?: string
@@ -693,14 +733,22 @@ function KpiCard({
   lowerIsBetter?: boolean
   spark: { label: string; value: number }[]
   sparkColor: string
+  href?: string
 }) {
   return (
-    <Card className="min-w-0 gap-0 px-4 pt-4 pb-2.5 md:px-5.5 md:pt-5 md:pb-1.5">
+    <Card className="relative min-w-0 gap-0 px-4 pt-4 pb-2.5 md:px-5.5 md:pt-5 md:pb-1.5">
+      {href ? (
+        <Link
+          href={href}
+          aria-label={`Open ${label}`}
+          className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        />
+      ) : null}
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="min-w-0 truncate text-sm font-semibold text-muted-foreground md:text-ui">{label}</p>
           {info ? (
-            <span className="-mx-1 -my-2 inline-flex shrink-0">
+            <span className="relative z-10 -mx-1 -my-2 inline-flex shrink-0">
               <ColumnHint label={label} hint={info} />
             </span>
           ) : null}
@@ -727,6 +775,7 @@ function CompactMetric({
   tone = "default",
   icon: Icon,
   wide = false,
+  href,
 }: {
   label: string
   value: number
@@ -734,15 +783,23 @@ function CompactMetric({
   tone?: "default" | "negative" | "warning" | "positive"
   icon?: LucideIcon
   wide?: boolean
+  href?: string
 }) {
   return (
     <div
       className={cn(
-        "min-w-0 rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:rounded-none md:border-l md:border-border md:bg-transparent md:px-5 md:py-4.5 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 md:first:border-l-0",
+        "relative min-w-0 rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:rounded-none md:border-l md:border-border md:bg-transparent md:px-5 md:py-4.5 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 md:first:border-l-0",
         tone === "warning" && "bg-warning-wash md:bg-warning-wash",
         wide && "col-span-2 flex items-center justify-between gap-3 md:col-span-1 md:block",
       )}
     >
+      {href ? (
+        <Link
+          href={href}
+          aria-label={`Open ${label}`}
+          className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        />
+      ) : null}
       <p
         className={cn(
           "flex items-center gap-1.25 text-caption font-semibold md:gap-1.5",
@@ -787,9 +844,11 @@ const metricSurface =
 function ProjectValueTile({
   high,
   low,
+  href,
 }: {
   high: number | null
   low: number | null
+  href?: string
 }) {
   const threshold = formatExactBdt(HIGH_VALUE_PROJECT_MIN).replace(/\.00$/, "")
   return (
@@ -801,6 +860,7 @@ function ProjectValueTile({
           label="High Value Projects"
           count={high}
           hint={`≥ ${threshold}`}
+          href={href}
         />
         <ProjectCount
           icon={Layers}
@@ -809,6 +869,7 @@ function ProjectValueTile({
           count={low}
           hint={`< ${threshold}`}
           divided
+          href={href}
         />
       </div>
     </div>
@@ -822,6 +883,7 @@ function ProjectCount({
   count,
   hint,
   divided = false,
+  href,
 }: {
   icon: LucideIcon
   color: string
@@ -829,14 +891,22 @@ function ProjectCount({
   count: number | null
   hint: string
   divided?: boolean
+  href?: string
 }) {
   return (
     <div
       className={cn(
-        "flex h-full min-w-0 flex-col md:flex-row md:items-start md:gap-3.5",
+        "relative flex h-full min-w-0 flex-col md:flex-row md:items-start md:gap-3.5",
         divided ? "border-l border-border pl-3 md:pl-4" : "pr-3 md:pr-4",
       )}
     >
+      {href ? (
+        <Link
+          href={href}
+          aria-label={`Open ${label}`}
+          className="absolute inset-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        />
+      ) : null}
       <MetricIcon icon={icon} color={color} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">
@@ -873,6 +943,7 @@ function MetricTile({
   bar,
   wrap = false,
   className,
+  href,
 }: {
   icon: LucideIcon
   color: string
@@ -882,9 +953,17 @@ function MetricTile({
   bar?: number
   wrap?: boolean
   className?: string
+  href?: string
 }) {
   return (
-    <div className={cn(metricSurface, "flex flex-col px-3.5 py-3.25 md:flex-row md:items-start md:gap-3.5 md:p-4", className)}>
+    <div className={cn(metricSurface, "relative flex flex-col px-3.5 py-3.25 md:flex-row md:items-start md:gap-3.5 md:p-4", className)}>
+      {href ? (
+        <Link
+          href={href}
+          aria-label={`Open ${label}`}
+          className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        />
+      ) : null}
       <MetricIcon icon={Icon} color={color} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">{label}</p>
