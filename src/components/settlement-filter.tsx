@@ -45,10 +45,15 @@ export function SettlementFilterControl({
   const buttonRefs = useRef<
     Partial<Record<SettlementFilter, HTMLButtonElement | null>>
   >({})
+  const [seenValue, setSeenValue] = useState(value)
   const [pending, setPending] = useState<{
     from: SettlementFilter
     to: SettlementFilter
   } | null>(null)
+  if (seenValue !== value) {
+    setSeenValue(value)
+    setPending(null)
+  }
   const shown = pending && pending.from === value ? pending.to : value
 
   function choose(next: SettlementFilter) {
