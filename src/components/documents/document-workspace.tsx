@@ -8,6 +8,7 @@ import { useAccess } from "@/components/access-provider"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { NameCombobox } from "@/components/name-combobox"
 import { RecordAttachments } from "@/components/record-attachments"
+import { UnsavedChangesDialog } from "@/components/unsaved-changes-dialog"
 import type { AttachmentParent } from "@/lib/attachments"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,10 @@ import { deliverPdf } from "@/lib/documents/deliver-pdf"
 import { clampPrintMargin, type PrintMargins } from "@/lib/documents/drafts"
 import { documentFileName, renderDocument } from "@/lib/documents/setc/render"
 import { documentNumberOf, type DocumentModel, type SavedRecordKind } from "@/lib/documents/setc/types"
+import {
+  bypassUnsavedChangesGuard,
+  useUnsavedChangesGuard,
+} from "@/lib/use-unsaved-changes-guard"
 import { cn } from "@/lib/utils"
 
 const pxPerMm = 96 / 25.4
@@ -49,6 +54,7 @@ export function DocumentWorkspace({
   pending,
   error,
   dirty = false,
+  guardUnsaved = false,
   onSave,
   files,
   templateNames,
@@ -74,6 +80,7 @@ export function DocumentWorkspace({
   error: string | null
   /** Saved document whose form no longer matches what Download would rebuild. */
   dirty?: boolean
+  guardUnsaved?: boolean
   onSave: () => void
   files?: { parentType: AttachmentParent; parentId: string | null }
   templateNames?: readonly string[]
@@ -86,6 +93,12 @@ export function DocumentWorkspace({
   const top = clampPrintMargin(margins.topMm, 32)
   const bottom = clampPrintMargin(margins.bottomMm, 28)
   const access = useAccess()
+  const unsavedGuard = useUnsavedChangesGuard(
+    Boolean(dirty && guardUnsaved && canSave),
+    {
+      message: `Your changes to this ${title.toLowerCase()} haven't been saved.`,
+    },
+  )
   const [pane, setPane] = useState<"edit" | "preview">("edit")
   const [copied, setCopied] = useState(false)
   const [templateName, setTemplateName] = useState("")
@@ -289,9 +302,11 @@ export function DocumentWorkspace({
           onConfirm={() => {
             setTrashError(null)
             setTrashPending(true)
+            bypassUnsavedChangesGuard(true)
             void onTrash().then((message) => {
               setTrashPending(false)
               if (message) {
+                bypassUnsavedChangesGuard(false)
                 setTrashError(message)
                 return
               }
@@ -300,6 +315,13 @@ export function DocumentWorkspace({
           }}
         />
       ) : null}
+      <UnsavedChangesDialog
+        open={unsavedGuard.confirmOpen}
+        onOpenChange={unsavedGuard.onOpenChange}
+        message={unsavedGuard.message}
+        onKeepEditing={unsavedGuard.keepEditing}
+        onDiscard={unsavedGuard.confirmDiscard}
+      />
       {canSaveAsTemplate && onSaveAsTemplate ? (
         <Dialog open={saveAsOpen} onOpenChange={setSaveAsOpen}>
           <DialogContent className="overflow-hidden sm:max-w-lg print:hidden!" mobileLayout="nav">

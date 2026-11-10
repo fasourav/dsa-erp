@@ -27,6 +27,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Label } from "@/components/ui/label"
 import { navIcons } from "@/lib/nav-icons"
 import type { SearchHit } from "@/lib/search"
+import { guardedNavigate } from "@/lib/use-unsaved-changes-guard"
 import { cn } from "@/lib/utils"
 
 const emptyResults: SearchHit[] = []
@@ -111,7 +112,7 @@ export function GlobalSearch() {
 
   function go(hit: SearchHit) {
     setOpen(false)
-    router.push(hit.href)
+    guardedNavigate(hit.href, () => router.push(hit.href))
   }
 
   function onInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
@@ -223,6 +224,7 @@ export function GlobalSearch() {
                         <li key={`${hit.moduleKey}-${hit.recordId}-${hit.label}-${index}`}>
                           <Link
                             href={hit.href}
+                            onClickCapture={() => setOpen(false)}
                             onClick={() => setOpen(false)}
                             className={cn(
                               "flex min-h-11 items-center gap-3 rounded-xl px-2 py-2 hover:bg-fill",
