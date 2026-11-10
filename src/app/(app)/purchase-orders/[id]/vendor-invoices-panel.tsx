@@ -463,7 +463,7 @@ export function VendorInvoicesPanel({
       {purchaseOrder ? (
         <>
           <VendorInvoiceFormDialog
-            key={formSession}
+            key={`vendor-invoice-form-${formSession}`}
             open={formOpen}
             onOpenChange={setFormOpen}
             purchaseOrderId={purchaseOrder.id}
@@ -471,7 +471,7 @@ export function VendorInvoicesPanel({
             maxAmount={maxBillAmount}
           />
           <RecordVendorPaymentDialog
-            key={recordSession}
+            key={`record-payment-${recordSession}`}
             open={recordOpen}
             onOpenChange={setRecordOpen}
             purchaseOrder={purchaseOrder}
