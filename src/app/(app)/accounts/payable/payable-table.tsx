@@ -180,7 +180,16 @@ export function PayableTable({
         onPageChange={setPage}
         pagingLabel="Accounts Payable pagination"
         mobileItem={(row) => ({
-          title: row.vendorName || "—",
+          title: row.purchaseOrderId ? (
+            <Link
+              href={`/purchase-orders/${row.purchaseOrderId}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {row.vendorName || "—"}
+            </Link>
+          ) : (
+            row.vendorName || "—"
+          ),
           subtitle: [
             row.projectName || "—",
             `Unpaid Since ${row.oldestUnpaidBillOn ? formatIsoDate(row.oldestUnpaidBillOn) : "—"}`,

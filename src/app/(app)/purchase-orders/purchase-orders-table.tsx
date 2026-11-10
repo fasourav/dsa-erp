@@ -296,7 +296,14 @@ export function PurchaseOrdersTable({
         onPageChange={setPage}
         pagingLabel="Purchase orders pagination"
         mobileItem={(order) => ({
-          title: order.vendorName || "—",
+          title: (
+            <Link
+              href={`/purchase-orders/${order.id}`}
+              className="block truncate underline-offset-4 hover:underline"
+            >
+              {order.vendorName || "—"}
+            </Link>
+          ),
           subtitle: [
             purchaseOrderDetailLine(order),
             order.projectName,
