@@ -22,7 +22,6 @@ import {
   rangeLabel,
   type SortState,
 } from "@/lib/list-paging"
-import { sumBy } from "@/lib/payment-status"
 import { useColumnVisibility } from "@/lib/use-column-visibility"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
@@ -57,15 +56,6 @@ export function IncomeTable({
   const sorted = useMemo(() => sortIncome(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
-  const totals = useMemo(
-    () => ({
-      values: {
-        invoiceAmount: sumBy(filtered, (row) => row.invoiceAmount),
-        collectedAmount: sumBy(filtered, (row) => row.collectedAmount),
-      },
-    }),
-    [filtered],
-  )
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -110,7 +100,6 @@ export function IncomeTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
-        totals={totals}
         emptyMessage="No Collected Invoices Yet."
         emptyState={
           rows.length === 0 && !hasActiveFilters

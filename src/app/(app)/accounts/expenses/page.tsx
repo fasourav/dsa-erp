@@ -41,7 +41,6 @@ export default async function OperationalExpensesPage({
         paymentMethods={data.paymentMethods}
         bankAccounts={data.bankAccounts}
         total={data.total}
-        totalAmount={data.totalAmount}
         page={data.page}
         error={data.error}
         initialQuery={q}

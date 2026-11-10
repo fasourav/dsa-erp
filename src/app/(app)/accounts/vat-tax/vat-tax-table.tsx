@@ -30,7 +30,6 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import { sumBy } from "@/lib/payment-status"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import type { ProjectOption, VatTaxRow } from "@/lib/vat-tax"
 import { cn } from "@/lib/utils"
@@ -110,10 +109,6 @@ export function VatTaxTable({
   const sorted = useMemo(() => sortVat(payments, sort), [payments, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
-  const totals = useMemo(
-    () => ({ values: { amount: sumBy(filtered, (payment) => payment.amount) } }),
-    [filtered],
-  )
 
   function openForm() {
     setFormSession((s) => s + 1)
@@ -197,7 +192,6 @@ export function VatTaxTable({
         onSort={onSort}
         visibility={{}}
         error={error}
-        totals={totals}
         emptyMessage="No VAT / Tax Payments Yet."
         emptyState={
           payments.length === 0 && !hasActiveFilters

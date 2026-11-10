@@ -18,7 +18,6 @@ import type {
 
 import { Popover } from "@base-ui/react/popover"
 
-import { Money } from "@/components/money"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import {
@@ -38,7 +37,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -143,12 +141,6 @@ export type DataListMobileItem = {
   meta?: ReactNode
 }
 
-export type DataListTotals<Id extends string> = {
-  label?: string
-  values: Partial<Record<Id, number>>
-  withheld?: boolean
-}
-
 export type DataListEmptyState = {
   kind: "none" | "filtered"
   action?: ReactNode
@@ -179,7 +171,6 @@ export function DataList<T, Id extends string>({
   toolbar,
   subtleScrollbar = false,
   stickyHeader = true,
-  totals,
 }: {
   columns: readonly ListColumn<Id>[]
   rows: readonly T[]
@@ -211,7 +202,6 @@ export function DataList<T, Id extends string>({
    */
   subtleScrollbar?: boolean
   stickyHeader?: boolean
-  totals?: DataListTotals<Id>
 }) {
   const visibleColumns = columns.filter((column) =>
     columnVisible(column, visibility),
@@ -221,21 +211,6 @@ export function DataList<T, Id extends string>({
   const compactActions = dense || visibleColumns.length >= 6
   const hasActions = renderActions !== undefined
   const hasRows = !error && rows.length > 0
-  const hasDesktopTotals =
-    hasRows &&
-    totals !== undefined &&
-    visibleColumns.some((column) => totals.values[column.id] !== undefined)
-  const mobileTotalEntries =
-    hasRows && totals
-      ? columns
-          .flatMap((column) => {
-            const value = totals.values[column.id]
-            return value !== undefined
-              ? [{ id: column.id, label: column.label, value }]
-              : []
-          })
-          .slice(0, 3)
-      : []
   const layout = computeTableColumnLayout(visibleColumns, { dense, hasActions })
   const pages = hidePagination ? [] : paginationItems(currentPage, pageCount)
 
@@ -252,30 +227,6 @@ export function DataList<T, Id extends string>({
               sort={sort}
               onSort={onSort}
             />
-          ) : null}
-          {mobileTotalEntries.length > 0 ? (
-            <div
-              aria-label={totals?.label ?? "Total"}
-              className="flex flex-col gap-1.5 rounded-card px-4 py-3 glass-panel"
-            >
-              {mobileTotalEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between gap-3 text-label"
-                >
-                  <span className="truncate text-muted-foreground">
-                    {entry.label}
-                  </span>
-                  <span className="shrink-0 text-callout font-strong tabular-nums">
-                    {totals?.withheld ? (
-                      <span className="text-muted-foreground">Hidden</span>
-                    ) : (
-                      <Money value={entry.value} />
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
           ) : null}
           <div className="overflow-hidden rounded-card glass-panel">
             {error ? (
@@ -522,47 +473,6 @@ export function DataList<T, Id extends string>({
               ))
             )}
           </TableBody>
-          {hasDesktopTotals && totals ? (
-            <TableFooter>
-              <TableRow className="hover:bg-transparent">
-                {visibleColumns.map((column, index) => {
-                  const previous = visibleColumns[index - 1]?.align ?? null
-                  const next = visibleColumns[index + 1]?.align ?? null
-                  const value = totals.values[column.id]
-                  const hasValue = value !== undefined
-                  return (
-                    <TableCell
-                      key={column.id}
-                      className={cn(
-                        "overflow-hidden align-middle",
-                        dense && "text-caption",
-                        hasValue ? "text-right tabular-nums" : alignClass(column.align),
-                        insetClass(column.align, previous, next, dense),
-                      )}
-                    >
-                      {hasValue ? (
-                        totals.withheld ? (
-                          <span className="text-muted-foreground">Hidden</span>
-                        ) : (
-                          <Money value={value} />
-                        )
-                      ) : index === 0 ? (
-                        <span>{totals.label ?? "Total"}</span>
-                      ) : null}
-                    </TableCell>
-                  )
-                })}
-                {hasActions ? (
-                  <TableCell
-                    className={cn(
-                      "sticky right-0 z-10 border-l border-border-subtle bg-muted py-2 text-right align-middle whitespace-nowrap",
-                      compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
-                    )}
-                  />
-                ) : null}
-              </TableRow>
-            </TableFooter>
-          ) : null}
         </Table>
         {error ? (
           <p role="alert" className="px-4 py-10 text-center text-callout text-destructive md:text-ui">

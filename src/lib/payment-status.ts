@@ -99,17 +99,6 @@ export function sumAmounts(amounts: readonly number[]): number {
   return amounts.reduce((total, amount) => total + moneyCents(amount), 0) / 100
 }
 
-export function sumBy<T>(
-  rows: readonly T[],
-  pick: (row: T) => number,
-): number {
-  let cents = 0
-  for (const row of rows) {
-    cents += moneyCents(pick(row))
-  }
-  return cents / 100
-}
-
 export function parsePositiveAmount(value: string): number | null {
   const parsed = parseProjectValue(value)
   if (parsed === null || parsed <= 0) {

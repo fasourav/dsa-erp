@@ -14,7 +14,7 @@ import {
   SettlementFilterControl,
 } from "@/components/settlement-filter"
 import { StatusBadge } from "@/components/status-badge"
-import { paymentStatusLabel, sumBy } from "@/lib/payment-status"
+import { paymentStatusLabel } from "@/lib/payment-status"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -109,17 +109,6 @@ export function ReceivableTable({
     [searched, sort, statusFilter],
   )
   const pageResult = paginateRows(visible, page)
-  const totals = useMemo(
-    () => ({
-      values: {
-        billedAmount: sumBy(visible, (row) => row.billedAmount),
-        paid: sumBy(visible, (row) => row.paid),
-        due: sumBy(visible, (row) => row.due),
-      },
-      withheld: visible.some((row) => row.settlement === null),
-    }),
-    [visible],
-  )
 
   function changeVisibility(id: ReceivableColumnId, checked: boolean) {
     if (locked.has(id)) {
@@ -192,7 +181,6 @@ export function ReceivableTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
-        totals={totals}
         emptyMessage={
           counts.all === 0 && !query.trim()
             ? "No Receivable Invoices Yet."

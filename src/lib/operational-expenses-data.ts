@@ -16,7 +16,6 @@ import {
   sanitizeSearch,
 } from "@/lib/page-query"
 import { dateInputValue } from "@/lib/project-validation"
-import { sumAmounts } from "@/lib/payment-status"
 import { creatorNames } from "@/lib/record-audit"
 import {
   isReportGroup,
@@ -165,7 +164,6 @@ export async function getOperationalExpenses(
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
   total: number
-  totalAmount: number
   page: number
   pageCount: number
   error: string | null
@@ -178,7 +176,6 @@ export async function getOperationalExpenses(
     paymentMethods: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
     total: 0,
-    totalAmount: 0,
     page: 1,
     pageCount: 1,
     error: "Could not load operational expenses.",
@@ -247,7 +244,7 @@ export async function getOperationalExpenses(
       matchingVendorIds,
     )
 
-    const [expenseSlice, amountRows, purchaseOrderPayments] = await Promise.all([
+    const [expenseSlice, purchaseOrderPayments] = await Promise.all([
       fetchPage(
         (from, to) => {
           let query = supabase
@@ -289,19 +286,6 @@ export async function getOperationalExpenses(
         requestedPage,
         LIST_PAGE_SIZE,
       ),
-      fetchAllPages(
-        (from, to) => {
-          let query = supabase
-            .from("operational_expenses")
-            .select("amount")
-            .order("id", { ascending: true })
-          if (orFilter) {
-            query = query.or(orFilter)
-          }
-          return query.range(from, to)
-        },
-        "Operational expense totals list is larger than expected.",
-      ),
       operationalPurchaseOrderPayments(supabase, officeCategoryNames),
     ])
 
@@ -311,9 +295,6 @@ export async function getOperationalExpenses(
       term,
     )
     const expenses = await mapExpenseRows(supabase, expenseSlice.rows)
-    const totalAmount = sumAmounts(
-      amountRows.map((row) => toNumber(row.amount)),
-    )
 
     return {
       expenses,
@@ -329,7 +310,6 @@ export async function getOperationalExpenses(
       ),
       bankAccounts,
       total: expenseSlice.total,
-      totalAmount,
       page: expenseSlice.page,
       pageCount: expenseSlice.pageCount,
       error: null,

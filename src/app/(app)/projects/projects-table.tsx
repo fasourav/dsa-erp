@@ -56,7 +56,6 @@ import {
   type ProjectRow,
   type SortState,
 } from "@/lib/project-summary"
-import { sumBy } from "@/lib/payment-status"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -126,22 +125,6 @@ export function ProjectsTable({
   const pageResult = useMemo(
     () => paginateProjects(filtered, page),
     [filtered, page],
-  )
-  const totals = useMemo(
-    () =>
-      showFinancials
-        ? {
-            values: {
-              totalValue: sumBy(filtered, (project) => project.totalValue),
-              totalPaid: sumBy(filtered, (project) => project.totalPaid),
-              totalDue: sumBy(filtered, (project) => project.totalDue),
-              expenseTotal: sumBy(filtered, (project) => project.expenseTotal),
-              expenseDue: sumBy(filtered, (project) => project.expenseDue),
-              grossProfit: sumBy(filtered, (project) => project.grossProfit),
-            },
-          }
-        : undefined,
-    [filtered, showFinancials],
   )
 
   function openForm(project: ProjectRow | null) {
@@ -290,7 +273,6 @@ export function ProjectsTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
-        totals={totals}
         emptyMessage="No Projects Yet."
         emptyState={
           projects.length === 0 && !hasActiveFilters

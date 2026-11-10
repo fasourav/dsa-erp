@@ -14,7 +14,6 @@ import {
   rangeLabel,
   type SortState,
 } from "@/lib/list-paging"
-import { sumBy } from "@/lib/payment-status"
 import { poExpenseColumnStore } from "@/lib/po-expense-column-store"
 import {
   poExpenseColumns,
@@ -56,10 +55,6 @@ export function ExpenseTable({
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
   const pageResult = paginateRows(filtered, page)
-  const totals = useMemo(
-    () => ({ values: { expenseAmount: sumBy(filtered, (row) => row.expenseAmount) } }),
-    [filtered],
-  )
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -104,7 +99,6 @@ export function ExpenseTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
-        totals={totals}
         emptyMessage="No Paid Expenses Yet."
         emptyState={
           rows.length === 0 && !hasActiveFilters

@@ -54,7 +54,6 @@ export function ExpensesTable({
   paymentMethods,
   bankAccounts,
   total,
-  totalAmount,
   page,
   error,
   initialQuery = "",
@@ -68,7 +67,6 @@ export function ExpensesTable({
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
   total: number
-  totalAmount?: number
   page: number
   pageCount?: number
   error: string | null
@@ -178,11 +176,6 @@ export function ExpensesTable({
         }}
         visibility={visibility}
         error={error}
-        totals={
-          totalAmount !== undefined
-            ? { values: { amount: totalAmount } }
-            : undefined
-        }
         emptyMessage={
           query.trim()
             ? "No Matching Operational Expenses."

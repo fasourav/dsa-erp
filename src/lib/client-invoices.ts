@@ -116,38 +116,6 @@ async function countClientInvoices(
   return { outstanding, settled, all }
 }
 
-async function computeClientInvoiceTotals(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  scope: InvoiceScope,
-): Promise<{ amount: number; paid: number }> {
-  const rows = await fetchAllPages(
-    (from, to) =>
-      applyClientInvoiceScope(
-        supabase
-          .from("client_invoices")
-          .select("id, amount")
-          .order("id", { ascending: true }),
-        scope,
-      ).range(from, to),
-    "Client invoice totals list is larger than expected.",
-  )
-  if (rows.length === 0) {
-    return { amount: 0, paid: 0 }
-  }
-  const invoiceIds = rows.map((row) => row.id)
-  const paymentRows = await fetchByIds(invoiceIds, (ids) =>
-    supabase
-      .from("client_payments")
-      .select("client_invoice_id, amount")
-      .in("client_invoice_id", ids)
-      .order("id", { ascending: true }),
-  )
-  return {
-    amount: sumAmounts(rows.map((row) => toNumber(row.amount))),
-    paid: sumAmounts(paymentRows.map((row) => toNumber(row.amount))),
-  }
-}
-
 type InvoiceRawRow = {
   id: string
   project_id: string
@@ -306,7 +274,6 @@ export async function getClientInvoices(
   page: number
   pageCount: number
   counts: SettlementCounts
-  totals: { amount: number; paid: number }
   error: string | null
 }> {
   const empty = {
@@ -319,7 +286,6 @@ export async function getClientInvoices(
     page: 1,
     pageCount: 1,
     counts: emptySettlementCounts,
-    totals: { amount: 0, paid: 0 },
     error: "Could not load client invoices.",
   }
 
@@ -395,7 +361,6 @@ export async function getClientInvoices(
         page: 1,
         pageCount: 1,
         counts: emptySettlementCounts,
-        totals: { amount: 0, paid: 0 },
         error: "That project could not be found.",
       }
     }
@@ -415,7 +380,6 @@ export async function getClientInvoices(
         page: 1,
         pageCount: 1,
         counts: emptySettlementCounts,
-        totals: { amount: 0, paid: 0 },
         error: "That project could not be found.",
       }
     }
@@ -427,7 +391,7 @@ export async function getClientInvoices(
       settlement: statusFilter,
     }
 
-    const [invoiceSlice, counts, totals] = await Promise.all([
+    const [invoiceSlice, counts] = await Promise.all([
       fetchPage(
       (from, to) => {
         let query = applyClientInvoiceScope(
@@ -466,7 +430,6 @@ export async function getClientInvoices(
       LIST_PAGE_SIZE,
       ),
       countClientInvoices(supabase, scope),
-      computeClientInvoiceTotals(supabase, scope),
     ])
 
     const invoices = await hydrateInvoices(
@@ -494,7 +457,6 @@ export async function getClientInvoices(
       page: invoiceSlice.page,
       pageCount: invoiceSlice.pageCount,
       counts: { ...counts, [statusFilter]: invoiceSlice.total },
-      totals,
       error: null,
     }
   } catch {

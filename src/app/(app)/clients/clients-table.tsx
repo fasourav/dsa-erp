@@ -51,7 +51,6 @@ import {
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
 import { formatCount } from "@/lib/format"
-import { sumBy } from "@/lib/payment-status"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -118,16 +117,6 @@ export function ClientsTable({
   const pageResult = useMemo(
     () => paginateClients(filtered, page),
     [filtered, page],
-  )
-  const totals = useMemo(
-    () => ({
-      values: {
-        totalProjectValue: sumBy(filtered, (client) => client.totalProjectValue),
-        totalPaid: sumBy(filtered, (client) => client.totalPaid),
-        totalPending: sumBy(filtered, (client) => client.totalPending),
-      },
-    }),
-    [filtered],
   )
 
   function openForm(client: ClientSummary | null) {
@@ -269,7 +258,6 @@ export function ClientsTable({
         onSort={onSort}
         visibility={visibility}
         error={error}
-        totals={totals}
         emptyMessage="No Clients Yet."
         emptyState={
           clients.length === 0 && !hasActiveFilters
