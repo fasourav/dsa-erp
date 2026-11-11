@@ -41,8 +41,8 @@ export async function updateDisplayName(
     return { error: "Could not save your name." }
   }
 
-  // AuthenticatedLayout reads the display name for the shell header via getAccountIdentity().
   revalidatePath("/", "layout")
+  revalidatePath("/profile")
   return { saved: true }
 }
 
