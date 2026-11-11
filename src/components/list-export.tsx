@@ -10,7 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { ListExportGrid } from "@/lib/reports/workbook"
+import { deliverFile, XLSX_MIME } from "@/lib/deliver-file"
+import { buildListWorkbook, parseListGrid, type ListExportGrid } from "@/lib/reports/workbook"
 
 export type ListExportLoaderResult = {
   grid?: ListExportGrid | null
@@ -60,7 +61,7 @@ export function ListExport(props: ListExportProps) {
       const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], {
         type: "text/csv;charset=utf-8",
       })
-      saveBlob(blob, `${grid.filename}.csv`)
+      await deliverFile(blob, `${grid.filename}.csv`, { navigateOnIos: false })
     } catch {
       setError("Could not export this list.")
     } finally {
@@ -74,16 +75,30 @@ export function ListExport(props: ListExportProps) {
     try {
       const grid = await resolveGrid()
       if (!grid) return
-      const response = await fetch("/reports/list-export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(grid),
-      })
-      if (!response.ok) {
+      const parsed = parseListGrid(grid)
+      if (!parsed) {
         setError("Could not export this list.")
         return
       }
-      saveBlob(await response.blob(), `${grid.filename}.xlsx`)
+      const filename = `${grid.filename}.xlsx`
+      try {
+        const bytes = await buildListWorkbook(parsed)
+        await deliverFile(new Blob([bytes as BlobPart], { type: XLSX_MIME }), filename, {
+          navigateOnIos: false,
+        })
+        return
+      } catch {
+        const response = await fetch("/reports/list-export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(grid),
+        })
+        if (!response.ok) {
+          setError("Could not export this list.")
+          return
+        }
+        await deliverFile(await response.blob(), filename, { navigateOnIos: false })
+      }
     } catch {
       setError("Could not export this list.")
     } finally {
@@ -93,7 +108,11 @@ export function ListExport(props: ListExportProps) {
 
   return (
     <div className="flex flex-col gap-1">
-      <DropdownMenu>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (open) void import("exceljs")
+        }}
+      >
         <DropdownMenuTrigger
           render={
             <Button type="button" variant="outline" disabled={pending} />
@@ -114,15 +133,6 @@ export function ListExport(props: ListExportProps) {
       ) : null}
     </div>
   )
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
 }
 
 function csvCell(value: string | number | null, textual = true): string {

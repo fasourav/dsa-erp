@@ -1,3 +1,4 @@
+// DEPRECATED in v1.3.2: Excel lists are built in the browser. This route is only a fallback when the browser build fails. Remove in v1.3.3.
 import { NextResponse } from "next/server"
 
 import { buildListWorkbook, parseListGrid } from "@/lib/reports/workbook"

@@ -1,3 +1,4 @@
+// Shared by server and browser. Do not add Node-only imports to this file.
 import { formatGroupedCount, formatMoney } from "@/lib/format"
 import { reportCompanyName } from "@/lib/reports/catalog"
 import type { BuiltReport, ExportKind, ReportRow } from "@/lib/reports/types"
