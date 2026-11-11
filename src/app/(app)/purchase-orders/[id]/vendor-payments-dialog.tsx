@@ -233,12 +233,13 @@ export function VendorPaymentsDialog({
                             {row.createdByName} · {formatRecordedAt(row.createdAt)}
                           </p>
                           <p className="text-label text-muted-foreground">
-                            <Link href={`/documents/vouchers/new?payment=${row.id}`} className="underline underline-offset-4">
+                            <Link href={`/documents/vouchers/new?payment=${row.id}`} prefetch={false} className="underline underline-offset-4">
                               Print / Download
                             </Link>
                             {" · "}
                             <Link
                               href={`/purchase-orders/${row.purchaseOrderId}`}
+                              prefetch={false}
                               className="underline underline-offset-4"
                             >
                               Purchase Order
@@ -256,6 +257,7 @@ export function VendorPaymentsDialog({
                             {row.bankLineDate ? (
                               <Link
                                 href={`/accounts/bank?account=${row.bankAccountId}`}
+                                prefetch={false}
                                 className="underline underline-offset-4"
                               >
                                 Bank Line
@@ -446,6 +448,7 @@ function PaymentForm({
             <p>
               <Link
                 href={`/purchase-orders/${payment.purchaseOrderId}`}
+                prefetch={false}
                 className="underline underline-offset-4"
               >
                 Purchase Order
@@ -462,6 +465,7 @@ function PaymentForm({
               {payment.bankLineDate ? (
                 <Link
                   href={`/accounts/bank?account=${payment.bankAccountId}`}
+                  prefetch={false}
                   className="underline underline-offset-4"
                 >
                   Bank Line

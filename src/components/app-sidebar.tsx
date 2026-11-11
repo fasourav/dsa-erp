@@ -66,6 +66,7 @@ export function AppSidebar({
       <div className="group/header relative mb-2 flex h-12.5 shrink-0 items-center">
         <Link
           href="/dashboard"
+          prefetch={false}
           aria-label="Dashboard"
           className="relative flex h-12.5 min-w-0 flex-1 items-center rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50"
         >

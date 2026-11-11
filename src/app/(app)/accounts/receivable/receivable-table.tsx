@@ -258,6 +258,7 @@ export function ReceivableTable({
                         ? `/accounts/invoices?project=${row.projectId}`
                         : "/accounts/invoices"
                     }
+                    prefetch={false}
                   />
                 }
               >

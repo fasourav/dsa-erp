@@ -20,7 +20,7 @@ export default function NoAccessPage() {
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button variant="outline" nativeButton={false} render={<Link href="/dashboard" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/dashboard" prefetch={false} />}>
             Home
           </Button>
         </EmptyContent>

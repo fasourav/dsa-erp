@@ -30,7 +30,7 @@ export default async function FormDocumentsPage({ params }: { params: Promise<{ 
           <>
             <ListExport grid={documentExportGrid(page.items, slug, formTitle(kind))} />
             {canAdd ? (
-              <Button nativeButton={false} render={<Link href={`/documents/${slug}/new`} />}>
+              <Button nativeButton={false} render={<Link href={`/documents/${slug}/new`} prefetch={false} />}>
                 <Plus aria-hidden="true" data-icon="inline-start" />
                 New
               </Button>

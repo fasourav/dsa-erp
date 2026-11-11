@@ -185,7 +185,7 @@ export function UsersPanel({
         variant="ghost"
         className="w-fit"
         nativeButton={false}
-        render={<Link href="/settings" />}
+        render={<Link href="/settings" prefetch={false} />}
       >
         <ArrowLeft aria-hidden="true" data-icon="inline-start" />
         Settings

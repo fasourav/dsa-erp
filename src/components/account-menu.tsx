@@ -90,7 +90,7 @@ export function AccountMenu({ account }: { account: AccountIdentity }) {
       <DropdownMenuContent align="end" sideOffset={8} className="w-64">
         <AccountHeader account={account} />
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/profile" />}>
+        <DropdownMenuItem render={<Link href="/profile" prefetch={false} />}>
           <UserRound aria-hidden="true" />
           My Profile
         </DropdownMenuItem>
@@ -132,7 +132,7 @@ export function MobileMoreMenu({ account }: { account: AccountIdentity }) {
         <AccountHeader account={account} />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link href="/profile" />}>
+          <DropdownMenuItem render={<Link href="/profile" prefetch={false} />}>
             <UserRound aria-hidden="true" />
             My Profile
           </DropdownMenuItem>

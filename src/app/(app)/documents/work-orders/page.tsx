@@ -25,7 +25,7 @@ export default async function WorkOrdersPage() {
           <>
             <ListExport grid={documentExportGrid(page.items, "work-orders", "Work Orders")} />
             {canAdd ? (
-              <Button nativeButton={false} render={<Link href="/documents/work-orders/new" />}>
+              <Button nativeButton={false} render={<Link href="/documents/work-orders/new" prefetch={false} />}>
                 <Plus aria-hidden="true" data-icon="inline-start" />
                 New Work Order
               </Button>

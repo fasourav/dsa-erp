@@ -148,6 +148,7 @@ export function AppShell({
             {isTabRoot ? (
               <Link
                 href="/dashboard"
+                prefetch={false}
                 aria-label="Dashboard"
                 className="rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 md:hidden"
               >
@@ -160,7 +161,7 @@ export function AppShell({
                 aria-label="Back"
                 className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong md:hidden"
                 nativeButton={false}
-                render={<Link href={backHref(pathname)} />}
+                render={<Link href={backHref(pathname)} prefetch={false} />}
               >
                 <ChevronLeft aria-hidden="true" className="size-5.5" strokeWidth={2.2} />
               </Button>

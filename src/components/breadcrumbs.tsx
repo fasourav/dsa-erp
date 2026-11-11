@@ -37,6 +37,7 @@ export function Breadcrumbs({
               {!isLast && item.href ? (
                 <Link
                   href={item.href}
+                  prefetch={false}
                   className="max-w-64 truncate transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   {item.label}

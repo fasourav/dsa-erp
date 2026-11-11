@@ -92,7 +92,7 @@ export function SignatureStampPanel({
       {!hasSignature ? (
         <p className="text-xs text-muted-foreground">
           Add your signature on{" "}
-          <Link href="/profile" className="underline">
+          <Link href="/profile" prefetch={false} className="underline">
             My Profile
           </Link>{" "}
           to sign documents.

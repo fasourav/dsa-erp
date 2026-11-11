@@ -224,7 +224,7 @@ export function ClientPaymentsDialog({
                       <RecordAttachments parentType="client_payment" parentId={row.id} collapsed />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" nativeButton={false} render={<Link href={`/documents/receipts/${row.id}`} />}>
+                      <Button variant="outline" nativeButton={false} render={<Link href={`/documents/receipts/${row.id}`} prefetch={false} />}>
                         Print / Download
                       </Button>
                       {canEdit ? (<Button type="button" variant="outline" onClick={() => openForm(row)}>

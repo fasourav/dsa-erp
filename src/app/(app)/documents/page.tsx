@@ -39,6 +39,7 @@ export default async function DocumentsPage() {
             <Link
               key={kind.href}
               href={kind.href}
+              prefetch={false}
               className="block rounded-card focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <Card className="h-full gap-3 transition-colors hover:bg-fill">
@@ -61,6 +62,7 @@ export default async function DocumentsPage() {
         {access.isOwner ? (
           <Link
             href="/documents/trash"
+            prefetch={false}
             className="block rounded-card focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <Card className="h-full gap-3 transition-colors hover:bg-fill">

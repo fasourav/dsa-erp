@@ -373,7 +373,7 @@ function RowActions({
         </DropdownMenuItem>) : null}
         <DropdownMenuItem
           nativeButton={false}
-          render={<Link href={`/purchase-orders/${order.id}`} />}
+          render={<Link href={`/purchase-orders/${order.id}`} prefetch={false} />}
         >
           <FileText aria-hidden="true" />
           Vendor Payments

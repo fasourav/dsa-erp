@@ -43,13 +43,13 @@ export function ReportsMenu() {
         <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-64">
-        <DropdownMenuItem render={<Link href="/reports" />}>
+        <DropdownMenuItem render={<Link href="/reports" prefetch={false} />}>
           <FileBarChart aria-hidden="true" />
           All Reports
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {visible.map((report) => (
-          <DropdownMenuItem key={report.slug} render={<Link href={`/reports/${report.slug}`} />}>
+          <DropdownMenuItem key={report.slug} render={<Link href={`/reports/${report.slug}`} prefetch={false} />}>
             <FileText aria-hidden="true" />
             {report.title}
           </DropdownMenuItem>
