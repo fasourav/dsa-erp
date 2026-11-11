@@ -111,7 +111,7 @@ export function ProjectSummarySection({
         <Kpi label="Paid To Vendors" value={overview.paidToVendors} />
         <Kpi label="Payable" value={overview.payable} />
         <Kpi
-          label="Gross Profit"
+          label="Profit Before Tax"
           value={overview.grossProfit}
           detail={`${margin} Margin`}
           className={overview.grossProfit < 0 ? "text-destructive" : undefined}
