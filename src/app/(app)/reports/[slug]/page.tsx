@@ -10,6 +10,7 @@ import { isReportSlug, reportBySlug } from "@/lib/reports/catalog"
 import { loadFinancialReport, reportLaunchDate } from "@/lib/reports/load"
 import { clampPeriod, currentReportPeriod, officeToday } from "@/lib/reports/period"
 import { buildProjectBudgetReport, buildReport } from "@/lib/reports/tables"
+import { safeFilename } from "@/lib/reports/workbook"
 import { getAccess } from "@/lib/permissions"
 
 export async function generateMetadata({
@@ -58,6 +59,7 @@ export default async function ReportPage({
             showFilters={false}
             pdfHref={`/reports/export?${exportQuery.toString()}&format=pdf`}
             excelHref={`/reports/export?${exportQuery.toString()}&format=xlsx`}
+            excelFilename={`${safeFilename(slug)}.xlsx`}
           />
         ) : (
           <>
@@ -165,6 +167,7 @@ function LoadedReport({
       to={to}
       pdfHref={`/reports/export?${exportQuery.toString()}&format=pdf`}
       excelHref={`/reports/export?${exportQuery.toString()}&format=xlsx`}
+      excelFilename={`${safeFilename(slug)}-${from}-to-${to}.xlsx`}
     />
   )
 }

@@ -9,6 +9,7 @@ import { requestOrigin } from "@/lib/documents/origin"
 import { isUuid } from "@/lib/ids"
 import { reportLaunchDate } from "@/lib/reports/load"
 import { clampPeriod, currentReportPeriod, officeToday } from "@/lib/reports/period"
+import { safeFilename } from "@/lib/reports/workbook"
 import { getAccess } from "@/lib/permissions"
 import {
   getClientProjects,
@@ -82,12 +83,13 @@ export default async function ClientStatementPage({
 
   const origin = await requestOrigin()
   const qrUrl = `${origin}/clients/${id}/statement?${exportQuery.toString()}`
+  const partyNameShown = loaded.statement.party || partyName
 
   return (
     <StatementView
       eyebrow="Clients"
       title="Client Statement"
-      partyName={loaded.statement.party || partyName}
+      partyName={partyNameShown}
       periodLabel={
         project
           ? `${statementPeriodLabel(period.from, period.to)} · ${project.name}`
@@ -101,6 +103,7 @@ export default async function ClientStatementPage({
       to={period.to}
       pdfHref={`/clients/${id}/statement/export?${exportQuery.toString()}&format=pdf`}
       excelHref={`/clients/${id}/statement/export?${exportQuery.toString()}&format=xlsx`}
+      excelFilename={`${safeFilename(`client-statement-${partyNameShown}`)}-${period.from}-to-${period.to}.xlsx`}
       statement={loaded.statement}
       projects={projects}
       projectId={project?.id ?? null}

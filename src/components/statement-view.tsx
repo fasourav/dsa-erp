@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { compareText, formatDayMonYear } from "@/lib/format"
+import { deliverFile, XLSX_MIME } from "@/lib/deliver-file"
 import {
   paginateRows,
   rangeLabel,
@@ -28,7 +29,9 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import type { ClientProjectOption, PartyStatement, StatementLine } from "@/lib/statements"
+import { buildReportWorkbook } from "@/lib/reports/workbook"
+import { buildStatementReport, type PartyStatement, type StatementLine } from "@/lib/statement-report"
+import type { ClientProjectOption } from "@/lib/statements"
 import { cn } from "@/lib/utils"
 
 import "./documents/document.css"
@@ -58,6 +61,7 @@ export function StatementView({
   to,
   pdfHref,
   excelHref,
+  excelFilename,
   statement,
   projects,
   projectId,
@@ -75,14 +79,37 @@ export function StatementView({
   to: string
   pdfHref: string
   excelHref: string
+  excelFilename: string
   statement: PartyStatement
   projects?: ClientProjectOption[]
   projectId?: string | null
   qrUrl?: string | null
 }) {
+  const [excelPending, setExcelPending] = useState(false)
   const labeledColumns = columns.map((column) =>
     column.id === "debit" ? { ...column, label: debitLabel } : column,
   )
+
+  async function downloadExcel() {
+    setExcelPending(true)
+    try {
+      const report = buildStatementReport({
+        title: `${title} — ${partyName}`,
+        periodLabel,
+        debitLabel,
+        statement,
+        note,
+      })
+      const bytes = await buildReportWorkbook(report)
+      await deliverFile(new Blob([bytes as BlobPart], { type: XLSX_MIME }), excelFilename, {
+        navigateOnIos: false,
+      })
+    } catch {
+      window.location.assign(excelHref)
+    } finally {
+      setExcelPending(false)
+    }
+  }
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3.5">
@@ -115,10 +142,15 @@ export function StatementView({
                 <Download aria-hidden="true" data-icon="inline-start" />
                 PDF
               </a>
-              <a href={excelHref} className={buttonVariants({ variant: "outline" })}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={excelPending}
+                onClick={() => void downloadExcel()}
+              >
                 <FileSpreadsheet aria-hidden="true" data-icon="inline-start" />
-                Excel
-              </a>
+                {excelPending ? "Creating…" : "Excel"}
+              </Button>
             </>
           }
         />
