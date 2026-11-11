@@ -185,12 +185,9 @@ function DashboardSections({
     amount:
       slice.key === "operational" ? snapshot.operational + snapshot.admin : snapshot[slice.key],
   }))
-  // Overhead keeps its neutral donut slice; its row swatch matches that slice.
-  const summaryRows = slices.map((slice) =>
-    slice.key === "projectOverhead"
-      ? { ...slice, swatch: "bg-fill ring-1 ring-inset ring-border" }
-      : slice,
-  )
+  // No Project Overhead row: operational expenses can no longer be tagged to a
+  // project, so the figure is always zero. It stays inside projectExpense.
+  const summaryRows = slices.filter((slice) => slice.key !== "projectOverhead")
   const adminBreakdown = new Set(["operational", "marketing", "salary"])
   const projectRows = summaryRows.filter((slice) => !adminBreakdown.has(slice.key))
   const adminRows = summaryRows.filter((slice) => adminBreakdown.has(slice.key))
