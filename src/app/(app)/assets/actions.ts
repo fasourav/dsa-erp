@@ -7,6 +7,7 @@ import { friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { assetQuantitySchema, firstIssue } from "@/lib/schemas"
 import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
@@ -62,8 +63,8 @@ export async function deleteAsset(id: string): Promise<DeleteResult> {
   if (!isUuid(id)) return { error: "That asset could not be found." }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const { data, error } = await supabase
     .from("assets")
@@ -115,8 +116,8 @@ async function saveAsset(
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const values = {
     name,

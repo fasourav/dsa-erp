@@ -58,6 +58,7 @@ export default async function ReportsPage() {
             <Link
               key={report.slug}
               href={`/reports/${report.slug}`}
+              prefetch={false}
               className="block rounded-card focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <Card className="h-full gap-3 transition-colors hover:bg-fill">

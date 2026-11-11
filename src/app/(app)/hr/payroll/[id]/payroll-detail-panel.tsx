@@ -142,7 +142,7 @@ export function PayrollDetailPanel({
           { label },
         ]}
         eyebrow={
-          <Link href="/hr/payroll" className="hover:text-foreground md:hidden">
+          <Link href="/hr/payroll" prefetch={false} className="hover:text-foreground md:hidden">
             Payroll
           </Link>
         }
@@ -322,7 +322,7 @@ function Cell({ line, columnId }: { line: SalaryLine; columnId: ColumnId }) {
   switch (columnId) {
     case "employee":
       return (
-        <Link href={`/documents/salary-slips/new?line=${line.id}`} className="text-ui font-semibold">
+        <Link href={`/documents/salary-slips/new?line=${line.id}`} prefetch={false} className="text-ui font-semibold">
           {line.employeeName || "—"}
         </Link>
       )

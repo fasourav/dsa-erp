@@ -4,6 +4,8 @@ import { titleCaseName } from "@/lib/format"
 import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
+import { getCurrentUser } from "@/lib/auth"
+
 import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { roundMoney } from "@/lib/payroll-month"
@@ -80,8 +82,8 @@ export async function deleteEmployee(id: string): Promise<DeleteResult> {
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -199,8 +201,8 @@ async function saveEmployee(
     }
   }
 
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

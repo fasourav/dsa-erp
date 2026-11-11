@@ -9,6 +9,7 @@ import { isUuid } from "@/lib/ids"
 import { overdraftMessage } from "@/lib/insufficient-balance"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
 import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
@@ -78,8 +79,8 @@ export async function deleteOperationalExpense(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -144,8 +145,8 @@ async function saveExpense(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

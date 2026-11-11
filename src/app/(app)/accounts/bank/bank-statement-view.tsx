@@ -134,7 +134,7 @@ export function BankStatementView({
           variant="outline"
           className="w-full sm:w-fit"
           nativeButton={false}
-          render={<Link href={accountId ? `/accounts/bank?account=${accountId}` : "/accounts/bank"} />}
+          render={<Link href={accountId ? `/accounts/bank?account=${accountId}` : "/accounts/bank"} prefetch={false} />}
         >
           Back To Transactions
         </Button>

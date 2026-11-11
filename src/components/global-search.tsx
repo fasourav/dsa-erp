@@ -230,6 +230,7 @@ export function GlobalSearch() {
                         <li key={`${hit.moduleKey}-${hit.recordId}-${hit.label}-${index}`}>
                           <Link
                             href={hit.href}
+                            prefetch={false}
                             data-unsaved-guard="skip"
                             onClick={(event) => {
                               if (

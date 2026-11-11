@@ -132,8 +132,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/auth/accept" ||
     pathname === "/set-password" ||
     pathname.startsWith("/verify/") ||
-    pathname.startsWith("/api/cron/") ||
-    pathname === "/api/vitals"
+    pathname.startsWith("/api/cron/")
 
   // Server actions check the session themselves and answer with a clear
   // "session expired" message; a redirect would surface as a generic failure.

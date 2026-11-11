@@ -6,6 +6,7 @@ import { revalidateSettings } from "@/lib/revalidate-settings"
 
 import { friendlyDbError } from "@/lib/db-errors"
 import { phaseProgressPercent } from "@/lib/project-progress"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { denyUnlessOwner } from "@/lib/permissions"
 import {
@@ -79,7 +80,7 @@ export async function deleteCatalogItem(
   }
 
   const supabase = await createClient()
-  const signedIn = await isSignedIn(supabase)
+  const signedIn = await isSignedIn()
 
   if (!signedIn) {
     return { error: "You must be signed in." }
@@ -180,7 +181,7 @@ async function saveCatalogItem(
   }
 
   const supabase = await createClient()
-  const signedIn = await isSignedIn(supabase)
+  const signedIn = await isSignedIn()
 
   if (!signedIn) {
     return { error: "You must be signed in." }
@@ -397,9 +398,9 @@ async function leadStatusInUse(
   return (count ?? 0) > 0 ? "in_use" : "clear"
 }
 
-async function isSignedIn(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data, error } = await supabase.auth.getUser()
-  return !error && Boolean(data.user)
+async function isSignedIn() {
+  const user = await getCurrentUser()
+  return Boolean(user)
 }
 
 function revalidateCatalogs(catalog: CatalogKey) {

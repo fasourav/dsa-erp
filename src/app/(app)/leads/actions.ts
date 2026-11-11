@@ -4,6 +4,8 @@ import { titleCaseName } from "@/lib/format"
 import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
+import { getCurrentUser } from "@/lib/auth"
+
 import { dhakaToday } from "@/lib/dashboard-metrics"
 import { isUuid } from "@/lib/ids"
 import { toE164FromStored } from "@/lib/phone"
@@ -81,8 +83,8 @@ export async function deleteLead(id: string): Promise<DeleteResult> {
   if (!isUuid(id)) return { error: "That lead could not be found." }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const { data, error } = await supabase
     .from("leads")
@@ -116,8 +118,8 @@ export async function convertLead(leadId: string): Promise<ConvertResult> {
   if (!isUuid(leadId)) return { error: "That lead could not be found." }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const { data: leadData, error: leadErr } = await supabase
     .from("leads")
@@ -241,8 +243,8 @@ async function saveLead(
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const { data: statusRows, error: statusErr } = await supabase
     .from("lead_statuses")

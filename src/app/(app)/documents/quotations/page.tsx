@@ -25,7 +25,7 @@ export default async function QuotationsPage() {
           <>
             <ListExport grid={documentExportGrid(page.items, "quotations", "Quotations")} />
             {canAdd ? (
-              <Button nativeButton={false} render={<Link href="/documents/quotations/new" />}>
+              <Button nativeButton={false} render={<Link href="/documents/quotations/new" prefetch={false} />}>
                 <Plus aria-hidden="true" data-icon="inline-start" />
                 New Quotation
               </Button>

@@ -3,6 +3,8 @@
 import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
+import { getCurrentUser } from "@/lib/auth"
+
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { formatMoney, toNumber } from "@/lib/format"
 import { denyUnless } from "@/lib/permissions"
@@ -126,9 +128,9 @@ async function savePurchaseOrder(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -311,9 +313,9 @@ export async function deletePurchaseOrder(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

@@ -10,6 +10,7 @@ import { isUuid } from "@/lib/ids"
 import { isSortOrder } from "@/lib/lookup-catalogs"
 import { parsePositiveAmount } from "@/lib/payment-status"
 import { isIsoDate, parseProjectValue , isFutureIsoDate } from "@/lib/project-validation"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless, denyUnlessOwner } from "@/lib/permissions"
@@ -127,8 +128,8 @@ export async function setBankAccountActive(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -158,8 +159,8 @@ export async function deleteBankAccount(id: string): Promise<DeleteResult> {
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -243,8 +244,8 @@ export async function addBankTransfer(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -294,8 +295,8 @@ export async function updateFiscalYearStartMonth(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -326,8 +327,8 @@ export async function updateLaunchDate(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -366,8 +367,8 @@ export async function updatePrintMargins(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -397,8 +398,8 @@ export async function deleteBankTransaction(id: string): Promise<DeleteResult> {
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -504,8 +505,8 @@ async function saveBankAccount(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -610,8 +611,8 @@ async function saveBankMovement(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError || !authData.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

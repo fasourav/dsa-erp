@@ -7,22 +7,22 @@ import {
   type ModuleKey,
   type PermissionAction,
 } from "@/lib/access"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 
 export const getAccess = cache(async (): Promise<AccessSnapshot | null> => {
-  const supabase = await createClient()
-  const { data: auth, error: authError } = await supabase.auth.getUser()
+  const [user, supabase] = await Promise.all([getCurrentUser(), createClient()])
 
-  if (authError || !auth.user) return null
+  if (!user) return null
 
-  const profile = await loadProfile(supabase, auth.user.id)
+  const profile = await loadProfile(supabase, user.id)
   if (!profile) return null
 
   const [{ data: grants }, { data: modules }] = await Promise.all([
     supabase
       .from("user_permissions")
       .select("module, can_view, can_add, can_edit, can_delete")
-      .eq("user_id", auth.user.id),
+      .eq("user_id", user.id),
     supabase.from("permission_modules").select("key, owners_only"),
   ])
 
@@ -32,7 +32,7 @@ export const getAccess = cache(async (): Promise<AccessSnapshot | null> => {
   }
 
   return {
-    userId: auth.user.id,
+    userId: user.id,
     role: profile.role,
     status,
     showFinancials: profile.show_financials,

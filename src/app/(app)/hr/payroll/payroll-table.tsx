@@ -290,7 +290,7 @@ export function PayrollTable({
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem
                 nativeButton={false}
-                render={<Link href={`/hr/payroll/${salary.id}`} />}
+                render={<Link href={`/hr/payroll/${salary.id}`} prefetch={false} />}
               >
                 <Eye aria-hidden="true" />
                 View

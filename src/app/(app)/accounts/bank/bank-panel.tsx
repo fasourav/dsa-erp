@@ -208,6 +208,7 @@ export function BankPanel({
                         ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
                         : "/accounts/bank?view=reconcile"
                     }
+                    prefetch={false}
                   />
                 }
               >
@@ -257,7 +258,7 @@ export function BankPanel({
             <Button
               className="w-full md:w-fit"
               nativeButton={false}
-              render={<Link href="/settings/bank" />}
+              render={<Link href="/settings/bank" prefetch={false} />}
             >
               Open Settings
             </Button>
@@ -288,6 +289,7 @@ export function BankPanel({
           For {accountFilter.name || "this account"}.{" "}
           <Link
             href="/accounts/bank"
+            prefetch={false}
             className="font-medium text-foreground underline underline-offset-4"
           >
             Show All
@@ -380,6 +382,7 @@ export function BankPanel({
                       ? `/accounts/bank?view=statement&account=${accountFilter.id}`
                       : "/accounts/bank?view=statement"
                   }
+                  prefetch={false}
                 />
               }
             >
@@ -395,9 +398,10 @@ export function BankPanel({
                       accountFilter
                         ? `/accounts/bank?view=reconcile&account=${accountFilter.id}`
                         : "/accounts/bank?view=reconcile"
-                  }
-                />
-              }
+                    }
+                    prefetch={false}
+                  />
+                }
               >
                 Reconcile
               </Button>

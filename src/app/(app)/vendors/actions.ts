@@ -12,6 +12,7 @@ import {
   isValidEmail,
 } from "@/lib/client-validation"
 import { phoneErrorForStored, phoneMatchKey, toE164FromStored } from "@/lib/phone"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import {
@@ -67,9 +68,9 @@ export async function loadVendorCategoryOptions(): Promise<VendorCategoryOptions
   const denied = await denyUnless("vendors", "view")
   if (denied) return { categories: null, error: denied }
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { categories: null, error: "You must be signed in." }
   }
 
@@ -172,9 +173,9 @@ async function saveVendor(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -307,9 +308,9 @@ export async function deleteVendor(id: string): Promise<DeleteVendorResult> {
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

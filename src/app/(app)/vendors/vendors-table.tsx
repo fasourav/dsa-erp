@@ -170,7 +170,7 @@ export function VendorsTable({
             <Button
               variant="outline"
               nativeButton={false}
-              render={<Link href="/purchase-orders" />}
+              render={<Link href="/purchase-orders" prefetch={false} />}
             >
               Purchase Orders
             </Button>
@@ -442,7 +442,7 @@ function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         {canStatement ? (
-          <DropdownMenuItem render={<Link href={`/vendors/${vendor.id}/statement`} />}>
+          <DropdownMenuItem render={<Link href={`/vendors/${vendor.id}/statement`} prefetch={false} />}>
             <FileText aria-hidden="true" />
             Statement
           </DropdownMenuItem>

@@ -621,6 +621,7 @@ function OverBudgetCard({ projects }: { projects: readonly OverBudgetProject[] }
             <li key={project.id} className="flex min-w-0 items-center justify-between gap-3">
               <Link
                 href={`/projects/${project.id}`}
+                prefetch={false}
                 className="min-w-0 truncate text-ui font-semibold underline-offset-4 hover:underline"
               >
                 {project.name}
@@ -748,6 +749,7 @@ function KpiCard({
       {href ? (
         <Link
           href={href}
+          prefetch={false}
           aria-label={`Open ${label}`}
           className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         />
@@ -804,6 +806,7 @@ function CompactMetric({
       {href ? (
         <Link
           href={href}
+          prefetch={false}
           aria-label={`Open ${label}`}
           className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         />
@@ -911,6 +914,7 @@ function ProjectCount({
       {href ? (
         <Link
           href={href}
+          prefetch={false}
           aria-label={`Open ${label}`}
           className="absolute inset-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         />
@@ -968,6 +972,7 @@ function MetricTile({
       {href ? (
         <Link
           href={href}
+          prefetch={false}
           aria-label={`Open ${label}`}
           className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         />

@@ -246,7 +246,7 @@ function ReconcileSession({
               variant="outline"
               className="w-full justify-start"
               nativeButton={false}
-              render={<Link href={`/accounts/bank?view=reconcile&account=${row.id}`} />}
+              render={<Link href={`/accounts/bank?view=reconcile&account=${row.id}`} prefetch={false} />}
             >
               {row.name || "Account"}
             </Button>

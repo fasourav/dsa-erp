@@ -254,7 +254,7 @@ export function ProjectSummarySection({
               type="button"
               variant="outline"
               nativeButton={false}
-              render={<Link href={`/accounts/invoices?project=${project.id}`} />}
+              render={<Link href={`/accounts/invoices?project=${project.id}`} prefetch={false} />}
             >
               Client Invoices
             </Button>
@@ -290,7 +290,7 @@ export function ProjectSummarySection({
               type="button"
               variant="outline"
               nativeButton={false}
-              render={<Link href={`/purchase-orders?project=${project.id}`} />}
+              render={<Link href={`/purchase-orders?project=${project.id}`} prefetch={false} />}
             >
               Purchase Orders
             </Button>

@@ -191,6 +191,7 @@ export function PurchaseOrdersTable({
               For {projectFilter.name || "this project"}.{" "}
               <Link
                 href="/purchase-orders"
+                prefetch={false}
                 className="font-semibold text-foreground underline underline-offset-4"
               >
                 Show all
@@ -501,7 +502,7 @@ function RowActions({
         ) : null}
         <DropdownMenuItem
           nativeButton={false}
-          render={<Link href={`/purchase-orders/${order.id}`} />}
+          render={<Link href={`/purchase-orders/${order.id}`} prefetch={false} />}
         >
           <FileText aria-hidden="true" />
           Vendor Payments

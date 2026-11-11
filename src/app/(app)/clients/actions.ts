@@ -4,6 +4,8 @@ import { titleCaseName } from "@/lib/format"
 import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
+import { getCurrentUser } from "@/lib/auth"
+
 import type { ClientKind } from "@/lib/client-summary"
 import { friendlyDbError, isUniqueViolation } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
@@ -105,9 +107,9 @@ async function saveClient(
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -185,9 +187,9 @@ export async function deleteClient(id: string): Promise<DeleteClientResult> {
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

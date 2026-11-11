@@ -255,7 +255,7 @@ export function ExpensesTable({
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem
                 nativeButton={false}
-                render={<Link href={`/documents/vouchers/new?expense=${expense.id}`} />}
+                render={<Link href={`/documents/vouchers/new?expense=${expense.id}`} prefetch={false} />}
               >
                 Print / Download
               </DropdownMenuItem>
@@ -340,7 +340,7 @@ export function ExpensesTable({
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem
                     nativeButton={false}
-                    render={<Link href={`/purchase-orders/${expense.purchaseOrderId}`} />}
+                    render={<Link href={`/purchase-orders/${expense.purchaseOrderId}`} prefetch={false} />}
                   >
                     View Purchase Order
                   </DropdownMenuItem>

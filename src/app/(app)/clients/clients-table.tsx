@@ -470,7 +470,7 @@ function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         {canStatement ? (
-          <DropdownMenuItem render={<Link href={`/clients/${client.id}/statement`} />}>
+          <DropdownMenuItem render={<Link href={`/clients/${client.id}/statement`} prefetch={false} />}>
             <FileText aria-hidden="true" />
             Statement
           </DropdownMenuItem>

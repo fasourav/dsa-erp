@@ -42,13 +42,13 @@ export function DocumentsMenu() {
         <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-60">
-        <DropdownMenuItem render={<Link href="/documents" />}>
+        <DropdownMenuItem render={<Link href="/documents" prefetch={false} />}>
           <Files aria-hidden="true" />
           All Documents
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {visible.map((kind) => (
-          <DropdownMenuItem key={kind.href} render={<Link href={kind.href} />}>
+          <DropdownMenuItem key={kind.href} render={<Link href={kind.href} prefetch={false} />}>
             <FileText aria-hidden="true" />
             {kind.title}
           </DropdownMenuItem>

@@ -250,6 +250,7 @@ export function PayableTable({
                         ? `/purchase-orders/${row.purchaseOrderId}`
                         : "/purchase-orders"
                     }
+                    prefetch={false}
                   />
                 }
               >

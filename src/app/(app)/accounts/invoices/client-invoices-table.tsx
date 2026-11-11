@@ -169,6 +169,7 @@ export function ClientInvoicesTable({
                   ...sortQueryParams(sort, defaultClientInvoiceSort),
                   size: pageSizeQueryValue(pageSize, LIST_PAGE_SIZE),
                 })}
+                prefetch={false}
                 className="font-medium text-foreground underline underline-offset-4"
               >
                 Show All
@@ -330,7 +331,7 @@ export function ClientInvoicesTable({
                 <Wallet aria-hidden="true" />
                 Payments
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href={`/documents/invoices/${invoice.id}`} />}>
+              <DropdownMenuItem render={<Link href={`/documents/invoices/${invoice.id}`} prefetch={false} />}>
                 Print / Download
               </DropdownMenuItem>
               <DropdownMenuSeparator />

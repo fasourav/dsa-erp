@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import type { ModuleKey } from "@/lib/access"
+import { getCurrentUser } from "@/lib/auth"
 import { denyUnless } from "@/lib/permissions"
 import { isUuid } from "@/lib/ids"
 import {
@@ -87,8 +88,8 @@ export async function uploadAttachment(
   if (denied) return { error: denied }
 
   const supabase = await createClient()
-  const { data: auth, error: authError } = await supabase.auth.getUser()
-  if (authError || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const id = crypto.randomUUID()
   const storagePath = `${parentType}/${parentId}/${id}/${id}.${extension}`
@@ -100,7 +101,7 @@ export async function uploadAttachment(
     content_type: contentType,
     byte_size: file.size,
     storage_path: storagePath,
-    created_by: auth.user.id,
+    created_by: user.id,
   })
   if (insertError) return { error: "Could not save this file." }
 
@@ -113,7 +114,7 @@ export async function uploadAttachment(
     return { error: "Could not upload this file." }
   }
 
-  revalidatePath("/", "layout")
+  revalidateAttachmentPaths(parentType, parentId)
   return { error: null }
 }
 
@@ -161,8 +162,61 @@ export async function deleteAttachment(id: string): Promise<{ error: string | nu
   if (deleteError) return { error: "Could not delete this file." }
   await supabase.storage.from(bucket).remove([data.storage_path])
   await removeQueuedAttachmentFiles(supabase)
-  revalidatePath("/", "layout")
+  if (isAttachmentParent(data.parent_type)) {
+    revalidateAttachmentPaths(data.parent_type, data.parent_id)
+  }
   return { error: null }
+}
+
+function revalidateAttachmentPaths(parentType: AttachmentParent, parentId: string) {
+  switch (parentType) {
+    case "project":
+      revalidatePath(`/projects/${parentId}`)
+      return
+    case "purchase_order":
+      revalidatePath(`/purchase-orders/${parentId}`)
+      revalidatePath(`/documents/purchase-orders/${parentId}`)
+      return
+    case "vendor_invoice":
+    case "vendor_payment":
+      revalidatePath("/purchase-orders/[id]", "page")
+      return
+    case "client_invoice":
+      revalidatePath("/accounts/invoices")
+      revalidatePath(`/documents/invoices/${parentId}`)
+      return
+    case "client_payment":
+      revalidatePath("/accounts/invoices")
+      revalidatePath(`/documents/receipts/${parentId}`)
+      return
+    case "expense":
+      revalidatePath("/accounts/expenses")
+      return
+    case "client":
+      revalidatePath("/clients")
+      return
+    case "vendor":
+      revalidatePath("/vendors")
+      return
+    case "employee":
+      revalidatePath("/hr/employees")
+      return
+    case "asset":
+      revalidatePath("/assets")
+      return
+    case "bank_transaction":
+      revalidatePath("/accounts/bank")
+      return
+    case "quotation":
+      revalidatePath(`/documents/quotations/${parentId}`)
+      return
+    case "work_order":
+      revalidatePath(`/documents/work-orders/${parentId}`)
+      return
+    case "issued_document":
+      revalidatePath("/documents")
+      return
+  }
 }
 
 async function denyAttachment(

@@ -533,7 +533,7 @@ function RowActions({
         </DropdownMenuItem>) : null}
         <DropdownMenuItem
           nativeButton={false}
-          render={<Link href={`/accounts/invoices?project=${project.id}`} />}
+          render={<Link href={`/accounts/invoices?project=${project.id}`} prefetch={false} />}
         >
           <FileText aria-hidden="true" />
           Client Invoices
@@ -541,7 +541,7 @@ function RowActions({
         <DropdownMenuItem
           nativeButton={false}
           render={
-            <Link href={`/purchase-orders?project=${project.id}`} />
+            <Link href={`/purchase-orders?project=${project.id}`} prefetch={false} />
           }
         >
           <Receipt aria-hidden="true" />

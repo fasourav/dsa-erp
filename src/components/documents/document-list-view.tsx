@@ -9,6 +9,7 @@ import { trashSavedDocument, type TrashKind } from "@/app/(app)/documents/action
 import { useAccess } from "@/components/access-provider"
 import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
+import { RecordLink } from "@/components/record-link"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -154,7 +155,7 @@ export function DocumentListView({
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem
                   nativeButton={false}
-                  render={<Link href={`${hrefBase}/${item.id}`} />}
+                  render={<Link href={`${hrefBase}/${item.id}`} prefetch={false} />}
                 >
                   <Pencil aria-hidden="true" />
                   Edit
@@ -218,13 +219,13 @@ export function DocumentListView({
 
 function DocumentLink({ href, children }: { href: string; children: string }) {
   return (
-    <Link
+    <RecordLink
       href={href}
       className={cn(
         "rounded-sm text-ui font-semibold text-foreground hover:text-primary-text focus-visible:ring-3 focus-visible:ring-ring/50",
       )}
     >
       {children}
-    </Link>
+    </RecordLink>
   )
 }

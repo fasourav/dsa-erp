@@ -44,7 +44,7 @@ export function ProjectDetailPanel({
           size="icon"
           className="mt-1.5 shrink-0 md:mt-2"
           nativeButton={false}
-          render={<Link href="/projects" aria-label="Back to projects" />}
+          render={<Link href="/projects" prefetch={false} aria-label="Back to projects" />}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
         </Button>
@@ -65,13 +65,13 @@ export function ProjectDetailPanel({
           description={meta || undefined}
           actions={
             <>
-              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/certificates/new?project=${project.id}`} />}>
+              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/certificates/new?project=${project.id}`} prefetch={false} />}>
                 Completion Certificate
               </Button>
-              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/letters/new?project=${project.id}`} />}>
+              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/letters/new?project=${project.id}`} prefetch={false} />}>
                 Letter
               </Button>
-              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/challans/new?project=${project.id}`} />}>
+              <Button variant="outline" nativeButton={false} render={<Link href={`/documents/challans/new?project=${project.id}`} prefetch={false} />}>
                 Delivery Challan
               </Button>
             </>

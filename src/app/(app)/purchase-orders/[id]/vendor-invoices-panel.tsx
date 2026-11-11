@@ -229,7 +229,7 @@ export function VendorInvoicesPanel({
             <Button
               variant="outline"
               nativeButton={false}
-              render={<Link href="/purchase-orders" />}
+              render={<Link href="/purchase-orders" prefetch={false} />}
             >
               All Purchase Orders
             </Button>
@@ -237,7 +237,7 @@ export function VendorInvoicesPanel({
               <Button
                 variant="outline"
                 nativeButton={false}
-                render={<Link href={`/documents/purchase-orders/${purchaseOrder.id}`} />}
+                render={<Link href={`/documents/purchase-orders/${purchaseOrder.id}`} prefetch={false} />}
               >
                 Print / Download
               </Button>
@@ -246,7 +246,7 @@ export function VendorInvoicesPanel({
               <Button
                 variant="outline"
                 nativeButton={false}
-                render={<Link href={`/documents/challans/new?po=${purchaseOrder.id}`} />}
+                render={<Link href={`/documents/challans/new?po=${purchaseOrder.id}`} prefetch={false} />}
               >
                 Delivery Challan
               </Button>
@@ -255,7 +255,7 @@ export function VendorInvoicesPanel({
               <Button
                 variant="outline"
                 nativeButton={false}
-                render={<Link href={`/documents/work-orders/${workOrderId}`} />}
+                render={<Link href={`/documents/work-orders/${workOrderId}`} prefetch={false} />}
               >
                 <FileText aria-hidden="true" data-icon="inline-start" />
                 View Work Order
@@ -264,7 +264,7 @@ export function VendorInvoicesPanel({
               <Button
                 variant="outline"
                 nativeButton={false}
-                render={<Link href={`/documents/work-orders/new?po=${purchaseOrder.id}`} />}
+                render={<Link href={`/documents/work-orders/new?po=${purchaseOrder.id}`} prefetch={false} />}
               >
                 <FileText aria-hidden="true" data-icon="inline-start" />
                 Create Work Order

@@ -11,6 +11,7 @@ import {
   parseProjectValue,
 } from "@/lib/project-validation"
 import { resolveBankAccountId } from "@/lib/resolve-bank-account"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { denyUnless } from "@/lib/permissions"
@@ -68,8 +69,8 @@ export async function addVatTaxPayment(
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const bank = await resolveBankAccountId(supabase, input.bankAccountId, "", "")
   if (bank.fieldError) {
@@ -124,8 +125,8 @@ export async function deleteVatTaxPayment(id: string): Promise<DeleteResult> {
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const { data, error } = await supabase
     .from("vat_tax_payments")
