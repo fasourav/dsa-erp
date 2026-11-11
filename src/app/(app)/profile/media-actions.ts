@@ -53,7 +53,12 @@ async function save(media: Media, file: File | null): Promise<MediaResult> {
     action: "update",
     summary: `${file ? "Updated" : "Removed"} ${rule.label}`,
   })
-  revalidatePath("/", "layout")
+  if (media === "avatar") {
+    // AuthenticatedLayout signs avatarPath for the shell header via getAccountIdentity().
+    revalidatePath("/", "layout")
+  } else {
+    revalidatePath("/profile")
+  }
   return { error: null }
 }
 
