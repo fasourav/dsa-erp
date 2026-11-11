@@ -3,9 +3,16 @@ import { NextResponse } from "next/server"
 import { allows } from "@/lib/access"
 import { getAccess } from "@/lib/permissions"
 import type { PrintMargins } from "@/lib/documents/drafts"
+import {
+  pdfCacheEnabled,
+  pdfCacheKey,
+  readCachedPdf,
+  storeCachedPdfLater,
+  type PdfMode,
+} from "@/lib/documents/pdf-cache"
 import { RFQ_BUCKET } from "@/lib/documents/rfq-store"
 import { stripSignatureImages } from "@/lib/documents/signature-urls"
-import { renderDocumentPdf } from "@/lib/documents/setc/pdf"
+import { prepareDocumentHtml, renderDocumentPdf, renderHtmlToPdf } from "@/lib/documents/setc/pdf"
 import { documentFileName } from "@/lib/documents/setc/render"
 import { loadSavedDocument } from "@/lib/documents/setc/saved"
 import { documentNumberOf, savedRecordKinds, type DocumentModel, type SavedRecordKind } from "@/lib/documents/setc/types"
@@ -63,9 +70,17 @@ export async function POST(request: Request) {
       if ("error" in loaded) {
         return NextResponse.json({ error: loaded.error }, { status: loaded.status })
       }
-      const pdf = await renderDocumentPdf(loaded.model, loaded.margins, letterhead, false)
+      const mode: PdfMode = letterhead ? "letterhead" : "print"
+      const html = await prepareDocumentHtml(loaded.model, loaded.margins, letterhead, false)
       const filename = documentFileName(loaded.filenameNo, letterhead)
-      return pdfResponse(pdf, filename)
+      const key = pdfCacheEnabled() ? pdfCacheKey({ kind: body.recordKind, id: body.id, mode, html }) : null
+      if (key) {
+        const cached = await readCachedPdf({ kind: body.recordKind, id: body.id, mode, key })
+        if (cached) return pdfResponse(cached, filename, "hit")
+      }
+      const pdf = await renderHtmlToPdf(html, letterhead)
+      if (key) storeCachedPdfLater({ kind: body.recordKind, id: body.id, mode, key, bytes: pdf })
+      return pdfResponse(pdf, filename, key ? "miss" : "off")
     }
 
     if (!body.draft || !body.source || !draftKinds.has(body.source.kind)) {
@@ -78,7 +93,7 @@ export async function POST(request: Request) {
     const source = stripSignatureImages(body.source)
     const pdf = await renderDocumentPdf(source, margins, letterhead, true)
     const filename = documentFileName(documentNumberOf(source), letterhead)
-    return pdfResponse(pdf, filename)
+    return pdfResponse(pdf, filename, "off")
   } catch {
     return NextResponse.json({ error: "Could not create the PDF." }, { status: 500 })
   }
@@ -102,15 +117,16 @@ async function savedRfqPdfResponse(id: string) {
     return NextResponse.json({ error: "Could not load the saved RFQ file." }, { status: 404 })
   }
   const pdf = new Uint8Array(await downloaded.data.arrayBuffer())
-  return pdfResponse(pdf, documentFileName(data.document_no, true))
+  return pdfResponse(pdf, documentFileName(data.document_no, true), "off")
 }
 
-function pdfResponse(pdf: Uint8Array, filename: string) {
+function pdfResponse(pdf: Uint8Array, filename: string, cache: "hit" | "miss" | "off") {
   return new NextResponse(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "X-Document-Filename": filename,
+      "X-Pdf-Cache": cache,
       "Cache-Control": "no-store",
     },
   })

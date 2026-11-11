@@ -8,6 +8,7 @@ import { allows } from "@/lib/access"
 import { isUuid } from "@/lib/ids"
 import { reportLaunchDate } from "@/lib/reports/load"
 import { clampPeriod, currentReportPeriod, officeToday } from "@/lib/reports/period"
+import { safeFilename } from "@/lib/reports/workbook"
 import { getAccess } from "@/lib/permissions"
 import {
   loadVendorStatement,
@@ -77,11 +78,13 @@ export default async function VendorStatementPage({
     )
   }
 
+  const partyNameShown = loaded.statement.party || partyName
+
   return (
     <StatementView
       eyebrow="Vendors"
       title="Vendor Statement"
-      partyName={loaded.statement.party || partyName}
+      partyName={partyNameShown}
       periodLabel={statementPeriodLabel(period.from, period.to)}
       debitLabel="Bills"
       note={note}
@@ -91,6 +94,7 @@ export default async function VendorStatementPage({
       to={period.to}
       pdfHref={`/vendors/${id}/statement/export?${exportQuery.toString()}&format=pdf`}
       excelHref={`/vendors/${id}/statement/export?${exportQuery.toString()}&format=xlsx`}
+      excelFilename={`${safeFilename(`vendor-statement-${partyNameShown}`)}-${period.from}-to-${period.to}.xlsx`}
       statement={loaded.statement}
     />
   )

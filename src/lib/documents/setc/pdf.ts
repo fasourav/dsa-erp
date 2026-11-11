@@ -108,12 +108,12 @@ async function underlayLetterhead(content: Uint8Array, png: Uint8Array): Promise
   return out.save()
 }
 
-export async function renderDocumentPdf(
+export async function prepareDocumentHtml(
   model: DocumentModel,
   margins: PrintMargins,
   letterhead: boolean,
   draft = false,
-): Promise<Uint8Array> {
+): Promise<string> {
   const css = await loadPrintCss()
   const mode: DocumentMode = letterhead ? "letterhead" : "print"
   const withImages = await inlineSignatureImages(model)
@@ -123,6 +123,10 @@ export async function renderDocumentPdf(
     const uri = `data:image/png;base64,${Buffer.from(png).toString("base64")}`
     html = html.replaceAll('src="/brand/letterhead-300dpi.png"', `src="${uri}"`)
   }
+  return html
+}
+
+export async function renderHtmlToPdf(html: string, letterhead: boolean): Promise<Uint8Array> {
   const pdf = await htmlToPdf(html, false)
   // Chrome prints this PNG with Flate, which does not soften it. If a runtime
   // ever switches the image to JPEG, put the original PNG back underneath.
@@ -130,4 +134,13 @@ export async function renderDocumentPdf(
     return underlayLetterhead(await htmlToPdf(html.replaceAll(/<img class="bg"[^>]*>/g, ""), true), await letterheadPng())
   }
   return pdf
+}
+
+export async function renderDocumentPdf(
+  model: DocumentModel,
+  margins: PrintMargins,
+  letterhead: boolean,
+  draft = false,
+): Promise<Uint8Array> {
+  return renderHtmlToPdf(await prepareDocumentHtml(model, margins, letterhead, draft), letterhead)
 }
