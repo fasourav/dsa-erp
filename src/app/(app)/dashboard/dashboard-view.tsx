@@ -177,12 +177,20 @@ function DashboardSections({
 
   const adminExpense =
     snapshot.operational + snapshot.marketing + snapshot.salary + snapshot.admin
+  // Screen heading: project costs plus VAT/Tax paid. The server's projectExpense
+  // (and Project Cost Ratio) stays without tax; gross/net profit already subtract tax.
+  const projectExpenseWithTax = snapshot.projectExpense + snapshot.tax
   const slices = expenseSliceStyle.map((slice) => ({
     ...slice,
     amount:
       slice.key === "operational" ? snapshot.operational + snapshot.admin : snapshot[slice.key],
   }))
-  const summaryRows = slices.filter((slice) => slice.key !== "projectOverhead")
+  // Overhead keeps its neutral donut slice; its row swatch matches that slice.
+  const summaryRows = slices.map((slice) =>
+    slice.key === "projectOverhead"
+      ? { ...slice, swatch: "bg-fill ring-1 ring-inset ring-border" }
+      : slice,
+  )
   const adminBreakdown = new Set(["operational", "marketing", "salary"])
   const projectRows = summaryRows.filter((slice) => !adminBreakdown.has(slice.key))
   const adminRows = summaryRows.filter((slice) => adminBreakdown.has(slice.key))
@@ -494,7 +502,7 @@ function DashboardSections({
             <span className="text-micro text-muted-foreground md:text-xs">Total Expense</span>
           </ExpenseDonut>
           <div className="mt-4 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] gap-x-2 md:gap-x-3">
-            <ExpenseSummaryHeader label="Project Expense" value={snapshot.projectExpense} />
+            <ExpenseSummaryHeader label="Project Expense" value={projectExpenseWithTax} />
             {projectRows.map((slice) => (
               <ExpenseSummaryRow key={slice.key} slice={slice} total={snapshot.totalExpense} />
             ))}
@@ -524,7 +532,7 @@ function DashboardSections({
             color={snapshot.netMargin < 0 ? "var(--destructive)" : "var(--chart-5)"}
           />
           <MarginRing label="Withdrawal Ratio" value={snapshot.withdrawalRatio} color="var(--chart-3)" />
-          <MarginRing label="Project Cost Ratio" value={snapshot.projectCostRatio} color="var(--chart-6)" />
+          <MarginRing label="Project Cost (Excl. Tax)" value={snapshot.projectCostRatio} color="var(--chart-6)" />
           <MarginRing label="Tax Ratio" value={snapshot.taxRatio} color="var(--chart-8)" />
           <MarginRing label="Admin Expense Ratio" value={snapshot.adminRatio} color="var(--chart-7)" />
         </div>
@@ -1103,7 +1111,7 @@ function downloadDashboard(
     ["Accounts Payable", formatExactBdt(model.payables)],
     ["Forecasted Profit", formatExactBdt(model.forecastedProfit)],
     ["Withdrawal", formatExactBdt(snapshot.withdrawal)],
-    ["Project Expense", formatExactBdt(snapshot.projectExpense)],
+    ["Project Expense", formatExactBdt(snapshot.projectExpense + snapshot.tax)],
     ["Material Cost", formatExactBdt(snapshot.material)],
     ["Subcontractor Cost", formatExactBdt(snapshot.subcontractor)],
     ["Project Overhead", formatExactBdt(snapshot.projectOverhead)],
@@ -1117,7 +1125,7 @@ function downloadDashboard(
     ["Gross Profit Margin", snapshot.grossMargin],
     ["Net Profit Margin", snapshot.netMargin],
     ["Withdrawal Ratio", snapshot.withdrawalRatio],
-    ["Project Cost Ratio", snapshot.projectCostRatio],
+    ["Project Cost Ratio (Excl. Tax)", snapshot.projectCostRatio],
     ["Tax Ratio", snapshot.taxRatio],
     ["Admin Expense Ratio", snapshot.adminRatio],
     ["Active Projects", model.performance.active],
