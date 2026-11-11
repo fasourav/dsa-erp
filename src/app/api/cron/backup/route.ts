@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto"
 
 import { NextResponse } from "next/server"
 
-import { isBackupEmailEnabled, runDailyBackup } from "@/lib/reports/daily-backup"
+import { isBackupEmailEnabled, pruneDailyBackups, runDailyBackup } from "@/lib/reports/daily-backup"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
@@ -25,6 +25,7 @@ export async function GET(request: Request) {
   }
 
   const result = await runDailyBackup(admin)
+  const pruned = result.status === "ok" ? await pruneDailyBackups(admin).catch(() => 0) : 0
   return NextResponse.json(
     {
       status: result.status,
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
       storagePath: result.storagePath,
       emailed: false,
       emailEnabled: isBackupEmailEnabled(),
+      pruned,
       error: result.error,
     },
     {
