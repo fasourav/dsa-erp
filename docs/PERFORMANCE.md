@@ -40,12 +40,6 @@ Optional environment variables:
 - `PERF_COOKIE`: `Cookie` header forwarded to Lighthouse requests for authenticated routes (`/dashboard`, `/accounts/*`).
 - `CHROME_PATH`: Explicit Chrome/Chromium binary path if auto-detection cannot locate Chrome.
 
-### Field Web Vitals (`/api/vitals`)
-
-`src/components/web-vitals.tsx` hooks Next.js `useReportWebVitals` for `LCP`, `INP`, `CLS`, `FCP`, and `TTFB`:
-- Non-production: logs `[web-vitals]` payloads to the browser console.
-- Production: sends `navigator.sendBeacon("/api/vitals", body)` (with `fetch(..., { keepalive: true })` fallback), which logs one structured JSON line per metric and returns `204 No Content`.
-
 ---
 
 ## First Load JS (Initial Client Entry Chunks)
@@ -94,7 +88,7 @@ Measured from `.next/build-manifest.json` (`rootMainFiles`) + each route's `page
 
 The following items remain above target budgets on `/login` or require post-deploy verification and are logged as follow-ups outside this speed package:
 1. **`/login` simulated TBT (`~141–147 s`) & FCP (`~1.08–1.10 s`):** Driven by continuous `requestAnimationFrame` / canvas drawing on the `/login` screen, which keeps the main thread busy throughout Lighthouse's quiet-window wait and slightly delays simulated mobile LCP (`3477 ms` on cold hit, `2993 ms` desktop). `/login` animation behavior was out of scope for this package; evaluate frame-throttling or `prefers-reduced-motion` gating in a dedicated follow-up if needed.
-2. **Authenticated `/dashboard` & `/accounts/*` lab + field runs:** Authenticated session cookies were not available in the automated build environment. Run `perf:lh` with `PERF_COOKIE` against the Vercel `sin1` preview deployment after applying the two additive migrations, and monitor real-user `/api/vitals` logs in Vercel (`LCP`, `INP`, `CLS`, `FCP`, `TTFB`).
+2. **Authenticated `/dashboard` & `/accounts/*` lab runs:** Authenticated session cookies were not available in the automated build environment. Run `perf:lh` with `PERF_COOKIE` against the Vercel `sin1` preview deployment after applying the two additive migrations.
 3. **Remaining unpaged lists (planned follow-up):** Vendor invoices, income, leads, and PO expenses remain on their existing loaders per scope; AR/AP keep full open-item sets for aging bucket accuracy (covered by the new `issued_on` / `status` indexes).
 
 ---
