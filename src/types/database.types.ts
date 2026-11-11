@@ -2598,6 +2598,39 @@ export type Database = {
         }
         Relationships: []
       }
+      document_pdf_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          id: string
+          letterhead: boolean
+          record_id: string
+          record_kind: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          id?: string
+          letterhead: boolean
+          record_id: string
+          record_kind: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          id?: string
+          letterhead?: boolean
+          record_id?: string
+          record_kind?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: []
+      }
       bank_match_tolerances: {
         Row: {
           days: number
