@@ -16,7 +16,7 @@ import {
 } from "@/lib/bank"
 import type { SortState } from "@/lib/list-paging"
 import { fetchAllPages, fetchPage } from "@/lib/fetch-pages"
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import type { NamedOption } from "@/lib/operational-expenses"
 import {
@@ -237,6 +237,7 @@ export async function getBankPage(
   options: {
     q?: string
     page?: number
+    pageSize?: number
     sort?: SortState<BankTransactionColumnId>
     includeReportRows?: boolean
   } = {},
@@ -345,9 +346,7 @@ export async function getBankPage(
     const accountsById = new Map(accounts.map((account) => [account.id, account]))
     const projects = projectRows
       .map((row) => ({ id: row.id, name: row.name?.trim() ?? "" }))
-      .sort((left, right) =>
-        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
-      )
+      .sort((left, right) => compareText(left.name, right.name))
     const projectsById = new Map(projects.map((project) => [project.id, project.name]))
 
     const { openingByAccount, accountBalances, balanceById } = computeBalances(
@@ -436,7 +435,7 @@ export async function getBankPage(
         return query.range(from, to)
       },
       requestedPage,
-      LIST_PAGE_SIZE,
+      options.pageSize ?? LIST_PAGE_SIZE,
     )
 
     const transactions = txSlice.rows.flatMap((row) =>

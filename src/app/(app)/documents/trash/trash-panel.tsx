@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { TrashedDocument } from "@/lib/documents/queries"
+import { compareText } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -53,9 +54,11 @@ export function TrashPanel({ items }: { items: TrashedDocument[] }) {
   const sorted = useMemo(() => {
     const copy = [...items]
     copy.sort((left, right) => {
-      const result = columnText(left, sort.key).localeCompare(columnText(right, sort.key), undefined, {
-        numeric: true,
-      })
+      const result =
+        sort.key === "detail"
+          ? left.issuedOn.localeCompare(right.issuedOn) ||
+            left.id.localeCompare(right.id)
+          : compareText(columnText(left, sort.key), columnText(right, sort.key))
       return sort.direction === "asc" ? result : -result
     })
     return copy

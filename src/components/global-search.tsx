@@ -27,6 +27,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Label } from "@/components/ui/label"
 import { navIcons } from "@/lib/nav-icons"
 import type { SearchHit } from "@/lib/search"
+import { guardedNavigate } from "@/lib/use-unsaved-changes-guard"
 import { cn } from "@/lib/utils"
 
 const emptyResults: SearchHit[] = []
@@ -109,9 +110,16 @@ export function GlobalSearch() {
     setOpen(true)
   }
 
-  function go(hit: SearchHit) {
+  function closePalette() {
     setOpen(false)
-    router.push(hit.href)
+    setQuery("")
+    setResults([])
+    setError(null)
+  }
+
+  function go(hit: SearchHit) {
+    closePalette()
+    guardedNavigate(hit.href, () => router.push(hit.href))
   }
 
   function onInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
@@ -145,23 +153,22 @@ export function GlobalSearch() {
         size="icon"
         aria-label="Search"
         aria-keyshortcuts="Control+K Meta+K"
-        className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong aria-expanded:bg-fill-strong md:h-8 md:w-60 md:justify-start md:gap-2 md:px-3.5 md:font-normal md:text-muted-foreground"
+        className="bg-fill shadow-none backdrop-blur-none hover:bg-fill-strong aria-expanded:bg-fill-strong md:h-8 md:w-40 md:justify-start md:gap-2 md:px-3.5 md:font-normal md:text-muted-foreground xl:w-60"
         onClick={openPalette}
       >
         <Search aria-hidden="true" className="size-4.5 md:size-4" />
         <span className="hidden md:inline">Search</span>
-        <kbd className="ml-auto hidden font-sans text-caption text-subtle-foreground md:inline">
+        <kbd className="ml-auto hidden font-sans text-caption text-subtle-foreground xl:inline">
           {shortcut}
         </kbd>
       </Button>
       <Dialog
         open={open}
         onOpenChange={(next) => {
-          setOpen(next)
-          if (!next) {
-            setQuery("")
-            setResults([])
-            setError(null)
+          if (next) {
+            setOpen(true)
+          } else {
+            closePalette()
           }
         }}
       >
@@ -223,7 +230,21 @@ export function GlobalSearch() {
                         <li key={`${hit.moduleKey}-${hit.recordId}-${hit.label}-${index}`}>
                           <Link
                             href={hit.href}
-                            onClick={() => setOpen(false)}
+                            data-unsaved-guard="skip"
+                            onClick={(event) => {
+                              if (
+                                event.button !== 0 ||
+                                event.metaKey ||
+                                event.ctrlKey ||
+                                event.shiftKey ||
+                                event.altKey
+                              ) {
+                                closePalette()
+                                return
+                              }
+                              event.preventDefault()
+                              go(hit)
+                            }}
                             className={cn(
                               "flex min-h-11 items-center gap-3 rounded-xl px-2 py-2 hover:bg-fill",
                               index === active && "bg-primary-tint hover:bg-primary-tint",

@@ -32,13 +32,14 @@ export function ReportsMenu() {
             type="button"
             variant="outline"
             size="sm"
+            aria-label="Reports"
             aria-current={active ? "page" : undefined}
             className="aria-[current=page]:bg-primary-tint aria-[current=page]:text-primary-text"
           />
         }
       >
         <FileBarChart aria-hidden="true" />
-        Reports
+        <span className="hidden xl:inline">Reports</span>
         <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-64">

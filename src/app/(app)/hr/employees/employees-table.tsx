@@ -22,9 +22,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import type { DepartmentOption, EmployeeRow } from "@/lib/employees"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
@@ -48,7 +49,13 @@ const columns: readonly ListColumn<ColumnId>[] = [
   { id: "monthlySalary", label: "Monthly Salary", align: "right", locked: true },
   { id: "allowance", label: "Allowance", align: "right", locked: true },
   { id: "joiningDate", label: "Joining Date", align: "left", locked: true },
-  { id: "isActive", label: "Status", align: "left", locked: true },
+  {
+    id: "isActive",
+    label: "Status",
+    align: "left",
+    locked: true,
+    sortText: { asc: "Inactive first", desc: "Active first" },
+  },
 ]
 const employeeSortKeys = columns.map((column) => column.id)
 const defaultEmployeeSort: SortState<ColumnId> = {
@@ -71,19 +78,13 @@ function sortEmployees(
     let cmp = 0
     switch (sort.key) {
       case "fullName":
-        cmp = a.fullName.localeCompare(b.fullName, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.fullName, b.fullName)
         break
       case "department":
-        cmp = a.department.localeCompare(b.department, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.department, b.department)
         break
       case "designation":
-        cmp = a.designation.localeCompare(b.designation, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.designation, b.designation)
         break
       case "monthlySalary":
         cmp = a.monthlySalary - b.monthlySalary
@@ -127,6 +128,8 @@ export function EmployeesTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -153,7 +156,10 @@ export function EmployeesTable({
       ),
     [listFilter, query, sorted],
   )
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
 
   function openForm(emp: EmployeeRow | null) {
     setFormEmployee(emp)
@@ -264,6 +270,12 @@ export function EmployeesTable({
           "employee",
           "employees",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

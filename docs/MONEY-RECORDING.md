@@ -47,9 +47,9 @@ An operational purchase order payment (cash) or bill (accrual) uses the purchase
 - **Project overhead**: operational expenses linked to a project. They are not also counted as operational, salary, or marketing.
 - **Salary**: operational expenses with no project whose resolved group is salary, plus operational purchase orders in that group, plus payroll outflows on the bank ledger.
 - **Marketing**: operational expenses with no project whose resolved group is marketing, plus operational purchase orders in that group.
-- **Tax**: VAT/Tax payments. Counted in gross profit, not in project expense.
+- **Tax**: VAT/Tax payments. Counted in gross profit. In the calculations it is separate from project expense; the dashboard Expense Summary heading adds it on screen (see Dashboard figures).
 
-Project expense is material + subcontractor + project overhead. Admin Expense is operational + marketing + salary. The profit JSON still has an `admin` key so existing sums keep working. That key is zero, because no row resolves to admin, and it is not shown as its own line. Adding it again would double-count. Gross profit is client collections minus project expense minus tax. Net profit subtracts Admin Expense. On the Financial Report, Admin Expense also includes depreciation, as it did before.
+Project expense is material + subcontractor + project overhead. Admin Expense is operational + marketing + salary. The profit JSON still has an `admin` key so existing sums keep working. That key is zero, because no row resolves to admin, and it is not shown as its own line. Adding it again would double-count. Gross profit is client collections minus project expense minus tax. Net profit subtracts Admin Expense. On the Financial Report, Admin Expense also includes depreciation, as it did before. The dashboard Expense Summary "Project Expense" heading shows project expense plus tax, with Tax Paid as a row under it; Project Cost Ratio (shown as "Project Cost (Excl. Tax)") still uses project expense without tax.
 
 ## Dashboard figures
 
@@ -58,7 +58,7 @@ These two cards are calculated in the app from figures the dashboard already loa
 - **Collection Efficiency** = (Total Revenue − Accounts Receivable) / Total Revenue, shown as a percent. Total Revenue is the dashboard revenue for the selected period. Accounts Receivable is the open client balance: current when the period is All Time or the current year, otherwise as of that year end. Total Revenue of zero shows 0%.
 - **Forecasted Profit** = Accounts Receivable − Accounts Payable. Accounts Payable is open vendor bills, the same balance as the Accounts Payable card.
 - The period selector opens on **All Time**. A chosen fiscal year still limits the period figures.
-- Project overhead stays in project expense and in the Expense Summary total. The summary list does not show a Project Overhead row.
+- Project overhead (operational expenses tagged to a project) stays in project expense, but the Expense Summary does not show it as a row: the Operational Expenses form has no project field, so it is always zero. The Project Expense heading is material + subcontractor + tax paid (plus project overhead, which is zero).
 - **High Value** and **Low Value** counts use ৳50,000 of project value. At or above that is high; below it is low. The card shows those counts only.
 - **Asset Value** on the dashboard is the Assets page Total Asset Value, for accounts that can view Assets (including the owner). Both use `assetValue` and `sumAssetCurrentValue` in `src/lib/asset-value.ts`: straight-line depreciation from purchase date, cost, and lifespan, then the sum of those current values. The card stays hidden without that permission. If the asset, project, or backlog lookup fails, the figure shows — rather than ৳0.
 - **Backlog value** is the sum of `project_backlogs.backlog_amount` for backlog projects in the selected period. It is shown beside the backlog count when that count is greater than zero.

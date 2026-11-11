@@ -1,15 +1,16 @@
 "use client"
 
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
-import Link from "next/link"
 import { useMemo } from "react"
 
 import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { formatIsoDate } from "@/lib/format"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -46,6 +47,8 @@ export function ExpenseTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<PoExpenseColumnId>({
@@ -54,7 +57,7 @@ export function ExpenseTable({
   })
   const sorted = useMemo(() => sortPoExpenses(rows, sort), [rows, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const pageResult = paginateRows(filtered, page, pageSize)
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -112,18 +115,24 @@ export function ExpenseTable({
           "expense",
           "expenses",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Expense pagination"
         mobileItem={(row) => ({
           title: row.purchaseOrderId ? (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${row.purchaseOrderId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.vendorName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             row.vendorName || "—"
           ),
@@ -167,12 +176,12 @@ function Cell({
       return (
         <span className="flex min-w-0 flex-col">
           {row.purchaseOrderId && row.vendorName ? (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${row.purchaseOrderId}`}
               className="truncate text-ui font-medium underline-offset-4 hover:underline"
             >
               {row.vendorName}
-            </Link>
+            </RecordLink>
           ) : (
             <span className={cn("truncate", !row.vendorName && "text-muted-foreground")}>
               {row.vendorName || "—"}

@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { compareText } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -41,6 +42,7 @@ import {
   type ExpenseCategoryOption,
   type PurchaseOrderRow,
   type VendorOption,
+  type VendorPoDefaults,
 } from "@/lib/purchase-order-summary"
 
 type OperationalColumnId =
@@ -73,12 +75,14 @@ export function OperationalPurchaseOrdersDialog({
   workTypes,
   expenseCategories,
   officeExpenseCategories,
+  vendorDefaults,
 }: {
   orders: PurchaseOrderRow[]
   vendors: VendorOption[]
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
   officeExpenseCategories: ExpenseCategoryOption[]
+  vendorDefaults: VendorPoDefaults
 }) {
   const canAdd = useCan("purchase_orders", "add")
 
@@ -241,6 +245,7 @@ export function OperationalPurchaseOrdersDialog({
         workTypes={workTypes}
         expenseCategories={expenseCategories}
         officeExpenseCategories={officeExpenseCategories}
+        vendorDefaults={vendorDefaults}
         defaultProjectId={null}
         operational
       />
@@ -413,19 +418,14 @@ function compareOperational(
     case "issuedOn":
       return left.issuedOn.localeCompare(right.issuedOn)
     case "workType":
-      return left.workType.localeCompare(right.workType, "en", {
-        sensitivity: "base",
-      })
+      return compareText(left.workType, right.workType)
     case "category":
-      return left.officeExpenseCategoryName.localeCompare(
+      return compareText(
+        left.officeExpenseCategoryName,
         right.officeExpenseCategoryName,
-        "en",
-        { sensitivity: "base" },
       )
     case "vendorName":
-      return left.vendorName.localeCompare(right.vendorName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(left.vendorName, right.vendorName)
     case "totalValue":
     case "totalPaid":
     case "totalPending":

@@ -11,6 +11,7 @@ import {
 } from "@/app/(app)/accounts/invoices/actions"
 import { MoneyInput } from "@/components/money-input"
 import { RecordAttachments } from "@/components/record-attachments"
+import { RecordPicker } from "@/components/record-picker"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -28,13 +29,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type {
   ClientInvoiceRow,
   InvoiceProjectOption,
@@ -170,27 +164,16 @@ export function ClientInvoiceFormDialog({
             </Field>
             <Field span="half" data-invalid={Boolean(projectError) || undefined}>
               <FieldLabel htmlFor="client-invoice-project">Project</FieldLabel>
-              <Select
-                items={projectItems}
-                value={projectId || null}
+              <RecordPicker
+                id="client-invoice-project"
+                value={projectId}
+                options={projectItems}
+                placeholder="Select A Project"
+                fallbackLabel={invoice?.projectName || "Saved project"}
                 disabled={pending}
-                onValueChange={(value) => setProjectId(value ?? "")}
-              >
-                <SelectTrigger
-                  id="client-invoice-project"
-                  className="w-full"
-                  aria-invalid={Boolean(projectError)}
-                >
-                  <SelectValue placeholder="Select A Project" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {projectItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                invalid={Boolean(projectError)}
+                onValueChange={setProjectId}
+              />
               {projectError ? <FieldError>{projectError}</FieldError> : null}
             </Field>
             <Field data-invalid={Boolean(amountError) || undefined}>

@@ -1,4 +1,4 @@
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import { budgetStatusByProject } from "@/lib/project-budget"
 import {
   clientDisplayName,
@@ -113,9 +113,7 @@ export async function getProjects(): Promise<{
         displayName: clientDisplayName(row.person_name, row.company_name),
       }))
       .sort((a, b) => {
-        const byName = a.displayName.localeCompare(b.displayName, "en", {
-          sensitivity: "base",
-        })
+        const byName = compareText(a.displayName, b.displayName)
         if (byName !== 0) {
           return byName
         }

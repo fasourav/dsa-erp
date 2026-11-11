@@ -9,6 +9,7 @@ import { ColumnHint, DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import {
   ListFilterBar,
   SettlementFilterControl,
@@ -31,6 +32,7 @@ import {
 import { formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -85,6 +87,8 @@ export function PayableTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
   } = useListUrlState<PayableColumnId>({
     sortKeys: payableSortKeys,
@@ -108,7 +112,7 @@ export function PayableTable({
       ),
     [searched, sort, statusFilter],
   )
-  const pageResult = paginateRows(visible, page)
+  const pageResult = paginateRows(visible, page, pageSize)
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -183,18 +187,24 @@ export function PayableTable({
           "payable",
           "payables",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Accounts Payable pagination"
         mobileItem={(row) => ({
           title: row.purchaseOrderId ? (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${row.purchaseOrderId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.vendorName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             row.vendorName || "—"
           ),
@@ -265,12 +275,12 @@ function Cell({
     case "projectName":
       if (row.projectId && row.projectName && row.projectName !== "Operational") {
         return (
-          <Link
+          <RecordLink
             href={`/projects/${row.projectId}`}
             className="block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
           >
             {row.projectName}
-          </Link>
+          </RecordLink>
         )
       }
       return (
@@ -286,12 +296,12 @@ function Cell({
     case "vendorName":
       if (row.purchaseOrderId && row.vendorName) {
         return (
-          <Link
+          <RecordLink
             href={`/purchase-orders/${row.purchaseOrderId}`}
             className="block truncate rounded-sm text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
           >
             {row.vendorName}
-          </Link>
+          </RecordLink>
         )
       }
       return row.vendorName ? (

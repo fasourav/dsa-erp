@@ -1,5 +1,5 @@
 import { fetchAllPages } from "@/lib/fetch-pages"
-import { formatIsoDate, formatMoney, toNumber } from "@/lib/format"
+import { compareText, formatIsoDate, formatMoney, toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import { dateInputValue } from "@/lib/project-validation"
 import { createClient } from "@/lib/supabase/server"
@@ -331,7 +331,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
           ]),
         } satisfies NamedOption
       })
-      .sort((left, right) => left.name.localeCompare(right.name, "en", { sensitivity: "base" }))
+      .sort((left, right) => compareText(left.name, right.name))
 
     const vendors = vendorRows
       .map((row) => {
@@ -346,7 +346,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
           detail: partyDetail([person, company, row.address, row.phone, row.email]),
         } satisfies NamedOption
       })
-      .sort((left, right) => left.name.localeCompare(right.name, "en", { sensitivity: "base" }))
+      .sort((left, right) => compareText(left.name, right.name))
 
     const projects = projectRows
       .map((row) => ({
@@ -355,7 +355,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
         clientId: row.client_id,
         location: row.location?.trim() ?? "",
       }))
-      .sort((left, right) => left.name.localeCompare(right.name, "en", { sensitivity: "base" }))
+      .sort((left, right) => compareText(left.name, right.name))
 
     const roleLabels = new Map<string, string>([
       ["owner", "Owner"],
@@ -392,7 +392,7 @@ export async function loadDocumentCatalog(): Promise<DocumentCatalog> {
       }
     }
     const employees = Array.from(employeeByKey.values()).sort((left, right) =>
-      left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+      compareText(left.name, right.name),
     )
 
     return {
@@ -1157,6 +1157,7 @@ export type TrashedDocument = {
   kindLabel: string
   documentNo: string
   detail: string
+  issuedOn: string
 }
 
 export async function listTrashedDocuments(): Promise<{
@@ -1188,57 +1189,71 @@ export async function listTrashedDocuments(): Promise<{
   if (error) return { items: [], error: storageError(error) }
 
   const items: Array<TrashedDocument & { deletedAt: string }> = [
-    ...(quotations.data ?? []).map((row) => ({
-      id: row.id,
-      kind: "quotation" as const,
-      kindLabel: "Quotation",
-      documentNo: row.document_no,
-      detail: formatIsoDate(dateInputValue(row.issued_on)),
-      deletedAt: row.deleted_at ?? "",
-    })),
-    ...(orders.data ?? []).map((row) => ({
-      id: row.id,
-      kind: "work_order" as const,
-      kindLabel: "Work Order",
-      documentNo: row.document_no,
-      detail: formatIsoDate(dateInputValue(row.issued_on)),
-      deletedAt: row.deleted_at ?? "",
-    })),
+    ...(quotations.data ?? []).map((row) => {
+      const issuedOn = dateInputValue(row.issued_on)
+      return {
+        id: row.id,
+        kind: "quotation" as const,
+        kindLabel: "Quotation",
+        documentNo: row.document_no,
+        detail: formatIsoDate(issuedOn),
+        issuedOn,
+        deletedAt: row.deleted_at ?? "",
+      }
+    }),
+    ...(orders.data ?? []).map((row) => {
+      const issuedOn = dateInputValue(row.issued_on)
+      return {
+        id: row.id,
+        kind: "work_order" as const,
+        kindLabel: "Work Order",
+        documentNo: row.document_no,
+        detail: formatIsoDate(issuedOn),
+        issuedOn,
+        deletedAt: row.deleted_at ?? "",
+      }
+    }),
     ...(issued.data ?? []).flatMap((row) => {
       const kind: TrashedDocument["kind"] =
         row.kind === "invoice" ? "invoice" : row.kind === "receipt" ? "receipt" : "purchase_order"
       const kindLabel =
         kind === "invoice" ? "Invoice" : kind === "receipt" ? "Money Receipt" : "Purchase Order"
+      const issuedOn = dateInputValue(row.issued_on)
       return [
         {
           id: row.id,
           kind,
           kindLabel,
           documentNo: row.document_no,
-          detail: formatIsoDate(dateInputValue(row.issued_on)),
+          detail: formatIsoDate(issuedOn),
+          issuedOn,
           deletedAt: row.deleted_at ?? "",
         },
       ]
     }),
-    ...(formMissing ? [] : (forms.data ?? [])).map((row) => ({
-      id: row.id,
-      kind: row.kind as TrashedDocument["kind"],
-      kindLabel:
-        row.kind === "rfq"
-          ? "Request For Quotation"
-          : row.kind === "delivery_challan"
-            ? "Delivery Challan"
-            : row.kind === "payment_voucher"
-              ? "Payment Voucher"
-              : row.kind === "completion"
-                ? "Work Completion Certificate"
-                : row.kind === "salary_slip"
-                  ? "Salary Slip"
-                  : "Letter / Notice",
-      documentNo: row.document_no,
-      detail: formatIsoDate(dateInputValue(row.issued_on)),
-      deletedAt: row.deleted_at ?? "",
-    })),
+    ...(formMissing ? [] : (forms.data ?? [])).map((row) => {
+      const issuedOn = dateInputValue(row.issued_on)
+      return {
+        id: row.id,
+        kind: row.kind as TrashedDocument["kind"],
+        kindLabel:
+          row.kind === "rfq"
+            ? "Request For Quotation"
+            : row.kind === "delivery_challan"
+              ? "Delivery Challan"
+              : row.kind === "payment_voucher"
+                ? "Payment Voucher"
+                : row.kind === "completion"
+                  ? "Work Completion Certificate"
+                  : row.kind === "salary_slip"
+                    ? "Salary Slip"
+                    : "Letter / Notice",
+        documentNo: row.document_no,
+        detail: formatIsoDate(issuedOn),
+        issuedOn,
+        deletedAt: row.deleted_at ?? "",
+      }
+    }),
   ]
   items.sort((left, right) => right.deletedAt.localeCompare(left.deletedAt))
   return {
@@ -1248,6 +1263,7 @@ export async function listTrashedDocuments(): Promise<{
       kindLabel: item.kindLabel,
       documentNo: item.documentNo,
       detail: item.detail,
+      issuedOn: item.issuedOn,
     })),
     error: null,
   }

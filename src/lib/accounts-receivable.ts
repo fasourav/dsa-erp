@@ -1,4 +1,5 @@
-import type { PaymentStatus } from "@/lib/payment-status"
+import { compareText } from "@/lib/format"
+import { paymentStatusLabel, type PaymentStatus } from "@/lib/payment-status"
 import {
   sanitizeColumnVisibility,
   type ListColumn,
@@ -91,9 +92,12 @@ function compareRows(
   switch (key) {
     case "clientName":
     case "projectName":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "status":
-      return (left.status ?? "").localeCompare(right.status ?? "")
+      return compareText(
+        left.status ? paymentStatusLabel(left.status) : "",
+        right.status ? paymentStatusLabel(right.status) : "",
+      )
     case "billedAmount":
     case "paid":
     case "due":

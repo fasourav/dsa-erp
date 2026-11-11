@@ -24,12 +24,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
 import { sumAssetCurrentValue } from "@/lib/asset-value"
 import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 import { useListUrlState } from "@/lib/use-list-url-state"
@@ -54,10 +55,10 @@ function sortAssets(rows: AssetRow[], sort: SortState<ColId>): AssetRow[] {
     let cmp = 0
     switch (sort.key) {
       case "name":
-        cmp = a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+        cmp = compareText(a.name, b.name)
         break
       case "category":
-        cmp = a.category.localeCompare(b.category, "en", { sensitivity: "base" })
+        cmp = compareText(a.category, b.category)
         break
       case "purchaseDate":
         cmp = a.purchaseDate.localeCompare(b.purchaseDate)
@@ -111,6 +112,8 @@ export function AssetsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColId>({
@@ -135,7 +138,10 @@ export function AssetsTable({
     () => filterRows(sorted, query, rowText, listFilter, (asset) => asset.categoryId || "none"),
     [listFilter, query, sorted],
   )
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
 
   function openForm(asset: AssetRow | null) {
     setFormAsset(asset)
@@ -257,6 +263,12 @@ export function AssetsTable({
           "asset",
           "assets",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

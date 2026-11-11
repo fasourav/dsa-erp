@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { RecordPicker } from "@/components/record-picker"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -89,6 +90,8 @@ export function ChoiceField({
   onChange,
   disabled,
   placeholder = "Choose",
+  searchable = false,
+  fallbackLabel,
 }: {
   id: string
   label: string
@@ -97,6 +100,8 @@ export function ChoiceField({
   onChange: (value: string) => void
   disabled?: boolean
   placeholder?: string
+  searchable?: boolean
+  fallbackLabel?: string
 }) {
   // Keep the item list stable. Dropping the placeholder item as soon as a value is
   // picked changed the list mid-selection and the Select snapped back to "unset",
@@ -110,23 +115,37 @@ export function ChoiceField({
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <Select
-        items={items}
-        value={selected}
-        disabled={disabled || options.length === 0}
-        onValueChange={(next) => onChange(!next || next === "unset" ? "" : next)}
-      >
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {items.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {searchable ? (
+        <RecordPicker
+          id={id}
+          value={value}
+          options={options}
+          placeholder={placeholder}
+          allowClear
+          clearLabel={placeholder}
+          fallbackLabel={fallbackLabel}
+          disabled={disabled || options.length === 0}
+          onValueChange={onChange}
+        />
+      ) : (
+        <Select
+          items={items}
+          value={selected}
+          disabled={disabled || options.length === 0}
+          onValueChange={(next) => onChange(!next || next === "unset" ? "" : next)}
+        >
+          <SelectTrigger id={id} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {items.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   )
 }

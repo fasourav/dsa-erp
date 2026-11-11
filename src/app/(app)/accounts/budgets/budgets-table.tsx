@@ -22,7 +22,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { compareText } from "@/lib/format"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
@@ -58,7 +60,7 @@ function sortBudgets(rows: BudgetRow[], sort: SortState<ColId>): BudgetRow[] {
     let cmp = 0
     switch (sort.key) {
       case "department":
-        cmp = a.department.localeCompare(b.department, "en", { sensitivity: "base" })
+        cmp = compareText(a.department, b.department)
         break
       case "period":
         cmp = a.periodYear - b.periodYear || a.periodMonth - b.periodMonth
@@ -104,6 +106,8 @@ export function BudgetsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColId>({
@@ -120,7 +124,10 @@ export function BudgetsTable({
 
   const sorted = useMemo(() => sortBudgets(budgets, sort), [budgets, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
   const totals = useMemo(() => {
     const allocated = budgets.reduce((sum, row) => sum + row.allocatedBudget, 0)
     const spent = budgets.reduce((sum, row) => sum + row.actualSpent, 0)
@@ -257,6 +264,12 @@ export function BudgetsTable({
           "budget",
           "budgets",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}

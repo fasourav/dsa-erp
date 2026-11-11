@@ -1,3 +1,5 @@
+import { compareText } from "@/lib/format"
+
 export const PAGE_SIZE = 10
 
 export const COLUMN_STORAGE_KEY = "dsa-erp.clients.columns"
@@ -55,6 +57,8 @@ export type DataColumn = {
   align: "left" | "right" | "center"
   locked: boolean
   format: ColumnFormat
+  sortKind?: "text" | "number" | "date"
+  sortText?: { asc: string; desc: string }
 }
 
 export const dataColumns: readonly DataColumn[] = [
@@ -72,6 +76,7 @@ export const dataColumns: readonly DataColumn[] = [
     align: "center",
     locked: false,
     format: "count",
+    sortKind: "number",
   },
   {
     id: "completedProjects",
@@ -79,6 +84,7 @@ export const dataColumns: readonly DataColumn[] = [
     align: "center",
     locked: false,
     format: "count",
+    sortKind: "number",
   },
   {
     id: "totalProjects",
@@ -86,6 +92,7 @@ export const dataColumns: readonly DataColumn[] = [
     align: "center",
     locked: false,
     format: "count",
+    sortKind: "number",
   },
   {
     id: "totalProjectValue",
@@ -187,9 +194,7 @@ export function sortClients(
       return primary
     }
 
-    const byName = a.displayName.localeCompare(b.displayName, "en", {
-      sensitivity: "base",
-    })
+    const byName = compareText(a.displayName, b.displayName)
     if (byName !== 0) {
       return byName
     }
@@ -205,13 +210,9 @@ function compareClients(
 ): number {
   switch (key) {
     case "displayName":
-      return a.displayName.localeCompare(b.displayName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.displayName, b.displayName)
     case "kind":
-      return kindLabel(a.kind).localeCompare(kindLabel(b.kind), "en", {
-        sensitivity: "base",
-      })
+      return compareText(kindLabel(a.kind), kindLabel(b.kind))
     case "ongoingProjects":
     case "completedProjects":
     case "totalProjects":
@@ -228,19 +229,20 @@ function compareClients(
 export function paginateClients(
   clients: readonly ClientSummary[],
   page: number,
+  pageSize: number = PAGE_SIZE,
 ) {
   const total = clients.length
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), pageCount)
-  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const startIndex = (currentPage - 1) * pageSize
 
   return {
-    rows: clients.slice(startIndex, startIndex + PAGE_SIZE),
+    rows: clients.slice(startIndex, startIndex + pageSize),
     total,
     pageCount,
     currentPage,
     rangeStart: total === 0 ? 0 : startIndex + 1,
-    rangeEnd: Math.min(startIndex + PAGE_SIZE, total),
+    rangeEnd: Math.min(startIndex + pageSize, total),
   }
 }
 

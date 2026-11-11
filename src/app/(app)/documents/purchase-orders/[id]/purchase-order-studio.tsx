@@ -99,6 +99,7 @@ export function PurchaseOrderStudio({
       pending={pending}
       error={error}
       dirty={unsaved}
+      guardUnsaved
       files={{ parentType: "purchase_order", parentId: form.id }}
       onSave={() => {
         setError(null)

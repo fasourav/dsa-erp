@@ -1,4 +1,4 @@
-import { formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate } from "@/lib/format"
 import { moneyCents } from "@/lib/payment-status"
 
 export const PAGE_SIZE = 10
@@ -20,6 +20,15 @@ export type ExpenseCategoryOption = {
   name: string
   reportGroup?: "operational" | "marketing" | "salary" | null
 }
+
+export type VendorPoDefaults = Record<
+  string,
+  {
+    expenseCategoryId?: string
+    officeExpenseCategoryId?: string
+    workType?: string
+  }
+>
 
 export type PurchaseOrderRow = {
   id: string
@@ -67,13 +76,21 @@ export type DataColumn = {
   label: string
   align: "left" | "right"
   locked: boolean
+  sortKind?: "text" | "number" | "date"
+  sortText?: { asc: string; desc: string }
 }
 
 export const dataColumns: readonly DataColumn[] = [
   { id: "issuedOn", label: "Date", align: "left", locked: true },
   { id: "projectName", label: "Project Name", align: "left", locked: true },
   { id: "vendorName", label: "Vendor Name", align: "left", locked: true },
-  { id: "status", label: "Status", align: "left", locked: true },
+  {
+    id: "status",
+    label: "Status",
+    align: "left",
+    locked: true,
+    sortText: { asc: "Unpaid first", desc: "Paid first" },
+  },
   {
     id: "totalValue",
     label: "Purchase Order Value",
@@ -184,13 +201,9 @@ function comparePurchaseOrders(
     case "issuedOn":
       return a.issuedOn.localeCompare(b.issuedOn)
     case "projectName":
-      return a.projectName.localeCompare(b.projectName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.projectName, b.projectName)
     case "vendorName":
-      return vendorSortKey(a).localeCompare(vendorSortKey(b), "en", {
-        sensitivity: "base",
-      })
+      return compareText(vendorSortKey(a), vendorSortKey(b))
     case "status":
       return paymentStatusRank(a) - paymentStatusRank(b)
     case "totalValue":
@@ -218,19 +231,20 @@ function paymentStatusRank(order: PurchaseOrderRow): number {
 export function paginatePurchaseOrders(
   orders: readonly PurchaseOrderRow[],
   page: number,
+  pageSize: number = PAGE_SIZE,
 ) {
   const total = orders.length
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), pageCount)
-  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const startIndex = (currentPage - 1) * pageSize
 
   return {
-    rows: orders.slice(startIndex, startIndex + PAGE_SIZE),
+    rows: orders.slice(startIndex, startIndex + pageSize),
     total,
     pageCount,
     currentPage,
     rangeStart: total === 0 ? 0 : startIndex + 1,
-    rangeEnd: Math.min(startIndex + PAGE_SIZE, total),
+    rangeEnd: Math.min(startIndex + pageSize, total),
   }
 }
 

@@ -102,6 +102,7 @@ export function InvoiceStudio({
       pending={pending}
       error={error}
       dirty={unsaved}
+      guardUnsaved
       files={{ parentType: "client_invoice", parentId: form.id }}
       onSave={() => {
         setError(null)

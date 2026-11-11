@@ -1,3 +1,4 @@
+import { compareText } from "@/lib/format"
 import {
   sanitizeColumnVisibility,
   type ListColumn,
@@ -171,7 +172,13 @@ export const bankTransactionColumns: readonly ListColumn<BankTransactionColumnId
     { id: "transactionDate", label: "Date", align: "left", locked: true },
     { id: "accountName", label: "Account", align: "left", locked: true, sortable: false },
     { id: "direction", label: "Direction", align: "left", locked: false },
-    { id: "sourceKind", label: "Source", align: "left", locked: false },
+    {
+      id: "sourceKind",
+      label: "Source",
+      align: "left",
+      locked: false,
+      sortText: { asc: "By source type", desc: "By source type, reversed" },
+    },
     { id: "amount", label: "Amount", align: "right", locked: false },
     { id: "balance", label: "Balance", align: "right", locked: false, sortable: false },
   ]
@@ -217,7 +224,7 @@ function compareAccounts(
     case "name":
     case "bankName":
     case "currency":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "isActive":
       return Number(left.isActive) - Number(right.isActive)
   }
@@ -260,10 +267,11 @@ function compareTransactions(
 ): number {
   switch (key) {
     case "transactionDate":
+      return left.transactionDate.localeCompare(right.transactionDate)
     case "accountName":
     case "direction":
     case "sourceKind":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "amount":
     case "balance":
       return left[key] - right[key]

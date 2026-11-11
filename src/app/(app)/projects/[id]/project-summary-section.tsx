@@ -14,12 +14,13 @@ import { DataList, type DataListMobileItem } from "@/components/data-list"
 import { Money } from "@/components/money"
 import { Badge } from "@/components/ui/badge"
 import { RecordAttachments } from "@/components/record-attachments"
+import { RecordLink } from "@/components/record-link"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -110,7 +111,7 @@ export function ProjectSummarySection({
         <Kpi label="Paid To Vendors" value={overview.paidToVendors} />
         <Kpi label="Payable" value={overview.payable} />
         <Kpi
-          label="Gross Profit"
+          label="Profit Before Tax"
           value={overview.grossProfit}
           detail={`${margin} Margin`}
           className={overview.grossProfit < 0 ? "text-destructive" : undefined}
@@ -306,12 +307,12 @@ export function ProjectSummarySection({
             sortValue={purchaseSortValue}
             mobileItem={(order) => ({
               title: (
-                <Link
+                <RecordLink
                   href={`/purchase-orders/${order.id}`}
                   className="block truncate underline-offset-4 hover:underline"
                 >
                   {order.vendorName || "—"}
-                </Link>
+                </RecordLink>
               ),
               value: <Money value={order.pending} />,
               subtitle: [
@@ -408,9 +409,10 @@ function RecordList<T, Id extends string>({
   const [page, setPage] = useState(1)
   const sorted = useMemo(() => {
     const direction = sort.direction === "asc" ? 1 : -1
+    const isDateSort = sort.key === "paidOn" || sort.key === "issuedOn"
     return [...rows].sort(
       (left, right) =>
-        compareSortValues(sortValue(left, sort.key), sortValue(right, sort.key)) * direction,
+        compareSortValues(sortValue(left, sort.key), sortValue(right, sort.key), isDateSort) * direction,
     )
   }, [rows, sort, sortValue])
   const pageResult = useMemo(() => paginateRows(sorted, page), [page, sorted])
@@ -445,12 +447,14 @@ function RecordList<T, Id extends string>({
   )
 }
 
-function compareSortValues(left: string | number, right: string | number) {
+function compareSortValues(left: string | number, right: string | number, isDate = false) {
   if (typeof left === "number" && typeof right === "number") {
     return left - right
   }
 
-  return String(left).localeCompare(String(right), "en", { sensitivity: "base" })
+  return isDate
+    ? String(left).localeCompare(String(right))
+    : compareText(String(left), String(right))
 }
 
 function PaymentTypeBadge({ direction }: { direction: RecentClientPayment["direction"] }) {
@@ -591,7 +595,7 @@ function PurchaseCell({
           type="button"
           variant="link"
           nativeButton={false}
-          render={<Link href={`/purchase-orders/${order.id}`} />}
+          render={<RecordLink href={`/purchase-orders/${order.id}`} />}
           className="h-auto min-h-8 px-0 text-ui font-semibold text-foreground"
         >
           {order.vendorName || "—"}

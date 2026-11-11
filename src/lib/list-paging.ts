@@ -1,4 +1,5 @@
 export const LIST_PAGE_SIZE = 10
+export const CLIENT_PAGE_SIZES = [10, 25, 50, 100] as const
 
 export type SortDirection = "asc" | "desc"
 
@@ -17,6 +18,10 @@ export type ListColumn<Id extends string> = {
   minWidth?: number
   /** Header help text. Shown with the existing tooltip control, not in the label. */
   hint?: string
+  /** How the column sorts, when the default guess (date name / right-aligned number / text) is wrong. */
+  sortKind?: "text" | "number" | "date"
+  /** Exact phone sort words, for rank or code orders. Wins over sortKind. */
+  sortText?: { asc: string; desc: string }
 }
 
 export type TableColumnLayout = {
@@ -107,6 +112,18 @@ function parseExplicitPx(width: string | undefined): number | null {
   return match ? Number(match[1]) : null
 }
 
+function isDateColumn<Id extends string>(
+  column: Pick<ListColumn<Id>, "id" | "label">,
+): boolean {
+  const id = column.id
+  return (
+    /date/i.test(id) ||
+    /date/i.test(column.label) ||
+    /(?:On|At)$/.test(id) ||
+    /^(?:month|period|when|lastLogin)$/i.test(id)
+  )
+}
+
 function defaultColumnWidthPx<Id extends string>(
   column: ListColumn<Id>,
   index: number,
@@ -118,13 +135,7 @@ function defaultColumnWidthPx<Id extends string>(
     return dense ? 164 : 176
   }
 
-  const isDate =
-    /date/i.test(id) ||
-    /date/i.test(column.label) ||
-    /(?:On|At)$/.test(id) ||
-    /^(?:month|period)$/i.test(id)
-
-  if (isDate) {
+  if (isDateColumn(column)) {
     return dense ? 120 : 122
   }
 
@@ -176,6 +187,34 @@ function defaultColumnWidthPx<Id extends string>(
   }
 
   return dense ? 196 : 192
+}
+
+export function sortDirectionText<Id extends string>(
+  column: Pick<
+    ListColumn<Id>,
+    "id" | "label" | "align" | "sortKind" | "sortText"
+  >,
+  direction: SortDirection,
+): string {
+  if (column.sortText) {
+    return direction === "asc" ? column.sortText.asc : column.sortText.desc
+  }
+  if (column.sortKind === "date") {
+    return direction === "asc" ? "Oldest first" : "Newest first"
+  }
+  if (column.sortKind === "number") {
+    return direction === "asc" ? "Low to high" : "High to low"
+  }
+  if (column.sortKind === "text") {
+    return direction === "asc" ? "A to Z" : "Z to A"
+  }
+  if (isDateColumn(column)) {
+    return direction === "asc" ? "Oldest first" : "Newest first"
+  }
+  if (column.align === "right") {
+    return direction === "asc" ? "Low to high" : "High to low"
+  }
+  return direction === "asc" ? "A to Z" : "Z to A"
 }
 
 export function toggleSort<Id extends string>(

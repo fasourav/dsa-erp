@@ -15,6 +15,7 @@ import { CustomizeColumns, DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { paymentBalanceStatus, StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -46,7 +47,9 @@ import {
   type PurchaseOrderRow,
   type SortState,
   type VendorOption,
+  type VendorPoDefaults,
 } from "@/lib/purchase-order-summary"
+import { CLIENT_PAGE_SIZES } from "@/lib/list-paging"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -67,6 +70,7 @@ export function PurchaseOrdersTable({
   workTypes,
   expenseCategories,
   officeExpenseCategories,
+  vendorDefaults,
   projectFilter,
   error,
 }: {
@@ -76,6 +80,7 @@ export function PurchaseOrdersTable({
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
   officeExpenseCategories: ExpenseCategoryOption[]
+  vendorDefaults: VendorPoDefaults
   projectFilter: ProjectFilter | null
   error: string | null
 }) {
@@ -96,6 +101,8 @@ export function PurchaseOrdersTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -134,8 +141,8 @@ export function PurchaseOrdersTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(
-    () => paginatePurchaseOrders(filtered, page),
-    [filtered, page],
+    () => paginatePurchaseOrders(filtered, page, pageSize),
+    [filtered, page, pageSize],
   )
 
   function openForm(order: PurchaseOrderRow | null) {
@@ -247,6 +254,7 @@ export function PurchaseOrdersTable({
               workTypes={workTypes}
               expenseCategories={expenseCategories}
               officeExpenseCategories={officeExpenseCategories}
+              vendorDefaults={vendorDefaults}
             />
             {canAdd ? (
               <Button type="button" onClick={() => openForm(null)}>
@@ -298,18 +306,24 @@ export function PurchaseOrdersTable({
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Purchase orders pagination"
         mobileItem={(order) => ({
           title: (
-            <Link
+            <RecordLink
               href={`/purchase-orders/${order.id}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {order.vendorName || "—"}
-            </Link>
+            </RecordLink>
           ),
           subtitle: [
             purchaseOrderDetailLine(order),
@@ -347,6 +361,7 @@ export function PurchaseOrdersTable({
         workTypes={workTypes}
         expenseCategories={expenseCategories}
         officeExpenseCategories={officeExpenseCategories}
+        vendorDefaults={vendorDefaults}
         defaultProjectId={projectFilter?.id ?? null}
         operational={formOperational}
       />
@@ -391,12 +406,12 @@ function CellValue({
         return <span className="text-ui font-semibold text-muted-foreground">Operational</span>
       }
       return order.projectName ? (
-        <Link
+        <RecordLink
           href={`/projects/${order.projectId}`}
           className="block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         >
           {order.projectName}
-        </Link>
+        </RecordLink>
       ) : (
         <span className="text-muted-foreground">—</span>
       )
@@ -404,7 +419,7 @@ function CellValue({
       const detail = purchaseOrderDetailLine(order)
       return (
         <div className="min-w-0">
-          <Link
+          <RecordLink
             href={`/purchase-orders/${order.id}`}
             className={cn(
               "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -412,7 +427,7 @@ function CellValue({
             )}
           >
             {order.vendorName || "—"}
-          </Link>
+          </RecordLink>
           {detail ? (
             <p className="truncate text-label text-muted-foreground">{detail}</p>
           ) : null}

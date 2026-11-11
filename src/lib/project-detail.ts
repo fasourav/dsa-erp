@@ -484,6 +484,7 @@ function buildOverview(input: {
   const poCommitments = sumAmounts(
     input.purchaseOrders.map((po) => po.totalValue),
   )
+  // Before tax. Shown as "Profit Before Tax"; Profit After Tax subtracts VAT/Tax paid.
   const grossProfit = sumAmounts([received, -paidToVendors, -operational])
   const buckets = new Map<string, number>()
   const months = new Map<string, { revenue: number; expense: number }>()

@@ -7,8 +7,12 @@ import {
 } from "@/lib/operational-expenses"
 import { getOperationalExpenses } from "@/lib/operational-expenses-data"
 import {
+  LIST_PAGE_SIZE,
+  pageSizeQueryValue,
   parsePageParams,
+  parsePageSize,
   parseSortParams,
+  SERVER_PAGE_SIZES,
   sortQueryParams,
 } from "@/lib/page-query"
 import { requireModule } from "@/lib/permissions"
@@ -23,13 +27,19 @@ export default async function OperationalExpensesPage({
   await requireModule("expenses")
   const params = await searchParams
   const { page: requestedPage, q } = parsePageParams(params)
+  const pageSize = parsePageSize(params.size, SERVER_PAGE_SIZES, LIST_PAGE_SIZE)
   const sort = parseSortParams<ExpenseColumnId>(
     params,
     sortableExpenseColumns,
     defaultExpenseSort,
   )
   const sortParams = sortQueryParams(sort, defaultExpenseSort)
-  const data = await getOperationalExpenses({ q, page: requestedPage, sort })
+  const data = await getOperationalExpenses({
+    q,
+    page: requestedPage,
+    pageSize,
+    sort,
+  })
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -42,6 +52,7 @@ export default async function OperationalExpensesPage({
         bankAccounts={data.bankAccounts}
         total={data.total}
         page={data.page}
+        pageSize={pageSize}
         error={data.error}
         initialQuery={q}
         sort={sort}
@@ -54,6 +65,7 @@ export default async function OperationalExpensesPage({
               q,
               sort: sortParams.sort,
               dir: sortParams.dir,
+              size: pageSizeQueryValue(pageSize, LIST_PAGE_SIZE),
             }}
             label="Operational Expenses pages"
           />

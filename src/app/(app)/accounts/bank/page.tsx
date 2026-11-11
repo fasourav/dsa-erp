@@ -10,8 +10,12 @@ import { getReconciliation } from "@/lib/bank-reconcile-data"
 import { getFiscalYearStartMonth } from "@/lib/company-settings"
 import { dhakaToday } from "@/lib/dashboard-metrics"
 import {
+  LIST_PAGE_SIZE,
+  pageSizeQueryValue,
   parsePageParams,
+  parsePageSize,
   parseSortParams,
+  SERVER_PAGE_SIZES,
   sortQueryParams,
 } from "@/lib/page-query"
 import { isIsoDate } from "@/lib/project-validation"
@@ -38,6 +42,7 @@ export default async function BankPage({
         ? "reconcile"
         : "ledger"
   const { page: requestedPage, q } = parsePageParams(params)
+  const pageSize = parsePageSize(params.size, SERVER_PAGE_SIZES, LIST_PAGE_SIZE)
   const sort = parseSortParams<BankTransactionColumnId>(
     params,
     sortableBankTransactionColumns,
@@ -49,6 +54,7 @@ export default async function BankPage({
     getBankPage(accountParam ?? null, {
       q,
       page: requestedPage,
+      pageSize,
       sort,
       includeReportRows: view !== "ledger",
     }),
@@ -70,6 +76,7 @@ export default async function BankPage({
         accountFilter={data.accountFilter}
         total={data.total}
         page={data.page}
+        pageSize={pageSize}
         error={data.error}
         fiscalYearStartMonth={fiscalYearStartMonth}
         view={view}
@@ -89,6 +96,7 @@ export default async function BankPage({
             q,
             sort: sortParams.sort,
             dir: sortParams.dir,
+            size: pageSizeQueryValue(pageSize, LIST_PAGE_SIZE),
           }}
           label="Bank transactions pages"
         />

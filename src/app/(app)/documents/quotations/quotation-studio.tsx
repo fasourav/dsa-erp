@@ -133,6 +133,7 @@ export function QuotationStudio({
       pending={pending}
       error={error}
       dirty={unsaved}
+      guardUnsaved
       files={{ parentType: "quotation", parentId: form.id }}
       templateNames={templates.map((item) => item.name)}
       canStartFromTemplate={canStartFromTemplate}
@@ -204,6 +205,8 @@ export function QuotationStudio({
       <ChoiceField
         id="client"
         label="Client Name"
+        searchable
+        fallbackLabel="Saved client"
         value={form.clientId}
         disabled={!canSave}
         options={clients.map((item) => ({ value: item.id, label: item.name }))}
@@ -212,6 +215,8 @@ export function QuotationStudio({
       <ChoiceField
         id="lead"
         label="Lead"
+        searchable
+        fallbackLabel="Saved lead"
         value={form.leadId}
         disabled={!canSave}
         options={leads.map((item) => ({ value: item.id, label: item.name }))}
@@ -220,6 +225,8 @@ export function QuotationStudio({
       <ChoiceField
         id="project"
         label="Project Name"
+        searchable
+        fallbackLabel="Saved project"
         value={form.projectId}
         disabled={!canSave || !form.clientId}
         options={clientProjects.map((item) => ({ value: item.id, label: item.name }))}

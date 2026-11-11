@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import {
   rangeLabel,
   toggleSort,
@@ -142,13 +142,13 @@ export function ActivityLog({
         cmp = left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)
         break
       case "who":
-        cmp = left.who.localeCompare(right.who, "en", { sensitivity: "base" })
+        cmp = compareText(left.who, right.who)
         break
       case "action":
-        cmp = left.what.localeCompare(right.what, "en", { sensitivity: "base" })
+        cmp = compareText(left.what, right.what)
         break
       case "record":
-        cmp = left.record.localeCompare(right.record, "en", { sensitivity: "base" })
+        cmp = compareText(left.record, right.record)
         break
     }
     return sort.direction === "asc" ? cmp : -cmp

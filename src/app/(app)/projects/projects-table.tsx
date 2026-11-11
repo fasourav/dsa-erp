@@ -24,6 +24,7 @@ import { DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,7 @@ import {
   type ProjectRow,
   type SortState,
 } from "@/lib/project-summary"
+import { CLIENT_PAGE_SIZES } from "@/lib/list-paging"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
 
@@ -98,6 +100,8 @@ export function ProjectsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -123,8 +127,8 @@ export function ProjectsTable({
     [listFilter, query, sorted],
   )
   const pageResult = useMemo(
-    () => paginateProjects(filtered, page),
-    [filtered, page],
+    () => paginateProjects(filtered, page, pageSize),
+    [filtered, page, pageSize],
   )
 
   function openForm(project: ProjectRow | null) {
@@ -292,6 +296,12 @@ export function ProjectsTable({
           pageResult.rangeEnd,
           error ? 0 : pageResult.total,
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
@@ -299,12 +309,12 @@ export function ProjectsTable({
         subtleScrollbar
         mobileItem={(project) => ({
           title: (
-            <Link
+            <RecordLink
               href={`/projects/${project.id}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {project.name || "—"}
-            </Link>
+            </RecordLink>
           ),
           value: (
             <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
@@ -387,7 +397,7 @@ function CellValue({
     case "name":
       return (
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <Link
+          <RecordLink
             href={`/projects/${project.id}`}
             className={cn(
               "max-w-full truncate rounded-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -395,7 +405,7 @@ function CellValue({
             )}
           >
             {project.name || "—"}
-          </Link>
+          </RecordLink>
           {project.overdueMilestones > 0 ? (
             <Badge variant="destructive">
               {project.overdueMilestones === 1

@@ -3,10 +3,18 @@
 import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
-export function useUrlSearch(initialQuery = "", debounceMs = 300) {
+import { normalizePageSizeParam } from "@/lib/page-query"
+
+export function useUrlSearch(
+  initialQuery = "",
+  debounceMs = 300,
+  pageSize?: { options: readonly number[]; fallback: number },
+) {
   const router = useRouter()
   const pathname = usePathname()
   const [, startTransition] = useTransition()
+  const sizeOptions = pageSize?.options
+  const sizeFallback = pageSize?.fallback
   const [state, setState] = useState(() => ({
     synced: initialQuery,
     value: initialQuery,
@@ -52,6 +60,9 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
           params.delete("q")
         }
         params.delete("page")
+        if (sizeOptions && sizeFallback !== undefined) {
+          normalizePageSizeParam(params, sizeOptions, sizeFallback)
+        }
         const qs = params.toString()
         startTransition(() => {
           router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
@@ -63,7 +74,7 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
         })
       }, debounceMs)
     },
-    [debounceMs, initialQuery, pathname, router],
+    [debounceMs, initialQuery, pathname, router, sizeFallback, sizeOptions],
   )
 
   const setPage = useCallback(
@@ -74,12 +85,15 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
       } else {
         params.delete("page")
       }
+      if (sizeOptions && sizeFallback !== undefined) {
+        normalizePageSizeParam(params, sizeOptions, sizeFallback)
+      }
       const qs = params.toString()
       startTransition(() => {
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
       })
     },
-    [pathname, router],
+    [pathname, router, sizeFallback, sizeOptions],
   )
 
   const setParams = useCallback(
@@ -104,12 +118,15 @@ export function useUrlSearch(initialQuery = "", debounceMs = 300) {
       if (!("page" in updates)) {
         params.delete("page")
       }
+      if (sizeOptions && sizeFallback !== undefined) {
+        normalizePageSizeParam(params, sizeOptions, sizeFallback)
+      }
       const qs = params.toString()
       startTransition(() => {
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
       })
     },
-    [pathname, router],
+    [pathname, router, sizeFallback, sizeOptions],
   )
 
   return { query, setQuery, setPage, setParams }

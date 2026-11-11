@@ -31,13 +31,14 @@ export function DocumentsMenu() {
             type="button"
             variant="outline"
             size="sm"
+            aria-label="Documents"
             aria-current={active ? "page" : undefined}
             className="aria-[current=page]:bg-primary-tint aria-[current=page]:text-primary-text"
           />
         }
       >
         <Files aria-hidden="true" />
-        Documents
+        <span className="hidden xl:inline">Documents</span>
         <ChevronDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-60">

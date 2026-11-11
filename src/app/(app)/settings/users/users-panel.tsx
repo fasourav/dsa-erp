@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import { lastLoginLabel } from "@/lib/last-login"
 import {
   paginateRows,
@@ -507,19 +507,19 @@ function sortUsers(rows: DirectoryUser[], sort: SortState<UserColumn>) {
     let cmp = 0
     switch (sort.key) {
       case "displayName":
-        cmp = left.displayName.localeCompare(right.displayName, "en", { sensitivity: "base" })
+        cmp = compareText(left.displayName, right.displayName)
         break
       case "email":
-        cmp = left.email.localeCompare(right.email, "en", { sensitivity: "base" })
+        cmp = compareText(left.email, right.email)
         break
       case "role":
-        cmp = left.role.localeCompare(right.role, "en", { sensitivity: "base" })
+        cmp = compareText(left.role, right.role)
         break
       case "designation":
-        cmp = left.designation.localeCompare(right.designation, "en", { sensitivity: "base" })
+        cmp = compareText(left.designation, right.designation)
         break
       case "status":
-        cmp = left.status.localeCompare(right.status)
+        cmp = compareText(statusLabel(left.status), statusLabel(right.status))
         break
       case "lastLogin":
         cmp = (left.lastSignInAt ?? "").localeCompare(right.lastSignInAt ?? "")

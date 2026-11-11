@@ -10,6 +10,7 @@ import {
   type ProjectFormFieldErrors,
 } from "@/app/(app)/projects/actions"
 import { MoneyInput } from "@/components/money-input"
+import { RecordPicker } from "@/components/record-picker"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -215,27 +216,16 @@ export function ProjectFormDialog({
 
               <Field data-invalid={Boolean(clientError) || undefined}>
                 <FieldLabel htmlFor="project-client">Client</FieldLabel>
-                <Select
-                  items={clientItems}
-                  value={clientId || null}
+                <RecordPicker
+                  id="project-client"
+                  value={clientId}
+                  options={clientItems}
+                  placeholder="Select A Client"
+                  fallbackLabel={project?.clientName || "Saved client"}
                   disabled={pending}
-                  onValueChange={(value) => setClientId(value ?? "")}
-                >
-                  <SelectTrigger
-                    id="project-client"
-                    className="w-full"
-                    aria-invalid={Boolean(clientError)}
-                  >
-                    <SelectValue placeholder="Select A Client" />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    {clientItems.map((client) => (
-                      <SelectItem key={client.value} value={client.value}>
-                        {client.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  invalid={Boolean(clientError)}
+                  onValueChange={setClientId}
+                />
                 {clientError ? <FieldError>{clientError}</FieldError> : null}
               </Field>
 

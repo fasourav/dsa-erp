@@ -4,7 +4,6 @@ import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan } from "@/components/access-provider"
 
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
-import Link from "next/link"
 import { useMemo, useState, useTransition } from "react"
 
 import { deleteVatTaxPayment } from "@/app/(app)/accounts/vat-tax/actions"
@@ -14,6 +13,7 @@ import { ListExport } from "@/components/list-export"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,8 +23,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
@@ -51,9 +52,7 @@ function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
     let cmp = 0
     switch (sort.key) {
       case "projectName":
-        cmp = a.projectName.localeCompare(b.projectName, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.projectName, b.projectName)
         break
       case "paidOn":
         cmp = a.paidOn.localeCompare(b.paidOn)
@@ -62,7 +61,7 @@ function sortVat(rows: VatTaxRow[], sort: SortState<ColId>): VatTaxRow[] {
         cmp = a.amount - b.amount
         break
       case "paymentMethod":
-        cmp = a.paymentMethod.localeCompare(b.paymentMethod)
+        cmp = compareText(a.paymentMethod, b.paymentMethod)
         break
     }
     return sort.direction === "asc" ? cmp : -cmp
@@ -93,6 +92,8 @@ export function VatTaxTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColId>({
@@ -108,7 +109,10 @@ export function VatTaxTable({
 
   const sorted = useMemo(() => sortVat(payments, sort), [payments, sort])
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
 
   function openForm() {
     setFormSession((s) => s + 1)
@@ -213,18 +217,24 @@ export function VatTaxTable({
           "payment",
           "payments",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="VAT tax pagination"
         mobileItem={(payment) => ({
           title: payment.projectId ? (
-            <Link
+            <RecordLink
               href={`/projects/${payment.projectId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {payment.projectName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             payment.projectName || "—"
           ),
@@ -307,7 +317,7 @@ function Cell({
     case "projectName":
       if (payment.projectId) {
         return (
-          <Link
+          <RecordLink
             href={`/projects/${payment.projectId}`}
             className={cn(
               "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -315,7 +325,7 @@ function Cell({
             )}
           >
             {payment.projectName || "—"}
-          </Link>
+          </RecordLink>
         )
       }
       return (

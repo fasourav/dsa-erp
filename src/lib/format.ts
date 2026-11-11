@@ -12,6 +12,15 @@ const groupedMoney = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 })
 
+const textCollator = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+})
+
+export function compareText(a: string, b: string): number {
+  return textCollator.compare(a, b)
+}
+
 const shortMonths = [
   "Jan",
   "Feb",

@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -280,11 +280,11 @@ function compareLine(left: StatementLine, right: StatementLine, key: LineColumn)
     case "date":
       return left.occurredOn.localeCompare(right.occurredOn) || left.id.localeCompare(right.id)
     case "type":
-      return left.kind.localeCompare(right.kind)
+      return compareText(left.kind, right.kind)
     case "reference":
-      return left.reference.localeCompare(right.reference)
+      return compareText(left.reference, right.reference)
     case "project":
-      return left.project.localeCompare(right.project)
+      return compareText(left.project, right.project)
     case "debit":
       return left.debit - right.debit
     case "credit":

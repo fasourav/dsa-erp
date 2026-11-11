@@ -37,7 +37,7 @@ const GlobalSearch = dynamic(
   () => import("@/components/global-search").then((m) => m.GlobalSearch),
   {
     ssr: false,
-    loading: () => <Skeleton className="size-11 rounded-full bg-fill md:h-8 md:w-60" />,
+    loading: () => <Skeleton className="size-11 rounded-full bg-fill md:h-8 md:w-40 xl:w-60" />,
   },
 )
 
@@ -166,7 +166,7 @@ export function AppShell({
               </Button>
             )}
             <div ref={setHeaderSlot} className="flex min-w-0 flex-1 items-center" />
-            <div className="flex items-center gap-2.5">
+            <div className="flex shrink-0 items-center gap-2 lg:gap-2.5">
               <div className="hidden md:contents">
                 <DocumentsMenu />
                 <ReportsMenu />

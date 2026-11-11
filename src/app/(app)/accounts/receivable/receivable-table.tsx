@@ -9,6 +9,7 @@ import { CustomizeColumns, DataList } from "@/components/data-list"
 import { ListExport } from "@/components/list-export"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import {
   ListFilterBar,
   SettlementFilterControl,
@@ -31,6 +32,7 @@ import {
 } from "@/lib/accounts-receivable"
 import { cn } from "@/lib/utils"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
@@ -85,6 +87,8 @@ export function ReceivableTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
   } = useListUrlState<ReceivableColumnId>({
     sortKeys: receivableSortKeys,
@@ -108,7 +112,7 @@ export function ReceivableTable({
       ),
     [searched, sort, statusFilter],
   )
-  const pageResult = paginateRows(visible, page)
+  const pageResult = paginateRows(visible, page, pageSize)
 
   function changeVisibility(id: ReceivableColumnId, checked: boolean) {
     if (locked.has(id)) {
@@ -198,18 +202,24 @@ export function ReceivableTable({
           "invoice",
           "invoices",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
         pagingLabel="Accounts Receivable pagination"
         mobileItem={(row) => ({
           title: row.projectId ? (
-            <Link
+            <RecordLink
               href={`/accounts/invoices?project=${row.projectId}`}
               className="block truncate underline-offset-4 hover:underline"
             >
               {row.projectName || "—"}
-            </Link>
+            </RecordLink>
           ) : (
             row.projectName || "—"
           ),
@@ -273,7 +283,7 @@ function Cell({
     case "projectName":
       if (row.projectId) {
         return (
-          <Link
+          <RecordLink
             href={`/accounts/invoices?project=${row.projectId}`}
             className={cn(
               "block truncate rounded-sm text-ui font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -281,7 +291,7 @@ function Cell({
             )}
           >
             {row.projectName || "—"}
-          </Link>
+          </RecordLink>
         )
       }
       return (

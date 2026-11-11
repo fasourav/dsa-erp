@@ -1,4 +1,4 @@
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import { openPayableByPurchaseOrder } from "@/lib/open-payable"
 import { dateInputValue } from "@/lib/project-validation"
 import {
@@ -6,6 +6,7 @@ import {
   type ProjectOption,
   type PurchaseOrderRow,
   type VendorOption,
+  type VendorPoDefaults,
 } from "@/lib/purchase-order-summary"
 import {
   isReportGroup,
@@ -32,6 +33,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
   workTypes: string[]
   expenseCategories: ExpenseCategoryOption[]
   officeExpenseCategories: ExpenseCategoryOption[]
+  vendorDefaults: VendorPoDefaults
   projectFilter: ProjectFilter | null
   error: string | null
 }> {
@@ -43,6 +45,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
     workTypes: [] as string[],
     expenseCategories: [] as ExpenseCategoryOption[],
     officeExpenseCategories: [] as ExpenseCategoryOption[],
+    vendorDefaults: {} as VendorPoDefaults,
     projectFilter: null,
     error: "Could not load purchase orders.",
   }
@@ -224,6 +227,36 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
       categoryRows.map((row) => row.name),
     )
 
+    const vendorDefaults: VendorPoDefaults = {}
+    const newestOrders = [...orders].sort(
+      (left, right) =>
+        right.issuedOn.localeCompare(left.issuedOn) ||
+        right.id.localeCompare(left.id),
+    )
+    for (const order of newestOrders) {
+      if (!order.vendorId) continue
+      const current = (vendorDefaults[order.vendorId] ??= {})
+      if (
+        order.projectId != null &&
+        !current.expenseCategoryId &&
+        order.expenseCategoryId &&
+        expenseCategoryNames.has(order.expenseCategoryId)
+      ) {
+        current.expenseCategoryId = order.expenseCategoryId
+      }
+      if (
+        order.projectId == null &&
+        !current.officeExpenseCategoryId &&
+        order.officeExpenseCategoryId &&
+        officeCategoryNames.has(order.officeExpenseCategoryId)
+      ) {
+        current.officeExpenseCategoryId = order.officeExpenseCategoryId
+      }
+      if (!current.workType && order.workType) {
+        current.workType = order.workType
+      }
+    }
+
     const requestedId =
       projectId && idPattern.test(projectId) ? projectId : null
     const matchedProject = requestedId
@@ -238,6 +271,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
         workTypes,
         expenseCategories,
         officeExpenseCategories,
+        vendorDefaults,
         projectFilter: null,
         error: "That project could not be found.",
       }
@@ -255,6 +289,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
       workTypes,
       expenseCategories,
       officeExpenseCategories,
+      vendorDefaults,
       projectFilter: matchedProject
         ? { id: matchedProject.id, name: matchedProject.name }
         : null,
@@ -266,7 +301,7 @@ export async function getPurchaseOrders(projectId: string | null): Promise<{
 }
 
 function byLabel(a: ProjectOption, b: ProjectOption): number {
-  const byName = a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+  const byName = compareText(a.name, b.name)
   if (byName !== 0) {
     return byName
   }

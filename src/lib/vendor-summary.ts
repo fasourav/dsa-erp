@@ -1,3 +1,5 @@
+import { compareText } from "@/lib/format"
+
 export const PAGE_SIZE = 10
 
 export const ONLY_OWNERS_CATEGORY_MESSAGE =
@@ -76,9 +78,7 @@ export function sortVendors(
       return primary
     }
 
-    const byName = a.displayName.localeCompare(b.displayName, "en", {
-      sensitivity: "base",
-    })
+    const byName = compareText(a.displayName, b.displayName)
     if (byName !== 0) {
       return byName
     }
@@ -94,18 +94,11 @@ function compareVendors(
 ): number {
   switch (key) {
     case "displayName":
-      return a.displayName.localeCompare(b.displayName, "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.displayName, b.displayName)
     case "vendorField":
-      return (a.vendorField ?? "").localeCompare(b.vendorField ?? "", "en", {
-        sensitivity: "base",
-      })
+      return compareText(a.vendorField ?? "", b.vendorField ?? "")
     case "contact":
-      return contactSortKey(a).localeCompare(contactSortKey(b), "en", {
-        sensitivity: "base",
-        numeric: true,
-      })
+      return compareText(contactSortKey(a), contactSortKey(b))
     case "totalProjectValue":
     case "totalPaid":
     case "totalDue":
@@ -122,19 +115,20 @@ function contactSortKey(vendor: VendorSummary): string {
 export function paginateVendors(
   vendors: readonly VendorSummary[],
   page: number,
+  pageSize: number = PAGE_SIZE,
 ) {
   const total = vendors.length
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), pageCount)
-  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const startIndex = (currentPage - 1) * pageSize
 
   return {
-    rows: vendors.slice(startIndex, startIndex + PAGE_SIZE),
+    rows: vendors.slice(startIndex, startIndex + pageSize),
     total,
     pageCount,
     currentPage,
     rangeStart: total === 0 ? 0 : startIndex + 1,
-    rangeEnd: Math.min(startIndex + PAGE_SIZE, total),
+    rangeEnd: Math.min(startIndex + pageSize, total),
   }
 }
 
@@ -213,9 +207,7 @@ export function mergeCategorySuggestions(
       const name = value?.trim() ?? ""
       return name ? [name] : []
     })
-    .sort((left, right) =>
-      left.localeCompare(right, "en", { sensitivity: "base" }),
-    )
+    .sort((left, right) => compareText(left, right))
 
   for (const value of extras) {
     pushSuggestion(suggestions, seen, value)

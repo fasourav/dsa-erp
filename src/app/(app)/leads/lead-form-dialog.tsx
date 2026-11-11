@@ -55,6 +55,7 @@ export function LeadFormDialog({
   lookups,
   readOnly = false,
   onEdit,
+  onCancelEdit,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -62,6 +63,7 @@ export function LeadFormDialog({
   lookups: LeadLookups
   readOnly?: boolean
   onEdit?: () => void
+  onCancelEdit?: () => void
 }) {
   const leadId = lead?.id ?? null
   const version = useRecordVersion("leads", leadId, open && !readOnly)
@@ -88,6 +90,27 @@ export function LeadFormDialog({
   const [fieldErrors, setFieldErrors] = useState<LeadFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, startSubmit] = useTransition()
+
+  function resetFields() {
+    setLeadName(lead?.leadName ?? "")
+    setAddedOn(lead?.addedOn || todayIsoDate())
+    setKind(lead?.kind ?? "")
+    setPhone(lead?.phone ?? "")
+    setEmail(lead?.email ?? "")
+    setProjectName(lead?.projectName ?? "")
+    setProjectType(lead?.projectType ?? "")
+    setSource(lead?.source ?? "")
+    setEstimatedValue(lead ? String(lead.estimatedValue || "") : "")
+    setCurrentStage(lead?.currentStage ?? "")
+    setStatus(lead?.status ?? defaultStatus)
+    setProbability(
+      lead && Number.isFinite(lead.probability) ? String(lead.probability) : "20",
+    )
+    setNotes(lead?.notes ?? "")
+    setAttempted(false)
+    setFieldErrors({})
+    setFormError(null)
+  }
 
   const nameError =
     attempted && !leadName.trim()
@@ -473,13 +496,27 @@ export function LeadFormDialog({
           ) : null}
         </DialogBody>
         <DialogFooter>
-          <DialogClose
-            render={
-              <Button type="button" variant="outline" disabled={pending} />
-            }
-          >
-            {isViewOnly ? "Close" : "Cancel"}
-          </DialogClose>
+          {!isViewOnly && onCancelEdit ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                resetFields()
+                onCancelEdit()
+              }}
+            >
+              Cancel
+            </Button>
+          ) : (
+            <DialogClose
+              render={
+                <Button type="button" variant="outline" disabled={pending} />
+              }
+            >
+              {isViewOnly ? "Close" : "Cancel"}
+            </DialogClose>
+          )}
           {isViewOnly ? (
             onEdit ? (
               <Button type="button" onClick={onEdit}>

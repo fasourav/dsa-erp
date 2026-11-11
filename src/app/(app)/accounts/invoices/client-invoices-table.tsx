@@ -45,7 +45,13 @@ import {
   toggleSort,
   type SortState,
 } from "@/lib/list-paging"
-import { buildPageHref, LIST_PAGE_SIZE, sortQueryParams } from "@/lib/page-query"
+import {
+  buildPageHref,
+  LIST_PAGE_SIZE,
+  pageSizeQueryValue,
+  SERVER_PAGE_SIZES,
+  sortQueryParams,
+} from "@/lib/page-query"
 import {
   settlementQueryValue,
   type SettlementCounts,
@@ -62,6 +68,7 @@ export function ClientInvoicesTable({
   projectFilter,
   total,
   page,
+  pageSize = LIST_PAGE_SIZE,
   error,
   initialQuery = "",
   statusFilter = "outstanding",
@@ -75,6 +82,7 @@ export function ClientInvoicesTable({
   projectFilter: InvoiceProjectFilter | null
   total: number
   page: number
+  pageSize?: number
   pageCount?: number
   error: string | null
   initialQuery?: string
@@ -87,7 +95,10 @@ export function ClientInvoicesTable({
   const canDelete = useCan("client_invoices", "delete")
 
   const visibility = useColumnVisibility(clientInvoiceColumnStore)
-  const { query, setQuery, setParams } = useUrlSearch(initialQuery)
+  const { query, setQuery, setParams } = useUrlSearch(initialQuery, undefined, {
+    options: SERVER_PAGE_SIZES,
+    fallback: LIST_PAGE_SIZE,
+  })
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoice, setFormInvoice] = useState<ClientInvoiceRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -105,7 +116,7 @@ export function ClientInvoicesTable({
   const rangeStart =
     effectiveTotal === 0 || invoices.length === 0
       ? 0
-      : (page - 1) * LIST_PAGE_SIZE + 1
+      : (page - 1) * pageSize + 1
   const rangeEnd =
     effectiveTotal === 0 || invoices.length === 0
       ? 0
@@ -156,6 +167,7 @@ export function ClientInvoicesTable({
                   q: query.trim(),
                   status: settlementQueryValue(statusFilter),
                   ...sortQueryParams(sort, defaultClientInvoiceSort),
+                  size: pageSizeQueryValue(pageSize, LIST_PAGE_SIZE),
                 })}
                 className="font-medium text-foreground underline underline-offset-4"
               >
@@ -246,6 +258,13 @@ export function ClientInvoicesTable({
           "invoice",
           "invoices",
         )}
+        totalCount={effectiveTotal}
+        pageSize={{
+          value: pageSize,
+          options: SERVER_PAGE_SIZES,
+          onChange: (n) =>
+            setParams({ size: pageSizeQueryValue(n, LIST_PAGE_SIZE) }),
+        }}
         hidePagination
         mobileItem={(invoice) => ({
           title: (

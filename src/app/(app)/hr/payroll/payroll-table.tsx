@@ -13,6 +13,7 @@ import { DataList } from "@/components/data-list"
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { Money } from "@/components/money"
 import { PageHeader } from "@/components/page-header"
+import { RecordLink } from "@/components/record-link"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,8 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear } from "@/lib/format"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type ListColumn,
@@ -80,10 +82,9 @@ function sortSalaries(
         cmp = left.paidOn.localeCompare(right.paidOn)
         break
       case "bankAccount":
-        cmp = accountName(left.bankAccountId).localeCompare(
+        cmp = compareText(
+          accountName(left.bankAccountId),
           accountName(right.bankAccountId),
-          "en",
-          { sensitivity: "base" },
         )
         break
       case "status":
@@ -120,6 +121,8 @@ export function PayrollTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -143,7 +146,7 @@ export function PayrollTable({
     [accountNames, salaries, sort],
   )
   const filtered = useMemo(() => filterRows(sorted, query, rowText), [query, sorted])
-  const pageResult = paginateRows(filtered, page)
+  const pageResult = paginateRows(filtered, page, pageSize)
   const takenMonths = salaries.map(
     (salary) =>
       `${salary.periodYear}-${String(salary.periodMonth).padStart(2, "0")}`,
@@ -245,6 +248,12 @@ export function PayrollTable({
           "month",
           "months",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
@@ -351,12 +360,12 @@ function Cell({
   switch (columnId) {
     case "month":
       return (
-        <Link
+        <RecordLink
           href={`/hr/payroll/${salary.id}`}
           className="text-ui font-semibold"
         >
           {monthLabel(salary.periodYear, salary.periodMonth)}
-        </Link>
+        </RecordLink>
       )
     case "employees":
       return <span className="tabular-nums">{salary.lineCount}</span>

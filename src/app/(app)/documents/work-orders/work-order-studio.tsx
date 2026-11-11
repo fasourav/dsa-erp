@@ -165,6 +165,7 @@ export function WorkOrderStudio({
       pending={pending}
       error={error}
       dirty={unsaved}
+      guardUnsaved
       files={{ parentType: "work_order", parentId: form.id }}
       templateNames={templates.map((item) => item.name)}
       canStartFromTemplate={canStartFromTemplate}
@@ -256,6 +257,8 @@ export function WorkOrderStudio({
       <ChoiceField
         id="purchase-order"
         label="Purchase Order"
+        searchable
+        fallbackLabel="Saved purchase order"
         placeholder={form.id && !linked ? "No purchase order (older work order)" : "Choose a purchase order"}
         value={form.purchaseOrderId}
         disabled={!canSave}
@@ -273,6 +276,8 @@ export function WorkOrderStudio({
       <ChoiceField
         id="vendor"
         label="Vendor Name"
+        searchable
+        fallbackLabel="Saved vendor"
         value={form.vendorId}
         disabled={!canSave || linked}
         options={vendors.map((item) => ({ value: item.id, label: item.name }))}
@@ -281,6 +286,8 @@ export function WorkOrderStudio({
       <ChoiceField
         id="project"
         label="Project Name"
+        searchable
+        fallbackLabel="Saved project"
         value={form.projectId}
         disabled={!canSave || linked}
         options={projects.map((item) => ({ value: item.id, label: item.name }))}

@@ -10,6 +10,7 @@ import {
 } from "@/app/(app)/accounts/vat-tax/actions"
 import { MoneyInput } from "@/components/money-input"
 import { NameCombobox } from "@/components/name-combobox"
+import { RecordPicker } from "@/components/record-picker"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -121,27 +122,15 @@ export function VatTaxFormDialog({
           <FieldGroup layout="inset">
             <Field data-invalid={Boolean(fieldErrors.projectId) || undefined}>
               <FieldLabel htmlFor="vat-project">Project</FieldLabel>
-              <Select
-                items={projItems}
-                value={projectId || null}
+              <RecordPicker
+                id="vat-project"
+                value={projectId}
+                options={projItems}
+                placeholder="Select Project"
                 disabled={pending}
-                onValueChange={(value) => setProjectId(value ?? "")}
-              >
-                <SelectTrigger
-                  id="vat-project"
-                  className="w-full"
-                  aria-invalid={Boolean(fieldErrors.projectId)}
-                >
-                  <SelectValue placeholder="Select Project" />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {projItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                invalid={Boolean(fieldErrors.projectId)}
+                onValueChange={setProjectId}
+              />
               {fieldErrors.projectId ? <FieldError>{fieldErrors.projectId}</FieldError> : null}
             </Field>
 

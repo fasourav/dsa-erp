@@ -1,4 +1,5 @@
 export const LIST_PAGE_SIZE = 50
+export const SERVER_PAGE_SIZES = [25, 50, 100] as const
 
 export type PageParams = {
   page: number
@@ -72,6 +73,46 @@ export function facetQueryValue(
     return null
   }
   return trimmed
+}
+
+export function parsePageSize(
+  raw: string | string[] | undefined | null,
+  options: readonly number[],
+  fallback: number,
+): number {
+  const value = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? ""
+  if (!/^\d+$/.test(value)) {
+    return fallback
+  }
+  const parsed = Number(value)
+  if (Number.isSafeInteger(parsed) && options.includes(parsed)) {
+    return parsed
+  }
+  return fallback
+}
+
+export function pageSizeQueryValue(
+  size: number,
+  fallback: number,
+): string | null {
+  if (!Number.isSafeInteger(size) || size === fallback) {
+    return null
+  }
+  return String(size)
+}
+
+export function normalizePageSizeParam(
+  params: URLSearchParams,
+  options: readonly number[],
+  fallback: number,
+): void {
+  if (!params.has("size")) return
+  const value = pageSizeQueryValue(
+    parsePageSize(params.get("size"), options, fallback),
+    fallback,
+  )
+  if (value) params.set("size", value)
+  else params.delete("size")
 }
 
 export function parsePageParams(

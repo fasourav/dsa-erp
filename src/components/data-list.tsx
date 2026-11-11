@@ -34,6 +34,13 @@ import {
   PaginationItem,
 } from "@/components/ui/pagination"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Table,
   TableBody,
   TableCell,
@@ -45,6 +52,7 @@ import {
   columnVisible,
   computeTableColumnLayout,
   paginationItems,
+  sortDirectionText,
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
@@ -147,6 +155,19 @@ export type DataListEmptyState = {
   onClearFilters?: () => void
 }
 
+export type DataListPageSize = {
+  value: number
+  options: readonly number[]
+  onChange: (n: number) => void
+}
+
+function parseTotalFromRangeText(rangeText: string): number {
+  const match = /\bof\s+([\d,]+)\b/i.exec(rangeText)
+  if (!match) return 0
+  const parsed = Number(match[1].replace(/,/g, ""))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 const noopPageChange = () => {}
 
 export function DataList<T, Id extends string>({
@@ -160,6 +181,8 @@ export function DataList<T, Id extends string>({
   emptyMessage,
   emptyState,
   rangeText,
+  totalCount,
+  pageSize,
   currentPage = 1,
   pageCount = 1,
   onPageChange = noopPageChange,
@@ -181,6 +204,8 @@ export function DataList<T, Id extends string>({
   emptyMessage: string
   emptyState?: DataListEmptyState
   rangeText: string
+  totalCount?: number
+  pageSize?: DataListPageSize
   currentPage?: number
   pageCount?: number
   onPageChange?: (page: number) => void
@@ -211,6 +236,14 @@ export function DataList<T, Id extends string>({
   const hasRows = !error && rows.length > 0
   const layout = computeTableColumnLayout(visibleColumns, { dense, hasActions })
   const pages = hidePagination ? [] : paginationItems(currentPage, pageCount)
+  const totalRows = totalCount ?? parseTotalFromRangeText(rangeText)
+  const smallestPageSize =
+    pageSize && pageSize.options.length > 0
+      ? Math.min(...pageSize.options)
+      : Number.POSITIVE_INFINITY
+  const showPageSize = Boolean(
+    pageSize && !error && totalRows > smallestPageSize,
+  )
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5 md:gap-3.5">
@@ -314,6 +347,14 @@ export function DataList<T, Id extends string>({
               </Button>
             </div>
           )}
+          {showPageSize && pageSize ? (
+            <PageSizeControl
+              value={pageSize.value}
+              options={pageSize.options}
+              onChange={pageSize.onChange}
+              mobile
+            />
+          ) : null}
         </div>
       ) : null}
       <div
@@ -471,6 +512,13 @@ export function DataList<T, Id extends string>({
         ) : null}
         <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
           <p className="text-label text-muted-foreground">{rangeText}</p>
+          {showPageSize && pageSize ? (
+            <PageSizeControl
+              value={pageSize.value}
+              options={pageSize.options}
+              onChange={pageSize.onChange}
+            />
+          ) : null}
           {hidePagination ? null : (
             <Pagination
               aria-label={pagingLabel}
@@ -533,6 +581,63 @@ export function DataList<T, Id extends string>({
   )
 }
 
+function PageSizeControl({
+  value,
+  options,
+  onChange,
+  mobile = false,
+}: {
+  value: number
+  options: readonly number[]
+  onChange: (size: number) => void
+  mobile?: boolean
+}) {
+  const items = options.map((option) => ({
+    value: String(option),
+    label: String(option),
+  }))
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 text-label text-muted-foreground",
+        mobile && "justify-end px-1",
+      )}
+    >
+      <span>Rows per page</span>
+      <Select
+        items={items}
+        value={String(value)}
+        onValueChange={(next) => {
+          const parsed = Number(next)
+          if (Number.isFinite(parsed)) {
+            onChange(parsed)
+          }
+        }}
+      >
+        <SelectTrigger
+          size="sm"
+          aria-label="Rows per page"
+          className={cn("tabular-nums", mobile && "h-9")}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="end">
+          {options.map((option) => (
+            <SelectItem
+              key={option}
+              value={String(option)}
+              className="tabular-nums"
+            >
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
 function MobileSortControl<Id extends string>({
   columns,
   sort,
@@ -545,7 +650,9 @@ function MobileSortControl<Id extends string>({
   const activeColumn =
     columns.find((column) => column.id === sort.key) ?? null
   const SortIcon = sort.direction === "asc" ? ArrowUp : ArrowDown
-  const directionLabel = sort.direction === "asc" ? "ascending" : "descending"
+  const directionText = activeColumn
+    ? sortDirectionText(activeColumn, sort.direction)
+    : ""
 
   return (
     <div className="flex items-center justify-end px-1">
@@ -556,10 +663,10 @@ function MobileSortControl<Id extends string>({
               type="button"
               variant="outline"
               size="sm"
-              className="h-9 max-w-full gap-1.5 px-3 text-label"
+              className="h-9 max-w-full min-w-0 gap-1.5 px-3 text-label"
               aria-label={
                 activeColumn
-                  ? `Sort by ${activeColumn.label}, ${directionLabel}`
+                  ? `Sort by ${activeColumn.label}, ${directionText}`
                   : "Sort"
               }
             />
@@ -567,9 +674,12 @@ function MobileSortControl<Id extends string>({
         >
           {activeColumn ? (
             <>
-              <span className="text-muted-foreground">Sort:</span>
-              <span className="truncate font-semibold text-foreground">
+              <span className="shrink-0 text-muted-foreground">Sort:</span>
+              <span className="min-w-8 truncate font-semibold text-foreground">
                 {activeColumn.label}
+              </span>
+              <span className="shrink-[0.2] truncate text-muted-foreground">
+                · {directionText}
               </span>
               <SortIcon
                 aria-hidden="true"
@@ -581,26 +691,41 @@ function MobileSortControl<Id extends string>({
             <span className="font-semibold text-foreground">Sort</span>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={6} className="w-56">
+        <DropdownMenuContent align="end" sideOffset={6} className="w-64">
           {columns.map((column) => {
             const active = column.id === sort.key
+            const itemDirectionText = sortDirectionText(
+              column,
+              active ? sort.direction : "asc",
+            )
             return (
               <DropdownMenuItem
                 key={column.id}
                 className={cn(
-                  "justify-between",
+                  "justify-between gap-3",
                   active && "font-semibold text-foreground",
                 )}
                 onClick={() => onSort(column.id)}
               >
-                <span className="truncate">{column.label}</span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate">{column.label}</span>
+                  {active ? (
+                    <span className="truncate text-caption font-normal text-muted-foreground">
+                      {itemDirectionText} · Tap to reverse
+                    </span>
+                  ) : null}
+                </div>
                 {active ? (
                   <SortIcon
                     aria-hidden="true"
                     className="size-3.5 shrink-0 text-primary"
                     strokeWidth={2.4}
                   />
-                ) : null}
+                ) : (
+                  <span className="shrink-0 text-caption text-muted-foreground">
+                    {itemDirectionText}
+                  </span>
+                )}
               </DropdownMenuItem>
             )
           })}

@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { compareText } from "@/lib/format"
 import { amountError, businessTodayIsoDate } from "@/lib/project-validation"
 
 export const stageStatuses = ["Not Started", "In Progress", "Done"] as const
@@ -59,7 +60,7 @@ export function phaseProgressSummary(
       const orderA = a.sort_order ?? a.sortOrder ?? 0
       const orderB = b.sort_order ?? b.sortOrder ?? 0
       if (orderA !== orderB) return orderA - orderB
-      return a.name.trim().localeCompare(b.name.trim(), "en", { sensitivity: "base" })
+      return compareText(a.name.trim(), b.name.trim())
     })
 
   const unique: { name: string }[] = []

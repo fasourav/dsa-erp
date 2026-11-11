@@ -154,6 +154,7 @@ export async function getOperationalExpenses(
   options: {
     q?: string
     page?: number
+    pageSize?: number
     sort?: SortState<ExpenseColumnId>
   } = {},
 ): Promise<{
@@ -284,7 +285,7 @@ export async function getOperationalExpenses(
           return query.range(from, to)
         },
         requestedPage,
-        LIST_PAGE_SIZE,
+        options.pageSize ?? LIST_PAGE_SIZE,
       ),
       operationalPurchaseOrderPayments(supabase, officeCategoryNames),
     ])

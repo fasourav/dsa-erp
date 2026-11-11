@@ -1,3 +1,4 @@
+import { compareText } from "@/lib/format"
 import {
   sanitizeColumnVisibility,
   type ListColumn,
@@ -108,7 +109,7 @@ function compareRows(
   switch (key) {
     case "vendorName":
     case "projectName":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "totalPayable":
     case "totalPaid":
     case "pendingPayable":

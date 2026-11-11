@@ -105,6 +105,7 @@ export function ReceiptStudio({
       pending={pending}
       error={error}
       dirty={unsaved}
+      guardUnsaved
       files={{ parentType: "client_payment", parentId: form.id }}
       onSave={() => {
         setError(null)

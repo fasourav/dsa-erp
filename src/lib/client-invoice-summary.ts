@@ -1,3 +1,4 @@
+import { compareText } from "@/lib/format"
 import type { ClientInvoiceStatus } from "@/lib/payment-status"
 import {
   sanitizeColumnVisibility,
@@ -76,7 +77,13 @@ export const clientInvoiceColumns: readonly ListColumn<ClientInvoiceColumnId>[] 
     { id: "clientName", label: "Client", align: "left", locked: true, sortable: false },
     { id: "amount", label: "Amount", align: "right", locked: false },
     { id: "paid", label: "Paid", align: "right", locked: false, sortable: false },
-    { id: "status", label: "Status", align: "left", locked: false },
+    {
+      id: "status",
+      label: "Status",
+      align: "left",
+      locked: false,
+      sortText: { asc: "Unpaid first", desc: "Paid first" },
+    },
   ]
 
 const defaultVisibility: ClientInvoiceColumnVisibility = {
@@ -127,10 +134,11 @@ function compareInvoices(
 ): number {
   switch (key) {
     case "issuedOn":
+      return left.issuedOn.localeCompare(right.issuedOn)
     case "projectName":
     case "clientName":
     case "status":
-      return left[key].localeCompare(right[key], "en", { sensitivity: "base" })
+      return compareText(left[key], right[key])
     case "amount":
     case "paid":
       return left[key] - right[key]

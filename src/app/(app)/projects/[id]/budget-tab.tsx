@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { compareText } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -363,5 +364,5 @@ function sortValue(line: BudgetLineView, key: ColumnId): string | number {
 
 function compare(left: string | number, right: string | number) {
   if (typeof left === "number" && typeof right === "number") return left - right
-  return String(left).localeCompare(String(right), "en", { sensitivity: "base" })
+  return compareText(String(left), String(right))
 }

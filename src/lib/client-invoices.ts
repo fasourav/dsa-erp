@@ -1,7 +1,7 @@
 import { listBankAccounts } from "@/lib/bank-accounts"
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { fetchAllPages, fetchByIds, fetchPage } from "@/lib/fetch-pages"
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
 import {
   LIST_PAGE_SIZE,
@@ -261,6 +261,7 @@ export async function getClientInvoices(
   options: {
     q?: string
     page?: number
+    pageSize?: number
     status?: SettlementFilter
     sort?: SortState<ClientInvoiceColumnId>
   } = {},
@@ -344,9 +345,7 @@ export async function getClientInvoices(
         clientId: row.client_id,
         clientName: clientsById.get(row.client_id) ?? "",
       }))
-      .sort((left, right) =>
-        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
-      )
+      .sort((left, right) => compareText(left.name, right.name))
 
     const projectsById = new Map(projects.map((project) => [project.id, project]))
 
@@ -427,7 +426,7 @@ export async function getClientInvoices(
         return query.range(from, to)
       },
       requestedPage,
-      LIST_PAGE_SIZE,
+      options.pageSize ?? LIST_PAGE_SIZE,
       ),
       countClientInvoices(supabase, scope),
     ])

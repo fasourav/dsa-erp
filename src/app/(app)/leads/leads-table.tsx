@@ -42,11 +42,12 @@ import {
   type ColumnId,
 } from "@/lib/lead-summary"
 import {
+  CLIENT_PAGE_SIZES,
   paginateRows,
   rangeLabel,
   type SortState,
 } from "@/lib/list-paging"
-import { formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
 import type { LeadLookups, LeadRow } from "@/lib/leads"
 import { useListUrlState } from "@/lib/use-list-url-state"
 import { cn } from "@/lib/utils"
@@ -63,23 +64,19 @@ function sortLeads(rows: LeadRow[], sort: SortState<ColumnId>): LeadRow[] {
     let cmp = 0
     switch (sort.key) {
       case "leadName":
-        cmp = a.leadName.localeCompare(b.leadName, "en", { sensitivity: "base" })
+        cmp = compareText(a.leadName, b.leadName)
         break
       case "addedOn":
         cmp = a.addedOn.localeCompare(b.addedOn)
         break
       case "projectName":
-        cmp = a.projectName.localeCompare(b.projectName, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.projectName, b.projectName)
         break
       case "currentStage":
-        cmp = a.currentStage.localeCompare(b.currentStage, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.currentStage, b.currentStage)
         break
       case "source":
-        cmp = a.source.localeCompare(b.source, "en", { sensitivity: "base" })
+        cmp = compareText(a.source, b.source)
         break
       case "estimatedValue":
         cmp = a.estimatedValue - b.estimatedValue
@@ -88,9 +85,7 @@ function sortLeads(rows: LeadRow[], sort: SortState<ColumnId>): LeadRow[] {
         cmp = a.probability - b.probability
         break
       case "status":
-        cmp = a.statusLabel.localeCompare(b.statusLabel, "en", {
-          sensitivity: "base",
-        })
+        cmp = compareText(a.statusLabel, b.statusLabel)
         break
     }
     return sort.direction === "asc" ? cmp : -cmp
@@ -139,6 +134,8 @@ export function LeadsTable({
     onSort,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     clearFilters,
     hasActiveFilters,
   } = useListUrlState<ColumnId>({
@@ -149,6 +146,7 @@ export function LeadsTable({
   const [formOpen, setFormOpen] = useState(false)
   const [formLead, setFormLead] = useState<LeadRow | null>(null)
   const [formMode, setFormMode] = useState<"view" | "edit">("edit")
+  const [formOrigin, setFormOrigin] = useState<"view" | "direct">("direct")
   const [formSession, setFormSession] = useState(0)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<LeadRow | null>(null)
@@ -162,11 +160,15 @@ export function LeadsTable({
     () => filterRows(sorted, query, rowText, listFilter, (lead) => lead.status),
     [listFilter, query, sorted],
   )
-  const pageResult = useMemo(() => paginateRows(filtered, page), [filtered, page])
+  const pageResult = useMemo(
+    () => paginateRows(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
 
   function openForm(lead: LeadRow | null) {
     setFormLead(lead)
     setFormMode("edit")
+    setFormOrigin("direct")
     setFormSession((s) => s + 1)
     setFormOpen(true)
   }
@@ -174,6 +176,7 @@ export function LeadsTable({
   function openView(lead: LeadRow) {
     setFormLead(lead)
     setFormMode("view")
+    setFormOrigin("view")
     setFormSession((s) => s + 1)
     setFormOpen(true)
   }
@@ -303,6 +306,12 @@ export function LeadsTable({
           "lead",
           "leads",
         )}
+        totalCount={error ? 0 : pageResult.total}
+        pageSize={{
+          value: pageSize,
+          options: CLIENT_PAGE_SIZES,
+          onChange: setPageSize,
+        }}
         currentPage={pageResult.currentPage}
         pageCount={pageResult.pageCount}
         onPageChange={setPage}
@@ -348,6 +357,7 @@ export function LeadsTable({
         lookups={lookups}
         readOnly={formMode === "view"}
         onEdit={canEdit && formLead ? () => setFormMode("edit") : undefined}
+        onCancelEdit={formOrigin === "view" ? () => setFormMode("view") : undefined}
       />
 
       <DeleteConfirmDialog
@@ -389,13 +399,13 @@ function CellValue({
             variant="link"
             title={lead.leadName || undefined}
             className={cn(
-              "h-auto max-w-full min-h-8 truncate px-0 text-left text-ui font-semibold text-foreground",
+              "h-auto max-w-full min-h-8 min-w-0 px-0 text-left text-ui font-semibold text-foreground",
               !lead.leadName && "text-muted-foreground",
             )}
             aria-label={`Open details for ${lead.leadName || "lead"}`}
             onClick={() => onView(lead)}
           >
-            {lead.leadName || "—"}
+            <span className="truncate">{lead.leadName || "—"}</span>
           </Button>
           {lead.kindLabel ? <Badge variant="outline">{lead.kindLabel}</Badge> : null}
         </div>
