@@ -649,12 +649,17 @@ function modelFromScope(data: unknown, now: Date): DashboardModel {
     forecastedProfit: toNumber(row.forecasted_profit),
     weeks: asArray(row.weeks).map((item) => {
       const point = asRecord(item)
+      const projectExpense = toNumber(point.project_expense)
+      const adminExpense = toNumber(point.admin_expense)
+      const totalExpense = toNumber(point.total_expense)
       return {
         label: text(point.label),
         revenue: toNumber(point.revenue),
-        projectExpense: toNumber(point.project_expense),
-        adminExpense: toNumber(point.admin_expense),
-        totalExpense: toNumber(point.total_expense),
+        projectExpense,
+        adminExpense,
+        // The weeks JSON has no tax key; its total is project + tax + admin.
+        tax: Math.round((totalExpense - projectExpense - adminExpense) * 100) / 100,
+        totalExpense,
         netProfit: toNumber(point.net_profit),
       } satisfies WeekPoint
     }),

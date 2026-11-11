@@ -458,8 +458,11 @@ function DashboardSections({
                 />
                 <WeekStat
                   label="Weekly Project Expense"
-                  value={latestWeek.projectExpense}
-                  direction={weekTrend(latestWeek.projectExpense, previousWeek?.projectExpense)}
+                  value={latestWeek.projectExpense + latestWeek.tax}
+                  direction={weekTrend(
+                    latestWeek.projectExpense + latestWeek.tax,
+                    previousWeek ? previousWeek.projectExpense + previousWeek.tax : undefined,
+                  )}
                   tone="cost"
                 />
                 <WeekStat

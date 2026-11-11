@@ -77,6 +77,7 @@ export type WeekPoint = {
   revenue: number
   projectExpense: number
   adminExpense: number
+  tax: number
   totalExpense: number
   netProfit: number
 }
@@ -981,6 +982,7 @@ function lastWeeks(
       revenue: weekRevenue,
       projectExpense: projectExpenseOf(expenses),
       adminExpense: adminExpenseOf(expenses),
+      tax: expenses.tax,
       totalExpense: expenses.total,
       netProfit: netProfitOf(weekRevenue, expenses),
     })
