@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto"
 import { NextResponse } from "next/server"
 
 import { removeQueuedAttachmentFiles } from "@/lib/attachment-files"
+import { removeExpiredPdfCache } from "@/lib/documents/pdf-cache"
 import { removeExpiredRfqFiles } from "@/lib/documents/rfq-store"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -34,5 +35,10 @@ export async function GET(request: Request) {
   await admin.rpc("purge_document_verify_hits")
   // External RFQ files are kept for 30 days; failure here never blocks the sweep.
   const rfqFiles = await removeExpiredRfqFiles(admin).catch(() => 0)
-  return NextResponse.json({ queued: sweep.data ?? 0, removed, rfqFiles }, { headers: { "Cache-Control": "no-store" } })
+  // Cached document PDFs are kept for 30 days; failure here never blocks the sweep.
+  const pdfCache = await removeExpiredPdfCache(admin).catch(() => 0)
+  return NextResponse.json(
+    { queued: sweep.data ?? 0, removed, rfqFiles, pdfCache },
+    { headers: { "Cache-Control": "no-store" } },
+  )
 }
