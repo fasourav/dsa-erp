@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useState, useSyncExternalStore, type ReactNode } from "react"
+import { useId, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from "react"
 import {
   Area,
   AreaChart,
@@ -21,7 +21,8 @@ import {
   LegendDot,
   Ring,
 } from "@/app/(app)/dashboard/dashboard-chart-primitives"
-import { formatAxisBdt, formatExactBdt, type ChartPoint } from "@/lib/dashboard-metrics"
+import { Money } from "@/components/money"
+import { formatAxisBdt, formatExactBdt, formatShare, type ChartPoint } from "@/lib/dashboard-metrics"
 
 export { expenseSliceStyle, LegendDot, Ring }
 
@@ -354,43 +355,101 @@ export function WeeklyChart({ data }: { data: WeekChartRow[] }) {
   )
 }
 
+const DONUT_RADIUS = 86
+const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS
+const DONUT_GAP = 3.6
+const DONUT_MIN_LEN = 3
+
+function arcPath(startLen: number, len: number) {
+  const a0 = startLen / DONUT_RADIUS
+  const a1 = (startLen + len) / DONUT_RADIUS
+  const p = (a: number) => `${98 + DONUT_RADIUS * Math.cos(a)} ${98 + DONUT_RADIUS * Math.sin(a)}`
+  const large = a1 - a0 > Math.PI ? 1 : 0
+  return `M ${p(a0)} A ${DONUT_RADIUS} ${DONUT_RADIUS} 0 ${large} 1 ${p(a1)}`
+}
+
 // Ring segments with a hairline gap between slices, drawn from 12 o'clock.
 export function ExpenseDonut({ slices, children }: { slices: ExpenseSlice[]; children?: ReactNode }) {
-  const radius = 86
-  const circumference = 2 * Math.PI * radius
-  const gap = slices.filter((slice) => slice.amount > 0).length > 1 ? 3.6 : 0
-  const total = slices.reduce((sum, slice) => sum + Math.max(0, slice.amount), 0)
+  const [activeKey, setActiveKey] = useState<string | null>(null)
+  const reduced = useReducedMotion()
+
+  const drawn = slices.filter((slice) => slice.amount > 0)
+  const n = drawn.length
+  const total = drawn.reduce((sum, slice) => sum + slice.amount, 0)
+  const gap = n > 1 ? DONUT_GAP : 0
+  const available = DONUT_CIRCUMFERENCE - gap * n
+
+  const rawLengths = total > 0 ? drawn.map((slice) => (slice.amount / total) * available) : []
+  const smallCount = rawLengths.filter((len) => len < DONUT_MIN_LEN).length
+  const bigTotal = rawLengths.reduce((sum, len) => (len < DONUT_MIN_LEN ? sum : sum + len), 0)
+  const scale = bigTotal > 0 ? (available - DONUT_MIN_LEN * smallCount) / bigTotal : 0
+  const lengths =
+    bigTotal <= 0
+      ? rawLengths.map(() => (n > 0 ? available / n : 0))
+      : rawLengths.map((raw) => (raw < DONUT_MIN_LEN ? DONUT_MIN_LEN : raw * scale))
+
+  const active = drawn.find((slice) => slice.key === activeKey)
+  const sliceClass = reduced
+    ? "cursor-pointer"
+    : "cursor-pointer transition-[opacity,stroke-width] duration-150"
   let offset = gap / 2
 
   return (
     <div className="relative mx-auto size-50 md:size-49">
-      <svg viewBox="0 0 196 196" className="size-full -rotate-90" aria-hidden="true">
-        <circle cx="98" cy="98" r={radius} fill="none" stroke="var(--fill)" strokeWidth="22" />
+      <svg
+        viewBox="0 0 196 196"
+        className="size-full -rotate-90 overflow-visible"
+        aria-hidden="true"
+        onPointerLeave={(e) => {
+          if (e.pointerType === "mouse") setActiveKey(null)
+        }}
+      >
+        <circle
+          cx="98"
+          cy="98"
+          r={DONUT_RADIUS}
+          fill="transparent"
+          stroke="var(--fill)"
+          strokeWidth="22"
+          onClick={() => setActiveKey(null)}
+        />
         {total > 0
-          ? slices.map((slice) => {
-              if (slice.amount <= 0) return null
-              const length = Math.max(0, (slice.amount / total) * circumference - gap)
-              const dash = (
-                <circle
-                  key={slice.key}
-                  cx="98"
-                  cy="98"
-                  r={radius}
-                  fill="none"
-                  stroke={slice.fill}
-                  strokeWidth="22"
-                  strokeDasharray={`${length} ${circumference}`}
-                  strokeDashoffset={-offset}
-                />
-              )
+          ? drawn.map((slice, index) => {
+              const length = lengths[index]
+              const startLen = offset
               offset += length + gap
-              return dash
+              const isActive = active?.key === slice.key
+              const sliceProps = {
+                fill: "none" as const,
+                stroke: slice.fill,
+                strokeWidth: isActive ? 26 : 22,
+                opacity: active && !isActive ? 0.35 : 1,
+                className: sliceClass,
+                onPointerEnter: (e: PointerEvent<SVGElement>) => {
+                  if (e.pointerType === "mouse") setActiveKey(slice.key)
+                },
+                onClick: () => setActiveKey((k) => (k === slice.key ? null : slice.key)),
+              }
+              return n === 1 ? (
+                <circle key={slice.key} cx="98" cy="98" r={DONUT_RADIUS} {...sliceProps} />
+              ) : (
+                <path key={slice.key} d={arcPath(startLen, length)} {...sliceProps} />
+              )
             })
           : null}
       </svg>
-      {children ? (
+      {active || children ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          {children}
+          {active ? (
+            <>
+              <Money value={active.amount} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
+              <span className="text-micro text-muted-foreground md:text-xs">
+                {active.label} · {formatShare(active.amount, total)}
+              </span>
+            </>
+          ) : (
+            children
+          )}
         </div>
       ) : null}
     </div>
