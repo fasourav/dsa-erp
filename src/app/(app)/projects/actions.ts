@@ -3,6 +3,8 @@
 import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
+import { getCurrentUser } from "@/lib/auth"
+
 import { friendlyDbError, mentions } from "@/lib/db-errors"
 import { phaseProgressPercent } from "@/lib/project-progress"
 import type { ProjectStatus } from "@/lib/project-summary"
@@ -128,9 +130,9 @@ async function saveProject(
 
   const status: ProjectStatus = input.status
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -274,9 +276,9 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
   }
 
   const supabase = await createClient()
-  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
-  if (authError || !authData.user) {
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

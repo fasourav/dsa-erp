@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import type { ModuleKey } from "@/lib/access"
+import { getCurrentUser } from "@/lib/auth"
 import { denyUnless } from "@/lib/permissions"
 import { isUuid } from "@/lib/ids"
 import {
@@ -87,8 +88,8 @@ export async function uploadAttachment(
   if (denied) return { error: denied }
 
   const supabase = await createClient()
-  const { data: auth, error: authError } = await supabase.auth.getUser()
-  if (authError || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const id = crypto.randomUUID()
   const storagePath = `${parentType}/${parentId}/${id}/${id}.${extension}`
@@ -100,7 +101,7 @@ export async function uploadAttachment(
     content_type: contentType,
     byte_size: file.size,
     storage_path: storagePath,
-    created_by: auth.user.id,
+    created_by: user.id,
   })
   if (insertError) return { error: "Could not save this file." }
 

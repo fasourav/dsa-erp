@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation"
 
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 
@@ -23,16 +24,15 @@ export async function setPassword(
     return { error: "Passwords do not match." }
   }
 
-  const supabase = await createClient()
-  const { data: auth, error: authError } = await supabase.auth.getUser()
-  if (authError || !auth.user) {
+  const [user, supabase] = await Promise.all([getCurrentUser(), createClient()])
+  if (!user) {
     redirect("/login?error=invite")
   }
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("status")
-    .eq("id", auth.user.id)
+    .eq("id", user.id)
     .maybeSingle()
 
   if (profileError || !profile) {
@@ -58,7 +58,7 @@ export async function setPassword(
     const { error: statusError } = await admin
       .from("profiles")
       .update({ status: "active" })
-      .eq("id", auth.user.id)
+      .eq("id", user.id)
       .eq("status", "invited")
 
     if (statusError) {
@@ -70,7 +70,7 @@ export async function setPassword(
     const { data: refreshed, error: refreshError } = await supabase
       .from("profiles")
       .select("status")
-      .eq("id", auth.user.id)
+      .eq("id", user.id)
       .maybeSingle()
 
     if (refreshError || refreshed?.status !== "active") {

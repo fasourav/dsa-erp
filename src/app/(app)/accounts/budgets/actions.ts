@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { isUuid } from "@/lib/ids"
 import { amountError, parseProjectValue } from "@/lib/project-validation"
 import { budgetYear } from "@/lib/schemas"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { dbIssue, friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
@@ -55,8 +56,8 @@ export async function deleteBudget(id: string): Promise<DeleteResult> {
   if (!isUuid(id)) return { error: "That budget could not be found." }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const { data, error } = await supabase
     .from("budgets")
@@ -100,8 +101,8 @@ async function saveBudget(
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) return { error: "You must be signed in." }
+  const user = await getCurrentUser()
+  if (!user) return { error: "You must be signed in." }
 
   const values = {
     department_id: departmentId,

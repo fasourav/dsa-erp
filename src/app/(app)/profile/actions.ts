@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { getCurrentUser } from "@/lib/auth"
 import { getAccess } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 
@@ -59,9 +60,8 @@ export async function changePassword(
     return { error: "Passwords do not match." }
   }
 
-  const supabase = await createClient()
-  const { data: auth, error: authError } = await supabase.auth.getUser()
-  if (authError || !auth.user) return { error: "You must be signed in." }
+  const [user, supabase] = await Promise.all([getCurrentUser(), createClient()])
+  if (!user) return { error: "You must be signed in." }
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) {

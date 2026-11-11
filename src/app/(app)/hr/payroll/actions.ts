@@ -7,6 +7,7 @@ import { isUuid } from "@/lib/ids"
 import { overdraftMessage } from "@/lib/insufficient-balance"
 import { netPay, roundMoney, workedInMonth } from "@/lib/payroll-month"
 import { isIsoDate, parseProjectValue } from "@/lib/project-validation"
+import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { cleanUpDeletedAttachmentFiles } from "@/lib/attachment-files"
 import { toNumber } from "@/lib/format"
@@ -75,8 +76,8 @@ export async function deleteMonthlySalary(id: string): Promise<DeleteResult> {
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
@@ -153,8 +154,8 @@ async function saveMonthlySalary(
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !auth.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 

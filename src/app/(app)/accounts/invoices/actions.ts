@@ -3,6 +3,8 @@
 import { eqVersion, missedUpdateMessage, staleWriteMessage, withVersion } from "@/lib/record-version"
 import { revalidatePath } from "next/cache"
 
+import { getCurrentUser } from "@/lib/auth"
+
 import { dbIssue, friendlyDbError, mentions } from "@/lib/db-errors"
 import { formatMoney, toNumber } from "@/lib/format"
 import { isUuid } from "@/lib/ids"
@@ -581,10 +583,9 @@ async function authorizedClient(): Promise<{
   supabase: SupabaseClient | null
   error: string | null
 }> {
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.getUser()
+  const [supabase, user] = await Promise.all([createClient(), getCurrentUser()])
 
-  if (error || !data.user) {
+  if (!user) {
     return { supabase: null, error: "You must be signed in." }
   }
 

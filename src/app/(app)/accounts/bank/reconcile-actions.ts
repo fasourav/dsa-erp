@@ -7,6 +7,7 @@ import { parseStatementCsv } from "@/lib/bank-reconcile"
 import { friendlyDbError } from "@/lib/db-errors"
 import { isUuid } from "@/lib/ids"
 import { isIsoDate } from "@/lib/project-validation"
+import { getCurrentUser } from "@/lib/auth"
 import { denyUnless } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 
@@ -23,7 +24,7 @@ export async function importStatementCsv(formData: FormData): Promise<{ error: s
   if (parsed.rows.length === 0) return { error: "The file has no lines.", count: 0 }
 
   const supabase = await createClient()
-  const { data: auth } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   // Re-importing the same statement (or an overlapping one) must not double the lines.
   // Compare as a multiset so genuinely repeated lines inside one file still import.
   const dates = parsed.rows.map((row) => row.lineDate).sort()
@@ -63,7 +64,7 @@ export async function importStatementCsv(formData: FormData): Promise<{ error: s
       direction: row.direction,
       amount: row.amount,
       reference: row.reference,
-      created_by: auth.user?.id ?? null,
+      created_by: user?.id ?? null,
     })),
   )
   if (error) {
@@ -91,7 +92,7 @@ export async function addStatementLine(input: {
   if (!Number.isFinite(amount) || amount <= 0) return { error: "Enter an amount greater than zero." }
 
   const supabase = await createClient()
-  const { data: auth } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   const { error } = await supabase.from("bank_statement_lines").insert({
     bank_account_id: input.accountId,
     line_date: input.lineDate,
@@ -99,7 +100,7 @@ export async function addStatementLine(input: {
     direction: input.direction,
     amount: Math.round(amount * 100) / 100,
     reference: input.reference.trim(),
-    created_by: auth.user?.id ?? null,
+    created_by: user?.id ?? null,
   })
   if (error) {
     if (isMissing(error)) return { error: notInstalled }

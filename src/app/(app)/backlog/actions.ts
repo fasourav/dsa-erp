@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { isUuid } from "@/lib/ids"
+import { getCurrentUser } from "@/lib/auth"
 import { friendlyDbError } from "@/lib/db-errors"
 import { denyUnless } from "@/lib/permissions"
 import {
@@ -36,8 +37,8 @@ export async function saveRecoveryPlan(
   }
 
   const supabase = await createClient()
-  const { data: auth, error: authError } = await supabase.auth.getUser()
-  if (authError || !auth.user) {
+  const user = await getCurrentUser()
+  if (!user) {
     return { error: "You must be signed in." }
   }
 
