@@ -123,7 +123,7 @@ export async function getLastBackupStatus(): Promise<LastBackupStatus> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("backup_runs")
-    .select("ran_at, size_bytes, status")
+    .select("ran_at, size_bytes, status, storage_path")
     .order("ran_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -133,7 +133,7 @@ export async function getLastBackupStatus(): Promise<LastBackupStatus> {
   return {
     ranAtLabel: formatBackupWhen(data.ran_at),
     sizeLabel: formatBackupSize(data.size_bytes),
-    status: data.status,
+    status: data.status === "ok" && !data.storage_path ? "Not Stored" : data.status,
   }
 }
 
