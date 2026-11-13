@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { type ReactNode } from "react"
 import {
-  AlertCircle,
   BadgeCheck,
   Box,
   Clock,
@@ -280,20 +279,22 @@ function DashboardSections({
           />
           <CompactMetric
             label="Accounts Receivable"
+            info="Unpaid client invoices: each invoice's amount minus payments received, for every invoice that is not void. Shows today's balance for All Time and the current year; for a past year, the balance on 31 Dec of that year."
             value={model.receivables}
             detail={stockDetail}
             href={receivableHref}
           />
           <CompactMetric
             label="Accounts Payable"
+            info="Unpaid vendor bills: each bill's amount minus payments made against it, for every bill that is not void (project and operational purchase orders). Purchase order value not yet billed is not included. Shows today's balance for All Time and the current year; for a past year, the balance on 31 Dec of that year."
             value={model.payables}
             detail={stockDetail}
             tone={model.payables > 0 ? "warning" : "default"}
-            icon={model.payables > 0 ? AlertCircle : undefined}
             href={payableHref}
           />
           <CompactMetric
             label="Forecasted Profit"
+            info="Accounts Receivable minus Accounts Payable: what you expect to keep once open client invoices are collected and open vendor bills are paid."
             value={model.forecastedProfit}
             detail="Receivable Minus Payable"
             tone={model.forecastedProfit < 0 ? "negative" : "positive"}
@@ -775,6 +776,7 @@ function KpiCard({
 
 function CompactMetric({
   label,
+  info,
   value,
   detail,
   tone = "default",
@@ -783,6 +785,7 @@ function CompactMetric({
   href,
 }: {
   label: string
+  info?: string
   value: number
   detail?: string
   tone?: "default" | "negative" | "warning" | "positive"
@@ -806,9 +809,9 @@ function CompactMetric({
           className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         />
       ) : null}
-      <p
+      <div
         className={cn(
-          "flex items-center gap-1.25 text-caption font-semibold md:gap-1.5",
+          "flex min-w-0 items-center gap-1.25 text-caption font-semibold md:gap-1.5",
           tone === "warning" ? "text-warning" : "text-muted-foreground",
         )}
       >
@@ -816,14 +819,19 @@ function CompactMetric({
           <Icon
             aria-hidden="true"
             className={cn(
-              "size-3.5",
+              "size-3.5 shrink-0",
               tone === "positive" && "text-success",
               tone === "negative" && "text-destructive",
             )}
           />
         ) : null}
-        {label}
-      </p>
+        <p className="min-w-0 truncate">{label}</p>
+        {info ? (
+          <span className="relative z-10 -mx-1 -my-2 inline-flex shrink-0">
+            <ColumnHint label={label} hint={info} />
+          </span>
+        ) : null}
+      </div>
       <p
         className={cn(
           "min-w-0 truncate text-[1.03125rem] leading-tight font-bold tracking-[-0.02em] md:mt-1.5 md:text-[1.1875rem] md:tracking-[-0.022em]",
