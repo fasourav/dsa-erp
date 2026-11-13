@@ -22,6 +22,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition, type ReactNode } from "react"
+import { toast } from "sonner"
 
 import {
   deleteBankAccount,
@@ -265,7 +266,20 @@ export function SettingsPanel({
           cache: "no-store",
         },
       )
-      if (!response.ok) {
+      if (response.status === 401) {
+        const message = "Your session has expired. Sign in again."
+        setBackupDownloadError(message)
+        toast.error(message, {
+          action: {
+            label: "Sign in",
+            onClick: () => router.push("/login"),
+          },
+        })
+        return
+      }
+      const contentType =
+        response.headers.get("Content-Type")?.trim().toLowerCase() ?? ""
+      if (!response.ok || !contentType.startsWith("application/zip")) {
         const payload = (await response.json().catch(() => null)) as {
           error?: string
         } | null
