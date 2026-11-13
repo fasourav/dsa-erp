@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Box,
   Contact,
+  Download,
   FileText,
   FolderKanban,
   Inbox,
@@ -21,6 +22,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition, type ReactNode } from "react"
+import { toast } from "sonner"
 
 import {
   deleteBankAccount,
@@ -57,6 +59,7 @@ import {
 } from "@/components/ui/card"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import type { BankAccountRow } from "@/lib/bank"
+import { deliverFile } from "@/lib/deliver-file"
 import type { PrintMargins } from "@/lib/documents/drafts"
 import { formatDayMonYear } from "@/lib/format"
 import { fiscalMonthOptions } from "@/lib/fiscal-year"
@@ -78,6 +81,12 @@ type LastBackupStatus = {
   sizeLabel: string
   status: string
   errorMessage: string | null
+  downloadId: string | null
+  recentBackups: {
+    id: string
+    ranAtLabel: string
+    sizeLabel: string
+  }[]
 } | null
 
 type SettingsSection = "home" | "company" | "bank" | "documents" | CatalogKey
@@ -140,6 +149,8 @@ export function SettingsPanel({
   const [marginBottom, setMarginBottom] = useState(String(printMargins.bottomMm))
   const [marginError, setMarginError] = useState<string | null>(null)
   const [savingMargins, startMarginSave] = useTransition()
+  const [downloadingBackupKey, setDownloadingBackupKey] = useState<string | null>(null)
+  const [backupDownloadError, setBackupDownloadError] = useState<string | null>(null)
 
   const catalogByKey = useMemo(() => {
     return new Map(catalogs.map((catalog) => [catalog.key, catalog]))
@@ -243,6 +254,52 @@ export function SettingsPanel({
     })
   }
 
+  async function downloadSavedBackup(backupId: string, buttonKey: string) {
+    setBackupDownloadError(null)
+    setDownloadingBackupKey(buttonKey)
+    try {
+      const response = await fetch(
+        `/settings/backup?id=${encodeURIComponent(backupId)}`,
+        {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        },
+      )
+      if (response.status === 401) {
+        const message = "Your session has expired. Sign in again."
+        setBackupDownloadError(message)
+        toast.error(message, {
+          action: {
+            label: "Sign in",
+            onClick: () => router.push("/login"),
+          },
+        })
+        return
+      }
+      const contentType =
+        response.headers.get("Content-Type")?.trim().toLowerCase() ?? ""
+      if (!response.ok || !contentType.startsWith("application/zip")) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string
+        } | null
+        setBackupDownloadError(
+          payload?.error?.trim() || "Could not download this backup.",
+        )
+        return
+      }
+      const filename = filenameFromDisposition(
+        response.headers.get("Content-Disposition"),
+      )
+      const blob = await response.blob()
+      await deliverFile(blob, filename, { navigateOnIos: false })
+    } catch {
+      setBackupDownloadError("Could not download this backup.")
+    } finally {
+      setDownloadingBackupKey(null)
+    }
+  }
+
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
       {section === "home" ? (
@@ -315,11 +372,11 @@ export function SettingsPanel({
       ) : null}
 
       {section === "company" ? (
-        <Card>
+        <Card className={lastBackup?.recentBackups.length ? "pb-0" : undefined}>
           <CardHeader>
             <CardTitle>Last Backup</CardTitle>
             <CardDescription>
-              Daily Zip Built At 02:00 Dhaka. Email Sending Stays Off.
+              Daily Zip Built At 02:00 Dhaka And Kept For 30 Days. Download Saved Nightly Copies Here; Email Sending Stays Off.
             </CardDescription>
           </CardHeader>
           <div className="border-t border-border">
@@ -342,7 +399,59 @@ export function SettingsPanel({
                 </p>
               ) : null}
             </div>
+            {backupDownloadError ? (
+              <p role="alert" className="border-t border-border px-4 py-3 text-sm text-destructive md:px-6">
+                {backupDownloadError}
+              </p>
+            ) : null}
           </div>
+          {lastBackup?.downloadId ? (
+            <CardFooter className="-mt-(--card-spacing) justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                disabled={downloadingBackupKey !== null}
+                onClick={() => void downloadSavedBackup(lastBackup.downloadId!, "latest")}
+              >
+                <Download aria-hidden="true" data-icon="inline-start" />
+                {downloadingBackupKey === "latest" ? "Downloading…" : "Download"}
+              </Button>
+            </CardFooter>
+          ) : null}
+          {lastBackup && lastBackup.recentBackups.length > 0 ? (
+            <div className="-mt-(--card-spacing) border-t border-border">
+              <div className="px-4 py-2.5 text-caption font-medium text-muted-foreground md:px-6">
+                Recent Backups
+              </div>
+              <ul className="border-t border-border">
+                {lastBackup.recentBackups.map((item) => {
+                  const isRowDownloading = downloadingBackupKey === item.id
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex flex-col gap-2 border-t border-border px-4 py-3 first:border-t-0 sm:flex-row sm:items-center sm:justify-between md:px-6"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:justify-start">
+                        <span className="tabular-nums">{item.ranAtLabel}</span>
+                        <span className="text-muted-foreground tabular-nums">{item.sizeLabel}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        disabled={downloadingBackupKey !== null}
+                        onClick={() => void downloadSavedBackup(item.id, item.id)}
+                      >
+                        <Download aria-hidden="true" data-icon="inline-start" />
+                        {isRowDownloading ? "Downloading…" : "Download"}
+                      </Button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ) : null}
         </Card>
       ) : null}
 
@@ -928,4 +1037,9 @@ function emptyCatalog(): CatalogList {
     hasReportGroup: false,
     items: [],
   }
+}
+
+function filenameFromDisposition(header: string | null): string {
+  const match = header ? /filename="?([^";]+)"?/i.exec(header) : null
+  return match?.[1]?.trim() || "dsa-erp-backup.zip"
 }

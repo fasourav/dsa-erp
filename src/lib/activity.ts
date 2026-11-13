@@ -7,7 +7,7 @@ export async function logActivity(input: {
   tableName: string
   recordId: string
   recordLabel: string
-  action: "insert" | "update" | "delete"
+  action: "insert" | "update" | "delete" | "export"
   summary: string
   newValues?: Record<string, unknown>
 }) {

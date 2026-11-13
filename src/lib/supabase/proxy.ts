@@ -138,6 +138,17 @@ export async function updateSession(request: NextRequest) {
   // "session expired" message; a redirect would surface as a generic failure.
   const isServerAction = request.method === "POST" && request.headers.has("next-action")
 
+  if (!isAuthenticated && pathname === "/settings/backup") {
+    const response = NextResponse.json(
+      { error: "Your session has expired. Sign in again." },
+      { status: 401 },
+    )
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      response.cookies.set(cookie)
+    }
+    return applyCsp(response)
+  }
+
   if (!isAuthenticated && !isOpenPath && !isServerAction) {
     return applyCsp(redirectWithSession(request, supabaseResponse, "/login"))
   }
