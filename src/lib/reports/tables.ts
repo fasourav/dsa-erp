@@ -58,7 +58,7 @@ function agingTables(title: string, aging: AgingReport, countHeader: string): Re
         { header: "Party", kind: "text" },
         { header: "Project", kind: "text" },
         { header: "Reference", kind: "text" },
-        { header: "Due", kind: "text" },
+        { header: "Due", kind: "text", sortAs: "date" },
         { header: "Days", kind: "integer" },
         { header: "Bucket", kind: "text" },
         { header: "Amount", kind: "money" },
@@ -74,6 +74,7 @@ function agingTables(title: string, aging: AgingReport, countHeader: string): Re
             row.bucket,
             row.amount,
           ] as Array<string | number | null>,
+          sortValues: [undefined, undefined, undefined, row.dueOn || null],
           emphasis: "plain" as const,
         })),
         {
@@ -146,7 +147,7 @@ function taxTables(report: TaxReport): ReportTable[] {
     {
       title: "Tax Payments",
       columns: [
-        { header: "Paid On", kind: "text" },
+        { header: "Paid On", kind: "text", sortAs: "date" },
         { header: "Project", kind: "text" },
         { header: "Method", kind: "text" },
         { header: "Notes", kind: "text" },
@@ -161,6 +162,7 @@ function taxTables(report: TaxReport): ReportTable[] {
             line.notes || "—",
             line.amount,
           ] as Array<string | number | null>,
+          sortValues: [line.paidOn || null],
           emphasis: "plain" as const,
         })),
         {

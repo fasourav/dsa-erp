@@ -95,10 +95,12 @@ export type ExportKind = "text" | "money" | "integer"
 export type ReportColumn = {
   header: string
   kind: ExportKind
+  sortAs?: "date"
 }
 
 export type ReportRow = {
   cells: Array<string | number | null>
+  sortValues?: Array<string | number | null | undefined>
   emphasis: Emphasis
 }
 
