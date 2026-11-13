@@ -272,7 +272,7 @@ export function SettingsPanel({
         toast.error(message, {
           action: {
             label: "Sign in",
-            onClick: () => router.push("/login"),
+            onClick: () => router.push("/login?next=%2Fsettings"),
           },
         })
         return

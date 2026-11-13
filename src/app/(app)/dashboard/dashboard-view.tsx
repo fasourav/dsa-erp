@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { type ReactNode } from "react"
 import {
-  AlertCircle,
   BadgeCheck,
   Box,
   Clock,
@@ -31,6 +30,7 @@ import {
   WeeklyChart,
 } from "@/app/(app)/dashboard/dashboard-charts-lazy"
 import {
+  DonutCentre,
   expenseSliceStyle,
   LegendDot,
   Ring,
@@ -185,15 +185,10 @@ function DashboardSections({
     amount:
       slice.key === "operational" ? snapshot.operational + snapshot.admin : snapshot[slice.key],
   }))
-  // No Project Overhead row: operational expenses can no longer be tagged to a
-  // project, so the figure is always zero. It stays inside projectExpense.
-  const summaryRows = slices.filter((slice) => slice.key !== "projectOverhead")
+  const summaryRows = slices
   const adminBreakdown = new Set(["operational", "marketing", "salary"])
   const projectRows = summaryRows.filter((slice) => !adminBreakdown.has(slice.key))
   const adminRows = summaryRows.filter((slice) => adminBreakdown.has(slice.key))
-  const donutSlices = slices.map((slice) =>
-    slice.key === "projectOverhead" ? { ...slice, fill: "var(--fill)" } : slice,
-  )
   const previousWeek = model.weeks[model.weeks.length - 2]
   const latestWeek = model.weeks[model.weeks.length - 1]
   const performanceCaption =
@@ -294,7 +289,6 @@ function DashboardSections({
             value={model.payables}
             detail={stockDetail}
             tone={model.payables > 0 ? "warning" : "default"}
-            icon={model.payables > 0 ? AlertCircle : undefined}
             href={payableHref}
           />
           <CompactMetric
@@ -497,9 +491,8 @@ function DashboardSections({
         </Panel>
 
         <Panel title="Expense Summary">
-          <ExpenseDonut slices={donutSlices}>
-            <Money value={snapshot.totalExpense} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
-            <span className="text-micro text-muted-foreground md:text-xs">Total Expense</span>
+          <ExpenseDonut slices={slices}>
+            <DonutCentre label="Total Expense" amount={snapshot.totalExpense} />
           </ExpenseDonut>
           <div className="mt-4 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] gap-x-2 md:gap-x-3">
             <ExpenseSummaryHeader label="Project Expense" value={projectExpenseWithTax} />
@@ -811,9 +804,9 @@ function CompactMetric({
           className="absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         />
       ) : null}
-      <p
+      <div
         className={cn(
-          "flex items-center gap-1.25 text-caption font-semibold md:gap-1.5",
+          "flex min-w-0 items-center gap-1.25 text-caption font-semibold md:gap-1.5",
           tone === "warning" ? "text-warning" : "text-muted-foreground",
         )}
       >
@@ -821,14 +814,14 @@ function CompactMetric({
           <Icon
             aria-hidden="true"
             className={cn(
-              "size-3.5",
+              "size-3.5 shrink-0",
               tone === "positive" && "text-success",
               tone === "negative" && "text-destructive",
             )}
           />
         ) : null}
-        {label}
-      </p>
+        <p className="min-w-0 truncate">{label}</p>
+      </div>
       <p
         className={cn(
           "min-w-0 truncate text-[1.03125rem] leading-tight font-bold tracking-[-0.02em] md:mt-1.5 md:text-[1.1875rem] md:tracking-[-0.022em]",

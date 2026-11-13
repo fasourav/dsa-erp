@@ -7,6 +7,7 @@ import {
   isVercelHostname,
   originFromHeaders,
 } from "@/lib/documents/origin"
+import { safeNextPath } from "@/lib/safe-next"
 import type { Database } from "@/types/database.types"
 
 import { getSupabaseEnv } from "./env"
@@ -150,11 +151,29 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (!isAuthenticated && !isOpenPath && !isServerAction) {
-    return applyCsp(redirectWithSession(request, supabaseResponse, "/login"))
+    const nextPath =
+      (request.method === "GET" || request.method === "HEAD") &&
+      !pathname.startsWith("/api/")
+        ? safeNextPath(`${pathname}${request.nextUrl.search}`)
+        : null
+    const loginSearch = nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""
+    return applyCsp(
+      redirectWithSession(request, supabaseResponse, "/login", loginSearch),
+    )
   }
 
   if (isAuthenticated && pathname === "/login") {
-    return applyCsp(redirectWithSession(request, supabaseResponse, "/dashboard"))
+    const nextPath =
+      safeNextPath(request.nextUrl.searchParams.get("next")) ?? "/dashboard"
+    const parsedNext = new URL(nextPath, "https://x.invalid")
+    return applyCsp(
+      redirectWithSession(
+        request,
+        supabaseResponse,
+        parsedNext.pathname,
+        parsedNext.search,
+      ),
+    )
   }
 
   return supabaseResponse

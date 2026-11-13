@@ -13,6 +13,7 @@ import { DuplicateWarning } from "@/app/(app)/accounts/duplicate-warning"
 import { BankAccountField } from "@/components/bank-account-field"
 import { MoneyInput } from "@/components/money-input"
 import { RecordAttachments } from "@/components/record-attachments"
+import { RecordPicker } from "@/components/record-picker"
 import { NameCombobox } from "@/components/name-combobox"
 import { Button } from "@/components/ui/button"
 import {
@@ -63,6 +64,7 @@ export function ExpenseFormDialog({
   onOpenChange,
   expense,
   categories,
+  projects,
   departments,
   paymentMethods,
   bankAccounts,
@@ -71,6 +73,7 @@ export function ExpenseFormDialog({
   onOpenChange: (open: boolean) => void
   expense: OperationalExpenseRow | null
   categories: readonly OfficeCategoryGroup[]
+  projects: readonly NamedOption[]
   departments: readonly NamedOption[]
   paymentMethods: readonly string[]
   bankAccounts: readonly BankAccountChoice[]
@@ -82,6 +85,7 @@ export function ExpenseFormDialog({
   )
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "")
   const [category, setCategory] = useState(expense?.category ?? "")
+  const [projectId, setProjectId] = useState(expense?.projectId ?? "")
   const [departmentId, setDepartmentId] = useState(expense?.departmentId ?? "")
   const [notes, setNotes] = useState(expense?.notes ?? "")
   const [paymentMethod, setPaymentMethod] = useState(expense?.paymentMethod ?? "")
@@ -119,6 +123,10 @@ export function ExpenseFormDialog({
       : null)
   const categoryItems = categories.map((item) => ({ value: item.name, label: item.name }))
   const selectedCategory = categories.find((item) => item.name === category)
+  const projectItems = projects.map((project) => ({
+    value: project.id,
+    label: project.name || "—",
+  }))
   const departmentItems = [
     { value: noneValue, label: "None" },
     ...departments.map((department) => ({
@@ -168,6 +176,7 @@ export function ExpenseFormDialog({
       amount: amount.trim(),
       category,
       paymentMethod: paymentMethod.trim(),
+      projectId,
       departmentId,
       notes: notes.trim(),
       bankAccountId,
@@ -281,6 +290,27 @@ export function ExpenseFormDialog({
                   {countsAsLabel(selectedCategory.reportGroup)}
                 </FieldDescription>
               ) : null}
+            </Field>
+            <Field data-invalid={Boolean(serverErrors.projectId) || undefined}>
+              <FieldLabel htmlFor="expense-project">Project</FieldLabel>
+              <RecordPicker
+                id="expense-project"
+                value={projectId}
+                options={projectItems}
+                allowClear
+                clearLabel="None (Office Expense)"
+                placeholder="Office Expense"
+                fallbackLabel={expense?.projectName || "Saved project"}
+                disabled={pending}
+                invalid={Boolean(serverErrors.projectId)}
+                onValueChange={setProjectId}
+              />
+              {serverErrors.projectId ? (
+                <FieldError>{serverErrors.projectId}</FieldError>
+              ) : null}
+              <FieldDescription>
+                Pick a project only for costs spent on that project. They count as Project Overhead. Leave blank for office costs.
+              </FieldDescription>
             </Field>
             <Field>
               <FieldLabel htmlFor="expense-method">Payment Method</FieldLabel>

@@ -16,12 +16,16 @@ export type OperationalExpenseRow = {
   category: string
   amount: number
   paymentMethod: string
+  projectId: string
+  projectName: string
   departmentId: string
   departmentName: string
   vendorId: string
   vendorName: string
   notes: string
   bankAccountId: string
+  bankAccountName: string
+  voucherNo: string
   createdByName: string
   createdAt: string
   fromPurchaseOrder: boolean
@@ -33,6 +37,12 @@ export type ExpenseColumnId =
   | "category"
   | "amount"
   | "paymentMethod"
+  | "project"
+  | "department"
+  | "bankingChannel"
+  | "voucherNo"
+  | "notes"
+  | "recordedBy"
 
 export type ExpenseOptionalColumnId = Exclude<
   ExpenseColumnId,
@@ -58,11 +68,23 @@ export const expenseColumns: readonly ListColumn<ExpenseColumnId>[] = [
   { id: "category", label: "Category", align: "left", locked: true, minWidth: 260 },
   { id: "amount", label: "Amount", align: "right", locked: false },
   { id: "paymentMethod", label: "Payment Method", align: "left", locked: false },
+  { id: "project", label: "Project / Office", align: "left", locked: false, sortable: false },
+  { id: "department", label: "Department", align: "left", locked: false, sortable: false },
+  { id: "bankingChannel", label: "Banking Channel", align: "left", locked: false, sortable: false },
+  { id: "voucherNo", label: "Voucher No", align: "left", locked: false, sortable: false },
+  { id: "notes", label: "Notes", align: "left", locked: false, sortable: false },
+  { id: "recordedBy", label: "Recorded By", align: "left", locked: false, sortable: false },
 ]
 
 const defaultVisibility: ExpenseColumnVisibility = {
   amount: true,
   paymentMethod: true,
+  project: true,
+  department: true,
+  bankingChannel: true,
+  voucherNo: true,
+  notes: true,
+  recordedBy: true,
 }
 
 export function defaultExpenseColumns(): ExpenseColumnVisibility {
@@ -71,7 +93,16 @@ export function defaultExpenseColumns(): ExpenseColumnVisibility {
 
 export function sanitizeExpenseColumns(value: unknown): ExpenseColumnVisibility {
   return sanitizeColumnVisibility(
-    ["amount", "paymentMethod"],
+    [
+      "amount",
+      "paymentMethod",
+      "project",
+      "department",
+      "bankingChannel",
+      "voucherNo",
+      "notes",
+      "recordedBy",
+    ],
     defaultExpenseColumns(),
     value,
   )
@@ -103,7 +134,18 @@ function compareRows(
       return left.expenseDate.localeCompare(right.expenseDate)
     case "category":
     case "paymentMethod":
+    case "notes":
       return compareText(left[key], right[key])
+    case "project":
+      return compareText(left.projectName, right.projectName)
+    case "department":
+      return compareText(left.departmentName, right.departmentName)
+    case "bankingChannel":
+      return compareText(left.bankAccountName, right.bankAccountName)
+    case "voucherNo":
+      return compareText(left.voucherNo, right.voucherNo)
+    case "recordedBy":
+      return compareText(left.createdByName, right.createdByName)
     case "amount":
       return left.amount - right.amount
   }

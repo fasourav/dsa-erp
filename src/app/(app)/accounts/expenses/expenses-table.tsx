@@ -56,6 +56,7 @@ export function ExpensesTable({
   expenses,
   poExpenses = [],
   categories,
+  projects,
   departments,
   paymentMethods,
   bankAccounts,
@@ -70,6 +71,7 @@ export function ExpensesTable({
   expenses: OperationalExpenseRow[]
   poExpenses?: OperationalExpenseRow[]
   categories: OfficeCategoryGroup[]
+  projects: NamedOption[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
@@ -227,9 +229,10 @@ export function ExpensesTable({
           title: expense.category || "—",
           subtitle: [
             expense.vendorName,
-            expense.paymentMethod,
+            expense.projectName || "Office",
+            expense.bankAccountName,
             expense.expenseDate ? formatIsoDate(expense.expenseDate) : "",
-            expense.createdByName,
+            expense.voucherNo,
           ]
             .filter(Boolean)
             .join(" · "),
@@ -312,9 +315,10 @@ export function ExpensesTable({
               subtitle: [
                 "From Operational PO",
                 expense.vendorName,
-                expense.paymentMethod,
+                expense.projectName || "Office",
+                expense.bankAccountName,
                 expense.expenseDate ? formatIsoDate(expense.expenseDate) : "",
-                expense.createdByName,
+                expense.voucherNo,
               ]
                 .filter(Boolean)
                 .join(" · "),
@@ -356,6 +360,7 @@ export function ExpensesTable({
         onOpenChange={setFormOpen}
         expense={formExpense}
         categories={categories}
+        projects={projects}
         departments={departments}
         paymentMethods={paymentMethods}
         bankAccounts={bankAccounts}
@@ -429,6 +434,44 @@ function Cell({
     case "paymentMethod":
       return expense.paymentMethod ? (
         <span>{expense.paymentMethod}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "project":
+      return expense.projectName ? (
+        <span>{expense.projectName}</span>
+      ) : (
+        <span className="text-muted-foreground">Office</span>
+      )
+    case "department":
+      return expense.departmentName ? (
+        <span>{expense.departmentName}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "bankingChannel":
+      return expense.bankAccountName ? (
+        <span>{expense.bankAccountName}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "voucherNo":
+      return expense.voucherNo ? (
+        <span>{expense.voucherNo}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "notes":
+      return expense.notes ? (
+        <span className="block max-w-64 truncate" title={expense.notes}>
+          {expense.notes}
+        </span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )
+    case "recordedBy":
+      return expense.createdByName ? (
+        <span>{expense.createdByName}</span>
       ) : (
         <span className="text-muted-foreground">—</span>
       )

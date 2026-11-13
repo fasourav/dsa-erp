@@ -107,3 +107,14 @@ export function parsePositiveAmount(value: string): number | null {
 
   return parsed
 }
+
+export function comparePaymentsNewestFirst(
+  left: { paidOn: string; createdAt: string; id: string },
+  right: { paidOn: string; createdAt: string; id: string },
+): number {
+  return (
+    right.paidOn.localeCompare(left.paidOn) ||
+    right.createdAt.localeCompare(left.createdAt) ||
+    left.id.localeCompare(right.id)
+  )
+}

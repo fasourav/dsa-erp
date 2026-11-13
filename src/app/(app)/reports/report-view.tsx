@@ -31,6 +31,7 @@ type Figure = {
 type ReportLine = {
   id: string
   cells: Array<string | number | null>
+  sortValues?: Array<string | number | null | undefined>
   emphasis: Emphasis
 }
 
@@ -155,6 +156,7 @@ function ReportTable({ table }: { table: ReportTable }) {
       table.rows.map((row, index) => ({
         id: `${table.title}-${index}`,
         cells: row.cells,
+        sortValues: row.sortValues,
         emphasis: row.emphasis,
       })),
     [table.rows, table.title],
@@ -261,12 +263,28 @@ function summaryFigures(report: BuiltReport): Figure[] {
 
 function sortLines(lines: ReportLine[], table: ReportTable, sort: SortState<string>) {
   const index = Number(sort.key.slice(1))
-  const kind = table.columns[index]?.kind ?? "text"
+  const column = table.columns[index]
+  const kind = column?.kind ?? "text"
+  const sortAs = column?.sortAs
+  const direction = sort.direction === "asc" ? 1 : -1
   const body = lines.filter((line) => line.emphasis === "plain")
   const foot = lines.filter((line) => line.emphasis !== "plain")
   body.sort((left, right) => {
+    if (sortAs === "date") {
+      const leftIso =
+        typeof left.sortValues?.[index] === "string" ? left.sortValues[index].trim() : ""
+      const rightIso =
+        typeof right.sortValues?.[index] === "string" ? right.sortValues[index].trim() : ""
+      if (!leftIso && rightIso) return 1
+      if (leftIso && !rightIso) return -1
+      if (leftIso && rightIso) {
+        const cmp = leftIso.localeCompare(rightIso)
+        if (cmp !== 0) return cmp * direction
+      }
+      return compareCell(left.cells[index], right.cells[index], kind) * direction
+    }
     const result = compareCell(left.cells[index], right.cells[index], kind)
-    return sort.direction === "asc" ? result : -result
+    return result * direction
   })
   return [...body, ...foot]
 }

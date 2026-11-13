@@ -17,14 +17,19 @@ import {
 } from "recharts"
 
 import {
+  DonutCentre,
   expenseSliceStyle,
   LegendDot,
   Ring,
 } from "@/app/(app)/dashboard/dashboard-chart-primitives"
-import { Money } from "@/components/money"
-import { formatAxisBdt, formatExactBdt, formatShare, type ChartPoint } from "@/lib/dashboard-metrics"
+import {
+  formatAxisBdt,
+  formatExactBdt,
+  formatShare,
+  type ChartPoint,
+} from "@/lib/dashboard-metrics"
 
-export { expenseSliceStyle, LegendDot, Ring }
+export { DonutCentre, expenseSliceStyle, LegendDot, Ring }
 
 type ExpenseSlice = {
   key: string
@@ -439,17 +444,18 @@ export function ExpenseDonut({ slices, children }: { slices: ExpenseSlice[]; chi
           : null}
       </svg>
       {active || children ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          {active ? (
-            <>
-              <Money value={active.amount} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
-              <span className="text-micro text-muted-foreground md:text-xs">
-                {active.label} · {formatShare(active.amount, total)}
-              </span>
-            </>
-          ) : (
-            children
-          )}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center">
+          <div className="flex w-[60%] min-w-0 flex-col items-center justify-center overflow-hidden text-center">
+            {active ? (
+              <DonutCentre
+                label={active.label}
+                amount={active.amount}
+                share={formatShare(active.amount, total)}
+              />
+            ) : (
+              children
+            )}
+          </div>
         </div>
       ) : null}
     </div>

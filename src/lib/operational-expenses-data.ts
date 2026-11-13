@@ -1,7 +1,7 @@
 import type { BankAccountChoice } from "@/lib/bank-account"
 import { listBankAccounts } from "@/lib/bank-accounts"
 import { fetchAllPages, fetchByIds, fetchPage } from "@/lib/fetch-pages"
-import { toNumber } from "@/lib/format"
+import { compareText, toNumber } from "@/lib/format"
 import type { SortState } from "@/lib/list-paging"
 import {
   defaultExpenseSort,
@@ -28,15 +28,16 @@ import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 type Embedded<T> = T | T[] | null
 
 const EXPENSE_SELECT =
-  "id, expense_date, category, amount, payment_method, department_id, vendor_id, notes, bank_account_id, created_at, created_by, departments(name), vendors(person_name, company_name)"
+  "id, expense_date, category, amount, payment_method, project_id, department_id, vendor_id, notes, bank_account_id, created_at, created_by, projects(name), departments(name), vendors(person_name, company_name)"
 
 // Searchable operational expense columns: category (ILIKE), notes (ILIKE),
-// payment_method (ILIKE), department name (via department_id), vendor name / company
-// (via vendor_id), bank account name / bank name (via bank_account_id),
+// payment_method (ILIKE), project name (via project_id), department name (via department_id),
+// vendor name / company (via vendor_id), bank account name / bank name (via bank_account_id),
 // expense_date (ISO date), and exact expense amount.
 function buildExpenseOrFilter(
   rawQuery: string,
   term: string,
+  projects: readonly NamedOption[],
   departments: readonly NamedOption[],
   bankAccounts: readonly BankAccountChoice[],
   matchingVendorIds: readonly string[],
@@ -51,6 +52,14 @@ function buildExpenseOrFilter(
       `notes.ilike.${like}`,
       `payment_method.ilike.${like}`,
     )
+
+    const matchingProjectIds = projects
+      .filter((project) => project.name.toLowerCase().includes(lower))
+      .slice(0, 200)
+      .map((project) => project.id)
+    if (matchingProjectIds.length > 0) {
+      clauses.push(`project_id.in.(${matchingProjectIds.join(",")})`)
+    }
 
     const matchingDeptIds = departments
       .filter((dept) => dept.name.toLowerCase().includes(lower))
@@ -106,12 +115,14 @@ type RawExpenseRow = {
   category: string
   amount: number
   payment_method: string | null
+  project_id: string | null
   department_id: string | null
   vendor_id: string | null
   notes: string | null
   bank_account_id: string
   created_at: string
   created_by: string | null
+  projects: Embedded<{ name: string | null }>
   departments: Embedded<{ name: string | null }>
   vendors: Embedded<{ person_name: string | null; company_name: string | null }>
 }
@@ -119,14 +130,40 @@ type RawExpenseRow = {
 async function mapExpenseRows(
   supabase: Awaited<ReturnType<typeof createClient>>,
   rows: readonly RawExpenseRow[],
+  bankAccounts: readonly BankAccountChoice[],
 ): Promise<OperationalExpenseRow[]> {
-  const creators = await creatorNames(
-    supabase,
-    "operational_expenses",
-    rows.map((row) => ({ id: row.id, createdBy: row.created_by })),
+  const [creators, voucherRows] = await Promise.all([
+    creatorNames(
+      supabase,
+      "operational_expenses",
+      rows.map((row) => ({ id: row.id, createdBy: row.created_by })),
+    ),
+    fetchByIds(
+      rows.map((row) => row.id),
+      (chunk) =>
+        supabase
+          .from("form_documents")
+          .select("operational_expense_id, document_no")
+          .eq("kind", "payment_voucher")
+          .in("operational_expense_id", chunk)
+          .is("deleted_at", null),
+    ).catch(() => [] as { operational_expense_id: string | null; document_no: string | null }[]),
+  ])
+
+  const accountNames = new Map(
+    bankAccounts.map((account) => [account.id, account.name.trim()]),
   )
+  const vouchers = new Map<string, string>()
+  for (const doc of voucherRows) {
+    const expenseId = doc.operational_expense_id
+    const docNo = doc.document_no?.trim() ?? ""
+    if (expenseId && docNo) {
+      vouchers.set(expenseId, docNo)
+    }
+  }
 
   return rows.map((row) => {
+    const project = one(row.projects)
     const department = one(row.departments)
     const vendor = one(row.vendors)
 
@@ -136,12 +173,16 @@ async function mapExpenseRows(
       category: row.category?.trim() ?? "",
       amount: toNumber(row.amount),
       paymentMethod: row.payment_method?.trim() ?? "",
+      projectId: row.project_id ?? "",
+      projectName: project?.name?.trim() ?? "",
       departmentId: row.department_id ?? "",
       departmentName: department?.name?.trim() ?? "",
       vendorId: row.vendor_id ?? "",
       vendorName: vendor ? partyName(vendor.person_name, vendor.company_name) : "",
       notes: row.notes ?? "",
       bankAccountId: row.bank_account_id,
+      bankAccountName: accountNames.get(row.bank_account_id) ?? "",
+      voucherNo: vouchers.get(row.id) ?? "",
       createdByName: creators.get(row.id) ?? "Unknown",
       createdAt: row.created_at,
       fromPurchaseOrder: false,
@@ -161,6 +202,7 @@ export async function getOperationalExpenses(
   expenses: OperationalExpenseRow[]
   poExpenses: OperationalExpenseRow[]
   categories: OfficeCategoryGroup[]
+  projects: NamedOption[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
@@ -173,6 +215,7 @@ export async function getOperationalExpenses(
     expenses: [] as OperationalExpenseRow[],
     poExpenses: [] as OperationalExpenseRow[],
     categories: [] as OfficeCategoryGroup[],
+    projects: [] as NamedOption[],
     departments: [] as NamedOption[],
     paymentMethods: [] as string[],
     bankAccounts: [] as BankAccountChoice[],
@@ -189,7 +232,7 @@ export async function getOperationalExpenses(
   const ascending = sort.direction === "asc"
 
   try {
-    const [categoryRows, departmentRows, methodRows, bankAccounts, matchingVendorIds] =
+    const [categoryRows, projectRows, departmentRows, methodRows, bankAccounts, matchingVendorIds] =
       await Promise.all([
         fetchAllPages(
           (from, to) =>
@@ -200,6 +243,15 @@ export async function getOperationalExpenses(
               .order("name", { ascending: true })
               .range(from, to),
           "Office expense category list is larger than expected.",
+        ),
+        fetchAllPages(
+          (from, to) =>
+            supabase
+              .from("projects")
+              .select("id, name")
+              .order("name", { ascending: true })
+              .range(from, to),
+          "Project list is larger than expected.",
         ),
         fetchAllPages(
           (from, to) =>
@@ -233,6 +285,12 @@ export async function getOperationalExpenses(
         return name ? [[row.id, name] as const] : []
       }),
     )
+    const projects: NamedOption[] = projectRows
+      .flatMap((row) => {
+        const name = row.name?.trim() ?? ""
+        return name ? [{ id: row.id, name }] : []
+      })
+      .sort((left, right) => compareText(left.name, right.name))
     const departments = departmentRows.map((row) => ({
       id: row.id,
       name: row.name?.trim() ?? "",
@@ -240,6 +298,7 @@ export async function getOperationalExpenses(
     const orFilter = buildExpenseOrFilter(
       rawQuery,
       term,
+      projects,
       departments,
       bankAccounts,
       matchingVendorIds,
@@ -287,7 +346,7 @@ export async function getOperationalExpenses(
         requestedPage,
         options.pageSize ?? LIST_PAGE_SIZE,
       ),
-      operationalPurchaseOrderPayments(supabase, officeCategoryNames),
+      operationalPurchaseOrderPayments(supabase, officeCategoryNames, bankAccounts),
     ])
 
     const matchingPoPayments = filterPoPayments(
@@ -295,12 +354,13 @@ export async function getOperationalExpenses(
       rawQuery,
       term,
     )
-    const expenses = await mapExpenseRows(supabase, expenseSlice.rows)
+    const expenses = await mapExpenseRows(supabase, expenseSlice.rows, bankAccounts)
 
     return {
       expenses,
       poExpenses: matchingPoPayments,
       categories,
+      projects,
       departments,
       paymentMethods: mergeCategorySuggestions(
         methodRows.map((row) => row.name),
@@ -336,7 +396,7 @@ export async function getAllOperationalExpensesForExport(
   const ascending = sort.direction === "asc"
 
   try {
-    const [categoryRows, departmentRows, bankAccounts, matchingVendorIds] =
+    const [categoryRows, projectRows, departmentRows, bankAccounts, matchingVendorIds] =
       await Promise.all([
         fetchAllPages(
           (from, to) =>
@@ -347,6 +407,15 @@ export async function getAllOperationalExpensesForExport(
               .order("name", { ascending: true })
               .range(from, to),
           "Office expense category list is larger than expected.",
+        ),
+        fetchAllPages(
+          (from, to) =>
+            supabase
+              .from("projects")
+              .select("id, name")
+              .order("name", { ascending: true })
+              .range(from, to),
+          "Project list is larger than expected.",
         ),
         fetchAllPages(
           (from, to) =>
@@ -369,6 +438,12 @@ export async function getAllOperationalExpensesForExport(
         return name ? [[row.id, name] as const] : []
       }),
     )
+    const projects: NamedOption[] = projectRows
+      .flatMap((row) => {
+        const name = row.name?.trim() ?? ""
+        return name ? [{ id: row.id, name }] : []
+      })
+      .sort((left, right) => compareText(left.name, right.name))
     const departments = departmentRows.map((row) => ({
       id: row.id,
       name: row.name?.trim() ?? "",
@@ -376,6 +451,7 @@ export async function getAllOperationalExpensesForExport(
     const orFilter = buildExpenseOrFilter(
       rawQuery,
       term,
+      projects,
       departments,
       bankAccounts,
       matchingVendorIds,
@@ -422,10 +498,10 @@ export async function getAllOperationalExpensesForExport(
         },
         "Operational expense export is larger than expected.",
       ),
-      operationalPurchaseOrderPayments(supabase, officeCategoryNames),
+      operationalPurchaseOrderPayments(supabase, officeCategoryNames, bankAccounts),
     ])
 
-    const expenses = await mapExpenseRows(supabase, expenseRows)
+    const expenses = await mapExpenseRows(supabase, expenseRows, bankAccounts)
     const matchingPoPayments = filterPoPayments(
       purchaseOrderPayments,
       rawQuery,
@@ -452,7 +528,7 @@ function filterPoPayments(
   return rows.filter((row) => {
     if (amount !== null && row.amount === amount) return true
     if (!term) return false
-    const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.notes} ${row.expenseDate} ${row.createdByName}`.toLowerCase()
+    const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.bankAccountName} ${row.voucherNo} ${row.notes} ${row.expenseDate} ${row.createdByName}`.toLowerCase()
     return haystack.includes(lower)
   })
 }
@@ -460,6 +536,7 @@ function filterPoPayments(
 async function operationalPurchaseOrderPayments(
   supabase: Awaited<ReturnType<typeof createClient>>,
   officeCategoryNames: Map<string, string>,
+  bankAccounts: readonly BankAccountChoice[],
 ): Promise<OperationalExpenseRow[]> {
   const orders = await fetchAllPages(
     (from, to) =>
@@ -497,7 +574,7 @@ async function operationalPurchaseOrderPayments(
       supabase
         .from("vendor_payments")
         .select(
-          "id, vendor_invoice_id, paid_on, amount, method, created_at, created_by",
+          "id, vendor_invoice_id, paid_on, amount, method, bank_account_id, created_at, created_by",
         )
         .in("vendor_invoice_id", ids)
         .order("id", { ascending: true })
@@ -508,7 +585,7 @@ async function operationalPurchaseOrderPayments(
   const vendorIds = orders.flatMap((order) =>
     order.vendor_id ? [order.vendor_id] : [],
   )
-  const [vendors, creators] = await Promise.all([
+  const [vendors, creators, voucherRows] = await Promise.all([
     fetchByIds(vendorIds, (ids) =>
       supabase.from("vendors").select("id, company_name, person_name").in("id", ids),
     ),
@@ -517,6 +594,16 @@ async function operationalPurchaseOrderPayments(
       "vendor_payments",
       payments.map((payment) => ({ id: payment.id, createdBy: payment.created_by })),
     ),
+    fetchByIds(
+      payments.map((payment) => payment.id),
+      (ids) =>
+        supabase
+          .from("form_documents")
+          .select("vendor_payment_id, document_no")
+          .eq("kind", "payment_voucher")
+          .in("vendor_payment_id", ids)
+          .is("deleted_at", null),
+    ).catch(() => [] as { vendor_payment_id: string | null; document_no: string | null }[]),
   ])
   const vendorNames = new Map(
     vendors.map((vendor) => [
@@ -524,6 +611,17 @@ async function operationalPurchaseOrderPayments(
       vendorDisplayName(vendor.company_name, vendor.person_name),
     ]),
   )
+  const accountNames = new Map(
+    bankAccounts.map((account) => [account.id, account.name.trim()]),
+  )
+  const vouchers = new Map<string, string>()
+  for (const doc of voucherRows) {
+    const paymentId = doc.vendor_payment_id
+    const docNo = doc.document_no?.trim() ?? ""
+    if (paymentId && docNo) {
+      vouchers.set(paymentId, docNo)
+    }
+  }
 
   return payments.flatMap((payment) => {
     const orderId = orderIdByInvoice.get(payment.vendor_invoice_id)
@@ -542,12 +640,18 @@ async function operationalPurchaseOrderPayments(
         category: officeName || workType || "Operational",
         amount: toNumber(payment.amount),
         paymentMethod: payment.method?.trim() ?? "",
+        projectId: "",
+        projectName: "",
         departmentId: "",
         departmentName: "",
         vendorId: order.vendor_id,
         vendorName: vendorNames.get(order.vendor_id) ?? "",
         notes: "From Operational PO",
-        bankAccountId: "",
+        bankAccountId: payment.bank_account_id ?? "",
+        bankAccountName:
+          (payment.bank_account_id ? accountNames.get(payment.bank_account_id) : undefined) ??
+          "",
+        voucherNo: vouchers.get(payment.id) ?? "",
         createdByName: creators.get(payment.id) ?? "Unknown",
         createdAt: payment.created_at,
         fromPurchaseOrder: true,

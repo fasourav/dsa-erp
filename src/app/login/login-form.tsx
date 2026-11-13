@@ -23,7 +23,13 @@ import {
 
 const initialState: SignInState = {}
 
-export function LoginForm({ notice }: { notice?: string }) {
+export function LoginForm({
+  notice,
+  next,
+}: {
+  notice?: string
+  next?: string | null
+}) {
   const [state, formAction, pending] = useActionState(signIn, initialState)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -44,6 +50,7 @@ export function LoginForm({ notice }: { notice?: string }) {
 
   return (
     <form action={formAction} className="flex w-full flex-col gap-3">
+      <input type="hidden" name="next" value={next ?? ""} />
       <FieldGroup className="gap-3">
         <Field>
           <FieldLabel htmlFor="email" className={labelClassName}>

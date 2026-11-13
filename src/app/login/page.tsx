@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { AuthStage } from "@/app/login/auth-stage"
 import { LoginForm } from "@/app/login/login-form"
 import { getCurrentUser } from "@/lib/auth"
+import { safeNextPath } from "@/lib/safe-next"
 
 export const metadata = {
   title: "Sign in",
@@ -11,15 +12,16 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>
+  searchParams: Promise<{ error?: string | string[]; next?: string | string[] }>
 }) {
-  const user = await getCurrentUser()
+  const [user, params] = await Promise.all([getCurrentUser(), searchParams])
+  const rawNext = Array.isArray(params.next) ? params.next[0] : params.next
+  const next = safeNextPath(rawNext)
 
   if (user) {
-    redirect("/dashboard")
+    redirect(next ?? "/dashboard")
   }
 
-  const params = await searchParams
   const error = Array.isArray(params.error) ? params.error[0] : params.error
   const inviteError =
     error === "invite"
@@ -31,7 +33,7 @@ export default async function LoginPage({
       title="Sign in"
       description="Use the email and password for your invited account."
     >
-      <LoginForm notice={inviteError} />
+      <LoginForm notice={inviteError} next={next} />
     </AuthStage>
   )
 }

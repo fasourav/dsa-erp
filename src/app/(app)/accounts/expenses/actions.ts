@@ -20,6 +20,7 @@ export type ExpenseInput = {
   category: string
   amount: string
   paymentMethod: string
+  projectId: string
   departmentId: string
   notes: string
   bankAccountId: string
@@ -33,6 +34,7 @@ export type ExpenseFieldErrors = {
   expenseDate?: string
   category?: string
   amount?: string
+  projectId?: string
   departmentId?: string
   bankAccountId?: string
   duplicateReason?: string
@@ -114,6 +116,7 @@ async function saveExpense(
 ): Promise<ExpenseResult> {
   const expenseDate = input.expenseDate.trim()
   const category = input.category.trim()
+  const projectId = input.projectId.trim()
   const departmentId = input.departmentId.trim()
   const notes = input.notes.trim()
   const paymentMethod = input.paymentMethod.trim()
@@ -134,6 +137,10 @@ async function saveExpense(
     fieldErrors.amount = input.amount.trim()
       ? "Enter an amount greater than 0."
       : "Enter an amount."
+  }
+
+  if (projectId && !isUuid(projectId)) {
+    fieldErrors.projectId = "Choose a project."
   }
 
   if (departmentId && !isUuid(departmentId)) {
@@ -160,6 +167,23 @@ async function saveExpense(
   }
   if (!categoryMatch.data || categoryMatch.data.length === 0) {
     return { error: null, fieldErrors: { category: "Choose a category." } }
+  }
+
+  if (projectId) {
+    const project = await supabase
+      .from("projects")
+      .select("id")
+      .eq("id", projectId)
+      .limit(1)
+    if (project.error) {
+      return { error: "Could not save this expense." }
+    }
+    if (!project.data || project.data.length === 0) {
+      return {
+        error: null,
+        fieldErrors: { projectId: "Choose a project." },
+      }
+    }
   }
 
   if (departmentId) {
@@ -236,6 +260,7 @@ async function saveExpense(
     category,
     amount,
     payment_method: paymentMethod || null,
+    project_id: projectId || null,
     department_id: departmentId || null,
     notes: duplicate.notes || null,
     bank_account_id: bank.id,
@@ -263,7 +288,7 @@ async function saveExpense(
       }
     }
     if (error.code === "23503") {
-      return { error: "Choose a valid department." }
+      return { error: "Choose a valid project or department." }
     }
 
     if (error.code === "23514" && issue?.message === "This value is not allowed.") {
@@ -282,5 +307,7 @@ async function saveExpense(
 
   revalidatePath("/accounts/expenses")
   revalidatePath("/accounts/bank")
+  revalidatePath("/dashboard")
+  revalidatePath("/projects", "layout")
   return { error: null }
 }
