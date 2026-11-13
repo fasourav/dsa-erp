@@ -29,6 +29,7 @@ import {
   TrendChart,
   WeeklyChart,
 } from "@/app/(app)/dashboard/dashboard-charts-lazy"
+import { DonutCentre } from "@/app/(app)/dashboard/dashboard-charts"
 import {
   expenseSliceStyle,
   LegendDot,
@@ -494,8 +495,7 @@ function DashboardSections({
 
         <Panel title="Expense Summary">
           <ExpenseDonut slices={slices}>
-            <Money value={snapshot.totalExpense} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
-            <span className="text-micro text-muted-foreground md:text-xs">Total Expense</span>
+            <DonutCentre label="Total Expense" amount={snapshot.totalExpense} />
           </ExpenseDonut>
           <div className="mt-4 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] gap-x-2 md:gap-x-3">
             <ExpenseSummaryHeader label="Project Expense" value={projectExpenseWithTax} />

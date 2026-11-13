@@ -21,8 +21,15 @@ import {
   LegendDot,
   Ring,
 } from "@/app/(app)/dashboard/dashboard-chart-primitives"
-import { Money } from "@/components/money"
-import { formatAxisBdt, formatExactBdt, formatShare, type ChartPoint } from "@/lib/dashboard-metrics"
+import { useSeesMoney } from "@/components/access-provider"
+import {
+  formatAxisBdt,
+  formatCompactBdt,
+  formatExactBdt,
+  formatShare,
+  type ChartPoint,
+} from "@/lib/dashboard-metrics"
+import { formatGroupedAmount } from "@/lib/format"
 
 export { expenseSliceStyle, LegendDot, Ring }
 
@@ -359,6 +366,55 @@ const DONUT_RADIUS = 86
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS
 const DONUT_GAP = 3.6
 const DONUT_MIN_LEN = 3
+const DONUT_COMPACT_MIN = 1_000_000
+
+function formatDonutBdt(value: number): string {
+  const safe = Number.isFinite(value) ? value : 0
+  if (Math.abs(safe) >= DONUT_COMPACT_MIN) {
+    return formatCompactBdt(safe)
+  }
+  const sign = safe < 0 ? "−" : ""
+  return `${sign}৳${formatGroupedAmount(Math.abs(safe), 0)}`
+}
+
+export function DonutCentre({
+  label,
+  amount,
+  share,
+}: {
+  label: string
+  amount: number
+  share?: string
+}) {
+  const seesMoney = useSeesMoney()
+  const exact = formatExactBdt(amount)
+
+  return (
+    <>
+      {seesMoney ? (
+        <span
+          title={exact}
+          aria-label={exact}
+          className="whitespace-nowrap text-callout font-bold tracking-[-0.02em] tabular-nums md:text-panel-title"
+        >
+          {formatDonutBdt(amount)}
+        </span>
+      ) : (
+        <span className="whitespace-nowrap text-callout font-bold tracking-[-0.02em] text-muted-foreground tabular-nums md:text-panel-title">
+          Hidden
+        </span>
+      )}
+      <span className="w-full truncate text-micro text-muted-foreground md:text-xs">
+        {label}
+      </span>
+      {share ? (
+        <span className="w-full truncate text-micro text-muted-foreground tabular-nums">
+          {share}
+        </span>
+      ) : null}
+    </>
+  )
+}
 
 function arcPath(startLen: number, len: number) {
   const a0 = startLen / DONUT_RADIUS
@@ -439,17 +495,18 @@ export function ExpenseDonut({ slices, children }: { slices: ExpenseSlice[]; chi
           : null}
       </svg>
       {active || children ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          {active ? (
-            <>
-              <Money value={active.amount} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
-              <span className="text-micro text-muted-foreground md:text-xs">
-                {active.label} · {formatShare(active.amount, total)}
-              </span>
-            </>
-          ) : (
-            children
-          )}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center">
+          <div className="flex w-[60%] min-w-0 flex-col items-center justify-center overflow-hidden text-center">
+            {active ? (
+              <DonutCentre
+                label={active.label}
+                amount={active.amount}
+                share={formatShare(active.amount, total)}
+              />
+            ) : (
+              children
+            )}
+          </div>
         </div>
       ) : null}
     </div>
