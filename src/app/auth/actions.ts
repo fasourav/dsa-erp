@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation"
 
+import { safeNextPath } from "@/lib/safe-next"
 import { createClient } from "@/lib/supabase/server"
 
 export type SignInState = {
@@ -29,7 +30,7 @@ export async function signIn(
     return { error: "Invalid email or password." }
   }
 
-  redirect("/dashboard")
+  redirect(safeNextPath(formData.get("next")) ?? "/dashboard")
 }
 
 export async function signOut() {
