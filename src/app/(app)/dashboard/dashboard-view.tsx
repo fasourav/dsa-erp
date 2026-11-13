@@ -256,9 +256,9 @@ function DashboardSections({
           {showFinancials ? (
             <KpiCard
               label="Cash Balance"
-              info="Adjusted cash movement: excludes bank opening balances and manual deposits/withdrawals. It is not your spendable bank balance and can be negative while Banking is positive. See Banking for actual balances."
+              info="Adjusted cash movement: excludes bank opening balances and manual deposits/withdrawals. Compared with the previous month-end. It is not your spendable bank balance and can be negative while Banking is positive. See Banking for actual balances."
               value={model.cashBalance}
-              detail={stockDetail}
+              detail={model.cashDelta != null ? `${stockDetail} · Vs Last Month` : stockDetail}
               delta={model.cashDelta}
               spark={model.cashSpark}
               sparkColor="var(--chart-5)"
