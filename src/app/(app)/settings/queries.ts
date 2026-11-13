@@ -17,6 +17,12 @@ export type LastBackupStatus = {
   sizeLabel: string
   status: string
   errorMessage: string | null
+  downloadId: string | null
+  recentBackups: {
+    id: string
+    ranAtLabel: string
+    sizeLabel: string
+  }[]
 } | null
 
 const sharedCatalogs = [
@@ -122,27 +128,48 @@ export async function getLookupCatalogs(): Promise<LookupCatalogsResult> {
 
 export async function getLastBackupStatus(): Promise<LastBackupStatus> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("backup_runs")
-    .select("ran_at, size_bytes, status, storage_path, error")
-    .order("ran_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [{ data, error }, { data: recentRows }] = await Promise.all([
+    supabase
+      .from("backup_runs")
+      .select("id, ran_at, size_bytes, status, storage_path, error")
+      .order("ran_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("backup_runs")
+      .select("id, ran_at, size_bytes, storage_path")
+      .not("storage_path", "is", null)
+      .gte("ran_at", cutoff)
+      .order("ran_at", { ascending: false })
+      .limit(40),
+  ])
 
   if (error || !data) return null
 
-  const status = data.status === "ok" && !data.storage_path ? "Not Stored" : data.status
+  const hasStoredFile = Boolean(data.storage_path?.trim())
+  const status = data.status === "ok" && !hasStoredFile ? "Not Stored" : data.status
   const errorText = data.error?.trim() ?? ""
+  const recentBackups = (recentRows ?? [])
+    .filter((row) => Boolean(row.storage_path?.trim()))
+    .map((row) => ({
+      id: row.id,
+      ranAtLabel: formatBackupWhen(row.ran_at),
+      sizeLabel: formatBackupSize(row.size_bytes),
+    }))
 
   return {
     ranAtLabel: formatBackupWhen(data.ran_at),
     sizeLabel: formatBackupSize(data.size_bytes),
     status,
     errorMessage: status === "error" && errorText ? errorText : null,
+    downloadId: hasStoredFile ? data.id : null,
+    recentBackups,
   }
 }
 
-function formatBackupWhen(value: string): string {
+export function formatBackupWhen(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
 

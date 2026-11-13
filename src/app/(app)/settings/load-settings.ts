@@ -20,6 +20,12 @@ export type SettingsPageData = {
     sizeLabel: string
     status: string
     errorMessage: string | null
+    downloadId: string | null
+    recentBackups: {
+      id: string
+      ranAtLabel: string
+      sizeLabel: string
+    }[]
   } | null
   error: string | null
 }
