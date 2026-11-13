@@ -53,7 +53,7 @@ export async function getProjectBudget(projectId: string): Promise<ProjectBudget
 
   try {
     const supabase = await createClient()
-    const [lineRows, actualRows, categories] = await Promise.all([
+    const [lineRows, actualRows, categories, overheadRows] = await Promise.all([
       fetchAllPages(
         (from, to) =>
           supabase
@@ -86,6 +86,18 @@ export async function getProjectBudget(projectId: string): Promise<ProjectBudget
             .range(from, to),
         "Category list is larger than expected.",
       ),
+      hidden
+        ? Promise.resolve([] as { amount: number; category: string | null }[])
+        : fetchAllPages(
+            (from, to) =>
+              supabase
+                .from("operational_expenses")
+                .select("amount, category")
+                .eq("project_id", projectId)
+                .order("id", { ascending: true })
+                .range(from, to),
+            "Operational expenses are larger than expected.",
+          ).catch(() => [] as { amount: number; category: string | null }[]),
     ])
 
     const categoryList = categories.flatMap((row) => {
@@ -93,10 +105,13 @@ export async function getProjectBudget(projectId: string): Promise<ProjectBudget
       if (!name) return []
       return [{ id: row.id, name, sortOrder: row.sort_order }]
     })
-    const lines = assembleLines(lineRows, actualRows, categoryList)
+    const assembled = assembleLines(lineRows, actualRows, categoryList)
+    const lines = hidden
+      ? assembled.map((line) => ({ ...line, status: "ok" as const }))
+      : splitOverheadLine(assembled, overheadRows, categoryList)
     const totals = totalLines(lines)
     return {
-      lines: hidden ? lines.map((line) => ({ ...line, status: "ok" as const })) : lines,
+      lines,
       categories: categoryList,
       totals,
       status: hidden ? null : projectBudgetStatus(lines),
@@ -375,6 +390,74 @@ function assembleLines(
         left.sortOrder - right.sortOrder ||
         compareText(left.categoryName, right.categoryName),
     )
+}
+
+function splitOverheadLine(
+  lines: readonly BudgetLineView[],
+  overheadRows: readonly { amount: number; category: string | null }[],
+  categories: readonly BudgetCategory[],
+): BudgetLineView[] {
+  if (overheadRows.length === 0) return [...lines]
+
+  const categoryNames = new Set(
+    categories.map((category) => category.name.trim().toLowerCase()),
+  )
+  const opexSum = roundMoney(
+    sum(
+      overheadRows
+        .filter((row) => {
+          const name = row.category?.trim().toLowerCase() ?? ""
+          return !name || !categoryNames.has(name)
+        })
+        .map((row) => toNumber(row.amount)),
+    ),
+  )
+  if (opexSum <= 0) return [...lines]
+
+  const uncategorisedIndex = lines.findIndex((line) => line.key === uncategorisedKey)
+  if (uncategorisedIndex < 0) return [...lines]
+
+  const uncategorised = lines[uncategorisedIndex]!
+  const moved = roundMoney(Math.min(opexSum, uncategorised.actual))
+  if (moved <= 0) return [...lines]
+
+  const overheadLine: BudgetLineView = {
+    key: "overhead",
+    lineId: null,
+    categoryId: null,
+    categoryName: "Overhead",
+    planned: 0,
+    committed: 0,
+    actual: moved,
+    remaining: roundMoney(-moved),
+    notes: "Operational expenses tagged to this project",
+    status: "unplanned",
+    sortOrder: 9000,
+  }
+
+  const nextActual = roundMoney(uncategorised.actual - moved)
+  const nextUncategorised: BudgetLineView = {
+    ...uncategorised,
+    actual: nextActual,
+    remaining: roundMoney(uncategorised.planned - nextActual),
+  }
+  const keepUncategorised =
+    nextUncategorised.actual !== 0 ||
+    nextUncategorised.committed !== 0 ||
+    nextUncategorised.lineId !== null
+
+  const result = [...lines]
+  result.splice(
+    uncategorisedIndex,
+    1,
+    overheadLine,
+    ...(keepUncategorised ? [nextUncategorised] : []),
+  )
+  return result.sort(
+    (left, right) =>
+      left.sortOrder - right.sortOrder ||
+      compareText(left.categoryName, right.categoryName),
+  )
 }
 
 async function loadBudgetGroups() {
