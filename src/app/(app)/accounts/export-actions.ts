@@ -153,20 +153,30 @@ export async function exportOperationalExpensesGrid(input: {
       columns: [
         { header: "Date", kind: "text" },
         { header: "Category", kind: "text" },
+        { header: "Project / Office", kind: "text" },
         { header: "Amount", kind: "money" },
         { header: "Payment Method", kind: "text" },
+        { header: "Banking Channel", kind: "text" },
         { header: "Department", kind: "text" },
         { header: "Vendor", kind: "text" },
+        { header: "Voucher No", kind: "text" },
+        { header: "Notes", kind: "text" },
+        { header: "Recorded By", kind: "text" },
       ],
       rows: sorted.map((row) => [
         formatDayMonYear(row.expenseDate),
         row.fromPurchaseOrder
           ? `${row.category} · From Operational PO`
-          : row.category,
+          : row.category || "—",
+        row.projectName || "Office",
         row.amount,
-        row.paymentMethod,
+        row.paymentMethod || "—",
+        row.bankAccountName || "—",
         row.departmentName || "—",
         row.vendorName || "—",
+        row.voucherNo || "—",
+        row.notes || "—",
+        row.createdByName || "—",
       ]),
     },
   }
