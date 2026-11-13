@@ -280,14 +280,12 @@ function DashboardSections({
           />
           <CompactMetric
             label="Accounts Receivable"
-            info="Unpaid client invoices: each invoice's amount minus payments received, for every invoice that is not void. Shows today's balance for All Time and the current year; for a past year, the balance on 31 Dec of that year."
             value={model.receivables}
             detail={stockDetail}
             href={receivableHref}
           />
           <CompactMetric
             label="Accounts Payable"
-            info="Unpaid vendor bills: each bill's amount minus payments made against it, for every bill that is not void (project and operational purchase orders). Purchase order value not yet billed is not included. Shows today's balance for All Time and the current year; for a past year, the balance on 31 Dec of that year."
             value={model.payables}
             detail={stockDetail}
             tone={model.payables > 0 ? "warning" : "default"}
@@ -295,7 +293,6 @@ function DashboardSections({
           />
           <CompactMetric
             label="Forecasted Profit"
-            info="Accounts Receivable minus Accounts Payable: what you expect to keep once open client invoices are collected and open vendor bills are paid."
             value={model.forecastedProfit}
             detail="Receivable Minus Payable"
             tone={model.forecastedProfit < 0 ? "negative" : "positive"}
@@ -776,7 +773,6 @@ function KpiCard({
 
 function CompactMetric({
   label,
-  info,
   value,
   detail,
   tone = "default",
@@ -785,7 +781,6 @@ function CompactMetric({
   href,
 }: {
   label: string
-  info?: string
   value: number
   detail?: string
   tone?: "default" | "negative" | "warning" | "positive"
@@ -811,7 +806,7 @@ function CompactMetric({
       ) : null}
       <div
         className={cn(
-          "flex min-w-0 items-center gap-1 text-caption font-semibold md:gap-1.5",
+          "flex min-w-0 items-center gap-1.25 text-caption font-semibold md:gap-1.5",
           tone === "warning" ? "text-warning" : "text-muted-foreground",
         )}
       >
@@ -826,11 +821,6 @@ function CompactMetric({
           />
         ) : null}
         <p className="min-w-0 truncate">{label}</p>
-        {info ? (
-          <span className="relative z-10 -my-2 -mr-2 -ml-1.5 inline-flex shrink-0 md:-mx-1">
-            <ColumnHint label={label} hint={info} />
-          </span>
-        ) : null}
       </div>
       <p
         className={cn(
