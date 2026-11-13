@@ -381,10 +381,10 @@ export function buildDashboard(
   const receivables = receivablesAsOf(input, windowEnd, asOfToday)
   const payables = payablesAsOf(input, windowEnd, asOfToday)
 
-  const cashBalance = operatingCashAsOf(bank, windowEnd)
+  const cashBalance = bankBalanceAsOf(bank, input.openingBalance, windowEnd)
   const cashDelta = changePercent(
     cashBalance,
-    operatingCashAsOf(bank, previousMonthEnd(windowEnd)),
+    bankBalanceAsOf(bank, input.openingBalance, previousMonthEnd(windowEnd)),
   )
 
   const projects = input.projects.filter(
@@ -464,10 +464,10 @@ export function buildDashboard(
     cashBalance,
     cashDelta,
     cashSpark: scoped
-      ? monthEnds(scopeYear, windowEnd, bank)
+      ? monthEnds(scopeYear, windowEnd, bank, input.openingBalance)
       : annualYears.map((year) => ({
           label: String(year),
-          value: operatingCashAsOf(bank, year === currentYear ? today : `${year}-12-31`),
+          value: bankBalanceAsOf(bank, input.openingBalance, year === currentYear ? today : `${year}-12-31`),
         })),
     receivables,
     payables,
@@ -1016,7 +1016,8 @@ function monthSpark(
 function monthEnds(
   year: number,
   today: string,
-  bank: (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[],
+  bank: (Dated & { direction: "inflow" | "outflow" })[],
+  openingBalance: number,
 ): ChartPoint[] {
   const lastMonth = Number(today.slice(5, 7))
   const points: ChartPoint[] = []
@@ -1024,23 +1025,20 @@ function monthEnds(
     const end = monthEndIso(year, month)
     points.push({
       label: MONTHS[month - 1],
-      value: operatingCashAsOf(bank, end < today ? end : today),
+      value: bankBalanceAsOf(bank, openingBalance, end < today ? end : today),
     })
   }
   return points
 }
 
-export function operatingCashAsOf(
-  bank: readonly (Dated & { direction: "inflow" | "outflow"; sourceKind: string })[],
+export function bankBalanceAsOf(
+  bank: readonly (Dated & { direction: "inflow" | "outflow" })[],
+  openingBalance: number,
   end: string,
 ): number {
-  // Dashboard Cash Balance = adjusted cash movement: no opening balances and no
-  // manual deposits/withdrawals. Banking ledger balances still use the full ledger.
-  return balanceAsOf(
-    bank.filter((row) => row.sourceKind !== "deposit" && row.sourceKind !== "withdrawal"),
-    end,
-    0,
-  )
+  // Dashboard Current Balance = the Banking balance: opening balances plus every
+  // bank entry through this date, including deposits, withdrawals, transfers, and payroll.
+  return balanceAsOf(bank, end, openingBalance)
 }
 
 function balanceAsOf(
