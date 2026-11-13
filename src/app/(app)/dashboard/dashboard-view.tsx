@@ -255,8 +255,8 @@ function DashboardSections({
           />
           {showFinancials ? (
             <KpiCard
-              label="Cash Balance"
-              info="Adjusted cash movement: excludes bank opening balances and manual deposits/withdrawals. Compared with the previous month-end. It is not your spendable bank balance and can be negative while Banking is positive. See Banking for actual balances."
+              label="Current Balance"
+              info="Your bank balance across all accounts: opening balances plus all money in and out, including deposits and withdrawals. All Time and the current year show today's balance. A past year shows its 31 Dec closing balance. Compared with the previous month-end. Same as the Banking page."
               value={model.cashBalance}
               detail={model.cashDelta != null ? `${stockDetail} · Vs Last Month` : stockDetail}
               delta={model.cashDelta}
@@ -1103,7 +1103,7 @@ function downloadDashboard(
     ["Total Revenue", formatExactBdt(snapshot.revenue)],
     ["Total Expense", formatExactBdt(snapshot.totalExpense)],
     ["Net Profit", formatExactBdt(snapshot.netProfit)],
-    ...(showFinancials ? [["Cash Balance", formatExactBdt(model.cashBalance)] as (string | number)[]] : []),
+    ...(showFinancials ? [["Current Balance", formatExactBdt(model.cashBalance)] as (string | number)[]] : []),
     ["Gross Profit", formatExactBdt(snapshot.grossProfit)],
     ["Accounts Receivable", formatExactBdt(model.receivables)],
     ["Accounts Payable", formatExactBdt(model.payables)],

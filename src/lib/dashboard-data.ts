@@ -409,7 +409,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
       (from, to) =>
         supabase
           .from("bank_transactions_readable")
-          .select("amount, direction, transaction_date, source_kind")
+          .select("bank_account_id, amount, direction, transaction_date, source_kind")
           .order("id", { ascending: true })
           .range(from, to),
       "Bank ledger is larger than expected.",
@@ -567,6 +567,7 @@ async function loadDashboardRows(): Promise<DashboardInput> {
     })),
     bank: bank.flatMap((transaction) => {
       if (
+        !transaction.bank_account_id ||
         !transaction.transaction_date ||
         !transaction.source_kind ||
         (transaction.direction !== "inflow" && transaction.direction !== "outflow")
