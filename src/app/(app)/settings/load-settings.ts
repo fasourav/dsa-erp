@@ -19,6 +19,7 @@ export type SettingsPageData = {
     ranAtLabel: string
     sizeLabel: string
     status: string
+    errorMessage: string | null
   } | null
   error: string | null
 }
