@@ -13,6 +13,7 @@ import { dateInputValue } from "@/lib/project-validation"
 import {
   clientInvoiceStatuses,
   clientInvoiceStatusFromPayments,
+  comparePaymentsNewestFirst,
   moneyCents,
   paymentStatusLabel,
   sumAmounts,
@@ -203,7 +204,7 @@ async function hydrateInvoices(
           supabase
             .from("client_payments")
             .select(
-              "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks, bank_account_id",
+              "id, client_invoice_id, paid_on, amount, method, reference, notes, remarks, bank_account_id, created_at",
             )
             .in("client_invoice_id", ids)
             .order("id", { ascending: true }),
@@ -223,6 +224,7 @@ async function hydrateInvoices(
       remarks: row.remarks ?? "",
       bankAccountId: row.bank_account_id,
       bankAccountName: accountsById.get(row.bank_account_id) ?? "",
+      createdAt: row.created_at,
     }
     const current = paymentsByInvoice.get(row.client_invoice_id) ?? []
     current.push(payment)
@@ -231,7 +233,9 @@ async function hydrateInvoices(
 
   return rows.map((row) => {
     const project = projectsById.get(row.project_id)
-    const payments = paymentsByInvoice.get(row.id) ?? []
+    const payments = [...(paymentsByInvoice.get(row.id) ?? [])].sort(
+      comparePaymentsNewestFirst,
+    )
     const paid = sumAmounts(payments.map((payment) => payment.amount))
     const balance = Math.max(
       0,

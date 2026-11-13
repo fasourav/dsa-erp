@@ -16,6 +16,7 @@ export type ClientPaymentRow = {
   remarks: string
   bankAccountId: string
   bankAccountName: string
+  createdAt: string
 }
 
 export type ClientInvoiceRow = {

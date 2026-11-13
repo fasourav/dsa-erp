@@ -6,6 +6,7 @@ import { isUuid } from "@/lib/ids"
 import { openPayableForBill, sumOpenPayable } from "@/lib/open-payable"
 import { dateInputValue } from "@/lib/project-validation"
 import {
+  comparePaymentsNewestFirst,
   derivePaymentStatus,
   isPaymentStatus,
   sumAmounts,
@@ -203,11 +204,13 @@ export async function getVendorInvoicePage(purchaseOrderId: string): Promise<{
         return []
       }
 
-      const payments = (paymentsByInvoice.get(row.id) ?? []).map((payment) => ({
-        ...payment,
-        billIssuedOn: dateInputValue(row.issued_on),
-        billAmount: toNumber(row.amount),
-      }))
+      const payments = (paymentsByInvoice.get(row.id) ?? [])
+        .map((payment) => ({
+          ...payment,
+          billIssuedOn: dateInputValue(row.issued_on),
+          billAmount: toNumber(row.amount),
+        }))
+        .sort(comparePaymentsNewestFirst)
       const paid = sumAmounts(payments.map((payment) => payment.amount))
       const balance = openPayableForBill(toNumber(row.amount), paid, row.status)
 
