@@ -17,21 +17,19 @@ import {
 } from "recharts"
 
 import {
+  DonutCentre,
   expenseSliceStyle,
   LegendDot,
   Ring,
 } from "@/app/(app)/dashboard/dashboard-chart-primitives"
-import { useSeesMoney } from "@/components/access-provider"
 import {
   formatAxisBdt,
-  formatCompactBdt,
   formatExactBdt,
   formatShare,
   type ChartPoint,
 } from "@/lib/dashboard-metrics"
-import { formatGroupedAmount } from "@/lib/format"
 
-export { expenseSliceStyle, LegendDot, Ring }
+export { DonutCentre, expenseSliceStyle, LegendDot, Ring }
 
 type ExpenseSlice = {
   key: string
@@ -366,55 +364,6 @@ const DONUT_RADIUS = 86
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS
 const DONUT_GAP = 3.6
 const DONUT_MIN_LEN = 3
-const DONUT_COMPACT_MIN = 1_000_000
-
-function formatDonutBdt(value: number): string {
-  const safe = Number.isFinite(value) ? value : 0
-  if (Math.abs(safe) >= DONUT_COMPACT_MIN) {
-    return formatCompactBdt(safe)
-  }
-  const sign = safe < 0 ? "−" : ""
-  return `${sign}৳${formatGroupedAmount(Math.abs(safe), 0)}`
-}
-
-export function DonutCentre({
-  label,
-  amount,
-  share,
-}: {
-  label: string
-  amount: number
-  share?: string
-}) {
-  const seesMoney = useSeesMoney()
-  const exact = formatExactBdt(amount)
-
-  return (
-    <>
-      {seesMoney ? (
-        <span
-          title={exact}
-          aria-label={exact}
-          className="whitespace-nowrap text-callout font-bold tracking-[-0.02em] tabular-nums md:text-panel-title"
-        >
-          {formatDonutBdt(amount)}
-        </span>
-      ) : (
-        <span className="whitespace-nowrap text-callout font-bold tracking-[-0.02em] text-muted-foreground tabular-nums md:text-panel-title">
-          Hidden
-        </span>
-      )}
-      <span className="w-full truncate text-micro text-muted-foreground md:text-xs">
-        {label}
-      </span>
-      {share ? (
-        <span className="w-full truncate text-micro text-muted-foreground tabular-nums">
-          {share}
-        </span>
-      ) : null}
-    </>
-  )
-}
 
 function arcPath(startLen: number, len: number) {
   const a0 = startLen / DONUT_RADIUS

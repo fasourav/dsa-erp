@@ -29,8 +29,8 @@ import {
   TrendChart,
   WeeklyChart,
 } from "@/app/(app)/dashboard/dashboard-charts-lazy"
-import { DonutCentre } from "@/app/(app)/dashboard/dashboard-charts"
 import {
+  DonutCentre,
   expenseSliceStyle,
   LegendDot,
   Ring,
@@ -811,7 +811,7 @@ function CompactMetric({
       ) : null}
       <div
         className={cn(
-          "flex min-w-0 items-center gap-1.25 text-caption font-semibold md:gap-1.5",
+          "flex min-w-0 items-center gap-1 text-caption font-semibold md:gap-1.5",
           tone === "warning" ? "text-warning" : "text-muted-foreground",
         )}
       >
@@ -827,7 +827,7 @@ function CompactMetric({
         ) : null}
         <p className="min-w-0 truncate">{label}</p>
         {info ? (
-          <span className="relative z-10 -mx-1 -my-2 inline-flex shrink-0">
+          <span className="relative z-10 -my-2 -mr-2 -ml-1.5 inline-flex shrink-0 md:-mx-1">
             <ColumnHint label={label} hint={info} />
           </span>
         ) : null}
