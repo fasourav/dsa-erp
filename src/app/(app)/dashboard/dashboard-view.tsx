@@ -185,15 +185,10 @@ function DashboardSections({
     amount:
       slice.key === "operational" ? snapshot.operational + snapshot.admin : snapshot[slice.key],
   }))
-  // No Project Overhead row: operational expenses can no longer be tagged to a
-  // project, so the figure is always zero. It stays inside projectExpense.
-  const summaryRows = slices.filter((slice) => slice.key !== "projectOverhead")
+  const summaryRows = slices
   const adminBreakdown = new Set(["operational", "marketing", "salary"])
   const projectRows = summaryRows.filter((slice) => !adminBreakdown.has(slice.key))
   const adminRows = summaryRows.filter((slice) => adminBreakdown.has(slice.key))
-  const donutSlices = slices.map((slice) =>
-    slice.key === "projectOverhead" ? { ...slice, fill: "var(--fill)" } : slice,
-  )
   const previousWeek = model.weeks[model.weeks.length - 2]
   const latestWeek = model.weeks[model.weeks.length - 1]
   const performanceCaption =
@@ -497,7 +492,7 @@ function DashboardSections({
         </Panel>
 
         <Panel title="Expense Summary">
-          <ExpenseDonut slices={donutSlices}>
+          <ExpenseDonut slices={slices}>
             <Money value={snapshot.totalExpense} size="kpi" className="text-callout font-bold tracking-[-0.02em] md:text-panel-title" />
             <span className="text-micro text-muted-foreground md:text-xs">Total Expense</span>
           </ExpenseDonut>
