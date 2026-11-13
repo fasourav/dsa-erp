@@ -77,6 +77,7 @@ type LastBackupStatus = {
   ranAtLabel: string
   sizeLabel: string
   status: string
+  errorMessage: string | null
 } | null
 
 type SettingsSection = "home" | "company" | "bank" | "documents" | CatalogKey
@@ -330,9 +331,16 @@ export function SettingsPanel({
               <span className="text-muted-foreground">Size</span>
               <span>{lastBackup?.sizeLabel ?? "—"}</span>
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 md:px-6">
-              <span className="text-muted-foreground">Status</span>
-              {lastBackup ? <StatusBadge status={lastBackup.status} /> : <span>—</span>}
+            <div className="border-t border-border px-4 py-3 md:px-6">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Status</span>
+                {lastBackup ? <StatusBadge status={lastBackup.status} /> : <span>—</span>}
+              </div>
+              {lastBackup?.errorMessage ? (
+                <p className="mt-2 line-clamp-3 text-left text-sm break-words text-destructive">
+                  {lastBackup.errorMessage}
+                </p>
+              ) : null}
             </div>
           </div>
         </Card>

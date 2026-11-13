@@ -53,15 +53,18 @@ function statusTone(status: string): StatusTone {
     case "partial":
     case "on hold":
     case "invited":
+    case "not stored":
       return "pending"
     case "unpaid":
     case "lost":
     case "outflow":
+    case "error":
       return "unpaid"
     case "active":
     case "open":
       return "active"
     case "completed":
+    case "ok":
       return "completed"
     default:
       return "neutral"

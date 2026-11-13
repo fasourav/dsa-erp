@@ -1,7 +1,6 @@
 import { buildBackup, type BackupQueryClient } from "@/lib/reports/backup"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-const LARGE_ZIP_BYTES = 20 * 1024 * 1024
 const BACKUP_BUCKET = "backups"
 
 type AdminClient = NonNullable<ReturnType<typeof createAdminClient>>
@@ -51,36 +50,32 @@ export async function runDailyBackup(admin: AdminClient): Promise<{
   }
 
   const sizeBytes = built.bytes.byteLength
-  let storagePath: string | null = null
-
-  if (sizeBytes > LARGE_ZIP_BYTES) {
-    const uploaded = await uploadZip(admin, built.bytes)
-    if (uploaded.error) {
-      const recorded = await recordRun(admin, {
-        status: "error",
-        sizeBytes,
-        storagePath: null,
-        error: uploaded.error,
-      })
-      if (recorded) {
-        return {
-          status: "error",
-          sizeBytes,
-          storagePath: null,
-          emailed: false,
-          error: recorded,
-        }
-      }
+  const uploaded = await uploadZip(admin, built.bytes)
+  if (uploaded.error) {
+    const recorded = await recordRun(admin, {
+      status: "error",
+      sizeBytes,
+      storagePath: null,
+      error: uploaded.error,
+    })
+    if (recorded) {
       return {
         status: "error",
         sizeBytes,
         storagePath: null,
         emailed: false,
-        error: uploaded.error,
+        error: recorded,
       }
     }
-    storagePath = uploaded.path
+    return {
+      status: "error",
+      sizeBytes,
+      storagePath: null,
+      emailed: false,
+      error: uploaded.error,
+    }
   }
+  const storagePath = uploaded.path
 
   const recorded = await recordRun(admin, {
     status: "ok",

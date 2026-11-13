@@ -16,6 +16,7 @@ export type LastBackupStatus = {
   ranAtLabel: string
   sizeLabel: string
   status: string
+  errorMessage: string | null
 } | null
 
 const sharedCatalogs = [
@@ -123,17 +124,21 @@ export async function getLastBackupStatus(): Promise<LastBackupStatus> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("backup_runs")
-    .select("ran_at, size_bytes, status")
+    .select("ran_at, size_bytes, status, storage_path, error")
     .order("ran_at", { ascending: false })
     .limit(1)
     .maybeSingle()
 
   if (error || !data) return null
 
+  const status = data.status === "ok" && !data.storage_path ? "Not Stored" : data.status
+  const errorText = data.error?.trim() ?? ""
+
   return {
     ranAtLabel: formatBackupWhen(data.ran_at),
     sizeLabel: formatBackupSize(data.size_bytes),
-    status: data.status,
+    status,
+    errorMessage: status === "error" && errorText ? errorText : null,
   }
 }
 
