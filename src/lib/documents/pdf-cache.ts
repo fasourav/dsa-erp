@@ -170,6 +170,7 @@ export function storeCachedPdfLater({
           upsert: false,
           cacheControl: "0",
         })
+        const uploadedByMe = !upload.error
 
         if (upload.error) {
           if (missingBucket(upload.error)) {
@@ -195,7 +196,9 @@ export function storeCachedPdfLater({
 
         if (inserted.error && !duplicateError(inserted.error)) {
           if (missingTable(inserted.error)) markUnavailable()
-          await admin.storage.from(PDF_CACHE_BUCKET).remove([storagePath])
+          if (uploadedByMe) {
+            await admin.storage.from(PDF_CACHE_BUCKET).remove([storagePath])
+          }
           return
         }
 
