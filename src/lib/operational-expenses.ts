@@ -16,6 +16,8 @@ export type OperationalExpenseRow = {
   category: string
   amount: number
   paymentMethod: string
+  projectId: string
+  projectName: string
   departmentId: string
   departmentName: string
   vendorId: string

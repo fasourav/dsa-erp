@@ -47,6 +47,7 @@ export default async function OperationalExpensesPage({
         expenses={data.expenses}
         poExpenses={data.poExpenses}
         categories={data.categories}
+        projects={data.projects}
         departments={data.departments}
         paymentMethods={data.paymentMethods}
         bankAccounts={data.bankAccounts}

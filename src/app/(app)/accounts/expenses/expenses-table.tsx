@@ -56,6 +56,7 @@ export function ExpensesTable({
   expenses,
   poExpenses = [],
   categories,
+  projects,
   departments,
   paymentMethods,
   bankAccounts,
@@ -70,6 +71,7 @@ export function ExpensesTable({
   expenses: OperationalExpenseRow[]
   poExpenses?: OperationalExpenseRow[]
   categories: OfficeCategoryGroup[]
+  projects: NamedOption[]
   departments: NamedOption[]
   paymentMethods: string[]
   bankAccounts: BankAccountChoice[]
@@ -356,6 +358,7 @@ export function ExpensesTable({
         onOpenChange={setFormOpen}
         expense={formExpense}
         categories={categories}
+        projects={projects}
         departments={departments}
         paymentMethods={paymentMethods}
         bankAccounts={bankAccounts}
