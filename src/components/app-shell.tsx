@@ -4,7 +4,7 @@ import { ChevronLeft, RotateCw } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState, useSyncExternalStore, type ReactNode } from "react"
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react"
 
 import { AccountMenu, MobileMoreMenu } from "@/components/account-menu"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -67,6 +67,14 @@ function DesktopSidebarSlot({ email }: { email: string }) {
   const overlayOpen = overlayPath === pathname
   // Drop a stale path during render so Back to the original page doesn't reopen it.
   if (overlayPath !== null && !overlayOpen) setOverlayPath(null)
+  useEffect(() => {
+    if (!overlayOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOverlayPath(null)
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [overlayOpen])
   const expanded =
     overlayOpen ||
     sidebarExpanded({
@@ -93,9 +101,6 @@ function DesktopSidebarSlot({ email }: { email: string }) {
           "relative z-30 hidden w-25 shrink-0 transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none print:hidden md:block",
           mode === "open" && "lg:w-70",
         )}
-        onKeyDown={(event) => {
-          if (event.key === "Escape" && overlayOpen) setOverlayPath(null)
-        }}
       >
         <AppSidebar
           expanded={expanded}
@@ -168,7 +173,7 @@ export function AppShell({
               </span>
             </div>
           ) : null}
-          <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mx-auto md:mt-5.5 md:mb-2.5 md:h-10 md:w-full md:max-w-[115rem] md:pt-0 md:pr-10 md:pl-7">
+          <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mt-5.5 md:mb-2.5 md:h-10 md:w-full md:max-w-[117rem] md:pt-0 md:pr-10 md:pl-7">
             {isTabRoot ? (
               <Link
                 href="/dashboard"
@@ -206,7 +211,7 @@ export function AppShell({
               <ThemeToggle initialTheme={theme} className="hidden md:inline-flex" />
             </div>
           </header>
-          <div className="px-4 print:px-0 md:mx-auto md:w-full md:max-w-[115rem] md:pr-10 md:pl-7">{children}</div>
+          <div className="px-4 print:px-0 md:w-full md:max-w-[117rem] md:pr-10 md:pl-7">{children}</div>
         </main>
         <MobileTabBar />
       </div>

@@ -3,7 +3,7 @@
 import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import type { FocusEventHandler, PointerEventHandler } from "react"
+import { useRef, type FocusEventHandler, type PointerEventHandler } from "react"
 
 import { useAccess } from "@/components/access-provider"
 import { BrandLockup, BrandMark } from "@/components/brand-mark"
@@ -69,6 +69,7 @@ export function AppSidebar({
   // mode, so the touch toggle collapses it back to Auto. Below lg the panel is
   // a rail regardless of mode, so there the toggle still opens the overlay.
   const collapseToAuto = expanded && !overlay && mode === "open"
+  const toggleRef = useRef<HTMLButtonElement>(null)
 
   return (
     <aside
@@ -157,6 +158,7 @@ export function AppSidebar({
         {/* Tablet or touch: always visible, one tap opens the overlay. With
             "Always expanded" saved, at lg+ touch it collapses back to Auto. */}
         <Button
+          ref={toggleRef}
           type="button"
           variant="secondary"
           size="icon-sm"
@@ -186,7 +188,10 @@ export function AppSidebar({
             aria-controls="primary-navigation"
             aria-expanded
             aria-label="Collapse sidebar"
-            onClick={() => onModeChange("auto")}
+            onClick={() => {
+              onModeChange("auto")
+              requestAnimationFrame(() => toggleRef.current?.focus())
+            }}
           >
             <PanelLeftClose aria-hidden="true" />
           </Button>

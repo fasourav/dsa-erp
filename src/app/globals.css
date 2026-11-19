@@ -730,6 +730,13 @@
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
+  /* Big monitors (2200px+ CSS width): scale rem-based type and spacing so the app fills the screen.
+     112.5% up to 2560px, then grows with the width so 4K at 100% looks like 2560 (18px at 2560). */
+  @media (width >= 137.5rem) {
+    html {
+      font-size: max(112.5%, 0.703125vw);
+    }
+  }
   body {
     @apply bg-background text-callout text-foreground;
     letter-spacing: -0.01em;
