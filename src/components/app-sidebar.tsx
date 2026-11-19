@@ -3,6 +3,7 @@
 import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useRef, type FocusEventHandler, type PointerEventHandler } from "react"
 
 import { useAccess } from "@/components/access-provider"
 import { BrandLockup, BrandMark } from "@/components/brand-mark"
@@ -33,34 +34,55 @@ import {
 } from "@/lib/sidebar-mode"
 import { cn } from "@/lib/utils"
 
-// Floating glass sidebar (desktop only). Between md and lg it is always the
-// 72px icon rail. From lg up it follows the mode: Auto expands on hover/focus
-// and overlays content; Always expanded reserves 252px; Always collapsed stays a rail.
+// Floating glass sidebar (desktop only). Between md and lg it is the 72px icon
+// rail. From lg up with a mouse it follows the mode: Auto expands on hover/focus
+// and overlays content; Always expanded reserves 252px; Always collapsed stays a
+// rail. Below lg, or on any touch screen (no hover), a visible toggle on the rail
+// opens the full labelled panel as an overlay over the page, with a backdrop.
 export function AppSidebar({
   expanded,
   mode,
   onModeChange,
   onMenuOpenChange,
+  overlay,
+  onOverlayToggle,
+  presenceHandlers,
 }: {
   expanded: boolean
   mode: SidebarMode
   onModeChange: (mode: SidebarMode) => void
   onMenuOpenChange: (open: boolean) => void
+  overlay: boolean
+  onOverlayToggle: () => void
+  presenceHandlers: {
+    onPointerEnter: PointerEventHandler<HTMLElement>
+    onPointerLeave: PointerEventHandler<HTMLElement>
+    onFocus: FocusEventHandler<HTMLElement>
+    onBlur: FocusEventHandler<HTMLElement>
+  }
 }) {
   const collapsed = !expanded
   const pathname = usePathname()
   const access = useAccess()
   const visibleItems = navItems.filter((item) => canSeeNav(access, item))
+  // Touch at lg+ with "Always expanded" saved: the panel is already open by
+  // mode, so the touch toggle collapses it back to Auto. Below lg the panel is
+  // a rail regardless of mode, so there the toggle still opens the overlay.
+  const collapseToAuto = expanded && !overlay && mode === "open"
+  const toggleRef = useRef<HTMLButtonElement>(null)
 
   return (
     <aside
       data-collapsed={collapsed}
       data-mode={mode}
       data-state={collapsed ? "collapsed" : "expanded"}
+      data-overlay={overlay || undefined}
+      {...presenceHandlers}
       className={cn(
         "group/sidebar absolute top-0 left-0 z-30 m-3.5 flex h-auto max-h-[calc(100svh-1.75rem)] min-h-0 w-18 flex-col items-stretch overflow-hidden rounded-sidebar px-3.25 pt-3.5 pb-3 text-sidebar-foreground glass-chrome transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none",
         !collapsed && "lg:w-63",
-        !collapsed && mode === "auto" && "lg:shadow-2xl",
+        !collapsed && mode === "auto" && "lg:bg-popover! lg:shadow-2xl",
+        overlay && "w-63 bg-popover! shadow-2xl",
       )}
     >
       <div className="group/header relative mb-2 flex h-12.5 shrink-0 items-center">
@@ -76,6 +98,8 @@ export function AppSidebar({
               !collapsed && "lg:scale-95 lg:opacity-0",
               collapsed &&
                 "lg:group-hover/header:scale-95 lg:group-hover/header:opacity-0 lg:group-focus-within/header:scale-95 lg:group-focus-within/header:opacity-0 lg:group-has-[[data-popup-open]]/header:scale-95 lg:group-has-[[data-popup-open]]/header:opacity-0",
+              "[@media(width<64rem),(hover:none)]:opacity-0",
+              overlay && "scale-95 opacity-0",
             )}
           >
             <BrandMark priority className="h-7.5" />
@@ -86,6 +110,7 @@ export function AppSidebar({
               "pointer-events-none pl-1 opacity-0 -translate-x-1 transition-[opacity,translate] duration-120 delay-0 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
               !collapsed &&
                 "lg:pointer-events-auto lg:translate-x-0 lg:opacity-100 lg:duration-200 lg:delay-80",
+              overlay && "pointer-events-auto translate-x-0 opacity-100 duration-200 delay-80",
             )}
           />
         </Link>
@@ -97,7 +122,7 @@ export function AppSidebar({
                 variant="secondary"
                 size="icon-sm"
                 className={cn(
-                  "absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:inline-flex",
+                  "absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none [@media(width>=64rem)_and_(hover:hover)]:inline-flex",
                   collapsed
                     ? "pointer-events-none scale-95 opacity-0 lg:group-hover/header:pointer-events-auto lg:group-hover/header:scale-100 lg:group-hover/header:opacity-100 lg:group-focus-within/header:pointer-events-auto lg:group-focus-within/header:scale-100 lg:group-focus-within/header:opacity-100 data-[popup-open]:pointer-events-auto data-[popup-open]:scale-100 data-[popup-open]:opacity-100"
                     : "lg:pointer-events-auto lg:scale-100 lg:opacity-100 lg:delay-75",
@@ -130,6 +155,47 @@ export function AppSidebar({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        {/* Tablet or touch: always visible, one tap opens the overlay. With
+            "Always expanded" saved, at lg+ touch it collapses back to Auto. */}
+        <Button
+          ref={toggleRef}
+          type="button"
+          variant="secondary"
+          size="icon-sm"
+          className={cn(
+            "absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2",
+            collapseToAuto
+              ? "[@media(width<64rem)]:inline-flex"
+              : "[@media(width<64rem),(hover:none)]:inline-flex",
+          )}
+          aria-controls="primary-navigation"
+          aria-expanded={overlay}
+          aria-label={overlay ? "Close sidebar" : "Open sidebar"}
+          onClick={onOverlayToggle}
+        >
+          {overlay ? (
+            <PanelLeftClose aria-hidden="true" />
+          ) : (
+            <PanelLeftOpen aria-hidden="true" />
+          )}
+        </Button>
+        {collapseToAuto ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon-sm"
+            className="absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 [@media(width>=64rem)_and_(hover:none)]:inline-flex"
+            aria-controls="primary-navigation"
+            aria-expanded
+            aria-label="Collapse sidebar"
+            onClick={() => {
+              onModeChange("auto")
+              requestAnimationFrame(() => toggleRef.current?.focus())
+            }}
+          >
+            <PanelLeftClose aria-hidden="true" />
+          </Button>
+        ) : null}
       </div>
       <TooltipProvider delay={300}>
         <nav
@@ -145,6 +211,7 @@ export function AppSidebar({
               icon={navIcons[item.href]}
               active={isNavActive(pathname, item.href)}
               collapsed={collapsed}
+              overlay={overlay}
             />
           ))}
         </nav>
@@ -155,6 +222,7 @@ export function AppSidebar({
           "pointer-events-none shrink-0 overflow-hidden px-3.25 pt-1 text-micro whitespace-nowrap text-muted-foreground opacity-0 -translate-x-1 transition-[opacity,translate] duration-120 delay-0 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
           !collapsed &&
             "lg:translate-x-0 lg:opacity-100 lg:duration-200 lg:delay-80",
+          overlay && "translate-x-0 opacity-100 duration-200 delay-80",
         )}
       >
         {APP_VERSION_LABEL}
@@ -180,12 +248,14 @@ function NavLink({
   icon: Icon,
   active,
   collapsed,
+  overlay,
 }: {
   href: string
   label: string
   icon: LucideIcon | undefined
   active: boolean
   collapsed: boolean
+  overlay: boolean
 }) {
   if (!Icon) return null
 
@@ -224,6 +294,7 @@ function NavLink({
             "relative z-10 w-42 shrink-0 truncate opacity-0 -translate-x-1 pointer-events-none transition-[opacity,translate] duration-120 delay-0 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
             !collapsed &&
               "lg:pointer-events-auto lg:translate-x-0 lg:opacity-100 lg:duration-200 lg:delay-80",
+            overlay && "pointer-events-auto translate-x-0 opacity-100 duration-200 delay-80",
           )}
         >
           {label}
