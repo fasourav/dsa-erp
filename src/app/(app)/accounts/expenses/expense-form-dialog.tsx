@@ -85,6 +85,7 @@ export function ExpenseFormDialog({
   )
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "")
   const [category, setCategory] = useState(expense?.category ?? "")
+  const [name, setName] = useState(expense?.name ?? "")
   const [projectId, setProjectId] = useState(expense?.projectId ?? "")
   const [departmentId, setDepartmentId] = useState(expense?.departmentId ?? "")
   const [notes, setNotes] = useState(expense?.notes ?? "")
@@ -121,6 +122,8 @@ export function ExpenseFormDialog({
     (attempted && !categories.some((item) => item.name === category)
       ? "Choose a category."
       : null)
+  const nameError =
+    serverErrors.name ?? (attempted && !name.trim() ? "Enter an expense name." : null)
   const categoryItems = categories.map((item) => ({ value: item.name, label: item.name }))
   const selectedCategory = categories.find((item) => item.name === category)
   const projectItems = projects.map((project) => ({
@@ -156,7 +159,8 @@ export function ExpenseFormDialog({
       !isIsoDate(expenseDate) ||
       parsedAmount === null ||
       parsedAmount <= 0 ||
-      !categories.some((item) => item.name === category)
+      !categories.some((item) => item.name === category) ||
+      !name.trim()
     ) {
       return
     }
@@ -175,6 +179,7 @@ export function ExpenseFormDialog({
       expenseDate,
       amount: amount.trim(),
       category,
+      name: name.trim(),
       paymentMethod: paymentMethod.trim(),
       projectId,
       departmentId,
@@ -290,6 +295,19 @@ export function ExpenseFormDialog({
                   {countsAsLabel(selectedCategory.reportGroup)}
                 </FieldDescription>
               ) : null}
+            </Field>
+            <Field data-invalid={Boolean(nameError) || undefined}>
+              <FieldLabel htmlFor="expense-name">Expense Name</FieldLabel>
+              <Input
+                id="expense-name"
+                maxLength={120}
+                value={name}
+                disabled={pending}
+                placeholder="e.g. Electricity bill – October"
+                aria-invalid={Boolean(nameError)}
+                onChange={(event) => setName(event.target.value)}
+              />
+              {nameError ? <FieldError>{nameError}</FieldError> : null}
             </Field>
             <Field data-invalid={Boolean(serverErrors.projectId) || undefined}>
               <FieldLabel htmlFor="expense-project">Project</FieldLabel>

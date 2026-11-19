@@ -153,6 +153,7 @@ export async function exportOperationalExpensesGrid(input: {
       columns: [
         { header: "Date", kind: "text" },
         { header: "Category", kind: "text" },
+        { header: "Expense Name", kind: "text" },
         { header: "Project / Office", kind: "text" },
         { header: "Amount", kind: "money" },
         { header: "Payment Method", kind: "text" },
@@ -168,6 +169,7 @@ export async function exportOperationalExpensesGrid(input: {
         row.fromPurchaseOrder
           ? `${row.category} · From Operational PO`
           : row.category || "—",
+        row.name || "—",
         row.projectName || "Office",
         row.amount,
         row.paymentMethod || "—",

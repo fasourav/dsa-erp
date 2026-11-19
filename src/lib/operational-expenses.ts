@@ -14,6 +14,7 @@ export type OperationalExpenseRow = {
   id: string
   expenseDate: string
   category: string
+  name: string
   amount: number
   paymentMethod: string
   projectId: string
@@ -35,6 +36,7 @@ export type OperationalExpenseRow = {
 export type ExpenseColumnId =
   | "expenseDate"
   | "category"
+  | "name"
   | "amount"
   | "paymentMethod"
   | "project"
@@ -46,7 +48,7 @@ export type ExpenseColumnId =
 
 export type ExpenseOptionalColumnId = Exclude<
   ExpenseColumnId,
-  "expenseDate" | "category"
+  "expenseDate" | "category" | "name"
 >
 
 export type ExpenseColumnVisibility = Record<ExpenseOptionalColumnId, boolean>
@@ -54,6 +56,7 @@ export type ExpenseColumnVisibility = Record<ExpenseOptionalColumnId, boolean>
 export const sortableExpenseColumns = [
   "expenseDate",
   "category",
+  "name",
   "amount",
   "paymentMethod",
 ] as const
@@ -66,6 +69,7 @@ export const defaultExpenseSort: SortState<ExpenseColumnId> = {
 export const expenseColumns: readonly ListColumn<ExpenseColumnId>[] = [
   { id: "expenseDate", label: "Date", align: "left", locked: true },
   { id: "category", label: "Category", align: "left", locked: true, minWidth: 260 },
+  { id: "name", label: "Name", align: "left", locked: true, minWidth: 200 },
   { id: "amount", label: "Amount", align: "right", locked: false },
   { id: "paymentMethod", label: "Payment Method", align: "left", locked: false },
   { id: "project", label: "Project / Office", align: "left", locked: false, sortable: false },
@@ -133,6 +137,7 @@ function compareRows(
     case "expenseDate":
       return left.expenseDate.localeCompare(right.expenseDate)
     case "category":
+    case "name":
     case "paymentMethod":
     case "notes":
       return compareText(left[key], right[key])

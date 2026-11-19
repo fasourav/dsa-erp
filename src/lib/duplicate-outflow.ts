@@ -53,7 +53,7 @@ export async function resolveDuplicateNotes(
   const [expenses, payments] = await Promise.all([
     supabase
       .from("operational_expenses")
-      .select("id, expense_date, amount, category, vendors(person_name, company_name)")
+      .select("id, expense_date, amount, category, name, vendors(person_name, company_name)")
       .eq("bank_account_id", input.bankAccountId)
       .gte("expense_date", from)
       .lte("expense_date", to),
@@ -81,7 +81,7 @@ export async function resolveDuplicateNotes(
       kind: "Operational Expense",
       date: row.expense_date,
       amount: toNumber(row.amount),
-      label: embeddedName(row.vendors) || row.category?.trim() || "Operational Expense",
+      label: row.name?.trim() || embeddedName(row.vendors) || row.category?.trim() || "Operational Expense",
     })
   }
 

@@ -18,6 +18,7 @@ export type ExpenseInput = {
   version?: string
   expenseDate: string
   category: string
+  name: string
   amount: string
   paymentMethod: string
   projectId: string
@@ -33,6 +34,7 @@ export type ExpenseInput = {
 export type ExpenseFieldErrors = {
   expenseDate?: string
   category?: string
+  name?: string
   amount?: string
   projectId?: string
   departmentId?: string
@@ -116,6 +118,7 @@ async function saveExpense(
 ): Promise<ExpenseResult> {
   const expenseDate = input.expenseDate.trim()
   const category = input.category.trim()
+  const name = input.name.trim()
   const projectId = input.projectId.trim()
   const departmentId = input.departmentId.trim()
   const notes = input.notes.trim()
@@ -131,6 +134,12 @@ async function saveExpense(
 
   if (!category) {
     fieldErrors.category = "Choose a category."
+  }
+
+  if (!name) {
+    fieldErrors.name = "Enter an expense name."
+  } else if (name.length > 120) {
+    fieldErrors.name = "Keep the name to 120 characters or fewer."
   }
 
   if (amount === null || amount <= 0) {
@@ -258,6 +267,7 @@ async function saveExpense(
   const values = {
     expense_date: expenseDate,
     category,
+    name,
     amount,
     payment_method: paymentMethod || null,
     project_id: projectId || null,
@@ -289,6 +299,13 @@ async function saveExpense(
     }
     if (error.code === "23503") {
       return { error: "Choose a valid project or department." }
+    }
+
+    if (/operational_expenses_name_len/.test(error.message ?? "")) {
+      return {
+        error: null,
+        fieldErrors: { name: "Keep the name to 120 characters or fewer." },
+      }
     }
 
     if (error.code === "23514" && issue?.message === "This value is not allowed.") {
