@@ -69,7 +69,7 @@ export const defaultExpenseSort: SortState<ExpenseColumnId> = {
 export const expenseColumns: readonly ListColumn<ExpenseColumnId>[] = [
   { id: "expenseDate", label: "Date", align: "left", locked: true },
   { id: "category", label: "Category", align: "left", locked: true, minWidth: 260 },
-  { id: "name", label: "Name", align: "left", locked: true, minWidth: 200 },
+  { id: "name", label: "Expense Name", align: "left", locked: true, minWidth: 200 },
   { id: "amount", label: "Amount", align: "right", locked: false },
   { id: "paymentMethod", label: "Payment Method", align: "left", locked: false },
   { id: "project", label: "Project / Office", align: "left", locked: false, sortable: false },

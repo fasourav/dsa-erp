@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FocusEvent, type PointerEvent } from "react"
 
+export const SIDEBAR_OPEN_DELAY_MS = 120
 export const SIDEBAR_CLOSE_DELAY_MS = 180
 
 function isFinePointer(event: PointerEvent<HTMLElement>) {
@@ -11,9 +12,12 @@ function isFinePointer(event: PointerEvent<HTMLElement>) {
 export function useSidebarPresence() {
   const [pointerInside, setPointerInside] = useState(false)
   const [focusInside, setFocusInside] = useState(false)
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearLeave = useCallback(() => {
+    if (enterTimer.current) clearTimeout(enterTimer.current)
+    enterTimer.current = null
     if (leaveTimer.current) clearTimeout(leaveTimer.current)
     leaveTimer.current = null
   }, [])
@@ -24,7 +28,8 @@ export function useSidebarPresence() {
     (event: PointerEvent<HTMLElement>) => {
       if (!isFinePointer(event)) return
       clearLeave()
-      setPointerInside(true)
+      // Hover intent: a quick pass over the rail should not pop it open.
+      enterTimer.current = setTimeout(() => setPointerInside(true), SIDEBAR_OPEN_DELAY_MS)
     },
     [clearLeave],
   )

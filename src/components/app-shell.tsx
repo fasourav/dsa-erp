@@ -61,29 +61,53 @@ function DesktopSidebarSlot({ email }: { email: string }) {
   )
   const [menuOpen, setMenuOpen] = useState(false)
   const presence = useSidebarPresence()
-  const expanded = sidebarExpanded({
-    mode,
-    pointerInside: presence.pointerInside,
-    focusInside: presence.focusInside,
-    menuOpen,
-  })
+  const pathname = usePathname()
+  // Tablet/touch overlay. Tied to the path, so any navigation closes it.
+  const [overlayPath, setOverlayPath] = useState(null as string | null)
+  const overlayOpen = overlayPath === pathname
+  // Drop a stale path during render so Back to the original page doesn't reopen it.
+  if (overlayPath !== null && !overlayOpen) setOverlayPath(null)
+  const expanded =
+    overlayOpen ||
+    sidebarExpanded({
+      mode,
+      pointerInside: presence.pointerInside,
+      focusInside: presence.focusInside,
+      menuOpen,
+    })
 
   return (
-    <div
-      data-sidebar-mode={mode}
-      className={cn(
-        "relative z-30 hidden w-25 shrink-0 transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none print:hidden md:block",
-        mode === "open" && "lg:w-70",
-      )}
-      {...presence.handlers}
-    >
-      <AppSidebar
-        expanded={expanded}
-        mode={mode}
-        onModeChange={modeStore.write}
-        onMenuOpenChange={setMenuOpen}
-      />
-    </div>
+    <>
+      {overlayOpen ? (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          tabIndex={-1}
+          className="fixed inset-0 z-20 hidden cursor-default bg-scrim print:hidden md:block"
+          onClick={() => setOverlayPath(null)}
+        />
+      ) : null}
+      <div
+        data-sidebar-mode={mode}
+        className={cn(
+          "relative z-30 hidden w-25 shrink-0 transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none print:hidden md:block",
+          mode === "open" && "lg:w-70",
+        )}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && overlayOpen) setOverlayPath(null)
+        }}
+      >
+        <AppSidebar
+          expanded={expanded}
+          mode={mode}
+          onModeChange={modeStore.write}
+          onMenuOpenChange={setMenuOpen}
+          overlay={overlayOpen}
+          onOverlayToggle={() => setOverlayPath(overlayOpen ? null : pathname)}
+          presenceHandlers={presence.handlers}
+        />
+      </div>
+    </>
   )
 }
 
@@ -144,7 +168,7 @@ export function AppShell({
               </span>
             </div>
           ) : null}
-          <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mt-5.5 md:mb-2.5 md:h-10 md:pt-0 md:pr-10 md:pl-7">
+          <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mx-auto md:mt-5.5 md:mb-2.5 md:h-10 md:w-full md:max-w-[115rem] md:pt-0 md:pr-10 md:pl-7">
             {isTabRoot ? (
               <Link
                 href="/dashboard"
@@ -182,7 +206,7 @@ export function AppShell({
               <ThemeToggle initialTheme={theme} className="hidden md:inline-flex" />
             </div>
           </header>
-          <div className="px-4 print:px-0 md:pr-10 md:pl-7">{children}</div>
+          <div className="px-4 print:px-0 md:mx-auto md:w-full md:max-w-[115rem] md:pr-10 md:pl-7">{children}</div>
         </main>
         <MobileTabBar />
       </div>
