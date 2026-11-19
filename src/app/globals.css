@@ -731,10 +731,11 @@
     text-size-adjust: 100%;
   }
   /* Big monitors (2200px+ CSS width): scale rem-based type and spacing so the app fills the screen.
-     112.5% up to 2560px, then grows with the width so 4K at 100% looks like 2560 (18px at 2560). */
+     18px from 2200px; grows past 2560x1440 only when the window is both wider and taller, so 4K
+     looks like 2560 while a 3440x1440 ultrawide stays at 18px instead of oversized text. */
   @media (width >= 137.5rem) {
     html {
-      font-size: max(112.5%, 0.703125vw);
+      font-size: max(112.5%, min(0.703125vw, 1.25vh));
     }
   }
   body {

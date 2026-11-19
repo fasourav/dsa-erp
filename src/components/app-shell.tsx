@@ -173,7 +173,7 @@ export function AppShell({
               </span>
             </div>
           ) : null}
-          <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mt-5.5 md:mb-2.5 md:h-10 md:w-full md:max-w-[117rem] md:pt-0 md:pr-10 md:pl-7">
+          <header className="flex h-12.5 items-center gap-2.5 px-4 pt-0.5 print:hidden md:mt-5.5 md:mb-2.5 md:h-10 md:w-full md:mx-auto md:max-w-[150rem] md:pt-0 md:pr-10 md:pl-7">
             {isTabRoot ? (
               <Link
                 href="/dashboard"
@@ -211,7 +211,7 @@ export function AppShell({
               <ThemeToggle initialTheme={theme} className="hidden md:inline-flex" />
             </div>
           </header>
-          <div className="px-4 print:px-0 md:w-full md:max-w-[117rem] md:pr-10 md:pl-7">{children}</div>
+          <div className="px-4 print:px-0 md:w-full md:mx-auto md:max-w-[150rem] md:pr-10 md:pl-7">{children}</div>
         </main>
         <MobileTabBar />
       </div>
