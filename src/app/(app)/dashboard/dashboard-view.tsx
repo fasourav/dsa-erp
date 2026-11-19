@@ -266,7 +266,7 @@ function DashboardSections({
             />
           ) : null}
         </div>
-        <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-0 md:overflow-hidden md:rounded-card md:glass-panel xl:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-6 md:gap-0 md:overflow-hidden md:rounded-card md:glass-panel xl:grid-cols-5">
           <CompactMetric
             label="Gross Profit"
             value={snapshot.grossProfit}
@@ -277,12 +277,14 @@ function DashboardSections({
             }
             tone={snapshot.grossProfit < 0 ? "negative" : "default"}
             href={pnlHref}
+            className="md:col-span-2 xl:col-span-1"
           />
           <CompactMetric
             label="Accounts Receivable"
             value={model.receivables}
             detail={stockDetail}
             href={receivableHref}
+            className="md:col-span-2 xl:col-span-1"
           />
           <CompactMetric
             label="Accounts Payable"
@@ -290,6 +292,7 @@ function DashboardSections({
             detail={stockDetail}
             tone={model.payables > 0 ? "warning" : "default"}
             href={payableHref}
+            className="md:col-span-2 xl:col-span-1"
           />
           <CompactMetric
             label="Forecasted Profit"
@@ -297,8 +300,14 @@ function DashboardSections({
             detail="Receivable Minus Payable"
             tone={model.forecastedProfit < 0 ? "negative" : "positive"}
             icon={model.forecastedProfit < 0 ? TrendingDown : TrendingUp}
+            className="md:col-span-3 md:border-t md:border-l-0 xl:col-span-1 xl:border-t-0 xl:border-l"
           />
-          <CompactMetric label="Withdrawal" value={snapshot.withdrawal} wide />
+          <CompactMetric
+            label="Withdrawal"
+            value={snapshot.withdrawal}
+            wide
+            className="md:border-t xl:border-t-0"
+          />
         </div>
       </section>
 
@@ -779,6 +788,7 @@ function CompactMetric({
   icon: Icon,
   wide = false,
   href,
+  className,
 }: {
   label: string
   value: number
@@ -787,13 +797,15 @@ function CompactMetric({
   icon?: LucideIcon
   wide?: boolean
   href?: string
+  className?: string
 }) {
   return (
     <div
       className={cn(
         "relative min-w-0 rounded-2xl bg-surface px-3.5 py-3.25 shadow-glass backdrop-blur-glass backdrop-saturate-180 md:rounded-none md:border-l md:border-border md:bg-transparent md:px-5 md:py-4.5 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 md:first:border-l-0",
         tone === "warning" && "bg-warning-wash md:bg-warning-wash",
-        wide && "col-span-2 flex items-center justify-between gap-3 md:col-span-1 md:block",
+        wide && "col-span-2 flex items-center justify-between gap-3 md:col-span-3 md:block xl:col-span-1",
+        className,
       )}
     >
       {href ? (

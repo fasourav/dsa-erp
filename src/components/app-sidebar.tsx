@@ -58,7 +58,7 @@ export function AppSidebar({
       data-mode={mode}
       data-state={collapsed ? "collapsed" : "expanded"}
       className={cn(
-        "group/sidebar absolute top-0 left-0 z-30 m-3.5 flex h-[calc(100svh-1.75rem)] min-h-0 w-18 flex-col items-stretch overflow-hidden rounded-sidebar px-3.25 pt-3.5 pb-3 text-sidebar-foreground glass-chrome transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none",
+        "group/sidebar absolute top-0 left-0 z-30 m-3.5 flex h-auto max-h-[calc(100svh-1.75rem)] min-h-0 w-18 flex-col items-stretch overflow-hidden rounded-sidebar px-3.25 pt-3.5 pb-3 text-sidebar-foreground glass-chrome transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none",
         !collapsed && "lg:w-63",
         !collapsed && mode === "auto" && "lg:shadow-2xl",
       )}
