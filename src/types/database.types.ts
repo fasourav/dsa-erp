@@ -1434,6 +1434,7 @@ export type Database = {
           department_id: string | null
           expense_date: string
           id: string
+          name: string | null
           notes: string | null
           payment_method: string | null
           project_id: string | null
@@ -1449,6 +1450,7 @@ export type Database = {
           department_id?: string | null
           expense_date?: string
           id?: string
+          name?: string | null
           notes?: string | null
           payment_method?: string | null
           project_id?: string | null
@@ -1464,6 +1466,7 @@ export type Database = {
           department_id?: string | null
           expense_date?: string
           id?: string
+          name?: string | null
           notes?: string | null
           payment_method?: string | null
           project_id?: string | null

@@ -456,7 +456,7 @@ async function fillFromVendorPayment(supabase: Client, draft: FormDraft) {
 async function fillFromExpense(supabase: Client, draft: FormDraft) {
   const expense = await supabase
     .from("operational_expenses")
-    .select("id, amount, expense_date, category, notes, payment_method, vendor_id, project_id")
+    .select("id, amount, expense_date, category, name, notes, payment_method, vendor_id, project_id")
     .eq("id", draft.operationalExpenseId)
     .maybeSingle()
   if (!expense.data) return
@@ -465,7 +465,7 @@ async function fillFromExpense(supabase: Client, draft: FormDraft) {
   draft.projectId = expense.data.project_id ?? ""
   draft.vendorId = expense.data.vendor_id ?? ""
   draft.body.accountHead = expense.data.category
-  draft.body.subject = expense.data.category
+  draft.body.subject = expense.data.name?.trim() || expense.data.category
   draft.body.narration = expense.data.notes?.trim() || ""
   draft.body.paymentMode = expense.data.payment_method?.trim() || ""
   draft.body.projectName = "Operational"

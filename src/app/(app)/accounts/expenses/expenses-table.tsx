@@ -226,8 +226,9 @@ export function ExpensesTable({
         }}
         hidePagination
         mobileItem={(expense) => ({
-          title: expense.category || "—",
+          title: expense.name || expense.category || "—",
           subtitle: [
+            expense.name ? expense.category : "",
             expense.vendorName,
             expense.projectName || "Office",
             expense.bankAccountName,
@@ -249,7 +250,7 @@ export function ExpensesTable({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label={`Actions for ${expense.category || "expense"}`}
+                  aria-label={`Actions for ${expense.name || expense.category || "expense"}`}
                 />
               }
             >
@@ -311,9 +312,10 @@ export function ExpensesTable({
             )}
             hidePagination
             mobileItem={(expense) => ({
-              title: expense.category || "—",
+              title: expense.name || expense.category || "—",
               subtitle: [
                 "From Operational PO",
+                expense.name ? expense.category : "",
                 expense.vendorName,
                 expense.projectName || "Office",
                 expense.bankAccountName,
@@ -335,7 +337,7 @@ export function ExpensesTable({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label={`Actions for ${expense.category || "PO payment"}`}
+                      aria-label={`Actions for ${expense.name || expense.category || "PO payment"}`}
                     />
                   }
                 >
@@ -376,7 +378,7 @@ export function ExpensesTable({
           setDeleteError(null)
         }}
         title="Delete Operational Expense"
-        itemName={pendingDelete?.vendorName || pendingDelete?.category}
+        itemName={pendingDelete?.name || pendingDelete?.vendorName || pendingDelete?.category}
         error={deleteError}
         pending={deleting}
         confirmKey={pendingDelete?.id}
@@ -428,6 +430,14 @@ function Cell({
             </span>
           ) : null}
         </span>
+      )
+    case "name":
+      return expense.name ? (
+        <span className="text-ui block max-w-64 truncate font-medium" title={expense.name}>
+          {expense.name}
+        </span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
       )
     case "amount":
       return <Money value={expense.amount} />

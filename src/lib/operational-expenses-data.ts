@@ -28,9 +28,9 @@ import { mergeCategorySuggestions } from "@/lib/vendor-summary"
 type Embedded<T> = T | T[] | null
 
 const EXPENSE_SELECT =
-  "id, expense_date, category, amount, payment_method, project_id, department_id, vendor_id, notes, bank_account_id, created_at, created_by, projects(name), departments(name), vendors(person_name, company_name)"
+  "id, expense_date, category, name, amount, payment_method, project_id, department_id, vendor_id, notes, bank_account_id, created_at, created_by, projects(name), departments(name), vendors(person_name, company_name)"
 
-// Searchable operational expense columns: category (ILIKE), notes (ILIKE),
+// Searchable operational expense columns: category (ILIKE), name (ILIKE), notes (ILIKE),
 // payment_method (ILIKE), project name (via project_id), department name (via department_id),
 // vendor name / company (via vendor_id), bank account name / bank name (via bank_account_id),
 // expense_date (ISO date), and exact expense amount.
@@ -49,6 +49,7 @@ function buildExpenseOrFilter(
     const like = `%${term}%`
     clauses.push(
       `category.ilike.${like}`,
+      `name.ilike.${like}`,
       `notes.ilike.${like}`,
       `payment_method.ilike.${like}`,
     )
@@ -113,6 +114,7 @@ type RawExpenseRow = {
   id: string
   expense_date: string
   category: string
+  name: string | null
   amount: number
   payment_method: string | null
   project_id: string | null
@@ -171,6 +173,7 @@ async function mapExpenseRows(
       id: row.id,
       expenseDate: dateInputValue(row.expense_date),
       category: row.category?.trim() ?? "",
+      name: row.name?.trim() ?? "",
       amount: toNumber(row.amount),
       paymentMethod: row.payment_method?.trim() ?? "",
       projectId: row.project_id ?? "",
@@ -319,6 +322,12 @@ export async function getOperationalExpenses(
             case "category":
               query = query
                 .order("category", { ascending })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
+            case "name":
+              query = query
+                .order("name", { ascending, nullsFirst: false })
                 .order("expense_date", { ascending: false })
                 .order("id", { ascending: false })
               break
@@ -475,6 +484,12 @@ export async function getAllOperationalExpensesForExport(
                 .order("expense_date", { ascending: false })
                 .order("id", { ascending: false })
               break
+            case "name":
+              query = query
+                .order("name", { ascending, nullsFirst: false })
+                .order("expense_date", { ascending: false })
+                .order("id", { ascending: false })
+              break
             case "amount":
               query = query
                 .order("amount", { ascending })
@@ -528,7 +543,7 @@ function filterPoPayments(
   return rows.filter((row) => {
     if (amount !== null && row.amount === amount) return true
     if (!term) return false
-    const haystack = `${row.category} ${row.vendorName} ${row.paymentMethod} ${row.bankAccountName} ${row.voucherNo} ${row.notes} ${row.expenseDate} ${row.createdByName}`.toLowerCase()
+    const haystack = `${row.category} ${row.name} ${row.vendorName} ${row.paymentMethod} ${row.bankAccountName} ${row.voucherNo} ${row.notes} ${row.expenseDate} ${row.createdByName}`.toLowerCase()
     return haystack.includes(lower)
   })
 }
@@ -638,6 +653,7 @@ async function operationalPurchaseOrderPayments(
         id: payment.id,
         expenseDate: dateInputValue(payment.paid_on),
         category: officeName || workType || "Operational",
+        name: officeName ? workType : "",
         amount: toNumber(payment.amount),
         paymentMethod: payment.method?.trim() ?? "",
         projectId: "",
