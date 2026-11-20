@@ -319,6 +319,7 @@ export function PurchaseOrdersTable({
                       type="button"
                       variant="outline"
                       size="icon"
+                      className="pointer-coarse:size-11"
                       aria-label="More actions"
                     />
                   }

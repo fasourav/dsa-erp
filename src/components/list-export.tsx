@@ -123,6 +123,7 @@ export function ListExport(props: ListExportProps) {
                 type="button"
                 variant="outline"
                 size="icon"
+                className="pointer-coarse:size-11"
                 aria-label="Export"
                 disabled={pending}
               />

@@ -281,7 +281,7 @@ export function DataList<T, Id extends string>({
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <div className="flex items-center justify-between gap-2.5">
-                          <span className="min-w-0 truncate text-row font-semibold [&_a]:block [&_a]:max-w-full [&_a]:truncate [&_a]:rounded-sm [&_a]:outline-none [&_a]:after:absolute [&_a]:after:inset-0 [&_a]:after:content-[''] [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring/50 [&_a:focus-visible]:ring-inset [&_button]:inline-block [&_button]:max-w-full [&_button]:min-w-0 [&_button]:truncate [&_button]:text-left [&_button]:align-middle [&_button]:after:absolute [&_button]:after:inset-0 [&_button]:after:content-[''] [&_button]:active:scale-100 [&_button:focus-visible]:ring-inset [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:text-row [&_[data-slot=button]]:font-semibold [&_[data-slot=button]]:md:h-auto [&_[data-slot=button]]:md:px-0 [&_[data-slot=button]]:md:text-row">
+                          <span className="min-w-0 truncate text-row font-semibold [&_a]:block [&_a]:max-w-full [&_a]:truncate [&_a]:rounded-sm [&_a]:outline-none [&_a]:after:absolute [&_a]:after:inset-0 [&_a]:after:content-[''] [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring/50 [&_a:focus-visible]:ring-inset [&_button]:inline-block [&_button]:max-w-full [&_button]:min-w-0 [&_button]:truncate [&_button]:text-left [&_button]:align-middle [&_button]:after:absolute [&_button]:after:inset-0 [&_button]:after:content-[''] [&_button]:active:scale-none! [&_button:focus-visible]:ring-inset [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:text-row [&_[data-slot=button]]:font-semibold [&_[data-slot=button]]:md:h-auto [&_[data-slot=button]]:md:px-0 [&_[data-slot=button]]:md:text-row">
                             {item.title}
                           </span>
                           {item.value ? (
@@ -312,7 +312,7 @@ export function DataList<T, Id extends string>({
                         ) : null}
                       </div>
                       {hasActions ? (
-                        <span className="relative z-10 inline-flex shrink-0 items-center [&_[data-slot=button][class*='size-']]:md:size-11 [&_[data-slot=button]:not([class*='size-'])]:md:h-11">{renderActions(row)}</span>
+                        <span className="relative z-10 inline-flex shrink-0 items-center [&_button[class*='size-']]:md:size-11 [&_button:not([class*='size-'])]:md:h-11 [&_[data-slot=button][class*='size-']]:md:size-11 [&_[data-slot=button]:not([class*='size-'])]:md:h-11 [&_[data-slot=dropdown-menu-trigger][class*='size-']]:md:size-11 [&_[data-slot=dropdown-menu-trigger]:not([class*='size-'])]:md:h-11">{renderActions(row)}</span>
                       ) : null}
                     </li>
                   )
@@ -495,7 +495,7 @@ export function DataList<T, Id extends string>({
                         compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
                       )}
                     >
-                      <span className="inline-flex items-center justify-end [&_[data-slot=button]:not([class*='size-'])]:h-8 [&_[data-slot=button]:not([class*='size-'])]:px-2 [&_[data-slot=button]:not([class*='size-'])]:text-xs [&_[data-slot=button][class*='size-']]:pointer-coarse:size-11 [&_[data-slot=button]:not([class*='size-'])]:pointer-coarse:h-11">
+                      <span className="inline-flex items-center justify-end [&_[data-slot=button]:not([class*='size-'])]:h-8 [&_[data-slot=button]:not([class*='size-'])]:px-2 [&_[data-slot=button]:not([class*='size-'])]:text-xs [&_button[class*='size-']]:pointer-coarse:size-11 [&_[data-slot=button][class*='size-']]:pointer-coarse:size-11 [&_[data-slot=button]:not([class*='size-'])]:pointer-coarse:h-11 [&_[data-slot=dropdown-menu-trigger][class*='size-']]:pointer-coarse:size-11 [&_[data-slot=dropdown-menu-trigger]:not([class*='size-'])]:pointer-coarse:h-11">
                         {renderActions(row)}
                       </span>
                     </TableCell>

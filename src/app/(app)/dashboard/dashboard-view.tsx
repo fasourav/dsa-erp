@@ -350,6 +350,7 @@ function DashboardSections({
             color="bg-chart-7"
             label="Project Lead Value"
             value={<Money value={model.performance.leadValue} />}
+            title={formatExactBdt(model.performance.leadValue)}
             hint="In Pipeline"
             href={leadsHref}
           />
@@ -425,6 +426,11 @@ function DashboardSections({
                 ) : (
                   <Money value={model.performance.assetValue} />
                 )
+              }
+              title={
+                model.performance.assetValue == null
+                  ? undefined
+                  : formatExactBdt(model.performance.assetValue)
               }
               hint={model.performance.assetValue == null ? "Unavailable" : "Current Value"}
               className="col-span-2 lg:col-span-1"
@@ -956,6 +962,7 @@ function MetricTile({
   color,
   label,
   value,
+  title,
   hint,
   bar,
   wrap = false,
@@ -966,6 +973,7 @@ function MetricTile({
   color: string
   label: string
   value: ReactNode
+  title?: string
   hint?: string
   bar?: number
   wrap?: boolean
@@ -986,9 +994,10 @@ function MetricTile({
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">{label}</p>
         <p
+          title={title}
           className={cn(
             "mt-0.5 text-metric tabular-nums",
-            wrap ? "break-words" : "max-xl:break-words xl:truncate [&>span>span+span]:max-xl:hidden",
+            wrap ? "break-words" : "min-w-0 truncate max-xl:text-[1.03125rem] [&>span>span+span]:max-xl:hidden",
           )}
         >
           {value}
