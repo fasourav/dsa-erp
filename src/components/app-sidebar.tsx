@@ -260,7 +260,7 @@ function NavLink({
   if (!Icon) return null
 
   const className = cn(
-    "relative flex h-8.25 w-full min-w-0 shrink-0 items-center gap-2.75 overflow-hidden rounded-lg px-3.25 text-left text-ui font-book tracking-[-0.005em] whitespace-nowrap text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 pointer-coarse:h-11",
+    "relative flex h-8.25 min-[137.5rem]:h-[max(2.0625rem,3.4svh)] w-full min-w-0 shrink-0 items-center gap-2.75 overflow-hidden rounded-lg px-3.25 text-left text-ui font-book tracking-[-0.005em] whitespace-nowrap text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 pointer-coarse:h-11",
     active &&
       "bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-nav-active hover:bg-sidebar-primary",
   )
@@ -279,12 +279,12 @@ function NavLink({
       >
         <span
           aria-hidden="true"
-          className="relative z-10 grid size-4.5 shrink-0 place-items-center"
+          className="relative z-10 grid size-4.5 shrink-0 place-items-center min-[137.5rem]:size-[max(1.125rem,1.6svh)]"
         >
           <Icon
             aria-hidden="true"
             className={cn(
-              "size-4.25 shrink-0",
+              "size-4.25 shrink-0 min-[137.5rem]:size-[max(1.0625rem,1.6svh)]",
               active ? "text-sidebar-primary-foreground" : "text-muted-foreground",
             )}
           />
