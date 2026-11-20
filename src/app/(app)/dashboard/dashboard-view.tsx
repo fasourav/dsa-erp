@@ -533,10 +533,10 @@ function DashboardSections({
             value={snapshot.netMargin}
             color={snapshot.netMargin < 0 ? "var(--destructive)" : "var(--chart-5)"}
           />
-          <MarginRing label="Withdrawal Ratio" value={snapshot.withdrawalRatio} color="var(--chart-3)" />
           <MarginRing label="Project Cost (Excl. Tax)" value={snapshot.projectCostRatio} color="var(--chart-6)" />
           <MarginRing label="Tax Ratio" value={snapshot.taxRatio} color="var(--chart-8)" />
           <MarginRing label="Admin Expense Ratio" value={snapshot.adminRatio} color="var(--chart-7)" />
+          <MarginRing label="Withdrawal Ratio" value={snapshot.withdrawalRatio} color="var(--chart-3)" />
         </div>
       </Panel>
 
@@ -985,7 +985,12 @@ function MetricTile({
       <MetricIcon icon={Icon} color={color} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-muted-foreground md:text-caption md:font-label">{label}</p>
-        <p className={cn("mt-0.5 text-metric tabular-nums", wrap ? "break-words" : "truncate")}>
+        <p
+          className={cn(
+            "mt-0.5 text-metric tabular-nums",
+            wrap ? "break-words" : "max-xl:break-words xl:truncate [&>span>span+span]:max-xl:hidden",
+          )}
+        >
           {value}
         </p>
         {hint ? <p className="mt-px truncate text-micro text-subtle-foreground md:text-xs">{hint}</p> : null}
@@ -1134,10 +1139,10 @@ function downloadDashboard(
     ["Expense Ratio", snapshot.expenseRatio],
     ["Gross Profit Margin", snapshot.grossMargin],
     ["Net Profit Margin", snapshot.netMargin],
-    ["Withdrawal Ratio", snapshot.withdrawalRatio],
     ["Project Cost Ratio (Excl. Tax)", snapshot.projectCostRatio],
     ["Tax Ratio", snapshot.taxRatio],
     ["Admin Expense Ratio", snapshot.adminRatio],
+    ["Withdrawal Ratio", snapshot.withdrawalRatio],
     ["Active Projects", model.performance.active],
     ["Projects in Leads", model.performance.openLeads],
     ["Clients", model.performance.clients],

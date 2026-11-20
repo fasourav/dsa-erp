@@ -23,6 +23,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-sidebar-overlay: var(--sidebar-overlay);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-tint: var(--primary-tint);
@@ -296,6 +297,8 @@
   --sheet: rgb(246 247 243 / 0.86);
   --dialog: rgb(255 255 255 / 0.85);
   --popover: rgb(255 255 255 / 0.85);
+  /* Opaque panel for the hover/overlay sidebar: nothing behind it may show through. */
+  --sidebar-overlay: rgb(252 252 250);
 
   --glass-shadow-desktop: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 0 0 0.5px rgb(0 0 0 / 0.04),
     0 1px 2px rgb(0 0 0 / 0.04), 0 10px 30px -8px rgb(28 34 20 / 0.1);
@@ -478,6 +481,7 @@
   --sheet: rgb(30 31 28 / 0.86);
   --dialog: rgb(34 36 31 / 0.9);
   --popover: rgb(44 46 40 / 0.92);
+  --sidebar-overlay: rgb(42 44 38);
 
   --glass-shadow-desktop: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 0 0 0.5px rgb(255 255 255 / 0.06),
     0 10px 30px -8px rgb(0 0 0 / 0.5);
