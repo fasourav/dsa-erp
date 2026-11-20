@@ -121,7 +121,7 @@ export function SettlementFilterControl({
             tabIndex={selected ? 0 : -1}
             onClick={() => choose(filter)}
             className={cn(
-              "inline-flex h-8 max-w-full items-center justify-center gap-1.5 rounded-full px-3 text-label font-semibold whitespace-nowrap outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "inline-flex h-8 max-w-full items-center justify-center gap-1.5 rounded-full px-3 text-label font-semibold whitespace-nowrap outline-none focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:h-11",
               selected
                 ? "bg-segment-active text-foreground shadow-segment"
                 : "bg-fill text-muted-foreground hover:text-foreground",

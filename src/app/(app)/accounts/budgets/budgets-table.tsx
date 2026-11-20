@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { compareText } from "@/lib/format"
+import { compareText, formatMoney } from "@/lib/format"
 import {
   CLIENT_PAGE_SIZES,
   paginateRows,
@@ -202,11 +202,11 @@ export function BudgetsTable({
       />
 
       {error ? null : (
-        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
           <Card size="sm">
             <CardContent className="flex flex-col gap-1">
               <p className="text-label font-semibold text-muted-foreground">Allocated</p>
-              <p className="text-metric">
+              <p className="min-w-0 truncate text-metric tabular-nums" title={formatMoney(totals.allocated)}>
                 <Money value={totals.allocated} />
               </p>
             </CardContent>
@@ -214,7 +214,7 @@ export function BudgetsTable({
           <Card size="sm">
             <CardContent className="flex flex-col gap-1">
               <p className="text-label font-semibold text-muted-foreground">Actual Spent</p>
-              <p className="text-metric">
+              <p className="min-w-0 truncate text-metric tabular-nums" title={formatMoney(totals.spent)}>
                 <Money value={totals.spent} />
               </p>
             </CardContent>
@@ -222,7 +222,7 @@ export function BudgetsTable({
           <Card size="sm">
             <CardContent className="flex flex-col gap-1">
               <p className="text-label font-semibold text-muted-foreground">Variance</p>
-              <p className="text-metric">
+              <p className="min-w-0 truncate text-metric tabular-nums" title={formatMoney(totals.variance)}>
                 <Money value={totals.variance} className={moneyClass(totals.variance)} />
               </p>
             </CardContent>

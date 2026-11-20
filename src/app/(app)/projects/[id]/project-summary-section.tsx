@@ -2,7 +2,7 @@
 
 import { Inbox } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react"
 
 import {
   ExpenseDonut,
@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { compareText, formatIsoDate } from "@/lib/format"
+import { compareText, formatIsoDate, formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -101,10 +101,37 @@ export function ProjectSummarySection({
   })
   const expenseTotal = slices.reduce((total, slice) => total + slice.amount, 0)
   const margin = formatPercent(overview.grossProfit, overview.projectValue)
+  const compactChart = useSyncExternalStore(
+    (onStoreChange) => {
+      const media = window.matchMedia("(width < 80rem)")
+      media.addEventListener("change", onStoreChange)
+      return () => media.removeEventListener("change", onStoreChange)
+    },
+    () => window.matchMedia("(width < 80rem)").matches,
+    () => false,
+  )
+  const tabsListRef = useRef<HTMLDivElement | null>(null)
+  const [tabsCanScroll, setTabsCanScroll] = useState(false)
+
+  useEffect(() => {
+    const el = tabsListRef.current
+    if (!el) return
+    const update = () => {
+      setTabsCanScroll(el.scrollWidth - el.scrollLeft - el.clientWidth > 1)
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    el.addEventListener("scroll", update, { passive: true })
+    return () => {
+      observer.disconnect()
+      el.removeEventListener("scroll", update)
+    }
+  }, [])
 
   return (
     <div className="flex flex-col gap-4 md:gap-5">
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-6 pointer-coarse:xl:grid-cols-3">
         <Kpi label="Project Value" value={overview.projectValue} />
         <Kpi label="Received" value={overview.received} />
         <Kpi label="Receivable" value={overview.receivable} />
@@ -118,7 +145,7 @@ export function ProjectSummarySection({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4 xl:grid-cols-4">
         <Mini label="Unbilled" value={overview.unbilled} />
         <Mini label="Total Invoiced" value={overview.totalInvoiced} />
         <Mini label="Contract Balance" value={overview.contractBalance} />
@@ -129,7 +156,13 @@ export function ProjectSummarySection({
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList className="max-w-full overflow-x-auto">
+        <TabsList
+          ref={tabsListRef}
+          className={cn(
+            "max-w-full overflow-x-auto",
+            tabsCanScroll && "max-xl:[mask-image:linear-gradient(to_right,black_85%,transparent)]",
+          )}
+        >
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="progress">Progress</TabsTrigger>
           <TabsTrigger value="budget">Budget</TabsTrigger>
@@ -152,7 +185,7 @@ export function ProjectSummarySection({
                   <LegendDot className="bg-chart-2" label="Net Profit" />
                 </div>
                 {overview.months.length > 0 ? (
-                  <WeeklyChart data={overview.months} />
+                  <WeeklyChart data={overview.months} compact={compactChart} />
                 ) : (
                   <ChartEmpty message="No Income Or Expenses Yet" />
                 )}
@@ -633,7 +666,7 @@ function Kpi({
     <Card className="min-w-0 gap-1">
       <CardContent className="flex min-w-0 flex-col gap-1">
         <p className="text-label text-muted-foreground">{label}</p>
-        <p className={cn("min-w-0 truncate text-metric md:text-kpi", className)}>
+        <p className={cn("min-w-0 truncate text-metric md:text-metric xl:text-kpi", className)} title={formatMoney(value)}>
           <Money value={value} size="kpi" />
         </p>
         {detail ? <p className="text-caption text-muted-foreground">{detail}</p> : null}
@@ -647,7 +680,7 @@ function Mini({ label, value }: { label: string; value: number }) {
     <Card size="sm" className="min-w-0 gap-1">
       <CardContent className="flex min-w-0 flex-col gap-1">
         <p className="text-caption text-muted-foreground">{label}</p>
-        <p className="min-w-0 truncate text-metric">
+        <p className="min-w-0 truncate text-metric" title={formatMoney(value)}>
           <Money value={value} />
         </p>
       </CardContent>

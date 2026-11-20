@@ -10,7 +10,7 @@ import { PageHeader, SectionHeader } from "@/components/page-header"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { deliverFile, XLSX_MIME } from "@/lib/deliver-file"
-import { compareText } from "@/lib/format"
+import { compareText, formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -106,14 +106,17 @@ export function ReportView({
       />
       {showFilters ? <ReportFilters launch={launch} today={today} from={from} to={to} /> : null}
       {figures.length > 0 ? (
-        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
           {figures.map((figure) => (
             <Card
               key={`${figure.label}-${figure.amount}`}
-              className="min-w-0 gap-0 px-4 py-4 last:odd:col-span-2 md:px-5 md:py-4 md:last:odd:col-span-1"
+              className="min-w-0 gap-0 px-4 py-4 last:odd:col-span-2 md:px-5 md:py-4 md:last:odd:col-span-2 xl:last:odd:col-span-1"
             >
               <p className="truncate text-label text-muted-foreground">{figure.label}</p>
-              <p className={cn("mt-1.5 truncate text-metric md:text-kpi", figure.amount < 0 && "text-destructive")}>
+              <p
+                className={cn("mt-1.5 truncate text-metric md:text-metric xl:text-kpi", figure.amount < 0 && "text-destructive")}
+                title={formatMoney(figure.amount)}
+              >
                 <Money value={figure.amount} size="kpi" />
               </p>
               {figure.detail ? (

@@ -81,8 +81,8 @@ export function AppSidebar({
       className={cn(
         "group/sidebar absolute top-0 left-0 z-30 m-3.5 flex h-auto max-h-[calc(100svh-1.75rem)] min-h-0 w-18 flex-col items-stretch overflow-hidden rounded-sidebar px-3.25 pt-3.5 pb-3 text-sidebar-foreground glass-chrome transition-[width] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none",
         !collapsed && "lg:w-63",
-        !collapsed && mode === "auto" && "lg:bg-popover! lg:shadow-2xl",
-        overlay && "w-63 bg-popover! shadow-2xl",
+        !collapsed && mode === "auto" && "lg:bg-sidebar-overlay! lg:shadow-[12px_0_40px_-8px_rgb(0_0_0/0.35)]",
+        overlay && "w-63 bg-sidebar-overlay! shadow-[12px_0_40px_-8px_rgb(0_0_0/0.35)]",
       )}
     >
       <div className="group/header relative mb-2 flex h-12.5 shrink-0 items-center">
@@ -163,7 +163,7 @@ export function AppSidebar({
           variant="secondary"
           size="icon-sm"
           className={cn(
-            "absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2",
+            "absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 pointer-coarse:size-11",
             collapseToAuto
               ? "[@media(width<64rem)]:inline-flex"
               : "[@media(width<64rem),(hover:none)]:inline-flex",
@@ -184,7 +184,7 @@ export function AppSidebar({
             type="button"
             variant="secondary"
             size="icon-sm"
-            className="absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 [@media(width>=64rem)_and_(hover:none)]:inline-flex"
+            className="absolute top-1/2 right-1.5 z-10 hidden -translate-y-1/2 pointer-coarse:size-11 [@media(width>=64rem)_and_(hover:none)]:inline-flex"
             aria-controls="primary-navigation"
             aria-expanded
             aria-label="Collapse sidebar"
@@ -260,7 +260,7 @@ function NavLink({
   if (!Icon) return null
 
   const className = cn(
-    "relative flex h-8.25 w-full min-w-0 shrink-0 items-center gap-2.75 overflow-hidden rounded-lg px-3.25 text-left text-ui font-book tracking-[-0.005em] whitespace-nowrap text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50",
+    "relative flex h-8.25 w-full min-w-0 shrink-0 items-center gap-2.75 overflow-hidden rounded-lg px-3.25 text-left text-ui font-book tracking-[-0.005em] whitespace-nowrap text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 pointer-coarse:h-11",
     active &&
       "bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-nav-active hover:bg-sidebar-primary",
   )

@@ -274,7 +274,13 @@ function smoothLine(xs: number[], ys: number[]) {
   return path
 }
 
-export function WeeklyChart({ data }: { data: WeekChartRow[] }) {
+export function WeeklyChart({
+  data,
+  compact = false,
+}: {
+  data: WeekChartRow[]
+  compact?: boolean
+}) {
   const ready = useChartReady()
   const reduced = useReducedMotion()
   const desktop = useDesktop()
@@ -298,7 +304,8 @@ export function WeeklyChart({ data }: { data: WeekChartRow[] }) {
             tick={{ ...axisTick, fontSize: desktop ? 11.5 : 11 }}
             axisLine={false}
             tickLine={false}
-            interval={desktop ? 0 : 1}
+            interval={compact ? "preserveStartEnd" : desktop ? 0 : 1}
+            minTickGap={12}
             tickMargin={8}
           />
           <YAxis

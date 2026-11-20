@@ -110,7 +110,7 @@ function DialogContent({
                 <Button
                   variant="secondary"
                   className={cn(
-                    "absolute group-data-[layout=nav]/dialog:hidden md:group-data-[layout=nav]/dialog:inline-flex",
+                    "absolute group-data-[layout=nav]/dialog:hidden pointer-coarse:size-11 md:group-data-[layout=nav]/dialog:inline-flex",
                     variant === "drawer"
                       ? "top-4 right-4 md:top-6 md:right-6"
                       : "top-5 right-3.5 md:top-5 md:right-6",

@@ -18,7 +18,7 @@ export type ListExportLoaderResult = {
   error?: string | null
 }
 
-type ListExportProps =
+type ListExportProps = (
   | {
       grid: ListExportGrid
       loadGrid?: never
@@ -27,6 +27,9 @@ type ListExportProps =
       loadGrid: () => Promise<ListExportLoaderResult>
       grid?: never
     }
+) & {
+  iconOnly?: boolean
+}
 
 export function ListExport(props: ListExportProps) {
   const [error, setError] = useState<string | null>(null)
@@ -113,14 +116,31 @@ export function ListExport(props: ListExportProps) {
           if (open) void import("exceljs")
         }}
       >
-        <DropdownMenuTrigger
-          render={
-            <Button type="button" variant="outline" disabled={pending} />
-          }
-        >
-          <Download aria-hidden="true" data-icon="inline-start" />
-          Export
-        </DropdownMenuTrigger>
+        {props.iconOnly ? (
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="pointer-coarse:size-11"
+                aria-label="Export"
+                disabled={pending}
+              />
+            }
+          >
+            <Download aria-hidden="true" />
+          </DropdownMenuTrigger>
+        ) : (
+          <DropdownMenuTrigger
+            render={
+              <Button type="button" variant="outline" disabled={pending} />
+            }
+          >
+            <Download aria-hidden="true" data-icon="inline-start" />
+            Export
+          </DropdownMenuTrigger>
+        )}
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => void downloadExcel()}>Excel</DropdownMenuItem>
           <DropdownMenuItem onClick={() => void downloadCsv()}>CSV</DropdownMenuItem>

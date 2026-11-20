@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Download, Printer, Share2, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, MoreHorizontal, Printer, Share2, Trash2 } from "lucide-react"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 
@@ -22,6 +22,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -173,51 +179,108 @@ export function DocumentWorkspace({
         description={description}
         actions={
           <>
-            {canShare ? (
-              <Button type="button" variant="outline" onClick={() => void shareDocument()}>
-                <Share2 aria-hidden="true" data-icon="inline-start" />
-                {copied ? "Link Copied" : "Share"}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pdfKind !== null}
-              aria-label="Print"
-              onClick={() => openPdf(false)}
-            >
-              <Printer aria-hidden="true" data-icon="inline-start" />
-              {pdfKind === "print" ? "Creating…" : "Print"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pdfKind !== null || (Boolean(record?.id) && dirty)}
-              aria-label={Boolean(record?.id) && dirty ? "Save to download" : "Download PDF"}
-              title={Boolean(record?.id) && dirty ? "Save the document, then download it." : undefined}
-              onClick={() => openPdf(true)}
-            >
-              <Download aria-hidden="true" data-icon="inline-start" />
-              {Boolean(record?.id) && dirty
-                ? "Save To Download"
-                : pdfKind === "letterhead"
-                  ? "Creating…"
-                  : "Download PDF"}
-            </Button>
-            {showTrash ? (
+            <div className="hidden md:contents">
+              {canShare ? (
+                <Button type="button" variant="outline" onClick={() => void shareDocument()}>
+                  <Share2 aria-hidden="true" data-icon="inline-start" />
+                  {copied ? "Link Copied" : "Share"}
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
-                disabled={pending || trashPending}
-                onClick={() => {
-                  setTrashError(null)
-                  setTrashOpen(true)
-                }}
+                disabled={pdfKind !== null}
+                aria-label="Print"
+                onClick={() => openPdf(false)}
               >
-                <Trash2 aria-hidden="true" data-icon="inline-start" />
-                Delete
+                <Printer aria-hidden="true" data-icon="inline-start" />
+                {pdfKind === "print" ? "Creating…" : "Print"}
               </Button>
-            ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pdfKind !== null || (Boolean(record?.id) && dirty)}
+                aria-label={Boolean(record?.id) && dirty ? "Save to download" : "Download PDF"}
+                title={Boolean(record?.id) && dirty ? "Save the document, then download it." : undefined}
+                onClick={() => openPdf(true)}
+              >
+                <Download aria-hidden="true" data-icon="inline-start" />
+                {Boolean(record?.id) && dirty
+                  ? "Save To Download"
+                  : pdfKind === "letterhead"
+                    ? "Creating…"
+                    : "Download PDF"}
+              </Button>
+              {showTrash ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending || trashPending}
+                  onClick={() => {
+                    setTrashError(null)
+                    setTrashOpen(true)
+                  }}
+                >
+                  <Trash2 aria-hidden="true" data-icon="inline-start" />
+                  Delete
+                </Button>
+              ) : null}
+            </div>
+            <div className="contents md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="More actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal aria-hidden="true" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canShare ? (
+                    <DropdownMenuItem onClick={() => void shareDocument()}>
+                      <Share2 aria-hidden="true" />
+                      {copied ? "Link Copied" : "Share"}
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem
+                    disabled={pdfKind !== null}
+                    onClick={() => openPdf(false)}
+                  >
+                    <Printer aria-hidden="true" />
+                    {pdfKind === "print" ? "Creating…" : "Print"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={pdfKind !== null || (Boolean(record?.id) && dirty)}
+                    onClick={() => openPdf(true)}
+                  >
+                    <Download aria-hidden="true" />
+                    {Boolean(record?.id) && dirty
+                      ? "Save To Download"
+                      : pdfKind === "letterhead"
+                        ? "Creating…"
+                        : "Download PDF"}
+                  </DropdownMenuItem>
+                  {showTrash ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={pending || trashPending}
+                      onClick={() => {
+                        setTrashError(null)
+                        setTrashOpen(true)
+                      }}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      Delete
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             {canSaveAsTemplate ? (
               <Button
                 type="button"
@@ -248,15 +311,15 @@ export function DocumentWorkspace({
       <Tabs
         value={pane}
         onValueChange={(value) => setPane(value === "preview" ? "preview" : "edit")}
-        className="print:hidden! md:hidden"
+        className="print:hidden! lg:hidden"
       >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="preview">Preview</TabsTrigger>
         </TabsList>
       </Tabs>
-      <div className="grid min-w-0 grid-cols-1 items-start gap-4 print:hidden md:grid-cols-2 md:gap-6">
-        <Card className={cn("min-w-0", pane === "preview" && "hidden md:flex")}>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 print:hidden lg:grid-cols-2 lg:gap-6">
+        <Card className={cn("min-w-0", pane === "preview" && "hidden lg:flex")}>
           <CardContent className="flex flex-col gap-4">
             {canStartFromTemplate && templateNames && onPickTemplate ? (
               <div className="flex flex-col gap-2">
@@ -280,7 +343,7 @@ export function DocumentWorkspace({
             ) : null}
           </CardContent>
         </Card>
-        <div className={cn("min-w-0", pane === "edit" && "hidden md:block")}>
+        <div className={cn("min-w-0", pane === "edit" && "hidden lg:block")}>
           <PreviewStage source={source} margins={{ topMm: top, bottomMm: bottom }} draft={!record?.id} />
         </div>
       </div>
@@ -538,7 +601,7 @@ function PreviewStage({
   const paged = rendered.pages.length > 1
 
   return (
-    <aside aria-label="Live preview" className="flex min-w-0 flex-col gap-3 md:sticky md:top-0">
+    <aside aria-label="Live preview" className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-0">
       <div ref={frame} className="flex min-w-0 justify-center overflow-hidden rounded-card bg-fill p-4 md:p-8">
         <div
           className="relative shrink-0 overflow-hidden bg-white"

@@ -4,7 +4,7 @@ import { ListExport } from "@/components/list-export"
 import { filterRows, ListSearch, rowText } from "@/components/list-search"
 import { useCan, useSeesMoney } from "@/components/access-provider"
 
-import { FileText, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { ClipboardList, FileText, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
@@ -111,6 +111,7 @@ export function PurchaseOrdersTable({
     facet: { key: "status", options: poStatusValues },
   })
   const [formOpen, setFormOpen] = useState(false)
+  const [operationalOpen, setOperationalOpen] = useState(false)
   const [formOperational, setFormOperational] = useState(false)
   const [formOrder, setFormOrder] = useState<PurchaseOrderRow | null>(null)
   const [formSession, setFormSession] = useState(0)
@@ -201,55 +202,148 @@ export function PurchaseOrdersTable({
         }
         actions={
           <>
-            <ListExport
-              grid={{
-                filename: "purchase-orders",
-                title: "Purchase Orders",
-                columns: [
-                  { header: "Date", kind: "text" },
-                  { header: "Project Name", kind: "text" },
-                  { header: "Vendor Name", kind: "text" },
-                  { header: "Work Type", kind: "text" },
-                  { header: "Expense Category", kind: "text" },
-                  { header: "Status", kind: "text" },
-                  { header: "Purchase Order Value", kind: "money" },
-                  { header: "Total Paid", kind: "money" },
-                  { header: "Pending Due", kind: "money" },
-                ],
-                rows: filtered.map((order) => [
-                  formatPurchaseOrderDate(order.issuedOn),
-                  order.projectName,
-                  order.vendorName,
-                  order.workType,
-                  order.expenseCategoryName,
-                  paymentStatusLabel(
-                    paymentBalanceStatus(
-                      order.totalPaid,
-                      order.totalPending,
-                      order.totalValue,
+            <div className="hidden xl:contents pointer-coarse:hidden pointer-coarse:xl:hidden">
+              <ListExport
+                grid={{
+                  filename: "purchase-orders",
+                  title: "Purchase Orders",
+                  columns: [
+                    { header: "Date", kind: "text" },
+                    { header: "Project Name", kind: "text" },
+                    { header: "Vendor Name", kind: "text" },
+                    { header: "Work Type", kind: "text" },
+                    { header: "Expense Category", kind: "text" },
+                    { header: "Status", kind: "text" },
+                    { header: "Purchase Order Value", kind: "money" },
+                    { header: "Total Paid", kind: "money" },
+                    { header: "Pending Due", kind: "money" },
+                  ],
+                  rows: filtered.map((order) => [
+                    formatPurchaseOrderDate(order.issuedOn),
+                    order.projectName,
+                    order.vendorName,
+                    order.workType,
+                    order.expenseCategoryName,
+                    paymentStatusLabel(
+                      paymentBalanceStatus(
+                        order.totalPaid,
+                        order.totalPending,
+                        order.totalValue,
+                      ),
                     ),
-                  ),
-                  seesMoney ? order.totalValue : "Hidden",
-                  seesMoney ? order.totalPaid : "Hidden",
-                  seesMoney ? order.totalPending : "Hidden",
-                ]),
-              }}
-            />
-            <CustomizeColumns
-              columns={dataColumns}
-              visibility={visibility}
-              onVisibilityChange={(id, checked) => {
-                if (!isOptionalColumn(id)) {
-                  return
-                }
+                    seesMoney ? order.totalValue : "Hidden",
+                    seesMoney ? order.totalPaid : "Hidden",
+                    seesMoney ? order.totalPending : "Hidden",
+                  ]),
+                }}
+              />
+              <CustomizeColumns
+                columns={dataColumns}
+                visibility={visibility}
+                onVisibilityChange={(id, checked) => {
+                  if (!isOptionalColumn(id)) {
+                    return
+                  }
 
-                writeColumnVisibility({
-                  ...visibility,
-                  [id]: checked,
-                })
-              }}
-            />
+                  writeColumnVisibility({
+                    ...visibility,
+                    [id]: checked,
+                  })
+                }}
+              />
+              <Button type="button" variant="outline" onClick={() => setOperationalOpen(true)}>
+                <ClipboardList aria-hidden="true" data-icon="inline-start" />
+                Operational Purchase Orders
+              </Button>
+              {canAdd ? (
+                <Button type="button" onClick={() => openForm(null)}>
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Assign Purchase Order
+                </Button>
+              ) : null}
+            </div>
+            <div className="contents xl:hidden pointer-coarse:contents pointer-coarse:xl:contents">
+              <ListExport
+                iconOnly
+                grid={{
+                  filename: "purchase-orders",
+                  title: "Purchase Orders",
+                  columns: [
+                    { header: "Date", kind: "text" },
+                    { header: "Project Name", kind: "text" },
+                    { header: "Vendor Name", kind: "text" },
+                    { header: "Work Type", kind: "text" },
+                    { header: "Expense Category", kind: "text" },
+                    { header: "Status", kind: "text" },
+                    { header: "Purchase Order Value", kind: "money" },
+                    { header: "Total Paid", kind: "money" },
+                    { header: "Pending Due", kind: "money" },
+                  ],
+                  rows: filtered.map((order) => [
+                    formatPurchaseOrderDate(order.issuedOn),
+                    order.projectName,
+                    order.vendorName,
+                    order.workType,
+                    order.expenseCategoryName,
+                    paymentStatusLabel(
+                      paymentBalanceStatus(
+                        order.totalPaid,
+                        order.totalPending,
+                        order.totalValue,
+                      ),
+                    ),
+                    seesMoney ? order.totalValue : "Hidden",
+                    seesMoney ? order.totalPaid : "Hidden",
+                    seesMoney ? order.totalPending : "Hidden",
+                  ]),
+                }}
+              />
+              <CustomizeColumns
+                columns={dataColumns}
+                visibility={visibility}
+                onVisibilityChange={(id, checked) => {
+                  if (!isOptionalColumn(id)) {
+                    return
+                  }
+
+                  writeColumnVisibility({
+                    ...visibility,
+                    [id]: checked,
+                  })
+                }}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="pointer-coarse:size-11"
+                      aria-label="More actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal aria-hidden="true" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setOperationalOpen(true)}>
+                    <ClipboardList aria-hidden="true" />
+                    Operational Purchase Orders
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {canAdd ? (
+                <Button type="button" onClick={() => openForm(null)}>
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Assign Purchase Order
+                </Button>
+              ) : null}
+            </div>
             <OperationalPurchaseOrdersDialog
+              open={operationalOpen}
+              onOpenChange={setOperationalOpen}
+              hideTrigger
               orders={orders}
               vendors={vendors}
               workTypes={workTypes}
@@ -257,12 +351,6 @@ export function PurchaseOrdersTable({
               officeExpenseCategories={officeExpenseCategories}
               vendorDefaults={vendorDefaults}
             />
-            {canAdd ? (
-              <Button type="button" onClick={() => openForm(null)}>
-                <Plus aria-hidden="true" data-icon="inline-start" />
-                Assign Purchase Order
-              </Button>
-            ) : null}
           </>
         }
       />
