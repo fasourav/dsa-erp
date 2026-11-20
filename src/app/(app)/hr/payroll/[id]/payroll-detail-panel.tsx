@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { BankAccountChoice } from "@/lib/bank-account"
-import { compareText, formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear, formatMoney } from "@/lib/format"
 import {
   paginateRows,
   rangeLabel,
@@ -185,7 +185,7 @@ export function PayrollDetailPanel({
         }
       />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
         <Kpi
           label="Employees"
           value={<span className="tabular-nums">{salary.lineCount}</span>}
@@ -193,14 +193,17 @@ export function PayrollDetailPanel({
         <Kpi
           label="Total Paid"
           value={showFinancials ? <Money value={salary.totalPaid} size="kpi" /> : "Hidden"}
+          title={showFinancials ? formatMoney(salary.totalPaid) : undefined}
         />
         <Kpi
           label="Bonus"
           value={showFinancials ? <Money value={bonus} size="kpi" /> : "Hidden"}
+          title={showFinancials ? formatMoney(bonus) : undefined}
         />
         <Kpi
           label="Deductions"
           value={showFinancials ? <Money value={deduction} size="kpi" /> : "Hidden"}
+          title={showFinancials ? formatMoney(deduction) : undefined}
         />
       </div>
 
@@ -294,12 +297,14 @@ export function PayrollDetailPanel({
   )
 }
 
-function Kpi({ label, value }: { label: string; value: ReactNode }) {
+function Kpi({ label, value, title }: { label: string; value: ReactNode; title?: string }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-1">
         <p className="text-label text-muted-foreground">{label}</p>
-        <p className="text-metric">{value}</p>
+        <p className="min-w-0 truncate text-metric tabular-nums" title={title}>
+          {value}
+        </p>
       </CardContent>
     </Card>
   )

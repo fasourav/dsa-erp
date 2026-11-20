@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { compareText, formatDayMonYear } from "@/lib/format"
+import { compareText, formatDayMonYear, formatMoney } from "@/lib/format"
 import { deliverFile, XLSX_MIME } from "@/lib/deliver-file"
 import {
   paginateRows,
@@ -158,7 +158,7 @@ export function StatementView({
           <ReportFilters launch={launch} today={today} from={from} to={to} />
           {projects ? <ProjectFilter projects={projects} projectId={projectId ?? null} /> : null}
         </div>
-        <div className="mt-3.5 grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+        <div className="mt-3.5 grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
           <Figure label="Opening Balance" amount={statement.opening} />
           <Figure label={debitLabel} amount={statement.debit} />
           <Figure label="Payments" amount={statement.credit} />
@@ -187,7 +187,10 @@ function Figure({ label, amount }: { label: string; amount: number }) {
   return (
     <Card className="min-w-0 gap-0 px-4 py-4 md:px-5 md:py-4">
       <p className="truncate text-label text-muted-foreground">{label}</p>
-      <p className={cn("mt-1.5 truncate text-metric md:text-kpi", amount < 0 && "text-destructive")}>
+      <p
+        className={cn("mt-1.5 truncate text-metric md:text-metric xl:text-kpi", amount < 0 && "text-destructive")}
+        title={formatMoney(amount)}
+      >
         <Money value={amount} size="kpi" />
       </p>
     </Card>

@@ -30,7 +30,7 @@ import {
   type ListColumn,
   type SortState,
 } from "@/lib/list-paging"
-import { compareText, formatDayMonYear, formatIsoDate } from "@/lib/format"
+import { compareText, formatDayMonYear, formatIsoDate, formatMoney } from "@/lib/format"
 import { sumAssetCurrentValue } from "@/lib/asset-value"
 import type { AssetCategoryOption, AssetRow } from "@/lib/assets"
 import { useListUrlState } from "@/lib/use-list-url-state"
@@ -213,11 +213,11 @@ export function AssetsTable({
       />
 
       {error ? null : (
-        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
           <Card size="sm" className="col-span-2 md:col-span-1">
             <CardContent className="flex flex-col gap-1">
               <p className="text-label font-semibold text-muted-foreground">Total Asset Value</p>
-              <p className="text-metric">
+              <p className="min-w-0 truncate text-metric tabular-nums" title={formatMoney(totalAssetValue)}>
                 <Money value={totalAssetValue} />
               </p>
             </CardContent>

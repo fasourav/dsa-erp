@@ -42,7 +42,7 @@ import {
   type BankTransactionRow,
 } from "@/lib/bank"
 import { bankTransactionColumnStore } from "@/lib/bank-column-store"
-import { formatIsoDate } from "@/lib/format"
+import { formatIsoDate, formatMoney } from "@/lib/format"
 import {
   rangeLabel,
   toggleSort,
@@ -265,13 +265,16 @@ export function BankPanel({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
           {balances.map((account) => (
             <Card key={account.id} size="sm">
               <CardContent className="flex flex-col gap-1">
                 <p className="truncate text-ui font-semibold">{account.name || "Account"}</p>
                 <p className="text-label text-muted-foreground">Balance</p>
-                <p className="text-metric">
+                <p
+                  className="min-w-0 truncate text-metric tabular-nums"
+                  title={showFinancials ? formatMoney(account.balance) : undefined}
+                >
                   {showFinancials ? (
                     <Money value={account.balance} />
                   ) : (
@@ -371,7 +374,7 @@ export function BankPanel({
           ),
         })}
         toolbar={
-          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+          <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:flex-row md:flex-wrap md:justify-end">
             <Button
               variant="outline"
               nativeButton={false}
@@ -413,12 +416,13 @@ export function BankPanel({
             ) : null}
             {canAdd ? (
               <span
-                className="inline-flex"
+                className="flex w-full md:inline-flex md:w-auto"
                 title={accounts.length < 2 ? "Add a second bank account to transfer." : undefined}
               >
                 <Button
                   type="button"
                   variant="outline"
+                  className="w-full md:w-auto"
                   disabled={accounts.length < 2}
                   aria-describedby={accounts.length < 2 ? "bank-transfer-hint" : undefined}
                   onClick={() => setTransferOpen(true)}
@@ -445,6 +449,7 @@ export function BankPanel({
             {canAdd ? (
               <Button
                 type="button"
+                className="col-span-2 md:col-span-1"
                 disabled={accounts.length === 0}
                 onClick={() => openMovement("deposit", null)}
               >
