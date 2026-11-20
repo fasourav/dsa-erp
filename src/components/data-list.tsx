@@ -251,7 +251,7 @@ export function DataList<T, Id extends string>({
         <div className="flex flex-wrap items-center gap-2 px-1 md:gap-2.5 md:px-0">{toolbar}</div>
       ) : null}
       {mobileItem ? (
-        <div className="flex flex-col gap-2.5 md:hidden">
+        <div className="flex flex-col gap-2.5 lg:hidden">
           {sortableColumns.length > 0 ? (
             <MobileSortControl
               columns={sortableColumns}
@@ -281,11 +281,11 @@ export function DataList<T, Id extends string>({
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <div className="flex items-center justify-between gap-2.5">
-                          <span className="min-w-0 truncate text-row font-semibold [&_a]:block [&_a]:max-w-full [&_a]:truncate [&_a:focus-visible]:ring-inset [&_button]:inline-block [&_button]:max-w-full [&_button]:min-w-0 [&_button]:truncate [&_button]:text-left [&_button]:align-middle [&_button:focus-visible]:ring-inset [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:text-row [&_[data-slot=button]]:font-semibold">
+                          <span className="min-w-0 truncate text-row font-semibold [&_a]:block [&_a]:max-w-full [&_a]:truncate [&_a]:rounded-sm [&_a]:outline-none [&_a]:after:absolute [&_a]:after:inset-0 [&_a]:after:content-[''] [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring/50 [&_a:focus-visible]:ring-inset [&_button]:inline-block [&_button]:max-w-full [&_button]:min-w-0 [&_button]:truncate [&_button]:text-left [&_button]:align-middle [&_button]:after:absolute [&_button]:after:inset-0 [&_button]:after:content-[''] [&_button]:active:scale-100 [&_button:focus-visible]:ring-inset [&_[data-slot=button]]:px-0 [&_[data-slot=button]]:text-row [&_[data-slot=button]]:font-semibold [&_[data-slot=button]]:md:h-auto [&_[data-slot=button]]:md:px-0 [&_[data-slot=button]]:md:text-row">
                             {item.title}
                           </span>
                           {item.value ? (
-                            <span className="shrink-0 text-callout font-strong tabular-nums">
+                            <span className="shrink-0 text-callout font-strong tabular-nums [&_a]:relative [&_a]:z-10 [&_button]:relative [&_button]:z-10">
                               {item.value}
                             </span>
                           ) : null}
@@ -297,11 +297,11 @@ export function DataList<T, Id extends string>({
                                 <span className="min-w-0 line-clamp-2 break-words">{item.subtitle}</span>
                               ) : null}
                               {item.subtitleAccessory ? (
-                                <span className="shrink-0">{item.subtitleAccessory}</span>
+                                <span className="relative z-10 shrink-0">{item.subtitleAccessory}</span>
                               ) : null}
                             </span>
                             {item.meta ? (
-                              <span className="shrink-0 text-callout font-strong tabular-nums">{item.meta}</span>
+                              <span className="shrink-0 text-callout font-strong tabular-nums [&_a]:relative [&_a]:z-10 [&_button]:relative [&_button]:z-10">{item.meta}</span>
                             ) : null}
                           </div>
                         ) : null}
@@ -312,7 +312,7 @@ export function DataList<T, Id extends string>({
                         ) : null}
                       </div>
                       {hasActions ? (
-                        <span className="inline-flex shrink-0 items-center">{renderActions(row)}</span>
+                        <span className="relative z-10 inline-flex shrink-0 items-center [&_[data-slot=button][class*='size-']]:md:size-11 [&_[data-slot=button]:not([class*='size-'])]:md:h-11">{renderActions(row)}</span>
                       ) : null}
                     </li>
                   )
@@ -328,6 +328,7 @@ export function DataList<T, Id extends string>({
                 type="button"
                 variant="outline"
                 size="icon"
+                className="md:size-11"
                 disabled={currentPage <= 1}
                 aria-label="Go to previous page"
                 onClick={() => onPageChange(currentPage - 1)}
@@ -339,6 +340,7 @@ export function DataList<T, Id extends string>({
                 type="button"
                 variant="outline"
                 size="icon"
+                className="md:size-11"
                 disabled={currentPage >= pageCount}
                 aria-label="Go to next page"
                 onClick={() => onPageChange(currentPage + 1)}
@@ -363,7 +365,7 @@ export function DataList<T, Id extends string>({
           !hasRows && "[&_[data-slot=table-container]]:overflow-x-hidden",
           subtleScrollbar &&
             "[&_[data-slot=table-container]]:scrollbar-subtle [&_[data-slot=table-container]]:overflow-y-hidden",
-          mobileItem && "hidden md:block",
+          mobileItem && "hidden lg:block",
         )}
       >
         <Table
@@ -442,7 +444,7 @@ export function DataList<T, Id extends string>({
               {hasActions ? (
                 <TableHead
                   className={cn(
-                    "sticky right-0 z-10 border-l border-border-subtle bg-muted text-right align-middle whitespace-nowrap",
+                    "sticky right-0 z-10 border-l border-border-subtle bg-muted text-right align-middle whitespace-nowrap max-xl:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.25)] pointer-coarse:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.25)] dark:max-xl:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.18)] dark:pointer-coarse:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.18)]",
                     compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
                   )}
                 >
@@ -489,11 +491,11 @@ export function DataList<T, Id extends string>({
                   {hasActions ? (
                     <TableCell
                       className={cn(
-                        "sticky right-0 z-10 border-l border-border-subtle bg-card py-2 text-right align-middle whitespace-nowrap transition-colors group-hover:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] group-has-aria-expanded:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] group-data-[state=selected]:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] dark:group-hover:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))] dark:group-has-aria-expanded:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))] dark:group-data-[state=selected]:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))]",
+                        "sticky right-0 z-10 border-l border-border-subtle bg-card py-2 text-right align-middle whitespace-nowrap transition-colors max-xl:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.25)] pointer-coarse:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.25)] group-hover:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] group-has-aria-expanded:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] group-data-[state=selected]:bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] dark:max-xl:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.18)] dark:pointer-coarse:shadow-[-8px_0_12px_-10px_rgb(0_0_0/0.18)] dark:group-hover:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))] dark:group-has-aria-expanded:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))] dark:group-data-[state=selected]:bg-[color-mix(in_srgb,var(--primary)_16%,var(--card))]",
                         compactActions ? "w-14 px-1.5 last:pr-2.5" : "w-19 pr-3 pl-1.5 last:pr-4",
                       )}
                     >
-                      <span className="inline-flex items-center justify-end [&_[data-slot=button]:not([class*='size-'])]:h-8 [&_[data-slot=button]:not([class*='size-'])]:px-2 [&_[data-slot=button]:not([class*='size-'])]:text-xs">
+                      <span className="inline-flex items-center justify-end [&_[data-slot=button]:not([class*='size-'])]:h-8 [&_[data-slot=button]:not([class*='size-'])]:px-2 [&_[data-slot=button]:not([class*='size-'])]:text-xs [&_[data-slot=button][class*='size-']]:pointer-coarse:size-11 [&_[data-slot=button]:not([class*='size-'])]:pointer-coarse:h-11">
                         {renderActions(row)}
                       </span>
                     </TableCell>
@@ -510,8 +512,8 @@ export function DataList<T, Id extends string>({
         ) : rows.length === 0 ? (
           <ListEmpty message={emptyMessage} emptyState={emptyState} />
         ) : null}
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
-          <p className="text-label text-muted-foreground">{rangeText}</p>
+        <div className="flex flex-col flex-wrap gap-3 gap-y-2 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:py-3 md:pr-4.5 md:pl-6">
+          <p className="text-label whitespace-nowrap text-muted-foreground">{rangeText}</p>
           {showPageSize && pageSize ? (
             <PageSizeControl
               value={pageSize.value}
@@ -522,9 +524,9 @@ export function DataList<T, Id extends string>({
           {hidePagination ? null : (
             <Pagination
               aria-label={pagingLabel}
-              className="mx-0 w-auto justify-start sm:justify-end"
+              className="mx-0 w-auto shrink-0 justify-start sm:justify-end"
             >
-              <PaginationContent className="flex-wrap gap-1">
+              <PaginationContent className="shrink-0 flex-nowrap gap-1">
                 <PaginationItem>
                   <Button
                     type="button"
@@ -604,7 +606,7 @@ function PageSizeControl({
         mobile && "justify-end px-1",
       )}
     >
-      <span>Rows per page</span>
+      <span className="whitespace-nowrap">Rows per page</span>
       <Select
         items={items}
         value={String(value)}
@@ -618,7 +620,7 @@ function PageSizeControl({
         <SelectTrigger
           size="sm"
           aria-label="Rows per page"
-          className={cn("tabular-nums", mobile && "h-9")}
+          className={cn("tabular-nums", mobile && "h-9 md:data-[size=sm]:h-9")}
         >
           <SelectValue />
         </SelectTrigger>
@@ -663,7 +665,7 @@ function MobileSortControl<Id extends string>({
               type="button"
               variant="outline"
               size="sm"
-              className="h-9 max-w-full min-w-0 gap-1.5 px-3 text-label"
+              className="h-9 max-w-full min-w-0 gap-1.5 px-3 text-label md:h-9 md:text-label"
               aria-label={
                 activeColumn
                   ? `Sort by ${activeColumn.label}, ${directionText}`
@@ -795,7 +797,7 @@ export function ColumnHint({ label, hint }: { label: string; hint: string }) {
         delay={200}
         nativeButton
         aria-label={`About ${label}`}
-        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-subtle-foreground focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:size-11"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
@@ -859,7 +861,7 @@ export function CustomizeColumns<Id extends string>({
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button type="button" variant="outline" />}>
+      <DropdownMenuTrigger render={<Button type="button" variant="outline" className="hidden lg:inline-flex" />}>
         <Columns3 aria-hidden="true" data-icon="inline-start" />
         Customize Columns
         <ChevronDown aria-hidden="true" data-icon="inline-end" />

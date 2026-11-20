@@ -265,13 +265,18 @@ export function ActivityLog({
         onPageChange={(next) => navigate({ page: next })}
         pagingLabel="Activity pagination"
         mobileItem={(row) => ({
-          title: row.what,
+          title: (
+            <span className="line-clamp-2 whitespace-normal">
+              {row.what}
+            </span>
+          ),
           subtitle: (
             <span className="block truncate">
               {[row.who, row.record].filter(Boolean).join(" · ")}
+              {" · "}
+              <RelativeTime iso={row.createdAt} absolute={row.when} />
             </span>
           ),
-          value: <RelativeTime iso={row.createdAt} absolute={row.when} />,
         })}
         renderCell={(row, columnId) => {
           switch (columnId) {
