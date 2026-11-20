@@ -76,6 +76,9 @@ export function OperationalPurchaseOrdersDialog({
   expenseCategories,
   officeExpenseCategories,
   vendorDefaults,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  hideTrigger = false,
 }: {
   orders: PurchaseOrderRow[]
   vendors: VendorOption[]
@@ -83,6 +86,9 @@ export function OperationalPurchaseOrdersDialog({
   expenseCategories: ExpenseCategoryOption[]
   officeExpenseCategories: ExpenseCategoryOption[]
   vendorDefaults: VendorPoDefaults
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
 }) {
   const canAdd = useCan("purchase_orders", "add")
 
@@ -90,7 +96,9 @@ export function OperationalPurchaseOrdersDialog({
     () => orders.filter((order) => order.projectId == null),
     [orders],
   )
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = controlledOnOpenChange ?? setInternalOpen
   const [sort, setSort] = useState<SortState<OperationalColumnId>>({
     key: "issuedOn",
     direction: "desc",
@@ -150,10 +158,12 @@ export function OperationalPurchaseOrdersDialog({
 
   return (
     <>
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-        <ClipboardList aria-hidden="true" data-icon="inline-start" />
-        Operational Purchase Orders
-      </Button>
+      {hideTrigger ? null : (
+        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+          <ClipboardList aria-hidden="true" data-icon="inline-start" />
+          Operational Purchase Orders
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="overflow-hidden sm:max-w-5xl">

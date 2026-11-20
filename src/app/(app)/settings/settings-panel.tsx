@@ -10,6 +10,7 @@ import {
   Inbox,
   Landmark,
   ListTree,
+  MoreHorizontal,
   Plus,
   Receipt,
   Settings,
@@ -57,6 +58,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Empty, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import type { BankAccountRow } from "@/lib/bank"
 import { deliverFile } from "@/lib/deliver-file"
@@ -627,11 +634,11 @@ export function SettingsPanel({
                 {bankAccounts.map((account) => (
                   <li
                     key={account.id}
-                    className="flex flex-col gap-3 border-t border-border px-4 py-3 first:border-t-0 md:px-6 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 first:border-t-0 md:px-6"
                   >
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium break-words">{account.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="min-w-0 truncate font-medium">{account.name}</p>
                         {account.isActive ? (
                           <StatusBadge status="active" />
                         ) : (
@@ -653,7 +660,7 @@ export function SettingsPanel({
                         {account.sortOrder}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="hidden flex-wrap gap-2 lg:flex">
                       <Button
                         type="button"
                         variant="outline"
@@ -682,6 +689,48 @@ export function SettingsPanel({
                       >
                         Delete
                       </Button>
+                    </div>
+                    <div className="shrink-0 lg:hidden">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={updatingBank || deletingBank}
+                              aria-label={`Actions for ${account.name}`}
+                            />
+                          }
+                        >
+                          <MoreHorizontal aria-hidden="true" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            disabled={updatingBank || deletingBank}
+                            onClick={() => openBankForm(account)}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={updatingBank || deletingBank}
+                            onClick={() => toggleBankAccount(account)}
+                          >
+                            {bankPendingId === account.id && updatingBank
+                              ? "Saving…"
+                              : account.isActive
+                                ? "Deactivate"
+                                : "Activate"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={updatingBank || deletingBank}
+                            onClick={() => openBankDelete(account)}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </li>
                 ))}
@@ -787,11 +836,11 @@ function CatalogDetail({
           {catalog.items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-col gap-3 border-t border-border px-4 py-3 first:border-t-0 md:px-6 sm:flex-row sm:items-center sm:justify-between"
+              className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 first:border-t-0 md:px-6"
             >
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium break-words">{item.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="min-w-0 truncate font-medium">{item.name}</p>
                   {catalog.hasActive && item.isActive === false ? (
                     <StatusBadge status="inactive" />
                   ) : null}
@@ -806,13 +855,37 @@ function CatalogDetail({
                   Sort Order {item.sortOrder}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden flex-wrap gap-2 lg:flex">
                 <Button type="button" variant="outline" onClick={() => onEdit(item)}>
                   Edit
                 </Button>
                 <Button type="button" variant="destructive" onClick={() => onDelete(item)}>
                   Delete
                 </Button>
+              </div>
+              <div className="shrink-0 lg:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={`Actions for ${item.name}`}
+                      />
+                    }
+                  >
+                    <MoreHorizontal aria-hidden="true" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(item)}>
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={() => onDelete(item)}>
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </li>
           ))}

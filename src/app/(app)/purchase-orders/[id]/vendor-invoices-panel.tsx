@@ -226,74 +226,155 @@ export function VendorInvoicesPanel({
         }
         actions={
           <>
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href="/purchase-orders" prefetch={false} />}
-            >
-              All Purchase Orders
-            </Button>
-            {purchaseOrder ? (
+            <div className="hidden xl:contents pointer-coarse:hidden pointer-coarse:xl:hidden">
               <Button
                 variant="outline"
                 nativeButton={false}
-                render={<Link href={`/documents/purchase-orders/${purchaseOrder.id}`} prefetch={false} />}
+                render={<Link href="/purchase-orders" prefetch={false} />}
               >
-                Print / Download
+                All Purchase Orders
               </Button>
-            ) : null}
-            {purchaseOrder ? (
-              <Button
-                variant="outline"
-                nativeButton={false}
-                render={<Link href={`/documents/challans/new?po=${purchaseOrder.id}`} prefetch={false} />}
-              >
-                Delivery Challan
-              </Button>
-            ) : null}
-            {purchaseOrder && workOrderId && canViewWorkOrder ? (
-              <Button
-                variant="outline"
-                nativeButton={false}
-                render={<Link href={`/documents/work-orders/${workOrderId}`} prefetch={false} />}
-              >
-                <FileText aria-hidden="true" data-icon="inline-start" />
-                View Work Order
-              </Button>
-            ) : purchaseOrder && !workOrderId && canAddWorkOrder ? (
-              <Button
-                variant="outline"
-                nativeButton={false}
-                render={<Link href={`/documents/work-orders/new?po=${purchaseOrder.id}`} prefetch={false} />}
-              >
-                <FileText aria-hidden="true" data-icon="inline-start" />
-                Create Work Order
-              </Button>
-            ) : null}
-            {canAdd ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!canAddBill}
-                onClick={() => openForm(null)}
-              >
-                <Plus aria-hidden="true" data-icon="inline-start" />
-                Add Bill
-              </Button>
-            ) : null}
-            {canAdd ? (
-              <Button
-                type="button"
-                disabled={!canRecordPayment}
-                onClick={() => {
-                  setRecordSession((current) => current + 1)
-                  setRecordOpen(true)
-                }}
-              >
-                <Wallet aria-hidden="true" data-icon="inline-start" />
-                Record Payment
-              </Button>
-            ) : null}
+              {purchaseOrder ? (
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/documents/purchase-orders/${purchaseOrder.id}`} prefetch={false} />}
+                >
+                  Print / Download
+                </Button>
+              ) : null}
+              {purchaseOrder ? (
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/documents/challans/new?po=${purchaseOrder.id}`} prefetch={false} />}
+                >
+                  Delivery Challan
+                </Button>
+              ) : null}
+              {purchaseOrder && workOrderId && canViewWorkOrder ? (
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/documents/work-orders/${workOrderId}`} prefetch={false} />}
+                >
+                  <FileText aria-hidden="true" data-icon="inline-start" />
+                  View Work Order
+                </Button>
+              ) : purchaseOrder && !workOrderId && canAddWorkOrder ? (
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/documents/work-orders/new?po=${purchaseOrder.id}`} prefetch={false} />}
+                >
+                  <FileText aria-hidden="true" data-icon="inline-start" />
+                  Create Work Order
+                </Button>
+              ) : null}
+              {canAdd ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canAddBill}
+                  onClick={() => openForm(null)}
+                >
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Add Bill
+                </Button>
+              ) : null}
+              {canAdd ? (
+                <Button
+                  type="button"
+                  disabled={!canRecordPayment}
+                  onClick={() => {
+                    setRecordSession((current) => current + 1)
+                    setRecordOpen(true)
+                  }}
+                >
+                  <Wallet aria-hidden="true" data-icon="inline-start" />
+                  Record Payment
+                </Button>
+              ) : null}
+            </div>
+            <div className="contents xl:hidden pointer-coarse:contents pointer-coarse:xl:contents">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="More actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal aria-hidden="true" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    nativeButton={false}
+                    render={<Link href="/purchase-orders" prefetch={false} />}
+                  >
+                    All Purchase Orders
+                  </DropdownMenuItem>
+                  {purchaseOrder ? (
+                    <DropdownMenuItem
+                      nativeButton={false}
+                      render={<Link href={`/documents/purchase-orders/${purchaseOrder.id}`} prefetch={false} />}
+                    >
+                      Print / Download
+                    </DropdownMenuItem>
+                  ) : null}
+                  {purchaseOrder ? (
+                    <DropdownMenuItem
+                      nativeButton={false}
+                      render={<Link href={`/documents/challans/new?po=${purchaseOrder.id}`} prefetch={false} />}
+                    >
+                      Delivery Challan
+                    </DropdownMenuItem>
+                  ) : null}
+                  {purchaseOrder && workOrderId && canViewWorkOrder ? (
+                    <DropdownMenuItem
+                      nativeButton={false}
+                      render={<Link href={`/documents/work-orders/${workOrderId}`} prefetch={false} />}
+                    >
+                      <FileText aria-hidden="true" />
+                      View Work Order
+                    </DropdownMenuItem>
+                  ) : purchaseOrder && !workOrderId && canAddWorkOrder ? (
+                    <DropdownMenuItem
+                      nativeButton={false}
+                      render={<Link href={`/documents/work-orders/new?po=${purchaseOrder.id}`} prefetch={false} />}
+                    >
+                      <FileText aria-hidden="true" />
+                      Create Work Order
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canAdd ? (
+                    <DropdownMenuItem
+                      disabled={!canAddBill}
+                      onClick={() => openForm(null)}
+                    >
+                      <Plus aria-hidden="true" />
+                      Add Bill
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {canAdd ? (
+                <Button
+                  type="button"
+                  disabled={!canRecordPayment}
+                  onClick={() => {
+                    setRecordSession((current) => current + 1)
+                    setRecordOpen(true)
+                  }}
+                >
+                  <Wallet aria-hidden="true" data-icon="inline-start" />
+                  Record Payment
+                </Button>
+              ) : null}
+            </div>
           </>
         }
       />
